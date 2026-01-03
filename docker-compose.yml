@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  # 1. Knowledge Graph Database
+  neo4j:
+    image: neo4j:community
+    container_name: biodockify_graph
+    ports:
+      - "7474:7474" # HTTP
+      - "7687:7687" # Bolt
+    environment:
+      - NEO4J_AUTH=neo4j/biodockify
+    volumes:
+      - ./brain/knowledge_graph/data:/data
+      - ./brain/knowledge_graph/logs:/logs
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider localhost:7474 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # 2. Local Large Language Model
+  ollama:
+    image: ollama/ollama:latest
+    container_name: biodockify_llm
+    ports:
+      - "11434:11434"
+    volumes:
+      - ./brain/models:/root/.ollama
+    # GPU Support (Optional - uncomment if NVIDIA GPU available)
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+
+  # 3. PDF Parsing Service (Optional - better than local lib)
+  grobid:
+    image: lfoppiano/grobid:0.8.0
+    container_name: biodockify_pdf
+    ports:
+      - "8070:8070"
+    environment:
+      - "JAVA_OPTS=-Xmx2g"

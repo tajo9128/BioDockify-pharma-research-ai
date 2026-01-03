@@ -1,0 +1,28 @@
+# BioDockify Core Dependencies
+
+# Core API & Orchestration
+fastapi==0.109.0
+uvicorn==0.27.0
+pydantic==2.6.0
+requests==2.31.0
+
+# Literature Search
+biopython==1.83
+
+# Molecular Vision (Offline)
+# Note: DECIMER pulls in TensorFlow; ensure you have the CPU version if no GPU.
+DECIMER-Image2SMILES==2.2.0
+tensorflow-cpu==2.15.0
+Pillow==10.2.0
+numpy==1.26.3
+
+# Optional: SMILES Validation
+rdkit==2023.9.4
+
+# Graph Database
+neo4j>=5.0.0
+
+# PDF Processing
+pypdf>=3.0.0
+pdfminer.six>=20221105
+Pillow>=9.0.0

@@ -1,0 +1,44 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+env/
+.env
+
+# Runtime & Secrets
+runtime/secrets/
+runtime/config.yaml
+brain/knowledge_graph/data/
+brain/knowledge_graph/logs/
+brain/models/
+data/papers/
+
+# IDEs
+.vscode/
+.idea/
+
+# Node/React
+node_modules/
+ui/dist/
+ui/.env
+
+# Tauri / Rust
+desktop/tauri/src-tauri/target/
+desktop/tauri/src-tauri/gen/
+
+# Installer output
+BioDockify_Setup.exe
+
+# OS generated
+.DS_Store
+Thumbs.db
+
+# Lab Output (Optional: Keep gitkeep if empty, ignore contents)
+lab_interface/reports/*
+lab_interface/sila_protocols/*
+!lab_interface/reports/.gitkeep
+!lab_interface/sila_protocols/.gitkeep
+
+# Logs
+*.log
