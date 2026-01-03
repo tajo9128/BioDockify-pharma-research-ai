@@ -33,16 +33,20 @@ jobs:
           pip install -r requirements.txt
           pip install pyyaml
 
-      - name: Install Frontend Dependencies
+      - name: Install & Build Frontend
+        working-directory: ui
+        run: |
+          npm install
+          npm run build
+
+      - name: Install Tauri Dependencies
         working-directory: desktop/tauri
         run: npm install
 
-      - name: Build Tauri App
+      - name: Build Tauri Desktop App
         working-directory: desktop/tauri
         run: npm run tauri build
         env:
-          # If you don't have a signing key yet, Tauri might need one or warn.
-          # For a basic build, this often works.
           CI: true
 
       - name: Build Installer (NSIS)
