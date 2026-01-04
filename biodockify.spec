@@ -1,62 +1,62 @@
 # -*- mode: python ; coding: utf-8 -*-
 import sys
 import os
-import site
-from PyInstaller.utils.hooks import collect_all
+import importlib
+from PyInstaller.building.build_main import Analysis, PYZ, EXE, COLLECT
+from PyInstaller.building.datastruct import Tree
 
 block_cipher = None
 
-# --- HELPER: FIND SITE-PACKAGES ---
-site_packages = site.getsitepackages()[0]
-print(f"DEBUG: Using site-packages at: {site_packages}")
-
-def get_lib_tree(lib_name):
-    """Returns a Tree object for a library in site-packages."""
-    path = os.path.join(site_packages, lib_name)
-    if not os.path.exists(path):
-        print(f"WARNING: Library '{lib_name}' not found at {path}")
-        # Try generic import to find path as fallback
-        try:
-            mod = __import__(lib_name)
+# --- ROBUST PATH FINDER ---
+def get_library_tree(name):
+    """
+    Imports a library to find its absolute path on disk, 
+    then returns a Tree() object to force-bundle it.
+    """
+    try:
+        # Import the module to get its true location
+        mod = importlib.import_module(name)
+        if hasattr(mod, '__file__'):
+            # Most packages have an __init__.py, get the dirname
             path = os.path.dirname(mod.__file__)
-            print(f"DEBUG: Found '{lib_name}' via import at {path}")
-        except Exception as e:
-            print(f"ERROR: Could not find library '{lib_name}': {e}")
-            return None
+        else:
+            # namespace packages might behave differently, but for TF/Numpy this is fine
+            path = os.path.dirname(mod.__path__[0])
             
-    print(f"DEBUG: Bundling '{lib_name}' from {path}")
-    return Tree(path, prefix=lib_name, excludes=['*.pyc', '__pycache__'])
+        print(f"DEBUG: Found '{name}' at '{path}'")
+        
+        # Return the Tree object
+        # prefix=name (e.g. 'tensorflow') ensures it sits in the root of the internal temp dir
+        return Tree(path, prefix=name, excludes=['*.pyc', '__pycache__', '*.dist-info'])
+        
+    except ImportError as e:
+        print(f"CRITICAL ERROR: Could not import '{name}'. Is it installed? Error: {e}")
+        # We generally want to fail hard here, but for now allow continue to see what else fails
+        return None
+    except Exception as e:
+        print(f"WARNING: Error processing '{name}': {e}")
+        return None
 
-# --- COLLECT DEPENDENCIES MANUALLY ---
-# We use Tree() to force the inclusion of the entire folder
-heavy_trees = []
-
-libs_to_bundle = [
+# --- COLLECT HEAVY LIBS ---
+heavy_libs = [
     'tensorflow', 
     'numpy', 
-    'PIL', 
+    'PIL', # usually 'PIL' but package is Pillow. import PIL works.
     'uvicorn', 
     'fastapi', 
-    'neo4j', 
-    'pypdf', 
+    'neo4j',
+    'pypdf',
     'pdfminer',
     'DECIMER'
 ]
 
-for lib in libs_to_bundle:
-    t = get_lib_tree(lib)
+manual_trees = []
+for lib in heavy_libs:
+    t = get_library_tree(lib)
     if t:
-        heavy_trees.append(t)
+        manual_trees.append(t)
 
-# --- STANDARD COLLECTION FOR BINARIES ---
-# Binaries (DLLs) still need hooks sometimes, sticking to collecting these
-tf_bin = collect_all('tensorflow')[1]
-np_bin = collect_all('numpy')[1]
-pil_bin = collect_all('PIL')[1]
-
-all_binaries = tf_bin + np_bin + pil_bin
-
-# Manual Source Folders
+# --- MANUAL DATA FOLDERS ---
 manual_datas = [
     ('api', 'api'),
     ('agent_zero', 'agent_zero'),
@@ -68,15 +68,9 @@ manual_datas = [
 
 a = Analysis(
     ['server.py'],
-    pathex=[site_packages],
-    binaries=all_binaries,
-    datas=manual_datas, # Trees are added to datas inside EXE/PYZ usually, or merged here? 
-    # Tree objects behave like datas in newer PyInstaller but need to be passed to EXE or COLLECT
-    # Wait, Tree cannot be in 'datas' list of Analysis directly if it's not a tuple list.
-    # We will pass trees to the EXE/COLLECT step or convert them?
-    # Spec file standard: datas=[] list of tuples. 
-    # Tree returns a distinct object.
-    
+    pathex=[],
+    binaries=[],
+    datas=manual_datas, 
     hiddenimports=[
         'tensorflow', 'numpy', 'PIL', 'uvicorn', 'fastapi', 'neo4j', 
         'pypdf', 'pdfminer', 'DECIMER', 'uvicorn.loops.auto', 
@@ -92,10 +86,10 @@ a = Analysis(
     noarchive=False,
 )
 
-# Merge Trees into datas (Analysis doesn't accept Tree objects in datas list)
-# We append them to a.datas
-for t in heavy_trees:
-     a.datas += t
+# --- INJECT TREES INTO DATAS ---
+# This forces the inclusion of the files
+for t in manual_trees:
+    a.datas += t
 
 pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 
