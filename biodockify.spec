@@ -10,52 +10,39 @@ block_cipher = None
 print("DEBUG: Starting Hybrid Spec File Execution")
 
 # --- HELPER: ROBUST COLLECTOR ---
+import importlib.util
+
 def robust_collect(name):
-    """
-    Tries standard collect_all. 
-    If that fails (returns empty), falls back to importing and Tree().
-    Returns: (datas, binaries, hiddenimports)
-    """
     print(f"DEBUG: Processing '{name}'...")
     
     # 1. Try Hook
     d, b, h = collect_all(name)
     if d or b:
-        print(f"  -> 'collect_all' succeeded for '{name}' (Datas: {len(d)}, Binaries: {len(b)})")
+        print(f"  -> 'collect_all' succeeded (Datas: {len(d)})")
         return d, b, h
     
-    print(f"  -> WARNING: 'collect_all' returned nothing for '{name}'. Falling back to Import+Tree.")
-    
-    # 2. Try Import + Tree
+    # 2. Try Manual Path Find via importlib util
     try:
-        mod = importlib.import_module(name)
-        if hasattr(mod, '__file__'):
-            path = os.path.dirname(mod.__file__)
-        else:
-            path = os.path.dirname(mod.__path__[0])
-            
-        print(f"  -> Found '{name}' at '{path}'")
-        
-        # Create Tree
-        # Tree returns a generic object that we can't easily merge into 'datas' lists nicely
-        # without it being in the Analysis step or passed to EXE.
-        # BUT, Analysis.datas accepts Tree objects? Let's check.
-        # Actually, best to return it as a list of tuples? No, Tree is complex.
-        # We will return a special flag or handle it outside.
-        
-        # Let's just return the Tree object in the 'datas' slot and hope Analysis flattens it
-        # OR we handle it by appending to a.datas later.
-        
-        # We will return it as a Single-Item List containing the Tree
-        t = Tree(path, prefix=name, excludes=['*.pyc', '__pycache__'])
-        return [t], [], [name]
-        
-    except ImportError as e:
-        print(f"  -> CRITICAL ERROR: Could not import '{name}' for fallback. Error: {e}")
-        return [], [], []
+        spec = importlib.util.find_spec(name)
+        if spec and spec.origin:
+             # origin is usually .../package/__init__.py
+             # we want the package root
+             path = os.path.dirname(spec.origin)
+             print(f"  -> Found via find_spec at '{path}'")
+             return [Tree(path, prefix=name, excludes=['*.pyc', '__pycache__'])], [], [name]
     except Exception as e:
-        print(f"  -> ERROR: tree fallback failed for '{name}': {e}")
-        return [], [], []
+        print(f"  -> find_spec failed: {e}")
+
+    # 3. Brute Force Search in sys.path
+    print(f"  -> Searching sys.path: {sys.path}")
+    for p in sys.path:
+        possible_path = os.path.join(p, name)
+        if os.path.isdir(possible_path):
+             print(f"  -> Found via Brute Force at '{possible_path}'")
+             return [Tree(possible_path, prefix=name, excludes=['*.pyc', '__pycache__'])], [], [name]
+
+    print(f"CRITICAL: Could not find '{name}' anywhere!")
+    return [], [], []
 
 # --- COLLECT LIBS ---
 libs = [
