@@ -3,7 +3,7 @@
         "beforeDevCommand": "npm run dev",
         "beforeBuildCommand": "",
         "devPath": "http://localhost:5173",
-        "distDir": "../../../ui/dist"
+        "distDir": "../dist"
     },
     "package": {
         "productName": "BioDockify AI",
