@@ -39,6 +39,17 @@ jobs:
           npm install
           npm run build
 
+      - name: Debug and Move Assets
+        run: |
+          echo "Listing ui/dist content:"
+          ls ui/dist
+          
+          echo "Moving to final destination..."
+          Move-Item -Path ui/dist -Destination desktop/tauri/dist_final -Force
+          
+          echo "Listing desktop/tauri/dist_final content:"
+          ls desktop/tauri/dist_final
+
       - name: Install Tauri Dependencies
         working-directory: desktop/tauri
         run: npm install
