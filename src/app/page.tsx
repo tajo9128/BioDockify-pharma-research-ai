@@ -185,7 +185,11 @@ export default function BioDockifyDashboard() {
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <Brain className="w-8 h-8 text-emerald-600" />
+              <img
+                src="/logo.png"
+                alt="BioDockify"
+                className="h-10 w-auto object-contain"
+              />
               <div>
                 <h1 className="text-2xl font-bold text-slate-900">BioDockify</h1>
                 <p className="text-xs text-slate-500">v2.0.0 - PhD Research Automation Platform</p>
