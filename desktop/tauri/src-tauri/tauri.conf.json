@@ -6,7 +6,7 @@
         "distDir": "../dist"
     },
     "package": {
-        "productName": "BioDockify AI",
+        "productName": "BioDockify-AI",
         "version": "0.1.0"
     },
     "tauri": {

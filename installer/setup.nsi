@@ -64,7 +64,7 @@ Section "Install Files" SecInstall
   SetOutPath "$INSTDIR"
   
   ; Install the Main Application Binary
-  File "..\desktop\tauri\src-tauri\target\release\BioDockify AI.exe"
+  File "..\desktop\tauri\src-tauri\target\release\BioDockify-AI.exe"
   
   ; Install the Sidecar (AI Engine)
   ; Note: Tauri expects sidecars to be named specifically with architecture in target triple
