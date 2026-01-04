@@ -50,6 +50,11 @@ jobs:
           
           echo "Listing assets in desktop/tauri/dist..."
           ls desktop/tauri/dist
+          
+          if (!(Test-Path "desktop/tauri/dist/index.html")) {
+            Write-Error "CRITICAL: index.html not found in desktop/tauri/dist. Build will fail."
+            exit 1
+          }
 
       - name: Install Tauri Dependencies
         working-directory: desktop/tauri
@@ -57,7 +62,7 @@ jobs:
 
       - name: Build Tauri Desktop App
         working-directory: desktop/tauri
-        run: npm run tauri build
+        run: npm run tauri build -- --verbose
         env:
           CI: true
 
