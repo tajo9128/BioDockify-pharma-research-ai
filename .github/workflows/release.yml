@@ -53,9 +53,21 @@ jobs:
       - name: Generate Icons
         working-directory: desktop/tauri/src-tauri
         run: |
-          npx @tauri-apps/cli icon icons/icon.png
+          echo "Source icon.png exists:"
+          Get-ChildItem icons/icon.png
+          
+          echo "Running Tauri icon generator..."
+          npx @tauri-apps/cli icon icons/icon.png --output icons
+          
           echo "Generated icons:"
           Get-ChildItem icons/
+          
+          echo "Verifying icon.ico exists..."
+          if (!(Test-Path "icons/icon.ico")) {
+            Write-Error "FAILED: icon.ico was not generated!"
+            exit 1
+          }
+          echo "SUCCESS: icon.ico found!"
 
       - name: Install Tauri Dependencies
         working-directory: desktop/tauri
