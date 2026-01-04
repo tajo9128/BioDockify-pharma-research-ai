@@ -23,19 +23,25 @@ PyInstaller.__main__.run([
     '--clean',
     
     # Hidden imports for critical libraries
-    '--hidden-import=uvicorn.logging',
-    '--hidden-import=uvicorn.loops',
-    '--hidden-import=uvicorn.loops.auto',
-    '--hidden-import=uvicorn.protocols',
-    '--hidden-import=uvicorn.protocols.http',
-    '--hidden-import=uvicorn.protocols.http.auto',
-    '--hidden-import=uvicorn.lifespan',
-    '--hidden-import=uvicorn.lifespan.on',
+    '--collect-all=uvicorn',
+    '--collect-all=fastapi',
+    '--collect-all=pydantic',
+    '--collect-all=requests',
     
-    '--hidden-import=fastapi',
-    '--hidden-import=pydantic',
-    '--hidden-import=requests',
+    # HEAVY Dependencies (Validation & Molecular Vision)
+    '--collect-all=tensorflow',
+    '--collect-all=numpy',
+    '--collect-all=PIL',
+    # Note: DECIMER might be named differently in site-packages, checking standard naming
+    '--hidden-import=DECIMER', 
     
+    # Graph Database
+    '--hidden-import=neo4j',
+    
+    # PDF Processing
+    '--hidden-import=pypdf',
+    '--hidden-import=pdfminer',
+
     # Include source directories
     '--add-data=api;api',
     '--add-data=agent_zero;agent_zero',
@@ -44,8 +50,10 @@ PyInstaller.__main__.run([
     '--add-data=orchestration;orchestration',
     '--add-data=export;export',
     
-    # Exclude heavy unnecessary things if possible
+    # Exclude GUI libs we definitely don't need
     '--exclude-module=tkinter',
+    '--exclude-module=matplotlib',
+    '--exclude-module=PyQt5',
 ])
 
 print(f"Build complete! Executable is in {DIST_DIR}/{EXECUTABLE_NAME}.exe")
