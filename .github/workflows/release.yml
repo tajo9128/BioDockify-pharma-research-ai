@@ -44,15 +44,15 @@ jobs:
           echo "Listing ui/dist content:"
           ls ui/dist
           
-          echo "Moving to desktop/tauri/dist..."
-          New-Item -ItemType Directory -Force -Path desktop/tauri/dist
-          Copy-Item -Path ui/dist/* -Destination desktop/tauri/dist -Recurse -Force
+          echo "Moving to desktop/tauri/src-tauri/ui_dist..."
+          New-Item -ItemType Directory -Force -Path desktop/tauri/src-tauri/ui_dist
+          Copy-Item -Path ui/dist/* -Destination desktop/tauri/src-tauri/ui_dist -Recurse -Force
           
-          echo "Listing assets in desktop/tauri/dist..."
-          ls desktop/tauri/dist
+          echo "Listing assets in desktop/tauri/src-tauri/ui_dist..."
+          ls desktop/tauri/src-tauri/ui_dist
           
-          if (!(Test-Path "desktop/tauri/dist/index.html")) {
-            Write-Error "CRITICAL: index.html not found in desktop/tauri/dist. Build will fail."
+          if (!(Test-Path "desktop/tauri/src-tauri/ui_dist/index.html")) {
+            Write-Error "CRITICAL: index.html not found in src-tauri/ui_dist. Build will fail."
             exit 1
           }
 
