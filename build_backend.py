@@ -30,15 +30,24 @@ PyInstaller.__main__.run([
     
     # HEAVY Dependencies (Validation & Molecular Vision)
     '--collect-all=tensorflow',
+    '--hidden-import=tensorflow',  # Redundant check
+    
     '--collect-all=numpy',
+    '--hidden-import=numpy',
+    
     '--collect-all=PIL',
-    # Note: DECIMER might be named differently in site-packages, checking standard naming
+    '--hidden-import=PIL',
+    
+    # Note: DECIMER might be named differently in site-packages
+    '--collect-all=DECIMER',
     '--hidden-import=DECIMER', 
     
     # Graph Database
+    '--collect-all=neo4j',
     '--hidden-import=neo4j',
     
     # PDF Processing
+    '--collect-all=pypdf',
     '--hidden-import=pypdf',
     '--hidden-import=pdfminer',
 
