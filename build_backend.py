@@ -13,6 +13,20 @@ if os.path.exists(DIST_DIR):
 if os.path.exists("build"):
     shutil.rmtree("build")
 
+# DYNAMICALLY FIND LIBRARY PATHS
+# This forces PyInstaller to look exactly where pip installed them
+import site
+import tensorflow as tf
+import numpy as np
+
+site_packages = site.getsitepackages()[0] # Standard site-packages
+tf_path = os.path.dirname(tf.__file__)
+numpy_path = os.path.dirname(np.__file__)
+
+print(f"DEBUG: Site Packages: {site_packages}")
+print(f"DEBUG: TensorFlow Path: {tf_path}")
+print(f"DEBUG: NumPy Path: {numpy_path}")
+
 print(f"Building {EXECUTABLE_NAME} from {ENTRY_POINT}...")
 
 PyInstaller.__main__.run([
@@ -21,6 +35,11 @@ PyInstaller.__main__.run([
     '--onefile',
     '--distpath=%s' % DIST_DIR,
     '--clean',
+    
+    # FORCE PATHS - This is the key fix
+    f'--paths={site_packages}',
+    f'--paths={tf_path}', 
+    f'--paths={numpy_path}',
     
     # Hidden imports for critical libraries
     '--collect-all=uvicorn',

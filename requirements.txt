@@ -12,7 +12,7 @@ biopython==1.83
 # Molecular Vision (Offline)
 # Note: DECIMER pulls in TensorFlow; ensure you have the CPU version if no GPU.
 DECIMER-Image2SMILES==2.2.0
-tensorflow-cpu==2.15.0
+tensorflow==2.15.0
 Pillow==10.2.0
 numpy==1.26.3
 
