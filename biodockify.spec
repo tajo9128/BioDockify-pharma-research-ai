@@ -1,62 +1,38 @@
 # -*- mode: python ; coding: utf-8 -*-
 import sys
 import os
-import importlib
-from PyInstaller.building.build_main import Analysis, PYZ, EXE, COLLECT
-from PyInstaller.building.datastruct import Tree
+from PyInstaller.utils.hooks import collect_all
 
 block_cipher = None
 
-# --- ROBUST PATH FINDER ---
-def get_library_tree(name):
-    """
-    Imports a library to find its absolute path on disk, 
-    then returns a Tree() object to force-bundle it.
-    """
-    try:
-        # Import the module to get its true location
-        mod = importlib.import_module(name)
-        if hasattr(mod, '__file__'):
-            # Most packages have an __init__.py, get the dirname
-            path = os.path.dirname(mod.__file__)
-        else:
-            # namespace packages might behave differently, but for TF/Numpy this is fine
-            path = os.path.dirname(mod.__path__[0])
-            
-        print(f"DEBUG: Found '{name}' at '{path}'")
-        
-        # Return the Tree object
-        # prefix=name (e.g. 'tensorflow') ensures it sits in the root of the internal temp dir
-        return Tree(path, prefix=name, excludes=['*.pyc', '__pycache__', '*.dist-info'])
-        
-    except ImportError as e:
-        print(f"CRITICAL ERROR: Could not import '{name}'. Is it installed? Error: {e}")
-        # We generally want to fail hard here, but for now allow continue to see what else fails
-        return None
-    except Exception as e:
-        print(f"WARNING: Error processing '{name}': {e}")
-        return None
+print("DEBUG: Starting Spec File Execution")
 
-# --- COLLECT HEAVY LIBS ---
-heavy_libs = [
-    'tensorflow', 
-    'numpy', 
-    'PIL', # usually 'PIL' but package is Pillow. import PIL works.
-    'uvicorn', 
-    'fastapi', 
-    'neo4j',
-    'pypdf',
-    'pdfminer',
-    'DECIMER'
-]
+# --- 1. COLLECT HEAVY DEPENDENCIES ---
+# We use collect_all to get everything.
+tf_datas, tf_binaries, tf_hiddenimports = collect_all('tensorflow')
+np_datas, np_binaries, np_hiddenimports = collect_all('numpy')
+pil_datas, pil_binaries, pil_hiddenimports = collect_all('PIL')
+neo_datas, neo_binaries, neo_hiddenimports = collect_all('neo4j')
+uv_datas, uv_binaries, uv_hiddenimports = collect_all('uvicorn')
+fa_datas, fa_binaries, fa_hiddenimports = collect_all('fastapi')
 
-manual_trees = []
-for lib in heavy_libs:
-    t = get_library_tree(lib)
-    if t:
-        manual_trees.append(t)
+# STRICT VALIDATION: If we didn't find TensorFlow, FAIL THE BUILD NOW.
+# This prevents the "6.7MB empty executable" problem.
+if not tf_datas and not tf_binaries:
+    print("CRITICAL ERROR: 'collect_all' found NO TensorFlow files!")
+    print("This means PyInstaller cannot see the tensorflow package.")
+    print(f"PYTHONPATH: {sys.path}")
+    raise RuntimeError("TensorFlow not found! Aborting build to prevent empty artifact.")
 
-# --- MANUAL DATA FOLDERS ---
+print(f"DEBUG: Found {len(tf_datas)} TF datas and {len(tf_binaries)} TF binaries")
+print(f"DEBUG: Found {len(np_datas)} NumPy datas and {len(np_binaries)} NumPy binaries")
+
+# Merge collected lists
+all_datas = tf_datas + np_datas + pil_datas + neo_datas + uv_datas + fa_datas
+all_binaries = tf_binaries + np_binaries + pil_binaries + neo_binaries + uv_binaries + fa_binaries
+all_hidden = tf_hiddenimports + np_hiddenimports + pil_hiddenimports + neo_hiddenimports + uv_hiddenimports + fa_hiddenimports
+
+# --- 2. MANUAL SOURCE FOLDERS ---
 manual_datas = [
     ('api', 'api'),
     ('agent_zero', 'agent_zero'),
@@ -66,15 +42,22 @@ manual_datas = [
     ('export', 'export')
 ]
 
+# --- 3. ANALYSIS ---
 a = Analysis(
     ['server.py'],
     pathex=[],
-    binaries=[],
-    datas=manual_datas, 
-    hiddenimports=[
-        'tensorflow', 'numpy', 'PIL', 'uvicorn', 'fastapi', 'neo4j', 
-        'pypdf', 'pdfminer', 'DECIMER', 'uvicorn.loops.auto', 
-        'uvicorn.protocols.http.auto', 'simple_websocket'
+    binaries=all_binaries,
+    datas=all_datas + manual_datas,
+    hiddenimports=all_hidden + [
+        'tensorflow',
+        'tensorflow.python',
+        'tensorflow.python._pywrap_tensorflow_internal',
+        'tensorflow.python.framework',
+        'tensorflow.python.keras',
+        'tensorflow.python.keras.utils',
+        'uvicorn.loops.auto', 
+        'uvicorn.protocols.http.auto', 
+        'simple_websocket'
     ],
     hookspath=[],
     hooksconfig={},
@@ -86,10 +69,14 @@ a = Analysis(
     noarchive=False,
 )
 
-# --- INJECT TREES INTO DATAS ---
-# This forces the inclusion of the files
-for t in manual_trees:
-    a.datas += t
+# --- 4. FIX TENSORFLOW BINARY PLACEMENT (User Suggestion) ---
+# This fixes the "DLL load failed" error often seen with TF in onefile mode
+print("DEBUG: Applying TensorFlow Binary Fix...")
+for i in range(len(a.binaries)):
+    dest, origin, kind = a.binaries[i]
+    if '_pywrap_tensorflow_internal' in dest:
+        print(f"DEBUG: Fixing path for {dest}")
+        a.binaries[i] = ('tensorflow.python.' + dest, origin, kind)
 
 pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 
