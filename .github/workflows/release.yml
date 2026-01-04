@@ -37,6 +37,7 @@ jobs:
         working-directory: ui
         run: |
           npm install
+          npx prisma generate
           npm run build
 
       - name: Copy Frontend to Tauri
@@ -44,8 +45,8 @@ jobs:
           echo "Creating desktop/tauri/dist directory..."
           New-Item -ItemType Directory -Force -Path "desktop/tauri/dist"
           
-          echo "Copying ui/dist to desktop/tauri/dist..."
-          Copy-Item -Path "ui/dist/*" -Destination "desktop/tauri/dist" -Recurse -Force
+          echo "Copying ui/out to desktop/tauri/dist..."
+          Copy-Item -Path "ui/out/*" -Destination "desktop/tauri/dist" -Recurse -Force
           
           echo "Verifying copied files:"
           Get-ChildItem "desktop/tauri/dist" -Recurse | Select-Object FullName

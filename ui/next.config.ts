@@ -1,8 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  output: "standalone",
-  /* config options here */
+  output: "export",
+  /* Static export for Tauri desktop app */
   typescript: {
     ignoreBuildErrors: true,
   },
@@ -10,6 +10,11 @@ const nextConfig: NextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+  images: {
+    unoptimized: true,
+  },
+  trailingSlash: true,
 };
 
 export default nextConfig;
+
