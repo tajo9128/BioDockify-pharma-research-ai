@@ -39,22 +39,18 @@ jobs:
           npm install
           npm run build
 
-      - name: Debug and Move Assets
+      - name: Inject Absolute Path into Tauri Config
         run: |
-          echo "Listing ui/dist content:"
-          ls ui/dist
+          $FrontDist = (Resolve-Path "ui/dist").Path
+          echo "Absolute Frontend Path: $FrontDist"
           
-          echo "Moving to desktop/tauri/src-tauri/ui_dist..."
-          New-Item -ItemType Directory -Force -Path desktop/tauri/src-tauri/ui_dist
-          Copy-Item -Path ui/dist/* -Destination desktop/tauri/src-tauri/ui_dist -Recurse -Force
+          $ConfigPath = "desktop/tauri/src-tauri/tauri.conf.json"
+          $Json = Get-Content $ConfigPath | ConvertFrom-Json
+          $Json.build.distDir = $FrontDist
+          $Json | ConvertTo-Json -Depth 10 | Set-Content $ConfigPath
           
-          echo "Listing assets in desktop/tauri/src-tauri/ui_dist..."
-          ls desktop/tauri/src-tauri/ui_dist
-          
-          if (!(Test-Path "desktop/tauri/src-tauri/ui_dist/index.html")) {
-            Write-Error "CRITICAL: index.html not found in src-tauri/ui_dist. Build will fail."
-            exit 1
-          }
+          echo "Verified Tauri Config:"
+          Get-Content $ConfigPath
 
       - name: Install Tauri Dependencies
         working-directory: desktop/tauri
