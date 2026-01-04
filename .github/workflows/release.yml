@@ -132,10 +132,20 @@ jobs:
           Get-ChildItem -Path "desktop/tauri/src-tauri/binaries/biodockify-engine-x86_64-pc-windows-msvc.exe" | Select-Object Name, Length
           Get-ChildItem -Path "desktop/tauri/src-tauri/target/release/BioDockify-AI.exe" | Select-Object Name, Length
           
+      - name: Install NSIS
+        run: choco install nsis
+
       - name: Build Professional Installer (NSIS)
         run: |
+          echo "Building NSIS Installer..."
           makensis installer/setup.nsi
-        continue-on-error: true
+          
+          echo "Verifying Installer Exists..."
+          if (!(Test-Path "BioDockify_Professional_Setup_v2.0.exe")) {
+            Write-Error "NSIS Build Failed: Installer not found!"
+            exit 1
+          }
+        continue-on-error: false
 
       - name: Upload Release Assets
         uses: softprops/action-gh-release@v1
