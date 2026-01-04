@@ -50,6 +50,13 @@ jobs:
           echo "Verifying copied files:"
           Get-ChildItem "desktop/tauri/dist" -Recurse | Select-Object FullName
 
+      - name: Generate Icons
+        run: |
+          cd desktop/tauri/src-tauri/icons
+          magick icon.png -define icon:auto-resize=256,128,64,48,32,16 icon.ico
+          echo "Generated icon.ico"
+          ls
+
       - name: Install Tauri Dependencies
         working-directory: desktop/tauri
         run: npm install
