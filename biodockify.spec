@@ -1,17 +1,16 @@
 # -*- mode: python ; coding: utf-8 -*-
 import sys
 import os
-import importlib
+import importlib.util
 from PyInstaller.utils.hooks import collect_all
 from PyInstaller.building.datastruct import Tree
+from PyInstaller.building.build_main import Analysis, PYZ, EXE, COLLECT
 
 block_cipher = None
 
-print("DEBUG: Starting Hybrid Spec File Execution")
+print("DEBUG: Starting Robust Spec File Execution")
 
 # --- HELPER: ROBUST COLLECTOR ---
-import importlib.util
-
 def robust_collect(name):
     print(f"DEBUG: Processing '{name}'...")
     
@@ -25,8 +24,6 @@ def robust_collect(name):
     try:
         spec = importlib.util.find_spec(name)
         if spec and spec.origin:
-             # origin is usually .../package/__init__.py
-             # we want the package root
              path = os.path.dirname(spec.origin)
              print(f"  -> Found via find_spec at '{path}'")
              return [Tree(path, prefix=name, excludes=['*.pyc', '__pycache__'])], [], [name]
@@ -68,27 +65,20 @@ for lib in libs:
     final_hidden.extend(h)
 
 # STRICT CHECK for TensorFlow
-# We check if we have ANY data for tensorflow
 tf_found = False
 for item in final_datas:
-    # If it's a tuple (dest, src, type), check dest
-    if isinstance(item, tuple) and 'tensorflow' in item[0]:
-        tf_found = True
-        break
-    # If it's a Tree object, check its root/prefix
-    if hasattr(item, 'root') and 'tensorflow' in str(item.root): # Tree object
-        tf_found = True
-        break
-    # Check simple string match on object string representation
-    if 'tensorflow' in str(item):
+    # Check if we have any data collection for tensorflow
+    chk_str = str(item)
+    if 'tensorflow' in chk_str:
         tf_found = True
         break
 
 if not tf_found:
-    print("CRITICAL CHECK FAILED: TensorFlow data NOT found in final bundle list.")
+    print("CRITICAL CHECK FAILED: TensorFlow data NOT found.")
+    # We still raise error because we want 600MB build
     raise RuntimeError("TensorFlow bundling failed. Aborting.")
 else:
-    print("DEBUG: TensorFlow appears to be present in datas.")
+    print("DEBUG: TensorFlow appears to be present.")
 
 # --- MANUAL SOURCE FOLDERS ---
 manual_datas = [
@@ -121,14 +111,11 @@ a = Analysis(
     noarchive=False,
 )
 
-# --- BINARY PATCH (If binaries were collected via hooks) ---
-# If we used Trees, binaries are inside the Tree (as datas) and preserved.
-# If we used hooks, binaries are in a.binaries and flattened.
+# --- BINARY PATCH ---
 print("DEBUG: Checking for _pywrap_tensorflow_internal fix...")
 for i in range(len(a.binaries)):
     dest, origin, kind = a.binaries[i]
     if '_pywrap_tensorflow_internal' in dest:
-        # Only patch if it doesn't already have the prefix
         if not dest.startswith('tensorflow'):
              print(f"DEBUG: Patching {dest} -> tensorflow.python.{dest}")
              a.binaries[i] = ('tensorflow.python.' + dest, origin, kind)
