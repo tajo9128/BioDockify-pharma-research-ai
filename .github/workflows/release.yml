@@ -60,7 +60,22 @@ jobs:
 
       - name: Build Python Backend
         run: |
-          python build_backend.py
+          # DEBUG: SHOW TENSORFLOW INFO
+          echo "Debug: TensorFlow Package Info"
+          python -m pip show tensorflow
+          
+          # BUILD WITH MODULE INVOCATION
+          echo "Building with python -m PyInstaller..."
+          python -m PyInstaller biodockify.spec --distpath binaries --clean --noconfirm
+          
+          echo "Moving backend executable..."
+          $source_bin = "binaries/biodockify-engine.exe"
+          if (!(Test-Path $source_bin)) {
+             Write-Error "Build Failed: Output binary not found at $source_bin"
+             exit 1
+          }
+          Move-Item -Path $source_bin -Destination "desktop/tauri/src-tauri/binaries/biodockify-engine-x86_64-pc-windows-msvc.exe" -Force
+
           
       - name: Prepare Tauri Binaries
         run: |
