@@ -30,12 +30,6 @@
                 "nsis",
                 "msi"
             ],
-            "nsis": {
-                "installerLanguages": [
-                    "English"
-                ],
-                "header": "installer_hooks.nsh"
-            },
             "externalBin": [
                 "binaries/biodockify-engine"
             ],
