@@ -139,8 +139,6 @@ jobs:
         with:
           files: |
             BioDockify_Professional_Setup_v2.0.exe
-            desktop/tauri/src-tauri/target/release/bundle/nsis/*.exe
-            desktop/tauri/src-tauri/target/release/bundle/msi/*.msi
           fail_on_unmatched_files: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

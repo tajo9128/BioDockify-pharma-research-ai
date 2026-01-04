@@ -15,18 +15,25 @@
 Section "Prerequisites" SecPrereq
   DetailPrint "Checking for Docker Desktop..."
   
-  ; Strategy 1: Check Registry (Most Reliable)
-  ReadRegStr $0 HKLM "SOFTWARE\Docker Inc.\Docker\1.0" "AppPath"
-  StrCmp $0 "" check_cli docker_found
+  ; Strategy 1: Check Uninstall Registry Key (Standard for Apps)
+  ReadRegStr $0 HKLM "SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Docker Desktop" "InstallLocation"
+  StrCmp $0 "" check_default_path docker_found_reg
+  
+  check_default_path:
+  ; Strategy 2: Check Default Install Path
+  IfFileExists "$PROGRAMFILES\Docker\Docker\Docker Desktop.exe" docker_found_file check_cli
   
   check_cli:
-  ; Strategy 2: Check active CLI command
+  ; Strategy 3: Check active CLI command (Last Resort)
+  ClearErrors
   ExecWait 'docker -v' $1
+  IfErrors docker_missing ; Command not found
   ${If} $1 == 0
-    Goto docker_found
+    Goto docker_found_cli
   ${EndIf}
   
-  ; If both failed:
+  docker_missing:
+  ; If ALL checks failed:
   MessageBox MB_YESNO|MB_ICONEXCLAMATION "Docker Desktop is REQUIRED but not found.$\n$\nBioDockify needs Docker to run the AI engine.$\n$\nClick YES to download Docker Desktop now.$\nClick NO to proceed anyway (Not Recommended)." IDYES download IDNO proceed
   
   download:
@@ -38,8 +45,16 @@ Section "Prerequisites" SecPrereq
     DetailPrint "Warning: Proceeding without detecting Docker."
     Goto done
 
-  docker_found:
-    DetailPrint "Docker Desktop found."
+  docker_found_reg:
+    DetailPrint "Docker Registry Key found."
+    Goto done
+    
+  docker_found_file:
+    DetailPrint "Docker Executable found."
+    Goto done
+    
+  docker_found_cli:
+    DetailPrint "Docker CLI found."
 
   done:
 SectionEnd
