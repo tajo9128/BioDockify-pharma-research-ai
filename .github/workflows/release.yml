@@ -32,6 +32,8 @@ jobs:
         run: |
           pip install -r requirements.txt
           pip install pyinstaller pyyaml
+          echo "Debug: Listed Packages"
+          pip list
 
       - name: Build Python Backend
         run: |
@@ -45,10 +47,13 @@ jobs:
           echo "Moving backend executable..."
           Move-Item -Path "binaries/biodockify-engine.exe" -Destination "desktop/tauri/src-tauri/binaries/biodockify-engine-x86_64-pc-windows-msvc.exe" -Force
           
-          echo "Verifying binary exists..."
-          if (!(Test-Path "desktop/tauri/src-tauri/binaries/biodockify-engine-x86_64-pc-windows-msvc.exe")) {
-            Write-Error "Failed to move binary!"
-            exit 1
+          echo "Verifying binary exists and is valid size (approx >50MB expected)..."
+          $file = Get-Item "desktop/tauri/src-tauri/binaries/biodockify-engine-x86_64-pc-windows-msvc.exe"
+          echo "Binary Size: $($file.Length / 1MB) MB"
+          
+          if ($file.Length -lt 50000000) {
+             Write-Error "BUILD FAILED: Backend binary is too small ($($file.Length) bytes). TensorFlow/Libs missing!"
+             exit 1
           }
 
       - name: Install & Build Frontend
