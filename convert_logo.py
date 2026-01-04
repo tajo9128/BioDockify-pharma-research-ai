@@ -14,20 +14,32 @@ def convert_logo():
     try:
         img = Image.open(source)
         
-        # Save as PNG for UI
+        # 1. Save Full Logo for UI Header (as PNG)
         print(f"Saving UI logo to {ui_dest}")
         img.save(ui_dest, "PNG")
         
+        # 2. Create Square Symbol for Icons
+        # If wide aspect ratio, crop the left square (Symbol)
+        width, height = img.size
+        if width > height * 1.2:
+            print("Wide logo detected. Cropping left square for icon...")
+            # Crop to a square based on height
+            icon_img = img.crop((0, 0, height, height))
+        else:
+            icon_img = img
+            
+        # Optional: specific resize for quality
+        icon_img = icon_img.resize((256, 256), Image.Resampling.LANCZOS)
+
         # Save as PNG for Tauri Source
         print(f"Saving Source Icon to {icon_dest_png}")
-        img.save(icon_dest_png, "PNG")
+        icon_img.save(icon_dest_png, "PNG")
         
         # Save as ICO for Installer
         print(f"Saving Installer Icon to {installer_icon}")
-        # Create sizes for ICO
         icon_sizes = [(256, 256), (128, 128), (64, 64), (48, 48), (32, 32), (16, 16)]
-        img.save(icon_dest_ico, "ICO", sizes=icon_sizes)
-        img.save(installer_icon, "ICO", sizes=icon_sizes)
+        icon_img.save(icon_dest_ico, "ICO", sizes=icon_sizes)
+        icon_img.save(installer_icon, "ICO", sizes=icon_sizes)
         
         print("Conversion Complete!")
         
