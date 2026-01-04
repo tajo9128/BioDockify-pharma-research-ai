@@ -1,0 +1,95 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Post {
+  id        String   @id @default(cuid())
+  title     String
+  content   String?
+  published Boolean  @default(false)
+  authorId  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ResearchSession {
+  id          String   @id @default(cuid())
+  topic       String
+  status      String   @default("pending") // pending, running, completed, failed
+  step        String   @default("literature") // literature, extraction, graph, synthesis
+  progress    Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  entities    Entity[]
+  logs        ResearchLog[]
+  exports     Export[]
+}
+
+model Entity {
+  id        String   @id @default(cuid())
+  type      String   // drug, disease, protein, gene
+  name      String
+  description String?
+  confidence Float
+  sessionId String
+
+  session   ResearchSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+}
+
+model ResearchLog {
+  id        String   @id @default(cuid())
+  level     String   // info, success, error, warning
+  message   String
+  timestamp DateTime @default(now())
+  sessionId String
+
+  session   ResearchSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+}
+
+model Export {
+  id          String   @id @default(cuid())
+  type        String   // protocol, report
+  format      String   // xml, docx, pdf
+  fileName    String
+  fileSize    Int
+  filePath    String
+  sessionId   String
+
+  session     ResearchSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime @default(now())
+}
+
+model Settings {
+  id             String   @id @default(cuid())
+  llmMode        String   @default("local") // local, cloud
+  ollamaUrl      String   @default("http://localhost:11434")
+  openaiApiKey   String?
+  selectedModel  String?
+  neo4jHost      String   @default("bolt://localhost:7687")
+  neo4jUsername  String?
+  neo4jPassword  String?
+  apiBaseUrl     String   @default("http://localhost:8000")
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
