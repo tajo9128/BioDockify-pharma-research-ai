@@ -39,11 +39,6 @@ jobs:
           npm install
           npm run build
 
-      - name: Copy Frontend Assets to Tauri
-        run: |
-          New-Item -ItemType Directory -Force -Path desktop/tauri/dist
-          Copy-Item -Path ui/dist/* -Destination desktop/tauri/dist -Recurse -Force
-
       - name: Install Tauri Dependencies
         working-directory: desktop/tauri
         run: npm install

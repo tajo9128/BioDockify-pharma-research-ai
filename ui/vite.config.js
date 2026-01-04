@@ -7,5 +7,9 @@ export default defineConfig({
     server: {
         port: 5173,
         host: true
+    },
+    build: {
+        outDir: '../desktop/tauri/frontend_dist',
+        emptyOutDir: true
     }
 })
