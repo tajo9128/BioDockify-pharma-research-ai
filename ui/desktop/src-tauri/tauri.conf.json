@@ -1,0 +1,99 @@
+{
+  "build": {
+    "beforeDevCommand": "cd ../ui && bun run dev",
+    "beforeBuildCommand": "cd ../ui && bun run build",
+    "devPath": "http://localhost:3000",
+    "distDir": "../ui/dist",
+    "withGlobalTauri": true
+  },
+  "package": {
+    "productName": "BioDockify AI",
+    "version": "1.0.0"
+  },
+  "tauri": {
+    "allowlist": [
+      {
+        "identifier": "http:*",
+        "allow": true
+      },
+      {
+        "identifier": "https:*",
+        "allow": true
+      },
+      "identifier": "fs:default",
+        "allow": [
+          "read-all",
+          "write-all"
+        ]
+      }
+    ],
+    "bundle": {
+      "active": true,
+      "targets": ["msi", "nsis", "appimage"],
+      "identifier": "com.biodockify.app",
+      "icon": [
+        "icons/32x32.png",
+        "icons/128x128.png",
+        "icons/128x128@2x.png",
+        "icons/icon.icns",
+        "icons/icon.ico"
+      ],
+      "category": "Developer Tool",
+      "copyright": "Copyright © 2025 BioDockify",
+      "longDescription": "AI-Powered Pharmaceutical Research Platform - Transform drug discovery with advanced literature analysis, knowledge graph construction, and automated lab protocol generation.",
+      "shortDescription": "Pharmaceutical Research AI Platform"
+    },
+    "security": {
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self' https:; img-src 'self' data: blob:; font-src 'self' data:;"
+    },
+    "updater": {
+      "active": false
+    },
+    "windows": {
+      "wix": {
+        "language": "en-US"
+      },
+      "webviewInstallMode": {
+        "type": "embedInstaller",
+        "content": "<html><head><style>body{padding:0;margin:0;overflow:hidden;width:100vw;height:100vh}</style></head><body><iframe src=\"{{url}}\" allowfullscreen></iframe></body></html>"
+      },
+      "nsis": {
+        "installMode": "perMachine",
+        "languages": ["English"]
+      }
+    },
+    "macOS": {
+      "entitlements": [
+        "com.apple.security.cs.allow-jit",
+        "com.apple.security.cs.allow-unsigned-executable-memory"
+      ],
+      "minimumSystemVersion": "10.13",
+      "exceptionDomain": {
+        "BioDockifyAI": "BioDockify AI Research Platform"
+      }
+    },
+    "linux": {
+      "deb": {
+        "depends": []
+      }
+    },
+    "systemTray": {
+      "iconPath": "icons/icon.png",
+      "iconAsTemplate": true
+    },
+    "windows": [
+      {
+        "title": "BioDockify AI",
+        "width": 1280,
+        "height": 720,
+        "resizable": true,
+        "fullscreen": false,
+        "center": true,
+        "decorations": true,
+        "alwaysOnTop": false,
+        "skipTaskbar": false,
+        "theme": "dark"
+      }
+    ]
+  }
+}

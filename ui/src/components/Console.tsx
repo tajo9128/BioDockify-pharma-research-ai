@@ -1,67 +1,118 @@
 'use client';
 
+import { useEffect, useRef } from 'react';
+import { Terminal, Code2, Activity } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-interface ConsoleProps {
-  logs: Array<{ level: string; message: string; timestamp: Date }>;
+export interface ConsoleLog {
+  id: string;
+  timestamp: string;
+  message: string;
+  type?: 'info' | 'success' | 'error' | 'phase';
 }
 
-export default function Console({ logs }: ConsoleProps) {
-  const getLevelColor = (level: string) => {
-    switch (level) {
-      case 'error':
-        return 'text-red-400';
+interface ConsoleProps {
+  logs: ConsoleLog[];
+  title?: string;
+}
+
+export default function Console({ logs, title = 'Console Output' }: ConsoleProps) {
+  const consoleEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    consoleEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [logs]);
+
+  const getLogStyle = (type: ConsoleLog['type']) => {
+    switch (type) {
+      case 'phase':
+        return {
+          bg: 'bg-[#5B9FF0]/10',
+          text: 'text-[#5B9FF0]',
+          border: 'border-[#5B9FF0]/20',
+          icon: <Terminal className="w-4 h-4" />
+        };
       case 'success':
-        return 'text-emerald-400';
-      case 'warning':
-        return 'text-yellow-400';
+        return {
+          bg: 'bg-[#00D4AA]/10',
+          text: 'text-[#00D4AA]',
+          border: 'border-[#00D4AA]/20',
+          icon: <Activity className="w-4 h-4" />
+        };
+      case 'error':
+        return {
+          bg: 'bg-[#FC8181]/10',
+          text: 'text-[#FC8181]',
+          border: 'border-[#FC8181]/20',
+          icon: <Terminal className="w-4 h-4" />
+        };
       default:
-        return 'text-cyan-400';
+        return {
+          bg: 'bg-white/5',
+          text: 'text-gray-300',
+          border: 'border-white/5',
+          icon: <Code2 className="w-4 h-4" />
+        };
     }
   };
 
-  const formatTime = (date: Date) => {
-    return date.toLocaleTimeString('en-US', {
-      hour12: false,
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-    });
-  };
-
   return (
-    <div className="bg-black/40 border border-white/10 rounded-2xl p-6 backdrop-blur-sm">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="font-semibold text-white flex items-center gap-2">
-          <div className="w-2 h-2 bg-cyan-500 rounded-full animate-pulse" />
-          Terminal Output
-        </h3>
-        <button
-          onClick={() => {
-            if (logs.length > 0) {
-              const lastLog = logs[logs.length - 1];
-              navigator.clipboard.writeText(lastLog.message);
-            }
-          }}
-          className="text-xs text-slate-400 hover:text-white transition-colors"
-        >
-          Copy Last Log
-        </button>
+    <div className="glass-card overflow-hidden">
+      {/* Modern Header */}
+      <div className="bg-gradient-to-r from-[#1A1D24] to-[#14161B] px-6 py-4 flex items-center justify-between border-b border-white/5">
+        <div className="flex items-center gap-3">
+          <div className="flex gap-2">
+            <div className="w-3 h-3 rounded-full bg-[#5B9FF0]" />
+            <div className="w-3 h-3 rounded-full bg-[#F6AD55]" />
+            <div className="w-3 h-3 rounded-full bg-[#00D4AA]" />
+          </div>
+          <span className="ml-3 text-sm text-gray-400 font-medium tracking-wide">
+            {title}
+          </span>
+        </div>
+        <div className="flex items-center gap-2 text-xs text-gray-500 font-mono">
+          <span>{logs.length}</span>
+          <span>logs</span>
+        </div>
       </div>
-      <div className="bg-black/60 rounded-lg p-4 h-64 overflow-y-auto font-mono text-sm space-y-2 custom-scrollbar">
+
+      {/* Console Content */}
+      <div className="p-6 font-mono text-sm h-96 overflow-y-auto">
         {logs.length === 0 ? (
-          <p className="text-slate-600 italic">Waiting for process to start...</p>
+          <div className="flex flex-col items-center justify-center h-full text-gray-500">
+            <Terminal className="w-12 h-12 mb-3 opacity-30" />
+            <p className="text-sm">Waiting for output...</p>
+          </div>
         ) : (
-          logs.map((log, index) => (
-            <div key={index} className="flex items-start gap-3">
-              <span className="text-slate-600 shrink-0">[{formatTime(new Date(log.timestamp))}]</span>
-              <span className={cn('font-medium shrink-0', getLevelColor(log.level))}>
-                {log.level.toUpperCase()}:
-              </span>
-              <span className="text-slate-300">{log.message}</span>
-            </div>
-          ))
+          <div className="space-y-2">
+            {logs.map((log) => {
+              const style = getLogStyle(log.type);
+              return (
+                <div
+                  key={log.id}
+                  className={cn(
+                    'flex items-start gap-3 p-3 rounded-xl border transition-all duration-200',
+                    style.bg,
+                    style.border
+                  )}
+                >
+                  <div className={cn('mt-0.5 shrink-0', style.text)}>
+                    {style.icon}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <span className="text-gray-600 mr-3 text-xs font-mono">
+                      [{log.timestamp}]
+                    </span>
+                    <span className={cn('text-sm leading-relaxed', style.text)}>
+                      {log.message}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         )}
+        <div ref={consoleEndRef} />
       </div>
     </div>
   );

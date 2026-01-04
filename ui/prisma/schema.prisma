@@ -1,6 +1,9 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -28,68 +31,51 @@ model Post {
   updatedAt DateTime @updatedAt
 }
 
-model ResearchSession {
-  id          String   @id @default(cuid())
-  topic       String
-  status      String   @default("pending") // pending, running, completed, failed
-  step        String   @default("literature") // literature, extraction, graph, synthesis
-  progress    Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+// BioDockify Research Models
 
-  entities    Entity[]
-  logs        ResearchLog[]
-  exports     Export[]
-}
-
-model Entity {
+model ResearchTask {
   id        String   @id @default(cuid())
-  type      String   // drug, disease, protein, gene
-  name      String
-  description String?
-  confidence Float
-  sessionId String
-
-  session   ResearchSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-
+  topic     String
+  status    String   @default("pending") // pending, running, completed, failed, cancelled
+  progress  Int      @default(0)
+  currentStep Int   @default(1)
+  phase     String   @default("Initializing")
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  results   ResearchResult?
+  exports   Export[]
 }
 
-model ResearchLog {
-  id        String   @id @default(cuid())
-  level     String   // info, success, error, warning
-  message   String
-  timestamp DateTime @default(now())
-  sessionId String
-
-  session   ResearchSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+model ResearchResult {
+  id              String   @id @default(cuid())
+  taskId          String   @unique
+  title           String
+  papersCount     Int      @default(0)
+  entitiesCount   Int      @default(0)
+  nodesCount      Int      @default(0)
+  connectionsCount Int     @default(0)
+  summary         String
+  createdAt       DateTime @default(now())
+  task            ResearchTask @relation(fields: [taskId], references: [id])
 }
 
 model Export {
   id          String   @id @default(cuid())
+  taskId      String
   type        String   // protocol, report
-  format      String   // xml, docx, pdf
-  fileName    String
-  fileSize    Int
-  filePath    String
-  sessionId   String
-
-  session     ResearchSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-
+  filename    String
   createdAt   DateTime @default(now())
+  task        ResearchTask @relation(fields: [taskId], references: [id])
 }
 
-model Settings {
-  id             String   @id @default(cuid())
-  llmMode        String   @default("local") // local, cloud
-  ollamaUrl      String   @default("http://localhost:11434")
-  openaiApiKey   String?
-  selectedModel  String?
-  neo4jHost      String   @default("bolt://localhost:7687")
-  neo4jUsername  String?
-  neo4jPassword  String?
-  apiBaseUrl     String   @default("http://localhost:8000")
-
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+model AppSettings {
+  id          String   @id @default(cuid())
+  llmProvider String   @default("ollama")
+  ollamaUrl   String   @default("http://localhost:11434")
+  openaiKey   String?
+  elsevierKey String?
+  neo4jHost   String   @default("bolt://localhost:7687")
+  neo4jUser   String   @default("neo4j")
+  neo4jPassword String
+  updatedAt   DateTime @updatedAt
 }

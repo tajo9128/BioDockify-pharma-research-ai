@@ -16,15 +16,10 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "BioDockify AI - Pharmaceutical Research Platform",
   description: "Zero-Cost AI Platform for Drug Discovery and Pharmaceutical Research. Literature analysis, entity extraction, and knowledge graph building.",
-  keywords: ["BioDockify", "Pharmaceutical", "Drug Discovery", "AI Research", "Knowledge Graph", "Entity Extraction"],
+  keywords: ["BioDockify", "Pharmaceutical", "Drug Discovery", "AI Research", "Knowledge Graph"],
   authors: [{ name: "BioDockify Team" }],
   icons: {
     icon: "/favicon.ico",
-  },
-  openGraph: {
-    title: "BioDockify AI",
-    description: "Zero-Cost Pharmaceutical Research Platform",
-    type: "website",
   },
 };
 

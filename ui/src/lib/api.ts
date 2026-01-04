@@ -1,126 +1,140 @@
-// API Service Layer for BioDockify Pharmaceutical Research Platform
+// API service module for BioDockify pharmaceutical research platform
+// All API calls are relative - the gateway handles routing
 
-const API_BASE = '/api';
+const API_BASE = '/api/v1';
 
-export const researchAPI = {
-  // Start a new research session
-  startResearch: async (topic: string) => {
-    const response = await fetch(`${API_BASE}/research`, {
+export interface ResearchStatus {
+  taskId: string;
+  status: 'pending' | 'running' | 'completed' | 'failed';
+  progress: number;
+  currentStep: number;
+  logs: string[];
+  phase: string;
+}
+
+export interface ResearchResults {
+  taskId: string;
+  title: string;
+  stats: {
+    papers: number;
+    entities: number;
+    nodes: number;
+    connections: number;
+  };
+  entities: {
+    drugs: string[];
+    diseases: string[];
+    proteins: string[];
+  };
+  summary: string;
+}
+
+export interface ProtocolRequest {
+  taskId: string;
+  type: 'liquid-handler' | 'crystallization' | 'assay';
+}
+
+export interface ReportRequest {
+  taskId: string;
+  template: 'full' | 'summary' | 'executive';
+}
+
+export interface Settings {
+  llm: {
+    provider: 'openai' | 'ollama';
+    apiKey?: string;
+    ollamaUrl?: string;
+  };
+  database: {
+    host: string;
+    user: string;
+    password: string;
+  };
+  elsevier?: {
+    apiKey?: string;
+  };
+}
+
+export interface ConnectionTest {
+  type: 'llm' | 'database' | 'elsevier';
+  status: 'success' | 'error';
+  message: string;
+}
+
+// Helper function for API calls
+async function apiRequest<T>(
+  endpoint: string,
+  options?: RequestInit
+): Promise<T> {
+  const url = `${API_BASE}${endpoint}`;
+
+  const response = await fetch(url, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options?.headers,
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ message: 'Unknown error' }));
+    throw new Error(error.message || 'API request failed');
+  }
+
+  return response.json();
+}
+
+export const api = {
+  // Research endpoints
+  startResearch: (topic: string) =>
+    apiRequest<{ taskId: string }>('/research/start', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ topic }),
-    });
-    if (!response.ok) throw new Error('Failed to start research');
-    return response.json();
-  },
+    }),
 
-  // Get all research sessions
-  getSessions: async () => {
-    const response = await fetch(`${API_BASE}/research`);
-    if (!response.ok) throw new Error('Failed to fetch sessions');
-    return response.json();
-  },
+  getStatus: (taskId: string) =>
+    apiRequest<ResearchStatus>(`/research/${taskId}/status`),
 
-  // Get research status by task ID
-  getStatus: async (taskId: string) => {
-    const response = await fetch(`${API_BASE}/research/${taskId}`);
-    if (!response.ok) throw new Error('Failed to fetch status');
-    return response.json();
-  },
+  getResults: (taskId: string) =>
+    apiRequest<ResearchResults>(`/research/${taskId}/results`),
 
-  // Update research status
-  updateStatus: async (taskId: string, updates: any) => {
-    const response = await fetch(`${API_BASE}/research/${taskId}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(updates),
-    });
-    if (!response.ok) throw new Error('Failed to update status');
-    return response.json();
-  },
-
-  // Get research results
-  getResults: async (taskId: string) => {
-    const response = await fetch(`${API_BASE}/research/${taskId}/results`);
-    if (!response.ok) throw new Error('Failed to fetch results');
-    return response.json();
-  },
-
-  // Add a log entry
-  addLog: async (taskId: string, level: string, message: string) => {
-    const response = await fetch(`${API_BASE}/research/${taskId}/logs`, {
+  cancelResearch: (taskId: string) =>
+    apiRequest<{ success: boolean }>(`/research/${taskId}/cancel`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ level, message }),
-    });
-    if (!response.ok) throw new Error('Failed to add log');
-    return response.json();
-  },
+    }),
 
-  // Get logs
-  getLogs: async (taskId: string, limit?: number) => {
-    const params = new URLSearchParams();
-    if (limit) params.append('limit', limit.toString());
-
-    const response = await fetch(`${API_BASE}/research/${taskId}/logs?${params}`);
-    if (!response.ok) throw new Error('Failed to fetch logs');
-    return response.json();
-  },
-};
-
-export const labAPI = {
-  // Generate protocol
-  generateProtocol: async (taskId: string, type: string) => {
-    const response = await fetch(`${API_BASE}/lab/protocol`, {
+  // Lab interface endpoints
+  generateProtocol: (request: ProtocolRequest) =>
+    apiRequest<{ url: string; filename: string }>('/lab/protocol', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ taskId, type }),
-    });
-    if (!response.ok) throw new Error('Failed to generate protocol');
-    return response.json();
-  },
+      body: JSON.stringify(request),
+    }),
 
-  // Generate report
-  generateReport: async (taskId: string, template: string, includeSections: string[]) => {
-    const response = await fetch(`${API_BASE}/lab/report`, {
+  generateReport: (request: ReportRequest) =>
+    apiRequest<{ url: string; filename: string }>('/lab/report', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ taskId, template, includeSections }),
-    });
-    if (!response.ok) throw new Error('Failed to generate report');
-    return response.json();
-  },
-};
+      body: JSON.stringify(request),
+    }),
 
-export const settingsAPI = {
-  // Get settings
-  getSettings: async () => {
-    const response = await fetch(`${API_BASE}/settings`);
-    if (!response.ok) throw new Error('Failed to fetch settings');
-    return response.json();
-  },
+  getRecentExports: () =>
+    apiRequest<{ id: string; type: string; filename: string; createdAt: string }[]>('/lab/exports'),
 
-  // Save settings
-  saveSettings: async (settings: any) => {
-    const response = await fetch(`${API_BASE}/settings`, {
+  // Settings endpoints
+  testConnection: (type: 'llm' | 'database' | 'elsevier') =>
+    apiRequest<ConnectionTest>(`/settings/test/${type}`),
+
+  getSettings: () =>
+    apiRequest<Settings>('/settings'),
+
+  saveSettings: (settings: Settings) =>
+    apiRequest<{ success: boolean }>('/settings', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(settings),
-    });
-    if (!response.ok) throw new Error('Failed to save settings');
-    return response.json();
-  },
+    }),
 
-  // Test connection
-  testConnection: async (type: string) => {
-    const response = await fetch(`${API_BASE}/settings/test/${type}`);
-    if (!response.ok) throw new Error('Failed to test connection');
-    return response.json();
-  },
+  // History endpoints
+  getResearchHistory: () =>
+    apiRequest<{ id: string; topic: string; status: string; createdAt: string }[]>('/research/history'),
 };
 
-export default {
-  research: researchAPI,
-  lab: labAPI,
-  settings: settingsAPI,
-};
+export default api;
