@@ -1,0 +1,23 @@
+BioDockify Research Assistant - End User License Agreement
+
+Copyright (c) 2026 BioDockify
+
+1. PREAMBLE
+This Agreement governs the relationship between You, a natural person or legal entity, hereinafter referred to as the "Licensee" and BioDockify.
+
+2. LICENSE GRANT
+BioDockify hereby grants Licensee a personal, non-exclusive, non-transferable, limited license to use the Software for personal or academic research purposes.
+
+3. RESTRICTIONS
+You may not:
+- Reverse engineer, decompile, or disassemble the Software.
+- Rent, lease, or lend the Software.
+
+4. DISCLAIMER
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY.
+
+5. THIRD PARTY COMPONENTS
+This software includes components such as Docker, Ollama, and various Python libraries which are subject to their own respective licenses.
+
+6. AI USAGE
+The output provided by the AI Agent is for research assistance purposes only and should be verified by human experts.
