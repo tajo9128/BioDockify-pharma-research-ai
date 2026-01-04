@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { Button } from '@/components/ui/button'
+import { Command } from '@tauri-apps/api/shell'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
@@ -48,6 +49,23 @@ export default function BioDockifyDashboard() {
   const [taskId, setTaskId] = useState<string | null>(null)
   const [thinkingSteps, setThinkingSteps] = useState<ThinkingStep[]>([])
   const [currentTask, setCurrentTask] = useState<AgentTask | null>(null)
+
+  // Spawn Sidecar on Startup
+  useEffect(() => {
+    const startBackend = async () => {
+      try {
+        if (typeof window !== 'undefined' && '__TAURI__' in window) {
+          console.log('Spawning BioDockify Engine...')
+          const command = Command.sidecar('binaries/biodockify-engine')
+          const child = await command.spawn()
+          console.log('BioDockify Engine started with PID:', child.pid)
+        }
+      } catch (err) {
+        console.error('Failed to spawn sidecar:', err)
+      }
+    }
+    startBackend()
+  }, [])
   const [error, setError] = useState<string | null>(null)
   const eventSourceRef = useRef<EventSource | null>(null)
 

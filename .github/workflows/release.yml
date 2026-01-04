@@ -31,7 +31,25 @@ jobs:
       - name: Install Python Dependencies
         run: |
           pip install -r requirements.txt
-          pip install pyyaml
+          pip install pyinstaller pyyaml
+
+      - name: Build Python Backend
+        run: |
+          python build_backend.py
+          
+      - name: Prepare Tauri Binaries
+        run: |
+          echo "Creating binaries directory..."
+          New-Item -ItemType Directory -Force -Path "desktop/tauri/src-tauri/binaries"
+          
+          echo "Moving backend executable..."
+          Move-Item -Path "binaries/biodockify-engine.exe" -Destination "desktop/tauri/src-tauri/binaries/biodockify-engine-x86_64-pc-windows-msvc.exe" -Force
+          
+          echo "Verifying binary exists..."
+          if (!(Test-Path "desktop/tauri/src-tauri/binaries/biodockify-engine-x86_64-pc-windows-msvc.exe")) {
+            Write-Error "Failed to move binary!"
+            exit 1
+          }
 
       - name: Install & Build Frontend
         working-directory: ui

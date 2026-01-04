@@ -14,7 +14,14 @@
             "all": false,
             "shell": {
                 "all": false,
-                "open": true
+                "open": true,
+                "sidecar": true,
+                "scope": [
+                    {
+                        "name": "binaries/biodockify-engine",
+                        "sidecar": true
+                    }
+                ]
             }
         },
         "bundle": {
@@ -22,6 +29,9 @@
             "targets": [
                 "nsis",
                 "msi"
+            ],
+            "externalBin": [
+                "binaries/biodockify-engine"
             ],
             "identifier": "com.biodockify.app",
             "icon": [

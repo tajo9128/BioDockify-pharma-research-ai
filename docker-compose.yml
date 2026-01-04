@@ -1,46 +1,81 @@
+# BioDockify v2.0.0 - Full Stack Docker Compose Configuration
+
 version: '3.8'
 
 services:
-  # 1. Knowledge Graph Database
-  neo4j:
-    image: neo4j:community
-    container_name: biodockify_graph
-    ports:
-      - "7474:7474" # HTTP
-      - "7687:7687" # Bolt
-    environment:
-      - NEO4J_AUTH=neo4j/biodockify
-    volumes:
-      - ./brain/knowledge_graph/data:/data
-      - ./brain/knowledge_graph/logs:/logs
-    healthcheck:
-      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider localhost:7474 || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  # 2. Local Large Language Model
-  ollama:
-    image: ollama/ollama:latest
-    container_name: biodockify_llm
-    ports:
-      - "11434:11434"
-    volumes:
-      - ./brain/models:/root/.ollama
-    # GPU Support (Optional - uncomment if NVIDIA GPU available)
-    # deploy:
-    #   resources:
-    #     reservations:
-    #       devices:
-    #         - driver: nvidia
-    #           count: 1
-    #           capabilities: [gpu]
-
-  # 3. PDF Parsing Service (Optional - better than local lib)
+  # GROBID for PDF parsing
   grobid:
     image: lfoppiano/grobid:0.8.0
-    container_name: biodockify_pdf
+    container_name: biodockify-grobid
     ports:
       - "8070:8070"
     environment:
-      - "JAVA_OPTS=-Xmx2g"
+      - GROBID_SERVICE_NAMES=processFulltextDocument
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8070/api/version"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - biodockify-network
+    restart: unless-stopped
+
+  # Neo4j for Knowledge Graph
+  neo4j:
+    image: neo4j:latest
+    container_name: biodockify-neo4j
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    environment:
+      - NEO4J_AUTH=neo4j/biodockify2024
+      - NEO4J_PLUGINS=["graph-data-science"]
+      - NEO4J_dbms_memory_heap_initial__size=512m
+      - NEO4J_dbms_memory_heap_max__size=1G
+    volumes:
+      - neo4j-data:/data
+      - neo4j-logs:/logs
+    healthcheck:
+      test: ["CMD", "cypher-shell", "-u", "neo4j", "-p", "biodockify2024", "RETURN 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - biodockify-network
+    restart: unless-stopped
+
+  # Ollama for LLM
+  ollama:
+    image: ollama/ollama:latest
+    container_name: biodockify-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-models:/root/.ollama
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+    command: serve
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - biodockify-network
+    restart: unless-stopped
+
+  # Note: Frontend (Next.js) is not containerized in this setup
+  # It runs directly on the host machine for development
+  # The Docker services above are used as external dependencies
+
+volumes:
+  neo4j-data:
+    driver: local
+  neo4j-logs:
+    driver: local
+  ollama-models:
+    driver: local
+
+networks:
+  biodockify-network:
+    driver: bridge
