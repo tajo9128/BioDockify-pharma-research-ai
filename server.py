@@ -6,6 +6,18 @@ import sys
 # Add the current directory to sys.path so imports work
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
+# EXPLICIT IMPORTS TO FORCE PYINSTALLER BUNDLING
+try:
+    import tensorflow as tf
+    import numpy as np
+    import PIL
+    import neo4j
+    import pypdf
+    import pdfminer
+    # import DECIMER # Hinting DECIMER
+except ImportError:
+    pass 
+
 from api.main import app
 
 def main():
