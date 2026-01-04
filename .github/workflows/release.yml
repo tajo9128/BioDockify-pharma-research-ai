@@ -44,11 +44,12 @@ jobs:
           echo "Listing ui/dist content:"
           ls ui/dist
           
-          echo "Moving to src-tauri/frontend_assets..."
-          Move-Item -Path ui/dist -Destination desktop/tauri/src-tauri/frontend_assets -Force
+          echo "Moving to desktop/tauri/dist..."
+          New-Item -ItemType Directory -Force -Path desktop/tauri/dist
+          Copy-Item -Path ui/dist/* -Destination desktop/tauri/dist -Recurse -Force
           
-          echo "Listing assets in src-tauri..."
-          ls desktop/tauri/src-tauri/frontend_assets
+          echo "Listing assets in desktop/tauri/dist..."
+          ls desktop/tauri/dist
 
       - name: Install Tauri Dependencies
         working-directory: desktop/tauri
