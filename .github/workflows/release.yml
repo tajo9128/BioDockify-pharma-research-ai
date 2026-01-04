@@ -67,13 +67,18 @@ jobs:
         env:
           CI: true
 
-      - name: List Bundle Contents
+      - name: List Build Output
         run: |
-          echo "Listing bundle directory contents..."
-          Get-ChildItem -Path "desktop/tauri/src-tauri/target/release/bundle" -Recurse | Select-Object FullName
+          echo "Listing entire target/release directory..."
+          Get-ChildItem -Path "desktop/tauri/src-tauri/target/release" -ErrorAction SilentlyContinue | Select-Object Name
           
-          echo "Finding installers..."
-          Get-ChildItem -Path "desktop/tauri/src-tauri/target/release/bundle" -Recurse -Include *.exe,*.msi | Select-Object FullName
+          echo ""
+          echo "Searching for ALL .exe files in target..."
+          Get-ChildItem -Path "desktop/tauri/src-tauri/target" -Recurse -Include *.exe -ErrorAction SilentlyContinue | Select-Object FullName
+          
+          echo ""
+          echo "Searching for ALL .msi files in target..."
+          Get-ChildItem -Path "desktop/tauri/src-tauri/target" -Recurse -Include *.msi -ErrorAction SilentlyContinue | Select-Object FullName
 
       - name: Upload Release Assets
         uses: softprops/action-gh-release@v1
