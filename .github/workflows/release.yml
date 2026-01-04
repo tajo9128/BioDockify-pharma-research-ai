@@ -30,18 +30,33 @@ jobs:
 
       - name: Install Python Dependencies
         run: |
+          # FORCE UPGRADE PIP
+          python -m pip install --upgrade pip
+          
+          # INSTALL REQUIREMENTS
           pip install -r requirements.txt
           pip install pyinstaller pyyaml
           
-          echo "Debug: Python Module Paths"
-          python -c "import sys; print(sys.path)"
+          # EXPLICITLY INSTALL HEAVY LIBS (Redundant Safety)
+          echo "Force installing critical libs..."
+          pip install tensorflow==2.15.0 numpy==1.26.3 pillow neo4j uvicorn fastapi
           
-          echo "Debug: Check Heavy Libs Installation"
-          python -c "import tensorflow as tf; print(f'TF: {tf.__version__} at {tf.__path__}')"
-          python -c "import numpy; print(f'NumPy: {numpy.__version__} at {numpy.__path__}')"
+          # DEBUG: VISUALIZE SITE-PACKAGES
+          echo "Debug: Python Site-Packages Location"
+          $site_pkg = python -c "import site; print(site.getsitepackages()[0])"
+          echo "Site Packages: $site_pkg"
           
-          echo "Debug: Listed Packages"
-          pip list
+          echo "Debug: Listing TensorFlow in Site-Packages"
+          if (Test-Path "$site_pkg\tensorflow") {
+             Get-ChildItem "$site_pkg\tensorflow" -Name | Select-Object -First 10
+             echo "TF Found!"
+          } else {
+             echo "CRITICAL: tensorflow folder NOT found in $site_pkg"
+             Get-ChildItem "$site_pkg" -Name | Select-Object -First 50
+          }
+          
+          echo "Debug: Import Check"
+          python -c "import tensorflow as tf; print(f'TF Loaded: {tf.__version__}')"
 
       - name: Build Python Backend
         run: |
