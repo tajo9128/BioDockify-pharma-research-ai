@@ -128,6 +128,10 @@ jobs:
           Get-ChildItem -Path "desktop/tauri/src-tauri/target" -Recurse -Include *.exe -ErrorAction SilentlyContinue | Select-Object FullName
           
           echo ""
+          echo "Debug: Checking Binary Sizes..."
+          Get-ChildItem -Path "desktop/tauri/src-tauri/binaries/biodockify-engine-x86_64-pc-windows-msvc.exe" | Select-Object Name, Length
+          Get-ChildItem -Path "desktop/tauri/src-tauri/target/release/biodockify-ai.exe" | Select-Object Name, Length
+          
       - name: Build Professional Installer (NSIS)
         run: |
           makensis installer/setup.nsi
