@@ -39,18 +39,16 @@ jobs:
           npm install
           npm run build
 
-      - name: Inject Absolute Path into Tauri Config
+      - name: Copy Frontend to Tauri
         run: |
-          $FrontDist = (Resolve-Path "ui/dist").Path
-          echo "Absolute Frontend Path: $FrontDist"
+          echo "Creating desktop/tauri/dist directory..."
+          New-Item -ItemType Directory -Force -Path "desktop/tauri/dist"
           
-          $ConfigPath = "desktop/tauri/src-tauri/tauri.conf.json"
-          $Json = Get-Content $ConfigPath | ConvertFrom-Json
-          $Json.build.distDir = $FrontDist
-          $Json | ConvertTo-Json -Depth 10 | Set-Content $ConfigPath
+          echo "Copying ui/dist to desktop/tauri/dist..."
+          Copy-Item -Path "ui/dist/*" -Destination "desktop/tauri/dist" -Recurse -Force
           
-          echo "Verified Tauri Config:"
-          Get-Content $ConfigPath
+          echo "Verifying copied files:"
+          Get-ChildItem "desktop/tauri/dist" -Recurse | Select-Object FullName
 
       - name: Install Tauri Dependencies
         working-directory: desktop/tauri
