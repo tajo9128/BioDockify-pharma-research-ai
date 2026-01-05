@@ -12,7 +12,7 @@ import {
   X, ArrowRight, RefreshCw, TestTube, Settings as SettingsIcon,
   FileOutput, Sparkles, TrendingUp, Network, Atom, Microscope,
   Beaker, Calendar, Clock, Globe, Award, Target, Lightbulb,
-  ChevronRight, Star, Rocket
+  ChevronRight, Star, Rocket, ChevronDown
 } from 'lucide-react';
 
 export default function PharmaceuticalResearchApp() {
@@ -615,11 +615,10 @@ export default function PharmaceuticalResearchApp() {
                   <button
                     onClick={generateProtocol}
                     disabled={!currentTaskId}
-                    className={`w-full py-4 rounded-2xl font-semibold text-lg flex items-center justify-center gap-3 transition-all ${
-                      currentTaskId
-                        ? 'glow-button text-white'
-                        : 'bg-gray-800/50 text-gray-500 cursor-not-allowed'
-                    }`}
+                    className={`w-full py-4 rounded-2xl font-semibold text-lg flex items-center justify-center gap-3 transition-all ${currentTaskId
+                      ? 'glow-button text-white'
+                      : 'bg-gray-800/50 text-gray-500 cursor-not-allowed'
+                      }`}
                   >
                     <Zap className="w-5 h-5" />
                     <span>Generate Protocol</span>
@@ -656,11 +655,10 @@ export default function PharmaceuticalResearchApp() {
                   <button
                     onClick={generateReport}
                     disabled={!currentTaskId}
-                    className={`w-full py-4 rounded-2xl font-semibold text-lg flex items-center justify-center gap-3 transition-all ${
-                      currentTaskId
-                        ? 'glow-button text-white'
-                        : 'bg-gray-800/50 text-gray-500 cursor-not-allowed'
-                    }`}
+                    className={`w-full py-4 rounded-2xl font-semibold text-lg flex items-center justify-center gap-3 transition-all ${currentTaskId
+                      ? 'glow-button text-white'
+                      : 'bg-gray-800/50 text-gray-500 cursor-not-allowed'
+                      }`}
                   >
                     <FileText className="w-5 h-5" />
                     <span>Generate Report</span>
@@ -730,17 +728,20 @@ export default function PharmaceuticalResearchApp() {
                 <div className="space-y-5">
                   <div>
                     <label className="block text-sm font-semibold text-white mb-3">Provider</label>
-                    <select
-                      value={settings.llm.provider}
-                      onChange={(e) => setSettings({
-                        ...settings,
-                        llm: { ...settings.llm, provider: e.target.value as 'openai' | 'ollama' }
-                      })}
-                      className="modern-input w-full appearance-none cursor-pointer"
-                    >
-                      <option value="ollama">Ollama (Local)</option>
-                      <option value="openai">OpenAI (Cloud)</option>
-                    </select>
+                    <div className="relative">
+                      <select
+                        value={settings.llm.provider}
+                        onChange={(e) => setSettings({
+                          ...settings,
+                          llm: { ...settings.llm, provider: e.target.value as 'openai' | 'ollama' }
+                        })}
+                        className="modern-input w-full appearance-none cursor-pointer pr-10"
+                      >
+                        <option value="ollama" className="bg-[#14161B]">Ollama (Local)</option>
+                        <option value="openai" className="bg-[#14161B]">OpenAI (Cloud)</option>
+                      </select>
+                      <ChevronDown className="absolute right-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
+                    </div>
                   </div>
 
                   {settings.llm.provider === 'ollama' && (
@@ -784,9 +785,8 @@ export default function PharmaceuticalResearchApp() {
                   </button>
 
                   {connectionStatus.llm && (
-                    <div className={`flex items-center gap-3 text-sm font-medium ${
-                      connectionStatus.llm === 'success' ? 'text-[#00D4AA]' : 'text-[#FC8181]'
-                    }`}>
+                    <div className={`flex items-center gap-3 text-sm font-medium ${connectionStatus.llm === 'success' ? 'text-[#00D4AA]' : 'text-[#FC8181]'
+                      }`}>
                       {connectionStatus.llm === 'success' ? <CheckCircle2 className="w-5 h-5" /> : <X className="w-5 h-5" />}
                       <span>{connectionStatus.llm === 'success' ? 'Connection successful' : 'Connection failed'}</span>
                     </div>
@@ -860,9 +860,8 @@ export default function PharmaceuticalResearchApp() {
                   </button>
 
                   {connectionStatus.database && (
-                    <div className={`flex items-center gap-3 text-sm font-medium ${
-                      connectionStatus.database === 'success' ? 'text-[#00D4AA]' : 'text-[#FC8181]'
-                    }`}>
+                    <div className={`flex items-center gap-3 text-sm font-medium ${connectionStatus.database === 'success' ? 'text-[#00D4AA]' : 'text-[#FC8181]'
+                      }`}>
                       {connectionStatus.database === 'success' ? <CheckCircle2 className="w-5 h-5" /> : <X className="w-5 h-5" />}
                       <span>{connectionStatus.database === 'success' ? 'Connection successful' : 'Connection failed'}</span>
                     </div>
