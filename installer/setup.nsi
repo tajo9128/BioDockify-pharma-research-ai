@@ -9,6 +9,24 @@
 
   Name "BioDockify AI"
   OutFile "..\BioDockify_Professional_Setup_v2.0.exe"
+  
+  ; Request admin privileges for installation
+  RequestExecutionLevel admin
+
+  !define MUI_ABORTWARNING
+  
+  ; Pages
+  !insertmacro MUI_PAGE_WELCOME
+  !insertmacro MUI_PAGE_LICENSE "..\LICENSE"
+  !insertmacro MUI_PAGE_COMPONENTS
+  !insertmacro MUI_PAGE_DIRECTORY
+  !insertmacro MUI_PAGE_INSTFILES
+  !insertmacro MUI_PAGE_FINISH
+  
+  !insertmacro MUI_UNPAGE_CONFIRM
+  !insertmacro MUI_UNPAGE_INSTFILES
+  
+  !insertmacro MUI_LANGUAGE "English"
 
   ; ... (header omitted)
 
@@ -86,6 +104,11 @@ Section "Install Files" SecInstall
   CreateShortcut "$SMPROGRAMS\BioDockify\Uninstall.lnk" "$INSTDIR\Uninstall.exe"
   
 SectionEnd
+
+Section "Desktop Shortcut" SecDesktop
+  CreateShortcut "$DESKTOP\BioDockify AI.lnk" "$INSTDIR\biodockify-ai.exe"
+SectionEnd
+
 
 ;--------------------------------
 ;Uninstaller Section
