@@ -15,33 +15,40 @@ from pydantic import BaseModel, Field
 # Configuration Models
 # =============================================================================
 
+# =============================================================================
+# Configuration Models
+# =============================================================================
+
 class OrchestratorConfig(BaseModel):
     """Configuration for the Research Orchestrator."""
     
-    use_cloud_api: bool = Field(
-        default=False,
-        description="Whether to use cloud API or local Ollama"
-    )
-    ollama_host: str = Field(
-        default="http://localhost:11434",
-        description="Local Ollama instance URL"
-    )
-    ollama_model: str = Field(
-        default="llama2",
-        description="Ollama model to use"
-    )
-    cloud_api_url: Optional[str] = Field(
-        default=None,
-        description="Cloud API endpoint URL (placeholder)"
-    )
-    cloud_api_key: Optional[str] = Field(
-        default=None,
-        description="Cloud API key (placeholder)"
-    )
-    timeout: int = Field(
-        default=30,
-        description="Request timeout in seconds"
-    )
+    # 1. AI Provider Settings
+    use_cloud_api: bool = Field(default=False)
+    ollama_host: str = Field(default="http://localhost:11434")
+    ollama_model: str = Field(default="llama2")
+    cloud_api_url: Optional[str] = Field(default=None)
+    cloud_api_key: Optional[str] = Field(default=None)
+    pubmed_email: Optional[str] = Field(default=None)
+    
+    # 2. Research Context (Section A)
+    project_name: str = Field(default="My PhD Research")
+    research_type: str = Field(default="PhD Thesis")
+    disease_context: str = Field(default="General")
+    research_stage: str = Field(default="Literature Review")
+    
+    # 3. Agent AI Behavior (Section B)
+    agent_mode: str = Field(default="semi-autonomous")
+    reasoning_depth: str = Field(default="standard")
+    self_correction: bool = Field(default=True)
+    max_retries: int = Field(default=3)
+    failure_policy: str = Field(default="ask_user")
+    
+    # 4. Literature Config (Section C)
+    literature_sources: List[str] = Field(default=["pubmed", "europe_pmc"])
+    year_range: int = Field(default=10)
+    novelty_strictness: str = Field(default="medium")
+
+    timeout: int = Field(default=30)
 
 
 # =============================================================================
@@ -114,27 +121,55 @@ class ResearchOrchestrator:
         Initialize the Research Orchestrator.
         Loads runtime configuration to determine Hybrid Mode (Cloud vs Local).
         """
-        # 1. Load Runtime Config
+        # 1. Load Runtime Config from Disk if not provided or incomplete
         from runtime.config_loader import load_config
         runtime_cfg = load_config()
-        api_keys = runtime_cfg.get("api_keys", {})
         
-        # 2. Determine Mode
-        openai_key = api_keys.get("openai_key")
-        use_cloud = bool(openai_key and openai_key.strip())
-        
-        # 3. Initialize Config
         if config:
             self.config = config
         else:
+            # BUILD FULL CONFIG FROM DISK
+            # Mapping Settings Specification -> Orchestrator Config
+            
+            # Section A: Project
+            project = runtime_cfg.get("project", {})
+            
+            # Section B: Agent
+            agent = runtime_cfg.get("agent", {})
+            
+            # Section C: Literature
+            lit = runtime_cfg.get("literature", {})
+            
+            # Section E: API & AI
+            ai = runtime_cfg.get("ai_provider", {})
+            use_hybrid = (ai.get("mode") == "hybrid")
+            openai_key = ai.get("openai_key")
+            
             self.config = OrchestratorConfig(
-                use_cloud_api=use_cloud,
+                # AI Settings
+                use_cloud_api=use_hybrid,
                 cloud_api_key=openai_key,
-                # Keep defaults for local
+                pubmed_email=ai.get("pubmed_email"),
+                
+                # Context
+                project_name=project.get("name", "PhD Research"),
+                research_type=project.get("type", "Thesis"),
+                disease_context=project.get("disease_context", "General"),
+                research_stage=project.get("stage", "Review"),
+                
+                # Behavior
+                agent_mode=agent.get("mode", "semi-autonomous"),
+                reasoning_depth=agent.get("reasoning_depth", "standard"),
+                self_correction=agent.get("self_correction", True),
+                
+                # Literature
+                literature_sources=lit.get("sources", []),
+                year_range=lit.get("year_range", 10),
+                novelty_strictness=lit.get("novelty_strictness", "medium")
             )
             
-        if self.config.use_cloud_api:
-            print(f"[+] Hybrid Mode Enabled: Using Cloud API (Key found)")
+        if self.config.use_cloud_api and self.config.cloud_api_key:
+            print(f"[+] Hybrid Mode Enabled: Using Cloud API")
         else:
             print(f"[*] Offline Mode: Using Local Ollama at {self.config.ollama_host}")
     

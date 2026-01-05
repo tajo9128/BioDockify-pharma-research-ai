@@ -40,18 +40,34 @@ export interface ReportRequest {
 }
 
 export interface Settings {
-  llm: {
-    provider: 'openai' | 'ollama';
-    apiKey?: string;
-    ollamaUrl?: string;
+  project: {
+    name: string;
+    type: string;
+    disease_context: string;
+    stage: string;
   };
-  database: {
+  agent: {
+    mode: 'assisted' | 'semi-autonomous' | 'autonomous';
+    reasoning_depth: 'shallow' | 'standard' | 'deep';
+    self_correction: boolean;
+    max_retries: number;
+    failure_policy: 'ask_user' | 'auto_retry' | 'abort';
+  };
+  literature: {
+    sources: string[];
+    year_range: number;
+    novelty_strictness: 'low' | 'medium' | 'high';
+  };
+  ai_provider: {
+    mode: 'free_api' | 'hybrid';
+    openai_key?: string;
+    elsevier_key?: string;
+    pubmed_email?: string;
+  };
+  database?: { // Keep legacy support for now or move to 'execution'
     host: string;
     user: string;
     password: string;
-  };
-  elsevier?: {
-    apiKey?: string;
   };
 }
 

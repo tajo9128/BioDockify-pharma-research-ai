@@ -6,7 +6,7 @@ import Console, { ConsoleLog } from '@/components/Console';
 import StatusBadge from '@/components/StatusBadge';
 import ProgressStep from '@/components/ProgressStep';
 import StatsCard from '@/components/StatsCard';
-import { api, ResearchStatus, ResearchResults } from '@/lib/api';
+import { api, ResearchStatus, ResearchResults, Settings } from '@/lib/api';
 import {
   Search, Database, FileText, Download, Zap, CheckCircle2, Play,
   X, ArrowRight, RefreshCw, TestTube, Settings as SettingsIcon,
@@ -25,10 +25,33 @@ export default function PharmaceuticalResearchApp() {
   const [isPolling, setIsPolling] = useState(false);
   const [recentResearches, setRecentResearches] = useState<any[]>([]);
   const [recentExports, setRecentExports] = useState<any[]>([]);
-  const [settings, setSettings] = useState({
-    llm: { provider: 'ollama' as const, ollamaUrl: 'http://localhost:11434', apiKey: '' },
+  const [activeSettingsTab, setActiveSettingsTab] = useState('general');
+  const [settings, setSettings] = useState<Settings>({
+    project: {
+      name: 'My PhD Research',
+      type: 'PhD Thesis',
+      disease_context: "Alzheimer's Disease",
+      stage: 'Literature Review'
+    },
+    agent: {
+      mode: 'semi-autonomous',
+      reasoning_depth: 'standard',
+      self_correction: true,
+      max_retries: 3,
+      failure_policy: 'ask_user'
+    },
+    literature: {
+      sources: ['pubmed', 'europe_pmc'],
+      year_range: 10,
+      novelty_strictness: 'medium'
+    },
+    ai_provider: {
+      mode: 'free_api',
+      openai_key: '',
+      elsevier_key: '',
+      pubmed_email: ''
+    },
     database: { host: 'bolt://localhost:7687', user: 'neo4j', password: 'password' },
-    elsevier: { apiKey: '' },
   });
   const [connectionStatus, setConnectionStatus] = useState<{ [key: string]: 'success' | 'error' | 'testing' }>({});
   const [protocolType, setProtocolType] = useState<'liquid-handler' | 'crystallization' | 'assay'>('liquid-handler');
@@ -70,9 +93,20 @@ export default function PharmaceuticalResearchApp() {
 
   // Load initial data
   useEffect(() => {
+    loadSettings();
     loadRecentResearches();
     loadRecentExports();
   }, []);
+
+  const loadSettings = async () => {
+    try {
+      const config = await api.getSettings();
+      setSettings(config);
+    } catch (error) {
+      console.error('Error loading settings:', error);
+      addConsoleLog('Failed to load configuration', 'error');
+    }
+  };
 
   const loadRecentResearches = async () => {
     try {
@@ -703,182 +737,324 @@ export default function PharmaceuticalResearchApp() {
         )}
 
         {activeView === 'settings' && (
-          <div className="max-w-4xl mx-auto">
-            <div className="mb-8">
-              <h2 className="text-3xl font-bold text-white mb-2 flex items-center gap-3">
-                <SettingsIcon className="w-8 h-8 text-[#9B8BFF]" />
-                Settings
-              </h2>
-              <p className="text-gray-400">Configure your AI models and database connections</p>
+          <div className="max-w-6xl mx-auto">
+            <div className="mb-8 flex items-center justify-between">
+              <div>
+                <h2 className="text-3xl font-bold text-white mb-2 flex items-center gap-3">
+                  <SettingsIcon className="w-8 h-8 text-[#9B8BFF]" />
+                  Configuration Dashboard
+                </h2>
+                <p className="text-gray-400">Manage research context, AI behavior, and API connections</p>
+              </div>
+              <div className="flex gap-4">
+                <button
+                  onClick={async () => {
+                    try {
+                      await api.apiRequest('/settings/reset', { method: 'POST' });
+                      loadSettings();
+                      addConsoleLog('Settings reset to defaults', 'warning');
+                    } catch (e) { console.error(e); }
+                  }}
+                  className="px-6 py-3 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 rounded-xl font-semibold transition-all"
+                >
+                  Reset Defaults
+                </button>
+                <button
+                  onClick={saveSettings}
+                  className="glow-button px-8 py-3 rounded-xl text-white font-bold text-lg flex items-center gap-3"
+                >
+                  <SaveSettingsIcon className="w-5 h-5" />
+                  <span>Save Configuration</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Tabs */}
+            <div className="flex gap-2 mb-8 border-b border-white/10 pb-1">
+              {['general', 'agent', 'apis', 'literature'].map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveSettingsTab(tab)}
+                  className={`px-6 py-3 text-sm font-bold uppercase tracking-wider rounded-t-lg transition-all ${activeSettingsTab === tab
+                      ? 'bg-white/10 text-white border-b-2 border-[#5B9FF0]'
+                      : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'
+                    }`}
+                >
+                  {tab === 'apis' ? 'API Connections' : tab.replace('_', ' ')}
+                </button>
+              ))}
             </div>
 
             <div className="space-y-8">
-              {/* LLM Configuration */}
-              <div className="glass-card p-8">
-                <div className="flex items-center gap-4 mb-6">
-                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#5B9FF0]/20 to-[#5B9FF0]/5 border border-[#5B9FF0]/30 flex items-center justify-center">
-                    <SettingsIcon className="w-7 h-7 text-[#5B9FF0]" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-bold text-white">LLM Configuration</h3>
-                    <p className="text-sm text-gray-400">Configure your AI model provider</p>
-                  </div>
-                </div>
 
-                <div className="space-y-5">
-                  <div>
-                    <label className="block text-sm font-semibold text-white mb-3">Provider</label>
-                    <div className="relative">
-                      <select
-                        value={settings.llm.provider}
-                        onChange={(e) => setSettings({
-                          ...settings,
-                          llm: { ...settings.llm, provider: e.target.value as 'openai' | 'ollama' }
-                        })}
-                        className="modern-input w-full appearance-none cursor-pointer pr-10"
-                      >
-                        <option value="ollama" className="bg-[#14161B]">Ollama (Local)</option>
-                        <option value="openai" className="bg-[#14161B]">OpenAI (Cloud)</option>
-                      </select>
-                      <ChevronDown className="absolute right-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
+              {/* === TAB: GENERAL === */}
+              {activeSettingsTab === 'general' && (
+                <div className="glass-card p-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                  <div className="flex items-center gap-4 mb-8">
+                    <div className="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center">
+                      <FileText className="w-6 h-6 text-blue-400" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-white">Project Context</h3>
+                      <p className="text-sm text-gray-400">Define the scientific scope for the AI agent</p>
                     </div>
                   </div>
 
-                  {settings.llm.provider === 'ollama' && (
-                    <div>
-                      <label className="block text-sm font-semibold text-white mb-3">Ollama URL</label>
+                  <div className="grid grid-cols-2 gap-6">
+                    <div className="col-span-2">
+                      <label className="block text-sm font-semibold text-white mb-3">Project Name</label>
                       <input
                         type="text"
-                        value={settings.llm.ollamaUrl}
-                        onChange={(e) => setSettings({
-                          ...settings,
-                          llm: { ...settings.llm, ollamaUrl: e.target.value }
-                        })}
+                        value={settings.project.name}
+                        onChange={e => setSettings({ ...settings, project: { ...settings.project, name: e.target.value } })}
                         className="modern-input w-full"
-                        placeholder="http://localhost:11434"
                       />
                     </div>
-                  )}
-
-                  {settings.llm.provider === 'openai' && (
                     <div>
-                      <label className="block text-sm font-semibold text-white mb-3">API Key</label>
-                      <input
-                        type="password"
-                        value={settings.llm.apiKey}
-                        onChange={(e) => setSettings({
-                          ...settings,
-                          llm: { ...settings.llm, apiKey: e.target.value }
-                        })}
-                        className="modern-input w-full"
-                        placeholder="sk-..."
-                      />
+                      <label className="block text-sm font-semibold text-white mb-3">Research Type</label>
+                      <div className="relative">
+                        <select
+                          value={settings.project.type}
+                          onChange={e => setSettings({ ...settings, project: { ...settings.project, type: e.target.value } })}
+                          className="modern-input w-full appearance-none pr-10 cursor-pointer"
+                        >
+                          <option value="PhD Thesis" className="bg-[#14161B]">PhD Thesis</option>
+                          <option value="Literature Review" className="bg-[#14161B]">Literature Review</option>
+                          <option value="Drug Repurposing" className="bg-[#14161B]">Drug Repurposing</option>
+                          <option value="Methodology Study" className="bg-[#14161B]">Methodology Study</option>
+                        </select>
+                        <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                      </div>
                     </div>
-                  )}
-
-                  <button
-                    onClick={() => testConnection('llm')}
-                    className="px-6 py-3 bg-white/5 hover:bg-white/10 border border-white/10 text-white rounded-xl flex items-center gap-3 transition-all font-semibold"
-                  >
-                    <RefreshCw className={`w-5 h-5 ${connectionStatus.llm === 'testing' ? 'animate-spin' : ''}`} />
-                    <span>Test Connection</span>
-                  </button>
-
-                  {connectionStatus.llm && (
-                    <div className={`flex items-center gap-3 text-sm font-medium ${connectionStatus.llm === 'success' ? 'text-[#00D4AA]' : 'text-[#FC8181]'
-                      }`}>
-                      {connectionStatus.llm === 'success' ? <CheckCircle2 className="w-5 h-5" /> : <X className="w-5 h-5" />}
-                      <span>{connectionStatus.llm === 'success' ? 'Connection successful' : 'Connection failed'}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Database Configuration */}
-              <div className="glass-card p-8">
-                <div className="flex items-center gap-4 mb-6">
-                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#00D4AA]/20 to-[#00D4AA]/5 border border-[#00D4AA]/30 flex items-center justify-center">
-                    <Database className="w-7 h-7 text-[#00D4AA]" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-bold text-white">Database Configuration</h3>
-                    <p className="text-sm text-gray-400">Neo4j graph database settings</p>
-                  </div>
-                </div>
-
-                <div className="space-y-5">
-                  <div>
-                    <label className="block text-sm font-semibold text-white mb-3">Host</label>
-                    <input
-                      type="text"
-                      value={settings.database.host}
-                      onChange={(e) => setSettings({
-                        ...settings,
-                        database: { ...settings.database, host: e.target.value }
-                      })}
-                      className="modern-input w-full"
-                      placeholder="bolt://localhost:7687"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-semibold text-white mb-3">Username</label>
+                      <label className="block text-sm font-semibold text-white mb-3">Disease / Indication</label>
                       <input
                         type="text"
-                        value={settings.database.user}
-                        onChange={(e) => setSettings({
-                          ...settings,
-                          database: { ...settings.database, user: e.target.value }
-                        })}
+                        value={settings.project.disease_context}
+                        onChange={e => setSettings({ ...settings, project: { ...settings.project, disease_context: e.target.value } })}
                         className="modern-input w-full"
-                        placeholder="neo4j"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-semibold text-white mb-3">Password</label>
-                      <input
-                        type="password"
-                        value={settings.database.password}
-                        onChange={(e) => setSettings({
-                          ...settings,
-                          database: { ...settings.database, password: e.target.value }
-                        })}
-                        className="modern-input w-full"
-                        placeholder="password"
+                        placeholder="e.g. Alzheimer's Disease"
                       />
                     </div>
                   </div>
-
-                  <button
-                    onClick={() => testConnection('database')}
-                    className="px-6 py-3 bg-white/5 hover:bg-white/10 border border-white/10 text-white rounded-xl flex items-center gap-3 transition-all font-semibold"
-                  >
-                    <RefreshCw className={`w-5 h-5 ${connectionStatus.database === 'testing' ? 'animate-spin' : ''}`} />
-                    <span>Test Connection</span>
-                  </button>
-
-                  {connectionStatus.database && (
-                    <div className={`flex items-center gap-3 text-sm font-medium ${connectionStatus.database === 'success' ? 'text-[#00D4AA]' : 'text-[#FC8181]'
-                      }`}>
-                      {connectionStatus.database === 'success' ? <CheckCircle2 className="w-5 h-5" /> : <X className="w-5 h-5" />}
-                      <span>{connectionStatus.database === 'success' ? 'Connection successful' : 'Connection failed'}</span>
-                    </div>
-                  )}
                 </div>
-              </div>
+              )}
 
-              {/* Save Button */}
-              <div className="flex justify-end">
-                <button
-                  onClick={saveSettings}
-                  className="glow-button px-8 py-4 rounded-2xl text-white font-bold text-lg flex items-center gap-3"
-                >
-                  <SaveSettingsIcon className="w-5 h-5" />
-                  <span>Save Settings</span>
-                </button>
-              </div>
+              {/* === TAB: AGENT === */}
+              {activeSettingsTab === 'agent' && (
+                <div className="glass-card p-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                  <div className="flex items-center gap-4 mb-8">
+                    <div className="w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center">
+                      <Sparkles className="w-6 h-6 text-purple-400" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-white">Agent Behavior</h3>
+                      <p className="text-sm text-gray-400">Control Agent Zero's autonomy and reasoning</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-6">
+                    <div className="grid grid-cols-2 gap-6">
+                      <div>
+                        <label className="block text-sm font-semibold text-white mb-3">Autonomy Mode</label>
+                        <div className="relative">
+                          <select
+                            value={settings.agent.mode}
+                            onChange={e => setSettings({ ...settings, agent: { ...settings.agent, mode: e.target.value as any } })}
+                            className="modern-input w-full appearance-none pr-10 cursor-pointer"
+                          >
+                            <option value="assisted" className="bg-[#14161B]">Assisted (Ask First)</option>
+                            <option value="semi-autonomous" className="bg-[#14161B]">Semi-Autonomous (Milestones)</option>
+                            <option value="autonomous" className="bg-[#14161B]">Fully Autonomous</option>
+                          </select>
+                          <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-semibold text-white mb-3">Reasoning Depth</label>
+                        <div className="relative">
+                          <select
+                            value={settings.agent.reasoning_depth}
+                            onChange={e => setSettings({ ...settings, agent: { ...settings.agent, reasoning_depth: e.target.value as any } })}
+                            className="modern-input w-full appearance-none pr-10 cursor-pointer"
+                          >
+                            <option value="shallow" className="bg-[#14161B]">Shallow (Fast)</option>
+                            <option value="standard" className="bg-[#14161B]">Standard (PhD Default)</option>
+                            <option value="deep" className="bg-[#14161B]">Deep (Rigorous)</option>
+                          </select>
+                          <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="p-4 bg-white/5 rounded-xl border border-white/10 flex items-center justify-between">
+                      <div>
+                        <h4 className="font-semibold text-white">Self-Correction</h4>
+                        <p className="text-xs text-gray-400">Allow agent to retry failed steps automatically</p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm text-gray-400">Max Retries:</span>
+                        <input
+                          type="number"
+                          value={settings.agent.max_retries}
+                          onChange={e => setSettings({ ...settings, agent: { ...settings.agent, max_retries: parseInt(e.target.value) } })}
+                          className="modern-input w-20 py-1 px-2 text-center"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* === TAB: APIS === */}
+              {activeSettingsTab === 'apis' && (
+                <div className="glass-card p-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                  <div className="flex items-center gap-4 mb-8">
+                    <div className="w-12 h-12 rounded-xl bg-teal-500/20 flex items-center justify-center">
+                      <Network className="w-6 h-6 text-teal-400" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-white">External Connections</h3>
+                      <p className="text-sm text-gray-400">Configure Hybrid AI and Database Access</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-6">
+                    {/* AI Toggle */}
+                    <div>
+                      <label className="block text-sm font-semibold text-white mb-3">AI Operating Mode</label>
+                      <div className="grid grid-cols-2 gap-4">
+                        <button
+                          onClick={() => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, mode: 'free_api' } })}
+                          className={`p-4 rounded-xl border text-left transition-all ${settings.ai_provider.mode === 'free_api' ? 'bg-[#5B9FF0]/20 border-[#5B9FF0] text-white' : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'}`}
+                        >
+                          <div className="font-bold mb-1">Free API Only</div>
+                          <div className="text-xs opacity-70">Use local Ollama and free tiers. No credit card needed.</div>
+                        </button>
+                        <button
+                          onClick={() => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, mode: 'hybrid' } })}
+                          className={`p-4 rounded-xl border text-left transition-all ${settings.ai_provider.mode === 'hybrid' ? 'bg-[#5B9FF0]/20 border-[#5B9FF0] text-white' : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'}`}
+                        >
+                          <div className="font-bold mb-1">Hybrid Mode (Recommended)</div>
+                          <div className="text-xs opacity-70">Enhance difficult steps with OpenAI/Elsevier APIs.</div>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Keys */}
+                    {settings.ai_provider.mode === 'hybrid' && (
+                      <div className="space-y-4 pt-4 border-t border-white/10">
+                        <div>
+                          <label className="block text-sm font-semibold text-white mb-2">OpenAI API Key</label>
+                          <div className="flex gap-2">
+                            <input
+                              type="password"
+                              value={settings.ai_provider.openai_key || ''}
+                              onChange={e => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, openai_key: e.target.value } })}
+                              className="modern-input flex-1"
+                              placeholder="sk-..."
+                            />
+                            <button onClick={() => testConnection('llm')} className="px-4 py-2 bg-white/10 rounded-lg hover:bg-white/20 transition-colors">Test</button>
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-semibold text-white mb-2">Elsevier API Key</label>
+                          <div className="flex gap-2">
+                            <input
+                              type="password"
+                              value={settings.ai_provider.elsevier_key || ''}
+                              onChange={e => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, elsevier_key: e.target.value } })}
+                              className="modern-input flex-1"
+                              placeholder="Elsevier Dev Key"
+                            />
+                            <button onClick={() => testConnection('elsevier')} className="px-4 py-2 bg-white/10 rounded-lg hover:bg-white/20 transition-colors">Test</button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    <div>
+                      <label className="block text-sm font-semibold text-white mb-2">PubMed Email (Required for NCBI)</label>
+                      <input
+                        type="email"
+                        value={settings.ai_provider.pubmed_email || ''}
+                        onChange={e => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, pubmed_email: e.target.value } })}
+                        className="modern-input w-full"
+                        placeholder="researcher@university.edu"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* === TAB: LITERATURE === */}
+              {activeSettingsTab === 'literature' && (
+                <div className="glass-card p-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                  <div className="flex items-center gap-4 mb-8">
+                    <div className="w-12 h-12 rounded-xl bg-orange-500/20 flex items-center justify-center">
+                      <Globe className="w-6 h-6 text-orange-400" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-white">Literature Scope</h3>
+                      <p className="text-sm text-gray-400">Define search boundaries and strictness</p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-8">
+                    <div>
+                      <label className="block text-sm font-semibold text-white mb-4">Active Data Sources</label>
+                      <div className="space-y-3">
+                        {['pubmed', 'europe_pmc', 'openalex'].map(src => (
+                          <label key={src} className="flex items-center gap-3 p-3 bg-white/5 rounded-lg cursor-pointer hover:bg-white/10 transition-colors">
+                            <input
+                              type="checkbox"
+                              checked={settings.literature.sources.includes(src)}
+                              onChange={(e) => {
+                                if (e.target.checked) setSettings({ ...settings, literature: { ...settings.literature, sources: [...settings.literature.sources, src] } });
+                                else setSettings({ ...settings, literature: { ...settings.literature, sources: settings.literature.sources.filter(s => s !== src) } });
+                              }}
+                              className="w-5 h-5 rounded border-gray-600 bg-gray-800 text-blue-500 focus:ring-blue-500"
+                            />
+                            <span className="capitalize text-white">{src.replace('_', ' ')}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="space-y-6">
+                      <div>
+                        <label className="block text-sm font-semibold text-white mb-2">Citations Range (Years)</label>
+                        <div className="flex items-center gap-4">
+                          <input
+                            type="range"
+                            min="1" max="50"
+                            value={settings.literature.year_range}
+                            onChange={e => setSettings({ ...settings, literature: { ...settings.literature, year_range: parseInt(e.target.value) } })}
+                            className="w-full accent-blue-500"
+                          />
+                          <span className="text-xl font-bold text-blue-400 w-16 text-right">{settings.literature.year_range}y</span>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-semibold text-white mb-3">Novelty Strictness</label>
+                        <div className="flex gap-2 p-1 bg-black/40 rounded-xl">
+                          {['low', 'medium', 'high'].map((lvl) => (
+                            <button
+                              key={lvl}
+                              onClick={() => setSettings({ ...settings, literature: { ...settings.literature, novelty_strictness: lvl as any } })}
+                              className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all capitalize ${settings.literature.novelty_strictness === lvl ? 'bg-blue-600 text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}
+                            >
+                              {lvl}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
             </div>
           </div>
         )}
