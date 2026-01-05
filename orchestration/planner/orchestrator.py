@@ -28,6 +28,12 @@ class OrchestratorConfig(BaseModel):
     ollama_model: str = Field(default="llama2")
     cloud_api_url: Optional[str] = Field(default=None)
     cloud_api_key: Optional[str] = Field(default=None)
+    
+    # Expanded Provider Support
+    primary_model: str = Field(default="google")
+    google_key: Optional[str] = Field(default=None)
+    openrouter_key: Optional[str] = Field(default=None)
+    huggingface_key: Optional[str] = Field(default=None)
     pubmed_email: Optional[str] = Field(default=None)
     
     # 2. Research Context (Section A)
@@ -49,6 +55,9 @@ class OrchestratorConfig(BaseModel):
     novelty_strictness: str = Field(default="medium")
 
     timeout: int = Field(default=30)
+    
+    # User Persona (Added for Perplexity-Like Logic)
+    user_persona: dict = Field(default_factory=dict)
 
 
 # =============================================================================
@@ -143,12 +152,15 @@ class ResearchOrchestrator:
             # Section E: API & AI
             ai = runtime_cfg.get("ai_provider", {})
             use_hybrid = (ai.get("mode") == "hybrid")
-            openai_key = ai.get("openai_key")
-            
             self.config = OrchestratorConfig(
                 # AI Settings
                 use_cloud_api=use_hybrid,
-                cloud_api_key=openai_key,
+                # cloud_api_key removed (legacy)
+                primary_model=ai.get("primary_model", "google"),
+                google_key=ai.get("google_key"),
+                openrouter_key=ai.get("openrouter_key"),
+                huggingface_key=ai.get("huggingface_key"),
+                
                 pubmed_email=ai.get("pubmed_email"),
                 
                 # Context
@@ -177,25 +189,31 @@ class ResearchOrchestrator:
     # Main Planning Method
     # -------------------------------------------------------------------------
     
-    def plan_research(self, title: str) -> ResearchPlan:
+    def plan_research(self, title: str, mode: str = "synthesize") -> ResearchPlan:
         """
         Decompose a research title into a structured research plan.
+        Respects Mode Enforcement and Citation Lock rules.
         
         Args:
             title: Research title/topic
+            mode: search | synthesize | write
             
         Returns:
             ResearchPlan with structured steps
         """
         print(f"\n{'='*60}")
-        print(f"Planning Research: {title}")
+        print(f"Planning Research: {title} [Mode: {mode.upper()}]")
         print(f"{'='*60}")
         
-        # Generate plan using configured AI backend
+        # 1. Mode Enforcement & Intent Check
+        if mode not in ["search", "synthesize", "write"]:
+            mode = "synthesize" # Fallback default
+            
+        # 2. Generate plan using configured AI backend
         if self.config.use_cloud_api:
-            plan_data = self._generate_plan_cloud(title)
+            plan_data = self._generate_plan_hybrid(title, mode)
         else:
-            plan_data = self._generate_plan_local(title)
+            plan_data = self._generate_plan_local(title, mode)
         
         # Create ResearchPlan from generated data
         plan = ResearchPlan(
@@ -206,23 +224,40 @@ class ResearchOrchestrator:
         )
         
         print(f"[+] Generated {len(plan.steps)} research steps")
+        
+        # 4. Citation Lock / Novelty Gate (Logic Rule #2 & #4)
+        strictness = self.config.user_persona.get("strictness", "balanced")
+        if strictness == "conservative" and mode == "write":
+            # For writing in conservative mode, we MUST have evidence first.
+            # If this is a fresh start (step 1 is not verification), inject a gate.
+            if plan.steps and "literature" not in plan.steps[0].category:
+                print("[!] Citation Lock Enforced: Injecting mandatory verification step.")
+                verification_step = ResearchStep(
+                    step_id=0,
+                    title="Mandatory Evidence Verification",
+                    description="Verify existence of sufficient high-quality sources before drafting.",
+                    category="literature_search",
+                    dependencies=[],
+                    estimated_time_minutes=15
+                )
+                plan.steps.insert(0, verification_step)
+                # Adjust IDs of subsequent steps
+                for s in plan.steps[1:]:
+                    s.step_id += 1
+                    s.dependencies = [d+1 for d in s.dependencies]
+                    if s.step_id == 1: s.dependencies.append(0)
+                    
         return plan
     
     # -------------------------------------------------------------------------
     # Local Ollama Implementation
     # -------------------------------------------------------------------------
     
-    def _generate_plan_local(self, title: str) -> dict:
+    def _generate_plan_local(self, title: str, mode: str) -> dict:
         """
         Generate research plan using local Ollama instance.
-        
-        Args:
-            title: Research title
-            
-        Returns:
-            Dictionary with plan data
         """
-        prompt = self._build_prompt(title)
+        prompt = self._build_prompt(title, mode)
         
         try:
             response = requests.post(
@@ -255,52 +290,59 @@ class ResearchOrchestrator:
             print(f"[!] Error generating plan: {e}")
             return self._generate_fallback_plan(title)
     
-    def _build_prompt(self, title: str) -> str:
+    def _build_prompt(self, title: str, mode: str = "synthesize") -> str:
         """
-        Build the prompt for Ollama.
+        Build the prompt for Ollama with Persona Injection AND Mode Enforcement.
+        """
+        # Extract Persona
+        role = self.config.user_persona.get("role", "researcher").replace("_", " ")
+        strictness = self.config.user_persona.get("strictness", "balanced")
+        purpose = ", ".join(self.config.user_persona.get("primary_purpose", ["general"]))
         
-        Args:
-            title: Research title
+        # Base Persona Instruction
+        system_instruction = f"You are a pharmaceutical research planner acting as a senior assistant to a {role}."
+        
+        # MODE ENFORCEMENT (Logic Rule #3)
+        mode_instruction = ""
+        if mode == "search":
+            mode_instruction = "MODE: SEARCH. Focus ONLY on retrieving, listing, and summarizing existing literature. Do not attempt synthesis or hypothesis generation yet."
+        elif mode == "synthesize":
+            mode_instruction = "MODE: SYNTHESIZE. Focus on connecting dot, building knowledge graphs, and identifying patterns across sources. Prioritize 'graph_building' and 'data_analysis' steps."
+        elif mode == "write":
+            mode_instruction = "MODE: WRITE. Focus on structuring a final specific output (review, report, or chapter). Ensure steps encompass outlining, drafting, and citation verification."
             
-        Returns:
-            Formatted prompt string
-        """
-        prompt = f"""You are a pharmaceutical research planner. Create a detailed research plan for the following title:
+        # Strictness & Context
+        if strictness == "conservative":
+            system_instruction += " You must be extremely rigorous. Avoid speculative steps."
+        elif strictness == "exploratory":
+            system_instruction += " You are encouraged to include novel, hypothesis-generating steps."
+        
+        context_instruction = f"User Goal: {purpose}. {mode_instruction}"
 
-Research Title: {title}
+        prompt = f"""{system_instruction}
+{context_instruction}
 
-Generate a research plan with these steps:
-1. Literature Search
-2. Entity Extraction (Bio-NER)
-3. Molecular Analysis
-4. Knowledge Graph Construction
-5. Data Analysis
-6. Synthesis Planning
-7. Literature Review
-8. Final Report Generation
+Create a detailed research plan for: "{title}"
 
-For each step, provide:
-- step_id (1-8)
-- title
-- description
-- category (use: literature_search, entity_extraction, molecular_analysis, 
-           graph_building, data_analysis, synthesis_planning, literature_review, final_report)
-- dependencies (list of step IDs this step depends on)
-- estimated_time_minutes
+Generate a plan with 4-8 steps strictly adhering to the {mode.upper()} mode.
 
-Return the plan in JSON format with these keys:
-- objectives: list of 3-5 research objectives
-- steps: list of step objects
-- total_estimated_time: total time in minutes
-
-Example format:
+Return JSON format:
 {{
   "objectives": ["Objective 1", "Objective 2"],
-  "steps": [...],
-  "total_estimated_time": 480
+  "steps": [
+    {{
+       "step_id": 1,
+       "title": "Step Title",
+       "description": "Actionable description",
+       "category": "literature_search|entity_extraction|graph_building|data_analysis|synthesis_planning|literature_review|final_report",
+       "dependencies": [],
+       "estimated_time_minutes": 30
+    }}
+  ],
+  "total_estimated_time": 120
 }}
 
-Provide ONLY the JSON, no other text."""
+Provide ONLY the JSON."""
         
         return prompt
     
@@ -334,21 +376,119 @@ Provide ONLY the JSON, no other text."""
     # Cloud API Implementation (Placeholder)
     # -------------------------------------------------------------------------
     
-    def _generate_plan_cloud(self, title: str) -> dict:
+    # -------------------------------------------------------------------------
+    # Hybrid API Implementation with Fallback Logic
+    # -------------------------------------------------------------------------
+    
+    def _generate_plan_hybrid(self, title: str) -> dict:
         """
-        Generate research plan using cloud API (placeholder).
-        
-        Args:
-            title: Research title
-            
-        Returns:
-            Dictionary with plan data
+        Generate research plan using Cloud APIs with Fallback.
+        Strategy: Primary -> Secondary -> Tertiary -> Local/Fallback
         """
-        print("Using cloud API for research planning...")
+        # 1. Define Priority Order
+        # We start with the user's selected primary, then try others if keys exist
+        available_providers = []
         
-        # TODO: Implement actual cloud API call
-        # For now, use fallback
+        # Add Primary First
+        if self.config.primary_model in ["google", "openrouter", "huggingface"]:
+            available_providers.append(self.config.primary_model)
+        
+        # Add others as backup
+        candidates = ["google", "openrouter", "huggingface"]
+        for c in candidates:
+            if c != self.config.primary_model:
+                available_providers.append(c)
+                
+        print(f"[*] Research Planner Strategy: {available_providers}")
+        
+        for provider in available_providers:
+            try:
+                api_key = self._get_key_for_provider(provider)
+                if not api_key:
+                    # print(f"[-] Skipping {provider} (No Key)")
+                    continue
+                    
+                print(f"[*] Attempting generation with: {provider.upper()}")
+                
+                # router logic
+                if provider == "google":
+                    plan = self._call_google_gemini(api_key, title)
+                elif provider == "openrouter":
+                    plan = self._call_openrouter(api_key, title)
+                elif provider == "huggingface":
+                    plan = self._call_huggingface(api_key, title)
+                else:
+                    continue
+                    
+                if plan:
+                    print(f"[+] Successfully generated plan using {provider.upper()}")
+                    return plan
+                    
+            except Exception as e:
+                print(f"[!] Provider {provider} failed: {e}")
+                # Log usage limit specific errors
+                if "429" in str(e):
+                    print(f"⚠ Rate Limit Hit for {provider}. Switching to next provider...")
+                continue # Try next provider
+        
+        print("[!] All cloud providers failed. Using offline fallback.")
         return self._generate_fallback_plan(title)
+
+    def _get_key_for_provider(self, provider: str) -> Optional[str]:
+        if provider == "google": return self.config.google_key
+        if provider == "openrouter": return self.config.openrouter_key
+        if provider == "huggingface": return self.config.huggingface_key
+        if provider == "openai": return self.config.cloud_api_key
+        return None
+
+    def _call_google_gemini(self, key: str, title: str) -> dict:
+        """Call Google Gemini API via REST."""
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={key}"
+        prompt = self._build_prompt(title)
+        payload = {"contents": [{"parts": [{"text": prompt}]}]}
+        
+        resp = requests.post(url, json=payload, headers={"Content-Type": "application/json"}, timeout=30)
+        resp.raise_for_status()
+        
+        # Parse Gemini Response
+        data = resp.json()
+        try:
+            text = data["candidates"][0]["content"]["parts"][0]["text"]
+            return self._parse_plan_response(text)
+        except (KeyError, IndexError):
+            raise ValueError("Invalid response format from Gemini")
+
+    def _call_openrouter(self, key: str, title: str) -> dict:
+        """Call OpenRouter API."""
+        url = "https://openrouter.ai/api/v1/chat/completions"
+        prompt = self._build_prompt(title)
+        payload = {
+            "model": "mistralai/mistral-7b-instruct", # Default cheap/fast model
+            "messages": [{"role": "user", "content": prompt}]
+        }
+        
+        resp = requests.post(url, json=payload, headers={"Authorization": f"Bearer {key}"}, timeout=30)
+        resp.raise_for_status()
+        
+        data = resp.json()
+        text = data["choices"][0]["message"]["content"]
+        return self._parse_plan_response(text)
+
+    def _call_huggingface(self, key: str, title: str) -> dict:
+        """Call HuggingFace Inference API."""
+        # Using Mixtral as it's solid for planning
+        url = "https://api-inference.huggingface.co/models/mistralai/Mixtral-8x7B-Instruct-v0.1"
+        prompt = self._build_prompt(title)
+        # HF API takes raw string for text-generation
+        payload = {"inputs": prompt, "parameters": {"max_new_tokens": 1024, "return_full_text": False}}
+        
+        resp = requests.post(url, json=payload, headers={"Authorization": f"Bearer {key}"}, timeout=30)
+        resp.raise_for_status()
+        
+        data = resp.json()
+        # HF returns list of dicts
+        text = data[0]["generated_text"]
+        return self._parse_plan_response(text)
     
     # -------------------------------------------------------------------------
     # Fallback Plan Generation

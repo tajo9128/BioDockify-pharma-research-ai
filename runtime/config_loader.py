@@ -37,7 +37,9 @@ DEFAULT_CONFIG = {
 
     # SECTION C: LITERATURE & EVIDENCE
     "literature": {
-        "sources": ["pubmed", "europe_pmc", "openalex"],
+        "sources": ["pubmed", "europe_pmc", "openalex"], # Default Active Sources
+        "enable_crossref": True,
+        "enable_preprints": False, # Tier 3 (Disabled by default)
         "year_range": 10,  # Last N years
         "article_types": ["review", "experimental", "computational"],
         "min_citations": 5,
@@ -48,7 +50,11 @@ DEFAULT_CONFIG = {
     # SECTION E: API & AI SETTINGS
     "ai_provider": {
         "mode": "free_api",  # Options: free_api, hybrid
-        "openai_key": "",
+        "primary_model": "google", # Options: google, openrouter, huggingface (OpenAI deprecated)
+        "google_key": "",
+        "openrouter_key": "",
+        "huggingface_key": "",
+        "elsevier_key": "",
         "elsevier_key": "",
         "pubmed_email": "",  # Required for NCBI compliance
     },

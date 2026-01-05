@@ -113,6 +113,9 @@ Section "Install Files" SecInstall
   CreateShortcut "$SMPROGRAMS\BioDockify\BioDockify AI.lnk" "$INSTDIR\biodockify-ai.exe"
   CreateShortcut "$SMPROGRAMS\BioDockify\Uninstall.lnk" "$INSTDIR\Uninstall.exe"
   
+  ; Auto-Start on System Boot
+  CreateShortcut "$SMSTARTUP\BioDockify AI.lnk" "$INSTDIR\biodockify-ai.exe"
+  
 SectionEnd
 
 Section "Desktop Shortcut" SecDesktop
@@ -125,14 +128,24 @@ SectionEnd
 
 Section "Uninstall"
 
+  ; Remove Files
   Delete "$INSTDIR\biodockify-ai.exe"
   Delete "$INSTDIR\Uninstall.exe"
+  Delete "$INSTDIR\biodockify-engine-x86_64-pc-windows-msvc.exe"
   RMDir /r "$INSTDIR"
 
+  ; Remove Start Menu Shortcuts
   Delete "$SMPROGRAMS\BioDockify\BioDockify AI.lnk"
   Delete "$SMPROGRAMS\BioDockify\Uninstall.lnk"
   RMDir "$SMPROGRAMS\BioDockify"
 
+  ; Remove Startup Shortcut
+  Delete "$SMSTARTUP\BioDockify AI.lnk"
+  
+  ; Remove Desktop Shortcut
+  Delete "$DESKTOP\BioDockify AI.lnk"
+
+  ; Remove Registry Keys
   DeleteRegKey /ifempty HKCU "Software\BioDockify"
 
 SectionEnd

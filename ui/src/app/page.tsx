@@ -12,12 +12,14 @@ import {
   X, ArrowRight, RefreshCw, TestTube, Settings as SettingsIcon,
   FileOutput, Sparkles, TrendingUp, Network, Atom, Microscope,
   Beaker, Calendar, Clock, Globe, Award, Target, Lightbulb,
-  ChevronRight, Star, Rocket, ChevronDown
+  ChevronRight, Star, Rocket, ChevronDown, PenTool, BookOpen,
+  MessageSquare, Brain, Lock, Shield
 } from 'lucide-react';
 
 export default function PharmaceuticalResearchApp() {
   const [activeView, setActiveView] = useState('home');
   const [researchTopic, setResearchTopic] = useState('');
+  const [researchMode, setResearchMode] = useState<'search' | 'synthesize' | 'write'>('synthesize');
   const [currentTaskId, setCurrentTaskId] = useState<string | null>(null);
   const [researchStatus, setResearchStatus] = useState<ResearchStatus | null>(null);
   const [researchResults, setResearchResults] = useState<ResearchResults | null>(null);
@@ -26,6 +28,7 @@ export default function PharmaceuticalResearchApp() {
   const [recentResearches, setRecentResearches] = useState<any[]>([]);
   const [recentExports, setRecentExports] = useState<any[]>([]);
   const [activeSettingsTab, setActiveSettingsTab] = useState('general');
+  const [showExplainWhy, setShowExplainWhy] = useState(false);
   const [settings, setSettings] = useState<Settings>({
     project: {
       name: 'My PhD Research',
@@ -130,7 +133,7 @@ export default function PharmaceuticalResearchApp() {
     if (!researchTopic.trim()) return;
 
     try {
-      const { taskId } = await api.startResearch(researchTopic);
+      const { taskId } = await api.startResearch(researchTopic, researchMode);
       setCurrentTaskId(taskId);
       setIsPolling(true);
       setActiveView('research');
@@ -212,69 +215,106 @@ export default function PharmaceuticalResearchApp() {
         {activeView === 'home' && (
           <div className="max-w-7xl mx-auto">
             {/* Hero Section */}
-            <div className="text-center mb-12 relative">
-              <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#5B9FF0]/10 to-[#4A90E2]/10 border border-white/10 rounded-full mb-6">
-                <Sparkles className="w-4 h-4 text-[#5B9FF0]" />
-                <span className="text-sm font-medium text-gray-300">AI-Powered Research Platform</span>
+            {/* Perplexity-Like Main Research Panel */}
+            <div className="max-w-4xl mx-auto mb-16 relative pt-10">
+              {/* Branding */}
+              <div className="text-center mb-10">
+                <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-white/5 border border-white/10 rounded-full mb-6 backdrop-blur-md">
+                  <Sparkles className="w-3.5 h-3.5 text-teal-400" />
+                  <span className="text-xs font-medium text-gray-300 tracking-wide uppercase">Agent Zero Engine</span>
+                </div>
+                <h1 className="text-5xl font-bold text-white mb-4 tracking-tight">
+                  What will you <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-blue-500">discover</span> today?
+                </h1>
+                <p className="text-gray-400 text-lg">
+                  {settings.user_persona?.role ? `Welcome back, ${settings.user_persona.role.replace('_', ' ')}.` : 'Autonomous pharmaceutical research assistant.'}
+                </p>
               </div>
 
-              <h1 className="text-6xl font-bold mb-6 relative">
-                <span className="gradient-text">BioDockify</span>
-                <span className="text-white"> AI</span>
-              </h1>
-
-              <p className="text-xl text-gray-400 mb-8 max-w-2xl mx-auto">
-                Transform pharmaceutical research with AI-powered literature analysis,
-                knowledge graph construction, and automated lab protocols
-              </p>
-
-              {/* Stats Banner */}
-              <div className="flex justify-center gap-8 mb-12">
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-white">10K+</div>
-                  <div className="text-sm text-gray-500 mt-1">Papers Analyzed</div>
-                </div>
-                <div className="w-px bg-white/10" />
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-white">500+</div>
-                  <div className="text-sm text-gray-500 mt-1">Active Researchers</div>
-                </div>
-                <div className="w-px bg-white/10" />
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-white">99%</div>
-                  <div className="text-sm text-gray-500 mt-1">Accuracy Rate</div>
-                </div>
-              </div>
-            </div>
-
-            {/* Search Card */}
-            <div className="glass-card p-8 mb-10 relative overflow-hidden">
-              <div className="absolute -right-20 -top-20 w-64 h-64 rounded-full blur-3xl opacity-10 bg-gradient-to-br from-[#5B9FF0] to-[#4A90E2]" />
-              <div className="relative">
-                <label className="block text-lg font-semibold text-white mb-4">
-                  <Search className="w-5 h-5 inline mr-2 text-[#5B9FF0]" />
-                  Start Your Research
-                </label>
-                <div className="flex gap-4">
-                  <input
-                    type="text"
+              {/* Main Input Card */}
+              <div className="glass-card p-1 rounded-2xl shadow-2xl shadow-black/50 border-white/10 relative z-20 group transition-all duration-300 focus-within:ring-2 ring-teal-500/30">
+                {/* Input Area */}
+                <div className="relative bg-[#0A0C10]/80 backdrop-blur-xl rounded-xl p-4">
+                  <textarea
                     value={researchTopic}
                     onChange={(e) => setResearchTopic(e.target.value)}
-                    placeholder="Enter your research topic (e.g., 'Drug interactions in Alzheimer's treatment')"
-                    className="modern-input flex-1 text-lg"
-                    onKeyPress={(e) => e.key === 'Enter' && startResearch()}
+                    placeholder="Ask a research question or describe a hypothesis..."
+                    className="w-full bg-transparent text-lg text-white placeholder-gray-500 focus:outline-none resize-none h-20 scrolling-auto"
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        startResearch();
+                      }
+                    }}
                   />
-                  <button
-                    onClick={startResearch}
-                    className="glow-button px-8 py-4 rounded-2xl text-white font-bold text-lg flex items-center gap-3"
-                  >
-                    <Play className="w-5 h-5" />
-                    <span>Start Research</span>
-                  </button>
+
+                  {/* Controls Footer */}
+                  <div className="flex items-center justify-between mt-4 pt-4 border-t border-white/5">
+                    {/* Mode Toggles */}
+                    <div className="flex items-center gap-1 bg-white/5 p-1 rounded-lg">
+                      <button
+                        onClick={() => setResearchMode('search')}
+                        className={`px-3 py-1.5 rounded-md text-xs font-medium flex items-center gap-2 transition-all ${researchMode === 'search'
+                          ? 'bg-blue-500/20 text-blue-400 shadow-sm'
+                          : 'text-gray-400 hover:text-gray-300 hover:bg-white/5'
+                          }`}
+                      >
+                        <Globe className="w-3.5 h-3.5" />
+                        Search
+                      </button>
+                      <button
+                        onClick={() => setResearchMode('synthesize')}
+                        className={`px-3 py-1.5 rounded-md text-xs font-medium flex items-center gap-2 transition-all ${researchMode === 'synthesize'
+                          ? 'bg-purple-500/20 text-purple-400 shadow-sm'
+                          : 'text-gray-400 hover:text-gray-300 hover:bg-white/5'
+                          }`}
+                      >
+                        <Brain className="w-3.5 h-3.5" />
+                        Synthesize
+                      </button>
+                      <button
+                        onClick={() => setResearchMode('write')}
+                        className={`px-3 py-1.5 rounded-md text-xs font-medium flex items-center gap-2 transition-all ${researchMode === 'write'
+                          ? 'bg-teal-500/20 text-teal-400 shadow-sm'
+                          : 'text-gray-400 hover:text-gray-300 hover:bg-white/5'
+                          }`}
+                      >
+                        <PenTool className="w-3.5 h-3.5" />
+                        Write
+                      </button>
+                    </div>
+
+                    {/* Action Button */}
+                    <div className="flex items-center gap-3">
+                      {/* Strictness Indicator (Read-only view from settings) */}
+                      <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-white/5 text-xs text-gray-400" title="Scientific Strictness">
+                        <Shield className="w-3 h-3" />
+                        <span className="capitalize">{settings.user_persona?.strictness || 'Balanced'}</span>
+                      </div>
+
+                      <button
+                        onClick={startResearch}
+                        disabled={!researchTopic.trim()}
+                        className="w-10 h-10 rounded-xl bg-teal-500 hover:bg-teal-400 text-black flex items-center justify-center transition-all disabled:opacity-50 disabled:cursor-not-allowed transform active:scale-95"
+                      >
+                        <ArrowRight className="w-5 h-5" />
+                      </button>
+                    </div>
+                  </div>
                 </div>
-                <p className="text-sm text-gray-500 mt-3">
-                  Powered by advanced AI models and comprehensive scientific databases
-                </p>
+              </div>
+
+              {/* Suggestions / Hints */}
+              <div className="mt-6 flex flex-wrap justify-center gap-3">
+                <button onClick={() => setResearchTopic("Identify contradictions in recent Alzheimer's amyloid theories")} className="px-4 py-2 rounded-full border border-white/10 bg-white/5 hover:bg-white/10 text-xs text-gray-400 transition-colors">
+                  Explore contradictions
+                </button>
+                <button onClick={() => setResearchTopic("Synthesize novel drug targets for Triple-Negative Breast Cancer")} className="px-4 py-2 rounded-full border border-white/10 bg-white/5 hover:bg-white/10 text-xs text-gray-400 transition-colors">
+                  Find novel targets
+                </button>
+                <button onClick={() => setResearchTopic("Draft a review on CRISPR delivery mechanisms")} className="px-4 py-2 rounded-full border border-white/10 bg-white/5 hover:bg-white/10 text-xs text-gray-400 transition-colors">
+                  Draft review chapter
+                </button>
               </div>
             </div>
 
@@ -374,89 +414,157 @@ export default function PharmaceuticalResearchApp() {
         )}
 
         {activeView === 'research' && (
-          <div className="max-w-6xl mx-auto">
+          <div className="max-w-6xl mx-auto animate-in fade-in duration-500">
             {/* Header */}
             <div className="mb-8 flex items-center justify-between">
               <div>
-                <h2 className="text-3xl font-bold text-white mb-2 flex items-center gap-3">
-                  <Rocket className="w-8 h-8 text-[#5B9FF0]" />
-                  Research Progress
-                </h2>
-                <p className="text-gray-400">
-                  Task ID: <span className="font-mono text-[#4A90E2]">{currentTaskId}</span>
-                </p>
+                <div className="flex items-center gap-3 mb-2">
+                  <Rocket className="w-6 h-6 text-teal-400" />
+                  <h2 className="text-2xl font-bold text-white">Agent Zero is thinking...</h2>
+                </div>
+                <div className="flex items-center gap-4 text-sm text-gray-400">
+                  <span className="bg-white/5 px-2 py-0.5 rounded border border-white/10 font-mono text-teal-300">{currentTaskId}</span>
+                  <span className="flex items-center gap-1.5"><Brain className="w-3 h-3 text-purple-400" /> Mode: <span className="text-gray-300 capitalize">{researchMode}</span></span>
+                  <span className="flex items-center gap-1.5"><Shield className="w-3 h-3 text-green-400" /> Strictness: <span className="text-gray-300 capitalize">{settings.user_persona?.strictness || 'Balanced'}</span></span>
+                </div>
               </div>
-              {researchStatus && (
-                <div className="flex items-center gap-4">
-                  <StatusBadge status={researchStatus.status as any} size="lg" />
-                  {researchStatus.status === 'running' && (
-                    <button
-                      onClick={cancelResearch}
-                      className="px-6 py-3 bg-[#FC8181]/10 hover:bg-[#FC8181]/20 text-[#FC8181] border border-[#FC8181]/30 rounded-xl flex items-center gap-2 transition-colors font-semibold"
-                    >
-                      <X className="w-5 h-5" />
-                      Cancel
-                    </button>
+
+              <div className="flex items-center gap-4">
+                {/* Confidence Meter (Mocked for UI visualization until backend connects) */}
+                <div className="flex flex-col items-end mr-4">
+                  <span className="text-xs text-gray-400 uppercase tracking-widest font-semibold mb-1">Confidence</span>
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-teal-500 animate-pulse" />
+                    <span className="text-teal-400 font-bold">High</span>
+                  </div>
+                </div>
+
+                {researchStatus?.status === 'running' && (
+                  <button
+                    onClick={cancelResearch}
+                    className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 rounded-lg flex items-center gap-2 transition-colors text-sm font-medium"
+                  >
+                    <X className="w-4 h-4" />
+                    Stop
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* LEFT COL: Progress & Console */}
+              <div className="lg:col-span-2 space-y-6">
+                {/* Progress Card */}
+                <div className="glass-card p-6 border-l-4 border-l-teal-500">
+                  {/* Steps UI */}
+                  <div className="flex items-center justify-between mb-6">
+                    <ProgressStep step={1} currentStep={researchStatus?.currentStep || 0} totalSteps={4} label="Search" />
+                    <div className="w-8 h-px bg-white/10" />
+                    <ProgressStep step={2} currentStep={researchStatus?.currentStep || 0} totalSteps={4} label="Read" />
+                    <div className="w-8 h-px bg-white/10" />
+                    <ProgressStep step={3} currentStep={researchStatus?.currentStep || 0} totalSteps={4} label="Reason" />
+                    <div className="w-8 h-px bg-white/10" />
+                    <ProgressStep step={4} currentStep={researchStatus?.currentStep || 0} totalSteps={4} label="Write" isLast />
+                  </div>
+
+                  {/* Current Action Text */}
+                  <div className="bg-black/20 rounded-lg p-4 font-mono text-sm text-gray-300 border border-white/5 flex items-start gap-3">
+                    <div className="mt-1 w-2 h-2 rounded-full bg-teal-400 animate-ping" />
+                    <div>
+                      <span className="text-teal-400 font-bold block mb-1">CURRENTLY:</span>
+                      {researchStatus?.phase || 'Initializing Agent Zero...'}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Reasoning / Explain Why */}
+                <div className="glass-card p-1 overflow-hidden">
+                  <button
+                    onClick={() => setShowExplainWhy(!showExplainWhy)}
+                    className="w-full flex items-center justify-between p-4 bg-white/5 hover:bg-white/10 transition-colors"
+                  >
+                    <div className="flex items-center gap-2 text-sm font-medium text-white">
+                      <MessageSquare className="w-4 h-4 text-purple-400" />
+                      Agent Thought Process
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-gray-400">
+                      <span>{showExplainWhy ? 'Hide' : 'Show'} reasoning</span>
+                      <ChevronDown className={`w-4 h-4 transition-transform ${showExplainWhy ? 'rotate-180' : ''}`} />
+                    </div>
+                  </button>
+
+                  {showExplainWhy && (
+                    <div className="p-4 bg-black/40 border-t border-white/5 max-h-60 overflow-y-auto font-mono text-xs text-green-400/80 space-y-1">
+                      {consoleLogs.map((log) => (
+                        <div key={log.id} className="flex gap-2">
+                          <span className="text-gray-600 shrink-0">[{log.timestamp}]</span>
+                          <span>{log.message}</span>
+                        </div>
+                      ))}
+                    </div>
                   )}
                 </div>
-              )}
-            </div>
 
-            {/* Progress Steps */}
-            <div className="glass-card p-8 mb-8">
-              <div className="flex items-center justify-between mb-6">
-                <ProgressStep
-                  step={1}
-                  currentStep={researchStatus?.currentStep || 0}
-                  totalSteps={4}
-                  label="Literature Search"
-                />
-                <ProgressStep
-                  step={2}
-                  currentStep={researchStatus?.currentStep || 0}
-                  totalSteps={4}
-                  label="Entity Extraction"
-                />
-                <ProgressStep
-                  step={3}
-                  currentStep={researchStatus?.currentStep || 0}
-                  totalSteps={4}
-                  label="Knowledge Graph"
-                />
-                <ProgressStep
-                  step={4}
-                  currentStep={researchStatus?.currentStep || 0}
-                  totalSteps={4}
-                  label="Analysis"
-                  isLast
-                />
+                {/* Follow Up Suggestions (Mocked for now) */}
+                <div className="grid grid-cols-2 gap-4">
+                  <button className="p-4 rounded-xl bg-white/5 border border-white/5 hover:bg-white/10 hover:border-white/10 text-left transition-all group">
+                    <div className="flex items-center gap-2 mb-2 text-teal-400 text-xs font-bold uppercase tracking-wider">
+                      <Lightbulb className="w-3 h-3" /> Suggestion
+                    </div>
+                    <p className="text-sm text-gray-300 group-hover:text-white">Check for contradictory reviews in 2024</p>
+                  </button>
+                  <button className="p-4 rounded-xl bg-white/5 border border-white/5 hover:bg-white/10 hover:border-white/10 text-left transition-all group">
+                    <div className="flex items-center gap-2 mb-2 text-purple-400 text-xs font-bold uppercase tracking-wider">
+                      <Network className="w-3 h-3" /> Related
+                    </div>
+                    <p className="text-sm text-gray-300 group-hover:text-white">Compare with alternative pathway inhibitors</p>
+                  </button>
+                </div>
               </div>
 
-              {researchStatus && (
-                <div className="mt-6">
-                  <div className="flex items-center justify-between text-sm mb-3">
-                    <span className="text-gray-400 font-medium">Overall Progress</span>
-                    <span className="text-[#5B9FF0] font-bold text-lg">{researchStatus.progress}%</span>
+              {/* RIGHT COL: Evidence Panel */}
+              <div className="space-y-4">
+                <div className="glass-card p-6 h-full border-t-4 border-t-purple-500">
+                  <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                    <BookOpen className="w-5 h-5 text-purple-400" />
+                    Sources & Evidence
+                  </h3>
+
+                  {/* Metrics Grid */}
+                  <div className="grid grid-cols-2 gap-2 mb-6">
+                    <div className="bg-white/5 rounded-lg p-3 text-center">
+                      <div className="text-2xl font-bold text-white">12</div>
+                      <div className="text-[10px] text-gray-400 uppercase tracking-wider">Papers</div>
+                    </div>
+                    <div className="bg-white/5 rounded-lg p-3 text-center">
+                      <div className="text-xl font-bold text-white">2024</div>
+                      <div className="text-[10px] text-gray-400 uppercase tracking-wider">Avg Year</div>
+                    </div>
                   </div>
-                  <div className="h-3 bg-gray-800/50 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-gradient-to-r from-[#5B9FF0] via-[#9B8BFF] to-[#4A90E2] transition-all duration-700 ease-out rounded-full"
-                      style={{ width: `${researchStatus.progress}%` }}
-                    />
-                  </div>
-                  <div className="mt-3 flex items-center gap-2 text-sm text-gray-500">
-                    <Activity className="w-4 h-4" />
-                    <span>Current Phase: <span className="text-white font-medium">{researchStatus.phase}</span></span>
+
+                  {/* Source List (Placeholder for now) */}
+                  <div className="space-y-3">
+                    <div className="p-3 bg-black/20 rounded-lg border border-white/5 flex gap-3">
+                      <div className="w-8 h-8 rounded bg-blue-900/20 flex items-center justify-center shrink-0 font-bold text-blue-400 text-xs">1</div>
+                      <div>
+                        <h4 className="text-sm font-medium text-blue-300 line-clamp-1">Novel Alzheimer's Mechanisms...</h4>
+                        <p className="text-xs text-gray-500">Nature Medicine • 2024</p>
+                      </div>
+                    </div>
+                    <div className="p-3 bg-black/20 rounded-lg border border-white/5 flex gap-3">
+                      <div className="w-8 h-8 rounded bg-blue-900/20 flex items-center justify-center shrink-0 font-bold text-blue-400 text-xs">2</div>
+                      <div>
+                        <h4 className="text-sm font-medium text-blue-300 line-clamp-1">Amyloid-Beta reconsidered...</h4>
+                        <p className="text-xs text-gray-500">Cell • 2023</p>
+                      </div>
+                    </div>
+                    <div className="mt-4 pt-4 border-t border-white/10 text-center">
+                      <span className="text-xs text-gray-500 italic">Processing {researchStatus?.currentStep === 1 ? 'sources...' : 'citations...'}</span>
+                    </div>
                   </div>
                 </div>
-              )}
+              </div>
             </div>
-
-            {/* Console */}
-            <Console
-              logs={consoleLogs}
-              title={researchStatus?.phase || 'Console Output'}
-            />
           </div>
         )}
 
@@ -750,9 +858,9 @@ export default function PharmaceuticalResearchApp() {
                 <button
                   onClick={async () => {
                     try {
-                      await api.apiRequest('/settings/reset', { method: 'POST' });
+                      await api.resetSettings();
                       loadSettings();
-                      addConsoleLog('Settings reset to defaults', 'warning');
+                      addConsoleLog('Settings reset to defaults', 'info');
                     } catch (e) { console.error(e); }
                   }}
                   className="px-6 py-3 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 rounded-xl font-semibold transition-all"
@@ -776,8 +884,8 @@ export default function PharmaceuticalResearchApp() {
                   key={tab}
                   onClick={() => setActiveSettingsTab(tab)}
                   className={`px-6 py-3 text-sm font-bold uppercase tracking-wider rounded-t-lg transition-all ${activeSettingsTab === tab
-                      ? 'bg-white/10 text-white border-b-2 border-[#5B9FF0]'
-                      : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'
+                    ? 'bg-white/10 text-white border-b-2 border-[#5B9FF0]'
+                    : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'
                     }`}
                 >
                   {tab === 'apis' ? 'API Connections' : tab.replace('_', ' ')}
@@ -906,178 +1014,468 @@ export default function PharmaceuticalResearchApp() {
                 </div>
               )}
 
-              {/* === TAB: APIS === */}
-              {activeSettingsTab === 'apis' && (
-                <div className="glass-card p-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                  <div className="flex items-center gap-4 mb-8">
-                    <div className="w-12 h-12 rounded-xl bg-teal-500/20 flex items-center justify-center">
-                      <Network className="w-6 h-6 text-teal-400" />
-                    </div>
-                    <div>
-                      <h3 className="text-xl font-bold text-white">External Connections</h3>
-                      <p className="text-sm text-gray-400">Configure Hybrid AI and Database Access</p>
+            </div>
+          </div>
+        )}
+
+        {/* === TAB: USER PERSONA === */}
+        {activeSettingsTab === 'persona' && (
+          <div className="glass-card p-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="flex items-center gap-4 mb-8">
+              <div className="w-12 h-12 rounded-xl bg-teal-500/20 flex items-center justify-center">
+                <User className="w-6 h-6 text-teal-400" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-white">Research Persona</h3>
+                <p className="text-sm text-gray-400">Adapt Agent Zero's behavior to your intent</p>
+              </div>
+            </div>
+
+            <div className="space-y-8">
+              {/* 1. ROLE */}
+              <div className="p-5 bg-white/5 rounded-xl border border-white/10">
+                <h4 className="font-semibold text-white mb-4">Who are you? (Role)</h4>
+                <div className="grid grid-cols-2 gap-3">
+                  {['phd_student', 'researcher', 'industry', 'educator'].map((role) => (
+                    <button
+                      key={role}
+                      onClick={() => setSettings({ ...settings, user_persona: { ...settings.user_persona, role: role as any } })}
+                      className={`p-3 rounded-lg border text-left transition-all flex items-center gap-3 ${settings.user_persona.role === role ? 'bg-teal-500/20 border-teal-500 text-white' : 'border-white/5 text-gray-400 hover:bg-white/5'}`}
+                    >
+                      <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${settings.user_persona.role === role ? 'border-teal-400' : 'border-gray-500'}`}>
+                        {settings.user_persona.role === role && <div className="w-2 h-2 rounded-full bg-teal-400" />}
+                      </div>
+                      <span className="capitalize">{role.replace('_', ' ')}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* 2. PURPOSE */}
+              <div>
+                <h4 className="font-semibold text-white mb-4">Primary Purpose</h4>
+                <div className="grid grid-cols-2 gap-3">
+                  {['phd_thesis', 'literature_review', 'hypothesis_gen', 'methodology'].map((p) => {
+                    const isActive = settings.user_persona.primary_purpose.includes(p);
+                    return (
+                      <button
+                        key={p}
+                        onClick={() => {
+                          const current = settings.user_persona.primary_purpose;
+                          const newPurposes = isActive ? current.filter(x => x !== p) : [...current, p];
+                          setSettings({ ...settings, user_persona: { ...settings.user_persona, primary_purpose: newPurposes } });
+                        }}
+                        className={`p-3 rounded-lg border text-left transition-all ${isActive ? 'bg-blue-500/20 border-blue-500 text-white' : 'border-white/5 text-gray-400 hover:bg-white/5'}`}
+                      >
+                        <span className="capitalize">{p.replace('_', ' ')}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* 3. BEHAVIOR CONTROLS */}
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <label className="text-xs text-gray-400 block mb-2">Scientific Strictness</label>
+                  <select
+                    value={settings.user_persona.strictness}
+                    onChange={(e) => setSettings({ ...settings, user_persona: { ...settings.user_persona, strictness: e.target.value as any } })}
+                    className="modern-input w-full bg-[#14161B]"
+                  >
+                    <option value="exploratory">Exploratory (Open)</option>
+                    <option value="balanced">Balanced (PhD Safe)</option>
+                    <option value="conservative">Conservative (Strict)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs text-gray-400 block mb-2">Output Expectation</label>
+                  <select
+                    value={settings.user_persona.output_expectation}
+                    onChange={(e) => setSettings({ ...settings, user_persona: { ...settings.user_persona, output_expectation: e.target.value as any } })}
+                    className="modern-input w-full bg-[#14161B]"
+                  >
+                    <option value="concept">Conceptual/Notes</option>
+                    <option value="review_quality">Review Quality</option>
+                    <option value="thesis_ready">Thesis Ready</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs text-gray-400 block mb-2">Research Horizon</label>
+                  <select
+                    value={settings.user_persona.research_horizon}
+                    onChange={(e) => setSettings({ ...settings, user_persona: { ...settings.user_persona, research_horizon: e.target.value as any } })}
+                    className="modern-input w-full bg-[#14161B]"
+                  >
+                    <option value="short">Short (Days)</option>
+                    <option value="medium">Medium (Weeks)</option>
+                    <option value="long">Long (Months/PhD)</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* TRANSPARENCY NOTE */}
+              <div className="p-3 bg-teal-900/10 border border-teal-500/20 rounded-lg text-xs text-teal-400">
+                <strong>Active Persona:</strong> Agent Zero will adapt its planning, rigor, and continuity based on these settings. No personal data is profiled or sent to the cloud.
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* === TAB: APIS === */}
+        {activeSettingsTab === 'apis' && (
+          <div className="glass-card p-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="flex items-center gap-4 mb-8">
+              <div className="w-12 h-12 rounded-xl bg-teal-500/20 flex items-center justify-center">
+                <Network className="w-6 h-6 text-teal-400" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-white">External Connections</h3>
+                <p className="text-sm text-gray-400">Configure Hybrid AI and Database Access</p>
+              </div>
+            </div>
+
+            <div className="space-y-6">
+              {/* AI Toggle */}
+              <div>
+                <label className="block text-sm font-semibold text-white mb-3">AI Operating Mode</label>
+                <div className="grid grid-cols-2 gap-4">
+                  <button
+                    onClick={() => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, mode: 'free_api' } })}
+                    className={`p-4 rounded-xl border text-left transition-all ${settings.ai_provider.mode === 'free_api' ? 'bg-[#5B9FF0]/20 border-[#5B9FF0] text-white' : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'}`}
+                  >
+                    <div className="font-bold mb-1">Free API Only</div>
+                    <div className="text-xs opacity-70">Use local Ollama and free tiers. No credit card needed.</div>
+                  </button>
+                  <button
+                    onClick={() => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, mode: 'hybrid' } })}
+                    className={`p-4 rounded-xl border text-left transition-all ${settings.ai_provider.mode === 'hybrid' ? 'bg-[#5B9FF0]/20 border-[#5B9FF0] text-white' : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'}`}
+                  >
+                    <div className="font-bold mb-1">Hybrid Mode (Recommended)</div>
+                    <div className="text-xs opacity-70">Enhance difficult steps with OpenAI/Elsevier APIs.</div>
+                  </button>
+                </div>
+              </div>
+
+              {/* Keys */}
+              {/* Keys */}
+              {settings.ai_provider.mode === 'hybrid' && (
+                <div className="space-y-4 pt-4 border-t border-white/10">
+                  {/* Provider Selection (No OpenAI) */}
+                  <div>
+                    <label className="block text-sm font-semibold text-white mb-3">Primary Reasoning Model</label>
+                    <div className="grid grid-cols-3 gap-2 p-1 bg-black/40 rounded-xl">
+                      {['google', 'openrouter', 'huggingface'].map((provider) => (
+                        <button
+                          key={provider}
+                          onClick={() => setSettings({
+                            ...settings,
+                            ai_provider: { ...settings.ai_provider, primary_model: provider as any }
+                          })}
+                          className={`py-2 rounded-lg text-sm font-medium transition-all capitalize ${settings.ai_provider.primary_model === provider
+                            ? 'bg-blue-600 text-white shadow-lg'
+                            : 'text-gray-500 hover:text-white'
+                            }`}
+                        >
+                          {provider === 'google' ? 'Google Gemini' : provider === 'huggingface' ? 'HuggingFace' : 'OpenRouter'}
+                        </button>
+                      ))}
                     </div>
                   </div>
 
-                  <div className="space-y-6">
-                    {/* AI Toggle */}
-                    <div>
-                      <label className="block text-sm font-semibold text-white mb-3">AI Operating Mode</label>
-                      <div className="grid grid-cols-2 gap-4">
+                  {/* Configurable Inputs based on selection */}
+                  {settings.ai_provider.primary_model === 'google' && (
+                    <div className="animate-in fade-in duration-300 p-4 bg-white/5 rounded-xl border border-white/10">
+                      <label className="block text-sm font-semibold text-white mb-3">Google Gemini Credentials</label>
+
+                      <div className="mb-4">
+                        <label className="text-xs text-gray-400 block mb-1">API Key</label>
+                        <input
+                          type="password"
+                          value={settings.ai_provider.google_key || ''}
+                          onChange={e => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, google_key: e.target.value } })}
+                          className="modern-input w-full"
+                          placeholder="AIza..."
+                        />
+                      </div>
+
+                      <div className="flex justify-end pt-2 border-t border-white/5">
                         <button
-                          onClick={() => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, mode: 'free_api' } })}
-                          className={`p-4 rounded-xl border text-left transition-all ${settings.ai_provider.mode === 'free_api' ? 'bg-[#5B9FF0]/20 border-[#5B9FF0] text-white' : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'}`}
+                          onClick={() => testConnection('llm')}
+                          className="flex items-center gap-2 px-4 py-2 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/30 rounded-lg transition-colors font-medium text-sm"
                         >
-                          <div className="font-bold mb-1">Free API Only</div>
-                          <div className="text-xs opacity-70">Use local Ollama and free tiers. No credit card needed.</div>
-                        </button>
-                        <button
-                          onClick={() => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, mode: 'hybrid' } })}
-                          className={`p-4 rounded-xl border text-left transition-all ${settings.ai_provider.mode === 'hybrid' ? 'bg-[#5B9FF0]/20 border-[#5B9FF0] text-white' : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'}`}
-                        >
-                          <div className="font-bold mb-1">Hybrid Mode (Recommended)</div>
-                          <div className="text-xs opacity-70">Enhance difficult steps with OpenAI/Elsevier APIs.</div>
+                          <Activity className="w-4 h-4" />
+                          Test Connection
                         </button>
                       </div>
                     </div>
+                  )}
 
-                    {/* Keys */}
-                    {settings.ai_provider.mode === 'hybrid' && (
-                      <div className="space-y-4 pt-4 border-t border-white/10">
-                        <div>
-                          <label className="block text-sm font-semibold text-white mb-2">OpenAI API Key</label>
-                          <div className="flex gap-2">
-                            <input
-                              type="password"
-                              value={settings.ai_provider.openai_key || ''}
-                              onChange={e => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, openai_key: e.target.value } })}
-                              className="modern-input flex-1"
-                              placeholder="sk-..."
-                            />
-                            <button onClick={() => testConnection('llm')} className="px-4 py-2 bg-white/10 rounded-lg hover:bg-white/20 transition-colors">Test</button>
-                          </div>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-semibold text-white mb-2">Elsevier API Key</label>
-                          <div className="flex gap-2">
-                            <input
-                              type="password"
-                              value={settings.ai_provider.elsevier_key || ''}
-                              onChange={e => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, elsevier_key: e.target.value } })}
-                              className="modern-input flex-1"
-                              placeholder="Elsevier Dev Key"
-                            />
-                            <button onClick={() => testConnection('elsevier')} className="px-4 py-2 bg-white/10 rounded-lg hover:bg-white/20 transition-colors">Test</button>
-                          </div>
-                        </div>
+                  {settings.ai_provider.primary_model === 'openrouter' && (
+                    <div className="animate-in fade-in duration-300 p-4 bg-white/5 rounded-xl border border-white/10">
+                      <label className="block text-sm font-semibold text-white mb-3">OpenRouter Credentials</label>
+
+                      <div className="mb-4">
+                        <label className="text-xs text-gray-400 block mb-1">API Key</label>
+                        <input
+                          type="password"
+                          value={settings.ai_provider.openrouter_key || ''}
+                          onChange={e => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, openrouter_key: e.target.value } })}
+                          className="modern-input w-full"
+                          placeholder="sk-or-..."
+                        />
                       </div>
-                    )}
 
-                    <div>
-                      <label className="block text-sm font-semibold text-white mb-2">PubMed Email (Required for NCBI)</label>
+                      <div className="flex justify-end pt-2 border-t border-white/5">
+                        <button
+                          onClick={() => testConnection('llm')}
+                          className="flex items-center gap-2 px-4 py-2 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/30 rounded-lg transition-colors font-medium text-sm"
+                        >
+                          <Activity className="w-4 h-4" />
+                          Test Connection
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {settings.ai_provider.primary_model === 'huggingface' && (
+                    <div className="animate-in fade-in duration-300 p-4 bg-white/5 rounded-xl border border-white/10">
+                      <label className="block text-sm font-semibold text-white mb-3">HuggingFace Credentials</label>
+
+                      <div className="mb-4">
+                        <label className="text-xs text-gray-400 block mb-1">Access Token</label>
+                        <input
+                          type="password"
+                          value={settings.ai_provider.huggingface_key || ''}
+                          onChange={e => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, huggingface_key: e.target.value } })}
+                          className="modern-input w-full"
+                          placeholder="hf_..."
+                        />
+                      </div>
+
+                      <div className="flex justify-end pt-2 border-t border-white/5">
+                        <button
+                          onClick={() => testConnection('llm')}
+                          className="flex items-center gap-2 px-4 py-2 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/30 rounded-lg transition-colors font-medium text-sm"
+                        >
+                          <Activity className="w-4 h-4" />
+                          Test Connection
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Fallback mechanism note */}
+                  <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg text-xs text-blue-300">
+                    <span className="font-bold block mb-1">Backup Strategy Active</span>
+                    If your primary model hits a rate limit, the system will automatically try the other providers using the keys you provide here.
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-white mb-2">Elsevier API Key</label>
+                    <div className="flex gap-2">
                       <input
-                        type="email"
-                        value={settings.ai_provider.pubmed_email || ''}
-                        onChange={e => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, pubmed_email: e.target.value } })}
-                        className="modern-input w-full"
-                        placeholder="researcher@university.edu"
+                        type="password"
+                        value={settings.ai_provider.elsevier_key || ''}
+                        onChange={e => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, elsevier_key: e.target.value } })}
+                        className="modern-input flex-1"
+                        placeholder="Elsevier Dev Key"
                       />
+                      <button onClick={() => testConnection('elsevier')} className="px-4 py-2 bg-white/10 rounded-lg hover:bg-white/20 transition-colors">Test</button>
                     </div>
                   </div>
                 </div>
               )}
 
-              {/* === TAB: LITERATURE === */}
-              {activeSettingsTab === 'literature' && (
-                <div className="glass-card p-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                  <div className="flex items-center gap-4 mb-8">
-                    <div className="w-12 h-12 rounded-xl bg-orange-500/20 flex items-center justify-center">
-                      <Globe className="w-6 h-6 text-orange-400" />
-                    </div>
+              <div>
+                <label className="block text-sm font-semibold text-white mb-2">PubMed Email (Required for NCBI)</label>
+                <input
+                  type="email"
+                  value={settings.ai_provider.pubmed_email || ''}
+                  onChange={e => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, pubmed_email: e.target.value } })}
+                  className="modern-input w-full"
+                  placeholder="researcher@university.edu"
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* === TAB: LITERATURE === */}
+        <div className="glass-card p-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="flex items-center gap-4 mb-8">
+            <div className="w-12 h-12 rounded-xl bg-orange-500/20 flex items-center justify-center">
+              <Globe className="w-6 h-6 text-orange-400" />
+            </div>
+            <div>
+              <h3 className="text-xl font-bold text-white">Literature Scope</h3>
+              <p className="text-sm text-gray-400">Define search boundaries and strictness</p>
+            </div>
+          </div>
+
+          <div className="space-y-6">
+            <div className="space-y-6">
+              {/* TIER 1: CORE */}
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <label className="text-sm font-semibold text-white">Tier 1: Core Biomedical (Mandatory)</label>
+                  <span className="text-xs text-green-400 font-medium px-2 py-1 bg-green-500/10 rounded-full border border-green-500/20">Active</span>
+                </div>
+                <div className="bg-black/20 rounded-xl p-4 border border-white/5 space-y-3">
+                  <div className="flex items-center gap-3">
+                    <input type="checkbox" checked={true} disabled className="w-4 h-4 rounded border-gray-600 bg-gray-700 text-blue-500" />
                     <div>
-                      <h3 className="text-xl font-bold text-white">Literature Scope</h3>
-                      <p className="text-sm text-gray-400">Define search boundaries and strictness</p>
+                      <span className="text-white block text-sm">PubMed (NCBI)</span>
+                      <span className="text-xs text-gray-500">Abstracts, MeSH terms, Gold standard</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <input type="checkbox" checked={true} disabled className="w-4 h-4 rounded border-gray-600 bg-gray-700 text-blue-500" />
+                    <div>
+                      <span className="text-white block text-sm">Europe PMC</span>
+                      <span className="text-xs text-gray-500">Full text (Open Access), Patents, Grants</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* TIER 2: METADATA */}
+              <div>
+                <label className="block text-sm font-semibold text-white mb-3">Tier 2: Metadata & Discovery</label>
+                <div className="bg-black/20 rounded-xl p-4 border border-white/5 space-y-3">
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="checkbox"
+                      checked={settings.literature.sources.includes('openalex')}
+                      onChange={(e) => {
+                        const newSources = e.target.checked
+                          ? [...settings.literature.sources, 'openalex']
+                          : settings.literature.sources.filter(s => s !== 'openalex');
+                        setSettings({ ...settings, literature: { ...settings.literature, sources: newSources } });
+                      }}
+                      className="w-4 h-4 rounded border-gray-600 bg-gray-800 text-purple-500 focus:ring-purple-500"
+                    />
+                    <div>
+                      <span className="text-white block text-sm">OpenAlex</span>
+                      <span className="text-xs text-gray-400">Broad coverage, citation graphs, trend detection</span>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-8">
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="checkbox"
+                      checked={settings.literature.enable_crossref}
+                      onChange={(e) => setSettings({ ...settings, literature: { ...settings.literature, enable_crossref: e.target.checked } })}
+                      className="w-4 h-4 rounded border-gray-600 bg-gray-800 text-purple-500 focus:ring-purple-500"
+                    />
                     <div>
-                      <label className="block text-sm font-semibold text-white mb-4">Active Data Sources</label>
-                      <div className="space-y-3">
-                        {['pubmed', 'europe_pmc', 'openalex'].map(src => (
-                          <label key={src} className="flex items-center gap-3 p-3 bg-white/5 rounded-lg cursor-pointer hover:bg-white/10 transition-colors">
-                            <input
-                              type="checkbox"
-                              checked={settings.literature.sources.includes(src)}
-                              onChange={(e) => {
-                                if (e.target.checked) setSettings({ ...settings, literature: { ...settings.literature, sources: [...settings.literature.sources, src] } });
-                                else setSettings({ ...settings, literature: { ...settings.literature, sources: settings.literature.sources.filter(s => s !== src) } });
-                              }}
-                              className="w-5 h-5 rounded border-gray-600 bg-gray-800 text-blue-500 focus:ring-blue-500"
-                            />
-                            <span className="capitalize text-white">{src.replace('_', ' ')}</span>
-                          </label>
-                        ))}
+                      <span className="text-white block text-sm">CrossRef</span>
+                      <span className="text-xs text-gray-400">DOI validation, publisher metadata</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* TIER 3: PREPRINTS */}
+              <div>
+                <label className="block text-sm font-semibold text-white mb-3">Tier 3: Preprints (Optional)</label>
+                <div className="bg-black/20 rounded-xl p-4 border border-white/5">
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="checkbox"
+                      checked={settings.literature.enable_preprints}
+                      onChange={(e) => setSettings({ ...settings, literature: { ...settings.literature, enable_preprints: e.target.checked } })}
+                      className="w-4 h-4 rounded border-gray-600 bg-gray-800 text-orange-500 focus:ring-orange-500"
+                    />
+                    <div>
+                      <span className="text-white block text-sm">bioRxiv / medRxiv</span>
+                      <span className="text-xs text-gray-400">Non-peer-reviewed results. Use with caution.</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-white mb-2">Search Sources</label>
+
+                <div className="grid grid-cols-2 gap-8">
+                  <div>
+                    <label className="block text-sm font-semibold text-white mb-4">Active Data Sources</label>
+                    <div className="space-y-3">
+                      {['pubmed', 'europe_pmc', 'openalex'].map(src => (
+                        <label key={src} className="flex items-center gap-3 p-3 bg-white/5 rounded-lg cursor-pointer hover:bg-white/10 transition-colors">
+                          <input
+                            type="checkbox"
+                            checked={settings.literature.sources.includes(src)}
+                            onChange={(e) => {
+                              if (e.target.checked) setSettings({ ...settings, literature: { ...settings.literature, sources: [...settings.literature.sources, src] } });
+                              else setSettings({ ...settings, literature: { ...settings.literature, sources: settings.literature.sources.filter(s => s !== src) } });
+                            }}
+                            className="w-5 h-5 rounded border-gray-600 bg-gray-800 text-blue-500 focus:ring-blue-500"
+                          />
+                          <span className="capitalize text-white">{src.replace('_', ' ')}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-6">
+                    <div>
+                      <label className="block text-sm font-semibold text-white mb-2">Citations Range (Years)</label>
+                      <div className="flex items-center gap-4">
+                        <input
+                          type="range"
+                          min="1" max="50"
+                          value={settings.literature.year_range}
+                          onChange={e => setSettings({ ...settings, literature: { ...settings.literature, year_range: parseInt(e.target.value) } })}
+                          className="w-full accent-blue-500"
+                        />
+                        <span className="text-xl font-bold text-blue-400 w-16 text-right">{settings.literature.year_range}y</span>
                       </div>
                     </div>
 
-                    <div className="space-y-6">
-                      <div>
-                        <label className="block text-sm font-semibold text-white mb-2">Citations Range (Years)</label>
-                        <div className="flex items-center gap-4">
-                          <input
-                            type="range"
-                            min="1" max="50"
-                            value={settings.literature.year_range}
-                            onChange={e => setSettings({ ...settings, literature: { ...settings.literature, year_range: parseInt(e.target.value) } })}
-                            className="w-full accent-blue-500"
-                          />
-                          <span className="text-xl font-bold text-blue-400 w-16 text-right">{settings.literature.year_range}y</span>
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-semibold text-white mb-3">Novelty Strictness</label>
-                        <div className="flex gap-2 p-1 bg-black/40 rounded-xl">
-                          {['low', 'medium', 'high'].map((lvl) => (
-                            <button
-                              key={lvl}
-                              onClick={() => setSettings({ ...settings, literature: { ...settings.literature, novelty_strictness: lvl as any } })}
-                              className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all capitalize ${settings.literature.novelty_strictness === lvl ? 'bg-blue-600 text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}
-                            >
-                              {lvl}
-                            </button>
-                          ))}
-                        </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-white mb-3">Novelty Strictness</label>
+                      <div className="flex gap-2 p-1 bg-black/40 rounded-xl">
+                        {['low', 'medium', 'high'].map((lvl) => (
+                          <button
+                            key={lvl}
+                            onClick={() => setSettings({ ...settings, literature: { ...settings.literature, novelty_strictness: lvl as any } })}
+                            className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all capitalize ${settings.literature.novelty_strictness === lvl ? 'bg-blue-600 text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}
+                          >
+                            {lvl}
+                          </button>
+                        ))}
                       </div>
                     </div>
                   </div>
                 </div>
+              </div>
               )}
 
             </div>
           </div>
         )}
+        </div>
       </div>
-    </div>
-  );
+      );
 }
 
-// Helper component for save icon
-function SaveSettingsIcon() {
+      // Helper component for save icon
+      function SaveSettingsIcon() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
-      <polyline points="17 21 17 13 7 13 7 21" />
-      <polyline points="7 3 7 8 15 8" />
-    </svg>
-  );
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+        <polyline points="17 21 17 13 7 13 7 21" />
+        <polyline points="7 3 7 8 15 8" />
+      </svg>
+      );
 }
 
-function Activity({ className }: { className?: string }) {
+      function Activity({className}: {className ?: string}) {
   return (
-    <svg className={className} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
-    </svg>
-  );
+      <svg className={className} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+      </svg>
+      );
 }

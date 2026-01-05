@@ -42,7 +42,8 @@ class ResearchExecutor:
     Executes a ResearchPlan step-by-step.
     """
     
-    def __init__(self):
+    def __init__(self, task_id: Optional[str] = None):
+        self.task_id = task_id
         self.ner = BioNER()
         self.analyst = ResearchAnalyst()
         if has_molecular_vision:
@@ -56,19 +57,50 @@ class ResearchExecutor:
 
     def execute_plan(self, plan: ResearchPlan) -> ResearchContext:
         """
-        Execute the entire research plan.
+        Execute the entire research plan with checkpointing.
         """
         logger.info(f"Starting execution of plan: {plan.research_title}")
         context = ResearchContext(topic=plan.research_title)
         
-        for step in plan.steps:
+        # Load previous context if resuming (Simplified logic for now)
+        # In a full production version, we would deserialize context from disk here.
+        
+        total_steps = len(plan.steps)
+        
+        for idx, step in enumerate(plan.steps):
             logger.info(f"--- Executing Step {step.step_id}: {step.title} ---")
             try:
                 self._execute_step(step, context)
                 logger.info(f"✓ Step {step.step_id} completed.")
+                
+                # CHECKPOINTING
+                if self.task_id:
+                    from runtime.task_manager import task_manager
+                    task = task_manager.load_task(self.task_id)
+                    if task:
+                        # Update Progress
+                        task["progress"] = int(((idx + 1) / total_steps) * 100)
+                        task["message"] = f"Completed: {step.title}"
+                        
+                        # Serialize Context (Partial) - For MVP we save stats/entities
+                        # Saving full extracted_text every time might be heavy, but safe.
+                        task["context_snapshot"] = {
+                            "entities": context.entities,
+                            "stats": context.analyst_stats,
+                            "last_step_id": step.step_id
+                        }
+                        task_manager.save_task(self.task_id, task)
+
             except Exception as e:
                 logger.error(f"✗ Step {step.step_id} failed: {e}")
-                # We verify if we should abort or continue; for now continue
+                if self.task_id:
+                     from runtime.task_manager import task_manager
+                     task = task_manager.load_task(self.task_id)
+                     if task:
+                         task["status"] = "failed"
+                         task["error"] = f"Step {step.step_id} failed: {e}"
+                         task_manager.save_task(self.task_id, task)
+                raise e # Re-raise to stop execution
         
         return context
 
@@ -95,15 +127,49 @@ class ResearchExecutor:
 
     def _handle_literature_search(self, step: ResearchStep, context: ResearchContext):
         """
-        Scan data/papers directory for PDFs and extract text.
+        Scan data/papers directory for PDFs. 
+        If none found, AUTO-FETCH from PubMed using the Scraper.
         """
         paper_dir = os.path.join("data", "papers")
         if not os.path.exists(paper_dir):
             os.makedirs(paper_dir, exist_ok=True)
-            logger.info(f"Created {paper_dir}. Please place PDFs there.")
-            return
+            logger.info(f"Created {paper_dir}.")
 
         pdf_files = [f for f in os.listdir(paper_dir) if f.lower().endswith('.pdf')]
+        
+        # 1. AUTO-FETCH if directory is empty
+        if not pdf_files:
+            logger.info("No local PDFs found. Initiating PubMed Search...")
+            try:
+                from modules.literature_search.scraper import search_papers
+                
+                # Fetch abstracts
+                logger.info(f"Searching PubMed for: {context.topic}")
+                results = search_papers(context.topic, max_results=5)
+                
+                if not results:
+                    logger.warning("PubMed search returned no results.")
+                
+                # Add fetched papers to context directly
+                for p in results:
+                    context.known_papers.append({
+                        "pmid": p['pmid'],
+                        "title": p['title'],
+                        "abstract": p['abstract'],
+                        "source": "PubMed API"
+                    })
+                    # Also append to extracted text for NER
+                    context.extracted_text += f"\n\nTitle: {p['title']}\nAbstract: {p['abstract']}"
+                    
+                logger.info(f"✓ Automatically fetched {len(results)} papers from PubMed.")
+                return 
+
+            except Exception as e:
+                logger.error(f"PubMed Auto-Fetch failed: {e}")
+                logger.info("Please place PDF files in 'data/papers' manually.")
+                return
+
+        # 2. Process Local PDFs (if they exist)
         logger.info(f"Found {len(pdf_files)} PDFs in {paper_dir}")
 
         all_text = []
@@ -116,12 +182,14 @@ class ResearchExecutor:
                 context.known_papers.append({
                     "pmid": pdf_file, # using filename as ID for now
                     "title": pdf_file,
-                    "abstract": text[:200] + "..."
+                    "abstract": text[:500] + "..."
                 })
             except Exception as e:
                 logger.error(f"Failed to parse {pdf_file}: {e}")
         
-        context.extracted_text = "\n\n".join(all_text)
+        if all_text:
+            context.extracted_text += "\n\n".join(all_text)
+        
         logger.info(f"Total extracted text length: {len(context.extracted_text)} chars")
 
     def _handle_entity_extraction(self, step: ResearchStep, context: ResearchContext):

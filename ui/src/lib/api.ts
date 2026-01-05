@@ -54,13 +54,19 @@ export interface Settings {
     failure_policy: 'ask_user' | 'auto_retry' | 'abort';
   };
   literature: {
-    sources: string[];
+    sources: string[]; // ['pubmed', 'europe_pmc', 'openalex']
+    enable_crossref: boolean;
+    enable_preprints: boolean;
     year_range: number;
     novelty_strictness: 'low' | 'medium' | 'high';
   };
   ai_provider: {
     mode: 'free_api' | 'hybrid';
+    primary_model?: 'google' | 'openrouter' | 'huggingface' | 'openai';
     openai_key?: string;
+    google_key?: string;
+    openrouter_key?: string;
+    huggingface_key?: string;
     elsevier_key?: string;
     pubmed_email?: string;
   };
@@ -102,10 +108,10 @@ async function apiRequest<T>(
 
 export const api = {
   // Research endpoints
-  startResearch: (topic: string) =>
+  startResearch: (topic: string, mode: 'search' | 'synthesize' | 'write' = 'synthesize') =>
     apiRequest<{ taskId: string }>('/research/start', {
       method: 'POST',
-      body: JSON.stringify({ topic }),
+      body: JSON.stringify({ topic, mode }),
     }),
 
   getStatus: (taskId: string) =>
@@ -136,8 +142,17 @@ export const api = {
     apiRequest<{ id: string; type: string; filename: string; createdAt: string }[]>('/lab/exports'),
 
   // Settings endpoints
-  testConnection: (type: 'llm' | 'database' | 'elsevier') =>
-    apiRequest<ConnectionTest>(`/settings/test/${type}`),
+  testConnection: (serviceType: 'llm' | 'elsevier', provider?: string, key?: string) =>
+    apiRequest<ConnectionTest>('/settings/test', {
+      method: 'POST',
+      body: JSON.stringify({ service_type: serviceType, provider, key })
+    }),
+
+  checkOllama: (baseUrl: string) =>
+    apiRequest<{ status: string, message: string, models: string[] }>('/settings/ollama/check', {
+      method: 'POST',
+      body: JSON.stringify({ base_url: baseUrl })
+    }),
 
   getSettings: () =>
     apiRequest<Settings>('/settings'),
@@ -146,6 +161,11 @@ export const api = {
     apiRequest<{ success: boolean }>('/settings', {
       method: 'POST',
       body: JSON.stringify(settings),
+    }),
+
+  resetSettings: () =>
+    apiRequest<{ success: boolean; config: Settings }>('/settings/reset', {
+      method: 'POST',
     }),
 
   // History endpoints
