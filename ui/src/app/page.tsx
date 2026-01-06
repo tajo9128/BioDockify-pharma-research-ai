@@ -208,7 +208,7 @@ export default function PharmaceuticalResearchApp() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-orbs">
+    <div className="min-h-screen bg-gradient-orbs relative">
       <Sidebar activeView={activeView} onViewChange={setActiveView} />
 
       <div className="ml-20 p-8 relative z-10">
