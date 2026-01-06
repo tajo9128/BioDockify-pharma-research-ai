@@ -1,5 +1,26 @@
 # BioDockify v2.1.2 - Definitive Hotfix
 
+## Release Notes
+
+## v2.1.17: Critical UI Build Fix & Pharma Integrity Suite
+**Release Date:** 2026-01-06
+
+**Status:** Critical Hotfix for v2.1.16 build failures.
+
+This release includes the full **Pharma Integrity Suite** (10 new compliance/validation tools) and a **complete rewrite of the frontend core** (`page.tsx`) to strictly resolve the persistent "Unexpected token div" build error.
+
+### 🛠️ Critical Fixes
+- **Frontend Core Rewrite**:Completely rebuilt `ui/src/app/page.tsx` with strict TypeScrip/JSX compliance to eliminate parsing errors.
+- **Build Stability**: Verified component nesting and imports to ensure Next.js 15 build success.
+
+### 🛡️ Features (Pharma Integrity Suite)
+- **Access**: Unpaywall, CORE (Legal OA).
+- **Validation**: ScienceParse, CERMINE, PubTator.
+- **Impact**: Semantic Scholar Ranker.
+- **Export**: LanguageTool, Detoxify, Zotero CSL.
+
+---
+
 ## 🌟 v2.1.2: Stable Release
 - **Frontend Syntax Fix**: Resolved critical build error in `page.tsx` (restored missing view wrappers).
 - **Core Stability**: Consolidates all v2.1.1 patches (Config Resilience, Installer Paths).
