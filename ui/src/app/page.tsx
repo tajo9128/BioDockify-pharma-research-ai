@@ -80,20 +80,25 @@ export default function PharmaceuticalResearchApp() {
     addLog(`Starting ${researchMode} research on: "${topic}"`, 'info');
 
     try {
-      // API call simulation for immediate feedback
-      // In real app: await api.startTask({ mode: researchMode, topic });
-      setTimeout(() => {
-        addLog('Initializing Agent Zero...', 'info');
-      }, 500);
+      // API call
+      const res = await api.startResearch(topic, researchMode);
+      addLog(`Task Started: ${res.taskId} via ${res.provider}`, 'success');
 
-      setTimeout(() => {
-        addLog('Searching PubMed and OpenAlex...', 'info');
-        setStats(prev => ({ ...prev, papersAnalyzed: prev.papersAnalyzed + 5 }));
-      }, 1500);
+      addLog('Initializing Agent Zero...', 'info');
 
-      // Keep it simple for this verified build
-    } catch (error) {
-      addLog('Failed to start research task', 'error');
+      // Simulate progress for UI feedback since real socket is not fully wired in this simplified view yet
+      // But the backend DID execute the LLM call (blocking in route.ts for now)
+      if (res.result) {
+        setTimeout(() => {
+          addLog('Research Analysis Complete.', 'success');
+          addLog(`Result: ${res.result.substring(0, 50)}...`, 'info');
+          setStats(prev => ({ ...prev, papersAnalyzed: prev.papersAnalyzed + 1 }));
+          setIsResearching(false);
+        }, 1000);
+      }
+
+    } catch (error: any) {
+      addLog(`Failed to start research task: ${error.message}`, 'error');
       setIsResearching(false);
     }
   };
@@ -275,17 +280,13 @@ export default function PharmaceuticalResearchApp() {
         )}
 
         {/* VIEW: SETTINGS */}
+        import SettingsPanel from '@/components/SettingsPanel';
+
+        // ...
+
+        // In render
         {activeView === 'settings' && (
-          <div className="max-w-4xl mx-auto">
-            <h2 className="text-3xl font-bold mb-8">System Settings</h2>
-            <div className="bg-slate-900 rounded-xl p-8 border border-slate-800">
-              <p className="text-slate-400">Settings configuration loaded from <code>config_loader.py</code></p>
-              {/* Placeholder for standard settings UI */}
-              <div className="mt-6 flex items-center space-x-4">
-                <div className="w-full h-12 bg-slate-800 rounded animate-pulse"></div>
-              </div>
-            </div>
-          </div>
+          <SettingsPanel />
         )}
 
       </main>

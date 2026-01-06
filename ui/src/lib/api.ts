@@ -61,14 +61,13 @@ export interface Settings {
     novelty_strictness: 'low' | 'medium' | 'high';
   };
   ai_provider: {
-    mode: 'free_api' | 'hybrid';
-    primary_model?: 'google' | 'openrouter' | 'huggingface' | 'openai';
-    openai_key?: string;
-    google_key?: string;
-    openrouter_key?: string;
-    huggingface_key?: string;
-    elsevier_key?: string;
-    pubmed_email?: string;
+    mode: 'auto' | 'ollama' | 'z-ai';
+    ollama_url?: string;
+    ollama_model?: string;
+    zai_key?: string;
+
+    // Legacy support (optional)
+    primary_model?: string;
   };
   database?: { // Keep legacy support for now or move to 'execution'
     host: string;
@@ -108,10 +107,10 @@ async function apiRequest<T>(
 
 export const api = {
   // Research endpoints
-  startResearch: (topic: string, mode: 'search' | 'synthesize' | 'write' = 'synthesize') =>
-    apiRequest<{ taskId: string }>('/research/start', {
+  startResearch: (topic: string, mode: 'search' | 'synthesize' | 'write' = 'synthesize', taskId?: string) =>
+    apiRequest<{ taskId: string, status: string, result: string, provider: string }>('/research', {
       method: 'POST',
-      body: JSON.stringify({ topic, mode }),
+      body: JSON.stringify({ topic, mode, taskId }),
     }),
 
   getStatus: (taskId: string) =>
@@ -140,6 +139,12 @@ export const api = {
 
   getRecentExports: () =>
     apiRequest<{ id: string; type: string; filename: string; createdAt: string }[]>('/lab/exports'),
+
+  exportResult: (format: 'pdf' | 'docx' | 'xlsx', data: any) =>
+    apiRequest<{ path: string }>('/export', {
+      method: 'POST',
+      body: JSON.stringify({ format, data }),
+    }),
 
   // Settings endpoints
   testConnection: (serviceType: 'llm' | 'elsevier', provider?: string, key?: string) =>

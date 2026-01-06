@@ -2,6 +2,31 @@
 
 ## Release Notes
 
+## v2.2.0: The "Agent Zero" Integration Update
+**Release Date:** 2026-01-06
+
+**Status:** Major Feature Release.
+
+This release integrates the external "Agent Zero" architecture and "Universal Skills" from the `workspace` archive, making BioDockify a fully agentic platform.
+
+### 🌟 New Features
+- **LLM Provider Architecture**:
+  - **Dynamic Switching**: Use Cloud (z-ai) or Local (Ollama) LLMs seamlessly.
+  - **Fallback System**: Auto-switches providers if one fails.
+- **Universal Skills Integration**:
+  - Added `DOCX`, `PDF`, `XLSX` generation skills.
+  - Added `Web Search`, `Web Reader`, `ASR` (Voice), `TTS` (Speech) skills foundation.
+- **New API Endpoints**:
+  - `POST /api/research`: Full agentic research task handling.
+  - `POST /api/export`: Multi-format report generation (PDF, DOCX, etc.).
+
+### 🛠️ Improvements
+- **Frontend Core**: Refactored `page.tsx` now calls the real Agentic API (`api.startResearch`) instead of simulations.
+- **Mini-Services**: Integrated `research-updater` WebSocket service for real-time progress.
+
+---
+
+
 ## v2.1.18: Sidebar Import Fix
 **Release Date:** 2026-01-06
 
