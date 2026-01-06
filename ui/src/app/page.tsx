@@ -17,7 +17,7 @@ import {
   Microscope,
   Network
 } from 'lucide-react';
-import { Sidebar } from '@/components/Sidebar';
+import Sidebar from '@/components/Sidebar';
 import { api } from '@/lib/api';
 
 // --- Types ---

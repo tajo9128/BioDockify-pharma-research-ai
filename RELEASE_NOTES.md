@@ -2,6 +2,19 @@
 
 ## Release Notes
 
+## v2.1.18: Sidebar Import Fix
+**Release Date:** 2026-01-06
+
+**Status:** Hotfix for v2.1.17 component import error.
+
+This release resolves the `Sidebar` import error that caused the v2.1.17 build to fail.
+
+### 🐛 Bug Fixes
+- **Frontend Import**: Corrected `page.tsx` to use default import for `Sidebar` component (`import Sidebar from ...`) instead of named import, matching the component definition.
+
+---
+
+
 ## v2.1.17: Critical UI Build Fix & Pharma Integrity Suite
 **Release Date:** 2026-01-06
 
