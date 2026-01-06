@@ -12,7 +12,7 @@
 - **Author:** Tajuddin Shaik  
 - **Team:** BioDockify Research Lab  
 - **Contact:** biodockify@hotmail.com  
-- **Version:** v2.2.0
+- **Version:** v2.3.0
 
 ---
 

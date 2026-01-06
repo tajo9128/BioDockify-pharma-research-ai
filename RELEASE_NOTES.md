@@ -2,6 +2,26 @@
 
 ## Release Notes
 
+## v2.3.0: Academic Integrity & Compliance Layer
+**Release Date:** 2026-01-06
+
+**Status:** Major Feature Release.
+
+This release introduces the **Academic Writing Compliance & Integrity Layer**, designed to ensure scientific quality, evidence grounding, and human verification of all AI-assisted drafts.
+
+### 🛡️ New Features
+- **Compliance Panel**: A real-time analysis tool available in "Write" mode.
+- **Academic Style Normalizer**: Detects generic AI phrasing and suggests scientific alternatives.
+- **Evidence Checker**: Enforces citation density to prevent hallucinations.
+- **Human Revision Gate**: **Mandatory** verification step. Users must confirm citation accuracy and authorship before export is unlocked.
+- **Disclosure Generator**: Standardized AI usage disclosure statement for manuscripts.
+
+### ⚠️ Important Architecture Change
+- **Export Control**: The "Export Manuscript" button is now **locked by default** until the Compliance Check passed and Human Revision is confirmed.
+
+---
+
+
 ## v2.2.0: The "Agent Zero" Integration Update
 **Release Date:** 2026-01-06
 

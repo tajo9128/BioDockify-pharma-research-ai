@@ -146,6 +146,12 @@ export const api = {
       body: JSON.stringify({ format, data }),
     }),
 
+  checkCompliance: (text: string) =>
+    apiRequest<{ compliant: boolean, scores: any, issues: any[] }>('/compliance/check', {
+      method: 'POST',
+      body: JSON.stringify({ text })
+    }),
+
   // Settings endpoints
   testConnection: (serviceType: 'llm' | 'elsevier', provider?: string, key?: string) =>
     apiRequest<ConnectionTest>('/settings/test', {

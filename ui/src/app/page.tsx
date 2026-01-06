@@ -1,6 +1,7 @@
-'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import CompliancePanel from '@/components/CompliancePanel';
+// ... existing imports
 import {
   Search,
   FileText,
@@ -51,6 +52,9 @@ export default function PharmaceuticalResearchApp() {
     protocolsGenerated: 0,
     graphNodes: 0
   });
+
+  // Compliance State
+  const [isCompliant, setIsCompliant] = useState(false);
 
   // Console Auto-scroll
   const consoleEndRef = useRef<HTMLDivElement>(null);
@@ -210,86 +214,117 @@ export default function PharmaceuticalResearchApp() {
               </div>
             </div>
 
-            {/* Live Console Preview */}
-            <div className="bg-black/50 rounded-xl border border-slate-800 p-4 font-mono text-sm h-48 overflow-y-auto custom-scrollbar">
-              <div className="text-slate-500 mb-2 sticky top-0 bg-black/90 p-1 border-b border-slate-800 flex justify-between">
-                <span>SYSTEM LOGS</span>
-                <div className="flex space-x-2">
-                  <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-                  <span className="text-green-500 text-xs">ONLINE</span>
-                </div>
+            {/* Compliance & Export Section (Only in Write Mode) */}
+            {researchMode === 'write' && (
+              <CompliancePanel
+                text={topic} // In real app, this would be the generated draft content
+                onComplianceChange={setIsCompliant}
+              />
+            )}
+
+            {/* Export Actions */}
+            {researchMode === 'write' && (
+              <div className="flex justify-end mt-4 space-x-3">
+                <button
+                  disabled={!isCompliant}
+                  className={`flex items-center space-x-2 px-6 py-2 rounded-lg font-bold transition-all ${isCompliant
+                      ? 'bg-teal-500 hover:bg-teal-400 text-slate-950 shadow-lg shadow-teal-500/20 transform hover:scale-105'
+                      : 'bg-slate-800 text-slate-500 cursor-not-allowed opacity-50'
+                    }`}
+                  onClick={() => addLog('Exporting document (Compliance Verified)...', 'success')}
+                >
+                  <Download className="w-4 h-4" />
+                  <span>Export Manuscript</span>
+                </button>
               </div>
-              <div className="space-y-1.5">
-                {logs.length === 0 && (
-                  <div className="text-slate-600 italic">No activity logs recorded yet...</div>
-                )}
-                {logs.map((log) => (
-                  <div key={log.id} className="flex items-start">
-                    <span className="text-slate-600 w-24 shrink-0">[{log.timestamp}]</span>
-                    <span className={`
+            )}
+          </div>
+
+            {/* Live Console Preview */}
+        <div className="bg-black/50 rounded-xl border border-slate-800 p-4 font-mono text-sm h-48 overflow-y-auto custom-scrollbar">
+          <div className="text-slate-500 mb-2 sticky top-0 bg-black/90 p-1 border-b border-slate-800 flex justify-between">
+            <span>SYSTEM LOGS</span>
+            <div className="flex space-x-2">
+              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+              <span className="text-green-500 text-xs">ONLINE</span>
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            {logs.length === 0 && (
+              <div className="text-slate-600 italic">No activity logs recorded yet...</div>
+            )}
+            {logs.map((log) => (
+              <div key={log.id} className="flex items-start">
+                <span className="text-slate-600 w-24 shrink-0">[{log.timestamp}]</span>
+                <span className={`
                       ${log.type === 'info' ? 'text-blue-300' : ''}
                       ${log.type === 'success' ? 'text-green-400' : ''}
                       ${log.type === 'error' ? 'text-red-400' : ''}
                       ${log.type === 'warning' ? 'text-yellow-400' : ''}
                     `}>
-                      {log.type === 'success' && '✓ '}
-                      {log.type === 'error' && '✗ '}
-                      {log.type === 'warning' && '⚠ '}
-                      {log.message}
-                    </span>
-                  </div>
-                ))}
-                <div ref={consoleEndRef} />
+                  {log.type === 'success' && '✓ '}
+                  {log.type === 'error' && '✗ '}
+                  {log.type === 'warning' && '⚠ '}
+                  {log.message}
+                </span>
               </div>
-            </div>
-
+            ))}
+            <div ref={consoleEndRef} />
           </div>
-        )}
+        </div>
 
-        {/* VIEW: CONSOLE (Expanded) */}
-        {activeView === 'console' && (
-          <div className="max-w-7xl mx-auto h-[calc(100vh-6rem)] bg-black rounded-2xl border border-slate-800 p-6 flex flex-col font-mono">
-            <div className="flex items-center justify-between mb-4 pb-4 border-b border-slate-800">
-              <h2 className="text-xl text-slate-200 font-bold flex items-center">
-                <Activity className="w-6 h-6 mr-3 text-teal-500" />
-                Terminal Output
-              </h2>
-              <div className="flex space-x-2">
-                <button onClick={() => setLogs([])} className="text-xs text-slate-500 hover:text-white px-3 py-1 border border-slate-800 rounded">
-                  CLEAR
-                </button>
-              </div>
-            </div>
-            <div className="flex-1 overflow-y-auto space-y-2 custom-scrollbar">
-              {logs.map((log) => (
-                <div key={log.id} className="border-b border-slate-900/50 pb-1">
-                  <span className="text-slate-500 mr-4">[{log.timestamp}]</span>
-                  <span className={`
+    </div>
+  )
+}
+
+{/* VIEW: CONSOLE (Expanded) */ }
+{
+  activeView === 'console' && (
+    <div className="max-w-7xl mx-auto h-[calc(100vh-6rem)] bg-black rounded-2xl border border-slate-800 p-6 flex flex-col font-mono">
+      <div className="flex items-center justify-between mb-4 pb-4 border-b border-slate-800">
+        <h2 className="text-xl text-slate-200 font-bold flex items-center">
+          <Activity className="w-6 h-6 mr-3 text-teal-500" />
+          Terminal Output
+        </h2>
+        <div className="flex space-x-2">
+          <button onClick={() => setLogs([])} className="text-xs text-slate-500 hover:text-white px-3 py-1 border border-slate-800 rounded">
+            CLEAR
+          </button>
+        </div>
+      </div>
+      <div className="flex-1 overflow-y-auto space-y-2 custom-scrollbar">
+        {logs.map((log) => (
+          <div key={log.id} className="border-b border-slate-900/50 pb-1">
+            <span className="text-slate-500 mr-4">[{log.timestamp}]</span>
+            <span className={`
                         ${log.type === 'info' ? 'text-slate-300' : ''}
                         ${log.type === 'success' ? 'text-green-400' : ''}
                         ${log.type === 'error' ? 'text-red-500 font-bold' : ''}
                         ${log.type === 'warning' ? 'text-yellow-500' : ''}
                       `}>
-                    {log.message}
-                  </span>
-                </div>
-              ))}
-              <div ref={consoleEndRef} />
-            </div>
+              {log.message}
+            </span>
           </div>
-        )}
-
-        {/* VIEW: SETTINGS */}
-        import SettingsPanel from '@/components/SettingsPanel';
-
-        // ...
-
-        // In render
-        {activeView === 'settings' && (
-          <SettingsPanel />
-        )}
-
-      </main>
+        ))}
+        <div ref={consoleEndRef} />
+      </div>
     </div>
+  )
+}
+
+{/* VIEW: SETTINGS */ }
+import SettingsPanel from '@/components/SettingsPanel';
+
+// ...
+
+// In render
+{
+  activeView === 'settings' && (
+    <SettingsPanel />
+  )
+}
+
+      </main >
+    </div >
   );
 }
