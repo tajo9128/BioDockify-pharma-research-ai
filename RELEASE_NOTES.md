@@ -1,4 +1,9 @@
-# BioDockify v2.1.1 - Hotfix Upgrade
+# BioDockify v2.1.2 - Definitive Hotfix
+
+## 🌟 v2.1.2: Stable Release
+- **Frontend Syntax Fix**: Resolved critical build error in `page.tsx` (restored missing view wrappers).
+- **Core Stability**: Consolidates all v2.1.1 patches (Config Resilience, Installer Paths).
+- **Verified**: Full manual audit of build artifacts and source code.
 
 ## 🚨 v2.1.1: Deep Path Resilience (Hotfix)
 - **Config Loader Refactor**: Now intelligently detects production (`Frozen`) vs development environments.
