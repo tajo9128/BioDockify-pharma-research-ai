@@ -178,7 +178,7 @@ jobs:
           makensis installer/setup.nsi
           
           echo "Verifying Installer Exists..."
-          if (!(Test-Path "BioDockify_Professional_Setup_v2.0.exe")) {
+          if (!(Test-Path "BioDockify_Professional_Setup*.exe")) {
             Write-Error "NSIS Build Failed: Installer not found!"
             exit 1
           }
@@ -189,7 +189,7 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
-            BioDockify_Professional_Setup_v2.0.exe
+            BioDockify_Professional_Setup*.exe
           fail_on_unmatched_files: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
