@@ -10,9 +10,31 @@ import shutil
 from pathlib import Path
 from typing import Dict, Any, Optional
 
+import sys
+
 # Define paths
 BASE_DIR = Path(__file__).parent.parent
-CONFIG_PATH = BASE_DIR / "runtime" / "config.yaml"
+
+def get_config_path():
+    """
+    Determines the appropriate config path based on environment.
+    Prioritizes %APPDATA% in production (frozen/installed), falls back to local dev.
+    """
+    app_name = "BioDockify"
+    
+    # Check if running as compiled executable (PyInstaller)
+    if getattr(sys, 'frozen', False):
+        # Production: Use User AppData
+        app_data = os.getenv('APPDATA')
+        if app_data:
+            config_dir = Path(app_data) / app_name
+            config_dir.mkdir(parents=True, exist_ok=True)
+            return config_dir / "config.yaml"
+            
+    # Development: Use local source directory
+    return BASE_DIR / "runtime" / "config.yaml"
+
+CONFIG_PATH = get_config_path()
 
 # -----------------------------------------------------------------------------
 # DEFAULT CONFIGURATION (The "Safe Contract")
