@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { api } from '@/lib/api';
-import { Search, PenTool, Layout, Play, Pause, Square, AlertCircle, FileText, Globe, Cpu, ChevronRight, Maximize2 } from 'lucide-react';
+import { Search, PenTool, Layout, Play, Pause, Square, AlertCircle, FileText, Globe, Cpu, ChevronRight, Maximize2, Beaker } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 
 // Types (Micro-definitions to be self-contained)
@@ -8,7 +8,11 @@ type WorkMode = 'search' | 'synthesize' | 'write';
 interface LogEntry { id: string; type: 'info' | 'thought' | 'result'; content: string; timestamp: Date; }
 interface Evidence { id: string; title: string; score: number; year: number; }
 
-export default function ResearchWorkstation() {
+interface ResearchWorkstationProps {
+    view?: string;
+}
+
+export default function ResearchWorkstation({ view = 'home' }: ResearchWorkstationProps) {
     // State
     const [mode, setMode] = useState<WorkMode>('search');
     const [query, setQuery] = useState('');
@@ -16,6 +20,7 @@ export default function ResearchWorkstation() {
     const [isPaused, setIsPaused] = useState(false);
     const [logs, setLogs] = useState<LogEntry[]>([]);
     const [evidence, setEvidence] = useState<Evidence[]>([]);
+    const [isFocusMode, setIsFocusMode] = useState(false);
 
     // Auto-scroll logic
     const logEndRef = useRef<HTMLDivElement>(null);
@@ -29,7 +34,6 @@ export default function ResearchWorkstation() {
 
         try {
             // Mocking the stream for UI demonstration
-            // In production, this would be a WebSocket or SSE connection
             const taskId = await api.startTask(query, mode);
             addLog('thought', 'Initializing Intent Engine...');
 
@@ -51,31 +55,95 @@ export default function ResearchWorkstation() {
         setLogs(prev => [...prev, { id: Date.now().toString(), type, content, timestamp: new Date() }]);
     };
 
+    // --- VIEW: RESULTS MANAGER ---
+    if (view === 'results') {
+        return (
+            <div className="h-screen bg-slate-950 text-slate-200 p-8 overflow-y-auto">
+                <header className="mb-8 border-b border-slate-800 pb-4">
+                    <h1 className="text-2xl font-bold text-white flex items-center gap-3">
+                        <FileText className="w-8 h-8 text-teal-400" />
+                        Research Results & History
+                    </h1>
+                </header>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {/* Placeholder Cards for History */}
+                    {['Alzheimer Target ID', 'CRISPR Off-Target Analysis', 'PD-L1 Pathway Review'].map((project, i) => (
+                        <div key={i} className="bg-slate-900 border border-slate-800 rounded-xl p-6 hover:border-teal-500/50 transition-colors cursor-pointer group">
+                            <div className="flex justify-between items-start mb-4">
+                                <div className="p-3 bg-teal-500/10 rounded-lg text-teal-400 group-hover:text-teal-300">
+                                    <FileText className="w-6 h-6" />
+                                </div>
+                                <span className="text-xs font-mono text-slate-500">2d ago</span>
+                            </div>
+                            <h3 className="text-lg font-bold text-slate-200 mb-2 group-hover:text-white">{project}</h3>
+                            <p className="text-sm text-slate-400 mb-4">Completed analysis with 45 verified citations.</p>
+                            <div className="flex items-center gap-2 text-xs font-medium text-slate-500">
+                                <span className="px-2 py-1 bg-slate-800 rounded">PDF</span>
+                                <span className="px-2 py-1 bg-slate-800 rounded">DOCX</span>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        );
+    }
+
+    // --- VIEW: LAB INTERFACE ---
+    if (view === 'lab') {
+        return (
+            <div className="h-screen bg-slate-950 text-slate-200 flex items-center justify-center">
+                <div className="text-center space-y-6 max-w-lg">
+                    <div className="w-24 h-24 bg-slate-900 rounded-full flex items-center justify-center mx-auto border-2 border-slate-800 animate-pulse">
+                        <Beaker className="w-10 h-10 text-purple-400" />
+                    </div>
+                    <div>
+                        <h1 className="text-2xl font-bold text-white mb-2">Virtual Lab Interface</h1>
+                        <p className="text-slate-400">
+                            Simulations for Molecular Docking (AutoDock Vina) and Protein Folding (AlphaFold adapter) are currently initializing.
+                        </p>
+                    </div>
+                    <button className="px-6 py-2 bg-purple-600/20 text-purple-400 border border-purple-600/50 rounded-lg hover:bg-purple-600/30 transition-colors">
+                        Connect Remote Cluster
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
+    // --- VIEW: STANDARD WORKSTATION (Home/Research) ---
     return (
         <div className="h-screen flex flex-col bg-slate-950 text-slate-200 overflow-hidden font-sans">
-
             {/* Header */}
-            <header className="h-14 border-b border-slate-800 flex items-center justify-between px-6 bg-slate-950/80 backdrop-blur">
+            <header className="h-14 border-b border-slate-800 flex items-center justify-between px-6 bg-slate-950/80 backdrop-blur flex-shrink-0">
                 <div className="flex items-center space-x-3">
                     <Layout className="w-5 h-5 text-teal-400" />
-                    <span className="font-bold text-white tracking-wide">BioDockify <span className="text-slate-600 font-normal">Workstation</span></span>
+                    <span className="font-bold text-white tracking-wide hidden md:inline">BioDockify <span className="text-slate-600 font-normal">Workstation</span></span>
                 </div>
                 <div className="flex items-center space-x-4">
                     <span className={`flex items-center text-xs font-mono px-2 py-1 rounded bg-slate-900 border border-slate-700 ${isRunning ? 'text-green-400 animate-pulse' : 'text-slate-500'}`}>
                         <Cpu className="w-3 h-3 mr-2" />
                         {isRunning ? 'AGENT ACTIVE' : 'IDLE'}
                     </span>
-                    <button className="p-2 hover:bg-slate-800 rounded-lg transition-colors"><Maximize2 className="w-4 h-4" /></button>
+                    <button
+                        onClick={() => setIsFocusMode(!isFocusMode)}
+                        className={`p-2 rounded-lg transition-colors ${isFocusMode ? 'bg-teal-500/20 text-teal-400' : 'hover:bg-slate-800 text-slate-400'}`}
+                        title="Toggle Focus Mode"
+                    >
+                        <Maximize2 className="w-4 h-4" />
+                    </button>
                 </div>
             </header>
 
-            {/* Main Layout (3 Columns) */}
-            <div className="flex-1 flex overflow-hidden">
+            {/* Main Layout (Responsive) */}
+            <div className="flex-1 flex overflow-hidden relative">
 
-                {/* COL 1: CONTROL PANEL */}
-                <div className="w-80 border-r border-slate-800 bg-slate-950 flex flex-col">
-                    <div className="p-6 space-y-6">
-
+                {/* COL 1: CONTROL PANEL (Hidden in Focus Mode or Small Screens) */}
+                <div className={`border-r border-slate-800 bg-slate-950 flex flex-col transition-all duration-300 ease-in-out
+                    ${isFocusMode ? 'w-0 opacity-0 overflow-hidden' : 'w-80 opacity-100'}
+                    ${/* Mobile: Hide by default if streaming - simplistic responsive logic */ ''}
+                    hidden md:flex flex-shrink-0
+                `}>
+                    <div className="p-6 space-y-6 w-80">
                         {/* Mode Selector */}
                         <div>
                             <label className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3 block">Operation Mode</label>
@@ -114,11 +182,10 @@ export default function ResearchWorkstation() {
                                 <Square className="w-4 h-4 fill-current" />
                             </button>
                         </div>
-
                     </div>
 
                     {/* Status Footer */}
-                    <div className="mt-auto p-4 border-t border-slate-800 bg-slate-900/50">
+                    <div className="mt-auto p-4 border-t border-slate-800 bg-slate-900/50 w-80">
                         <div className="flex items-center justify-between text-xs text-slate-500">
                             <span>Pharma Pipeline:</span>
                             <span className="text-green-400 font-bold">READY</span>
@@ -126,8 +193,8 @@ export default function ResearchWorkstation() {
                     </div>
                 </div>
 
-                {/* COL 2: STREAM (Reasoning Engine) */}
-                <div className="flex-1 border-r border-slate-800 bg-slate-950 flex flex-col relative">
+                {/* COL 2: STREAM (Reasoning Engine) - Always Visible, Flex-1 */}
+                <div className="flex-1 border-r border-slate-800 bg-slate-950 flex flex-col relative min-w-0">
                     <div className="p-4 border-b border-slate-800 bg-slate-950/80 backdrop-blur sticky top-0 z-10 flex justify-between items-center">
                         <h2 className="text-sm font-bold text-slate-300">Reasoning Stream</h2>
                         <button className="text-xs text-teal-400 hover:underline">Export Logs</button>
@@ -144,11 +211,11 @@ export default function ResearchWorkstation() {
                             <div key={log.id} className="group animate-in fade-in slide-in-from-bottom-2 duration-300">
                                 <div className="flex items-start space-x-3">
                                     <div className={`mt-1 w-2 h-2 rounded-full flex-shrink-0 ${log.type === 'thought' ? 'bg-purple-500' :
-                                            log.type === 'result' ? 'bg-green-500' : 'bg-slate-500'
+                                        log.type === 'result' ? 'bg-green-500' : 'bg-slate-500'
                                         }`} />
-                                    <div className="space-y-1">
+                                    <div className="space-y-1 min-w-0">
                                         <span className="text-xs text-slate-500 font-mono uppercase">{log.type} &middot; {log.timestamp.toLocaleTimeString()}</span>
-                                        <div className={`text-sm leading-relaxed ${log.type === 'thought' ? 'text-slate-400 italic' : 'text-slate-200'}`}>
+                                        <div className={`text-sm leading-relaxed ${log.type === 'thought' ? 'text-slate-400 italic' : 'text-slate-200'} break-words`}>
                                             <ReactMarkdown>{log.content}</ReactMarkdown>
                                         </div>
                                     </div>
@@ -159,13 +226,16 @@ export default function ResearchWorkstation() {
                     </div>
                 </div>
 
-                {/* COL 3: KNOWLEDGE GRAPH (Evidence) */}
-                <div className="w-96 bg-slate-950 flex flex-col">
+                {/* COL 3: KNOWLEDGE GRAPH (Evidence) - Hidden in Focus Mode, Stacked? */}
+                <div className={`bg-slate-950 flex flex-col transition-all duration-300 ease-in-out
+                     ${isFocusMode ? 'w-0 opacity-0 overflow-hidden' : 'w-96 opacity-100'}
+                     border-l border-slate-800 hidden xl:flex flex-shrink-0
+                `}>
                     <div className="p-4 border-b border-slate-800 bg-slate-950/80 backdrop-blur sticky top-0 z-10">
                         <h2 className="text-sm font-bold text-slate-300">Live Evidence</h2>
                     </div>
 
-                    <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                    <div className="flex-1 overflow-y-auto p-4 space-y-3 w-96">
                         {evidence.length === 0 ? (
                             <div className="text-center py-12 text-slate-600 text-sm">
                                 No evidence collected yet.
@@ -195,8 +265,8 @@ const ModeBtn = ({ id, label, icon: Icon, active, onClick }: any) => (
     <button
         onClick={onClick}
         className={`w-full flex items-center p-3 rounded-lg transition-all border ${active
-                ? 'bg-teal-500/10 border-teal-500/50 text-white'
-                : 'bg-slate-900 border-transparent text-slate-500 hover:bg-slate-800 hover:text-slate-300'
+            ? 'bg-teal-500/10 border-teal-500/50 text-white'
+            : 'bg-slate-900 border-transparent text-slate-500 hover:bg-slate-800 hover:text-slate-300'
             }`}
     >
         <div className={`p-2 rounded-md mr-3 ${active ? 'bg-teal-500 text-black' : 'bg-slate-800'}`}>

@@ -68,6 +68,7 @@ export interface Settings {
     huggingface_key?: string;
     openrouter_key?: string;
     glm_key?: string;
+    elsevier_key?: string;
     pubmed_email?: string;
   };
   // New V2 Schema Additions
@@ -82,6 +83,14 @@ export interface Settings {
       biorxiv: boolean;
       chemrxiv: boolean;
       clinicaltrials: boolean;
+      google_scholar: boolean;
+      openalex: boolean;
+      semantic_scholar: boolean;
+      ieee: boolean;
+      elsevier: boolean;
+      scopus: boolean;
+      wos: boolean;
+      science_index: boolean;
     };
   };
   ai_advanced: {
@@ -90,8 +99,10 @@ export interface Settings {
     thread_count: number;
   };
   persona: {
-    role: 'PhD Student' | 'Senior Researcher' | 'Industry Scientist';
+    role: 'PhD Student' | 'PG Student' | 'Senior Researcher' | 'Industry Scientist';
     strictness: 'exploratory' | 'balanced' | 'conservative';
+    introduction: string;
+    research_focus: string;
   };
   output: {
     format: 'markdown' | 'pdf' | 'docx' | 'latex';

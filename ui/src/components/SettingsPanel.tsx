@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api, Settings } from '@/lib/api';
-import { Save, Server, Cloud, Cpu, RefreshCw, CheckCircle, AlertCircle, Shield, Activity, Power, BookOpen, Layers, FileText, Globe, Database, Key } from 'lucide-react';
+import { Save, Server, Cloud, Cpu, RefreshCw, CheckCircle, AlertCircle, Shield, Activity, Power, BookOpen, Layers, FileText, Globe, Database, Key, FlaskConical, Link } from 'lucide-react';
 
 // Extended Settings interface matching "Fully Loaded" specs + New User Requests
 interface AdvancedSettings extends Settings {
@@ -15,12 +15,7 @@ interface AdvancedSettings extends Settings {
         gpu_layers: number;
         thread_count: number;
     };
-    ai_cloud: {
-        google_key: string;
-        huggingface_key: string;
-        openrouter_key: string;
-        glm_key: string; // Specific request for GLM 4.7
-    };
+    // Removed ai_cloud - keys live in ai_provider to match backend
     pharma: {
         enable_pubtator: boolean;
         enable_semantic_scholar: boolean;
@@ -32,11 +27,21 @@ interface AdvancedSettings extends Settings {
             biorxiv: boolean;
             chemrxiv: boolean;
             clinicaltrials: boolean;
+            google_scholar: boolean;
+            openalex: boolean;
+            semantic_scholar: boolean;
+            ieee: boolean;
+            elsevier: boolean;
+            scopus: boolean;
+            wos: boolean;
+            science_index: boolean;
         };
     };
     persona: {
-        role: 'PhD Student' | 'Senior Researcher' | 'Industry Scientist';
+        role: string;
         strictness: 'exploratory' | 'balanced' | 'conservative';
+        introduction: string;
+        research_focus: string;
     };
     output: {
         format: 'markdown' | 'pdf' | 'docx' | 'latex';
@@ -52,16 +57,28 @@ export default function SettingsPanel() {
         project: { name: 'New Project', type: 'Drug Discovery', disease_context: 'Alzheimer\'s', stage: 'Early Discovery' },
         agent: { mode: 'assisted', reasoning_depth: 'standard', self_correction: true, max_retries: 3, failure_policy: 'ask_user' },
         literature: { sources: ['pubmed'], enable_crossref: true, enable_preprints: false, year_range: 5, novelty_strictness: 'medium' },
-        ai_provider: { mode: 'auto', ollama_url: 'http://localhost:11434', ollama_model: 'llama2' },
+        ai_provider: {
+            mode: 'auto',
+            ollama_url: 'http://localhost:11434',
+            ollama_model: 'llama2',
+            google_key: '',
+            huggingface_key: '',
+            openrouter_key: '',
+            glm_key: '',
+            elsevier_key: ''
+        },
 
         system: { auto_start: true, minimize_to_tray: true, pause_on_battery: true, max_cpu_percent: 80 },
         ai_advanced: { context_window: 8192, gpu_layers: -1, thread_count: 8 },
-        ai_cloud: { google_key: '', huggingface_key: '', openrouter_key: '', glm_key: '' },
         pharma: {
             enable_pubtator: true, enable_semantic_scholar: true, enable_unpaywall: true, citation_threshold: 'high',
-            sources: { pubmed: true, pmc: true, biorxiv: false, chemrxiv: false, clinicaltrials: true }
+            sources: {
+                pubmed: true, pmc: true, biorxiv: false, chemrxiv: false, clinicaltrials: true,
+                google_scholar: false, openalex: true, semantic_scholar: true, ieee: false,
+                elsevier: false, scopus: false, wos: false, science_index: false
+            }
         },
-        persona: { role: 'PhD Student', strictness: 'conservative' },
+        persona: { role: 'PhD Student', strictness: 'conservative', introduction: '', research_focus: '' },
         output: { format: 'markdown', citation_style: 'apa', include_disclosure: true, output_dir: 'C:\\Research\\Exports' }
     };
 
@@ -79,7 +96,15 @@ export default function SettingsPanel() {
     const loadSettings = async () => {
         try {
             const remote = await api.getSettings();
-            if (remote) setSettings({ ...defaultSettings, ...remote });
+            if (remote) {
+                setSettings(prev => ({
+                    ...prev,
+                    ...remote,
+                    ai_provider: { ...prev.ai_provider, ...remote.ai_provider }, // Ensure flat merge
+                    pharma: { ...prev.pharma, ...remote.pharma, sources: { ...prev.pharma.sources, ...remote.pharma?.sources } },
+                    persona: { ...prev.persona, ...remote.persona }
+                }));
+            }
         } catch (e) {
             console.warn('Using default settings');
         } finally {
@@ -99,7 +124,6 @@ export default function SettingsPanel() {
         }
     };
 
-    // ... checkOllamaConnection (same as before) ...
     const checkOllamaConnection = async () => {
         if (!settings.ai_provider.ollama_url) return;
         setConnectionMsg('Pinging...');
@@ -120,6 +144,34 @@ export default function SettingsPanel() {
         }
     };
 
+    const handleTestKey = async (provider: string, key?: string, serviceType: 'llm' | 'elsevier' = 'llm') => {
+        if (!key) {
+            alert('Please enter an API key first.');
+            return;
+        }
+        try {
+            const res = await api.testConnection(serviceType, provider, key);
+            if (res.status === 'success') {
+                alert(`✅ ${res.message}`);
+            } else if (res.status === 'warning') {
+                alert(`⚠️ ${res.message}`);
+            } else {
+                alert(`❌ ${res.message}`);
+            }
+        } catch (e: any) {
+            alert(`❌ API Test Failed: ${e.message}`);
+        }
+    };
+
+    const updatePharmaSource = (key: keyof typeof settings.pharma.sources, val: boolean) => {
+        setSettings({
+            ...settings,
+            pharma: {
+                ...settings.pharma,
+                sources: { ...settings.pharma.sources, [key]: val }
+            }
+        });
+    };
 
     if (loading) return <div className="p-12 text-center text-slate-400">Loading Configuration...</div>;
 
@@ -127,8 +179,8 @@ export default function SettingsPanel() {
         <button
             onClick={() => setActiveTab(id)}
             className={`flex items-center space-x-2 px-4 py-3 rounded-lg font-medium transition-all min-w-max ${activeTab === id
-                    ? 'bg-teal-500/10 text-teal-400 border border-teal-500/20'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                ? 'bg-teal-500/10 text-teal-400 border border-teal-500/20'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800'
                 }`}
         >
             <Icon className="w-4 h-4" />
@@ -224,75 +276,40 @@ export default function SettingsPanel() {
                                     </div>
                                 </div>
                             </div>
-
-                            <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
-                                <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
-                                    <Cpu className="w-5 h-5 mr-2 text-purple-400" /> Hardware Acceleration
-                                </h3>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div>
-                                        <label className="block text-sm font-medium text-slate-400 mb-2">Context Window</label>
-                                        <select
-                                            value={settings.ai_advanced.context_window}
-                                            onChange={(e) => setSettings({ ...settings, ai_advanced: { ...settings.ai_advanced, context_window: parseInt(e.target.value) } })}
-                                            className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-white"
-                                        >
-                                            <option value={4096}>4,096 (Standard)</option>
-                                            <option value={8192}>8,192 (Extended)</option>
-                                            <option value={16384}>16,384 (Large - High RAM)</option>
-                                            <option value={32768}>32,768 (Massive - 24GB+ VRAM)</option>
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-slate-400 mb-2">GPU Layers Offload</label>
-                                        <div className="flex items-center space-x-4">
-                                            <input
-                                                type="range" min="-1" max="100"
-                                                value={settings.ai_advanced.gpu_layers}
-                                                onChange={(e) => setSettings({ ...settings, ai_advanced: { ...settings.ai_advanced, gpu_layers: parseInt(e.target.value) } })}
-                                                className="flex-1 accent-teal-500 h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer"
-                                            />
-                                            <span className="text-sm font-mono text-teal-400">{settings.ai_advanced.gpu_layers === -1 ? 'ALL' : settings.ai_advanced.gpu_layers}</span>
-                                        </div>
-                                        <p className="text-xs text-slate-500 mt-1">Slider: -1 (All) to 100 layers.</p>
-                                    </div>
-                                </div>
-                            </div>
                         </div>
                     )}
 
-                    {/* TAB: CLOUD APIS (User Request 3-Box + GLM) */}
+                    {/* TAB: CLOUD APIS */}
                     {activeTab === 'cloud' && (
                         <div className="space-y-6 animate-in fade-in duration-300">
                             <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
                                 <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
                                     <Cloud className="w-5 h-5 mr-2 text-sky-400" /> External API Keys
                                 </h3>
-                                <p className="text-sm text-slate-400 mb-6">
-                                    Configure fallback or primary cloud providers. Agent will prioritize these over local models if "Cloud Only" is selected or local fails.
-                                </p>
-
                                 <div className="grid gap-4">
                                     {/* Google */}
                                     <CloudKeyBox
                                         name="Google Gemini"
                                         icon="G"
-                                        value={settings.ai_cloud.google_key}
-                                        onChange={(v: string) => setSettings({ ...settings, ai_cloud: { ...settings.ai_cloud, google_key: v } })}
+                                        value={settings.ai_provider.google_key}
+                                        onChange={(v: string) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, google_key: v } })}
+                                        onTest={() => handleTestKey('google', settings.ai_provider.google_key)}
                                     />
                                     {/* Hugging Face */}
                                     <CloudKeyBox
                                         name="Hugging Face Inference"
                                         icon="🤗"
-                                        value={settings.ai_cloud.huggingface_key}
-                                        onChange={(v: string) => setSettings({ ...settings, ai_cloud: { ...settings.ai_cloud, huggingface_key: v } })}
+                                        value={settings.ai_provider.huggingface_key}
+                                        onChange={(v: string) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, huggingface_key: v } })}
+                                        onTest={() => handleTestKey('huggingface', settings.ai_provider.huggingface_key)}
                                     />
                                     {/* OpenRouter */}
                                     <CloudKeyBox
                                         name="OpenRouter"
                                         icon="OR"
-                                        value={settings.ai_cloud.openrouter_key}
-                                        onChange={(v: string) => setSettings({ ...settings, ai_cloud: { ...settings.ai_cloud, openrouter_key: v } })}
+                                        value={settings.ai_provider.openrouter_key}
+                                        onChange={(v: string) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, openrouter_key: v } })}
+                                        onTest={() => handleTestKey('openrouter', settings.ai_provider.openrouter_key)}
                                     />
                                     {/* GLM 4.7 (Paid) */}
                                     <div className="border-t border-slate-800 my-2 pt-4">
@@ -303,8 +320,9 @@ export default function SettingsPanel() {
                                         <CloudKeyBox
                                             name="GLM-4.7 API Key"
                                             icon="Z"
-                                            value={settings.ai_cloud.glm_key}
-                                            onChange={(v: string) => setSettings({ ...settings, ai_cloud: { ...settings.ai_cloud, glm_key: v } })}
+                                            value={settings.ai_provider.glm_key}
+                                            onChange={(v: string) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, glm_key: v } })}
+                                            onTest={() => handleTestKey('glm', settings.ai_provider.glm_key)}
                                         />
                                     </div>
                                 </div>
@@ -312,13 +330,13 @@ export default function SettingsPanel() {
                         </div>
                     )}
 
-                    {/* TAB: PHARMA & SOURCES */}
+                    {/* TAB: PHARMA & SOURCES (Fixed Tab Logic + Added Sources) */}
                     {activeTab === 'pharma' && (
                         <div className="space-y-6 animate-in fade-in duration-300">
                             {/* Rules */}
                             <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
                                 <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
-                                    <Shield className="w-5 h-5 mr-2 text-emerald-400" /> Compliance Rules
+                                    <Shield className="w-5 h-5 mr-2 text-emerald-400" /> Compliance Rules & Safety
                                 </h3>
                                 <div className="space-y-4">
                                     <div className="flex items-center justify-between p-4 bg-slate-950 rounded-lg border border-slate-800">
@@ -339,43 +357,68 @@ export default function SettingsPanel() {
                                 </div>
                             </div>
 
-                            {/* Sources Selection */}
+                            {/* Sources Grid */}
                             <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
-                                <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
-                                    <Globe className="w-5 h-5 mr-2 text-blue-400" /> Literature Sources
+                                <h3 className="text-lg font-semibold text-white mb-6 flex items-center">
+                                    <Database className="w-5 h-5 mr-2 text-cyan-400" /> Literature Sources
                                 </h3>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <ToggleCheckbox
-                                        label="PubMed / MEDLINE"
-                                        checked={settings.pharma.sources.pubmed}
-                                        onChange={() => setSettings({ ...settings, pharma: { ...settings.pharma, sources: { ...settings.pharma.sources, pubmed: !settings.pharma.sources.pubmed } } })}
-                                    />
-                                    <ToggleCheckbox
-                                        label="PubMed Central (Full Text)"
-                                        checked={settings.pharma.sources.pmc}
-                                        onChange={() => setSettings({ ...settings, pharma: { ...settings.pharma, sources: { ...settings.pharma.sources, pmc: !settings.pharma.sources.pmc } } })}
-                                    />
-                                    <ToggleCheckbox
-                                        label="ClinicalTrials.gov"
-                                        checked={settings.pharma.sources.clinicaltrials}
-                                        onChange={() => setSettings({ ...settings, pharma: { ...settings.pharma, sources: { ...settings.pharma.sources, clinicaltrials: !settings.pharma.sources.clinicaltrials } } })}
-                                    />
-                                    <ToggleCheckbox
-                                        label="bioRxiv (Preprints)"
-                                        checked={settings.pharma.sources.biorxiv}
-                                        onChange={() => setSettings({ ...settings, pharma: { ...settings.pharma, sources: { ...settings.pharma.sources, biorxiv: !settings.pharma.sources.biorxiv } } })}
-                                    />
-                                    <ToggleCheckbox
-                                        label="ChemRxiv (Chemistry)"
-                                        checked={settings.pharma.sources.chemrxiv}
-                                        onChange={() => setSettings({ ...settings, pharma: { ...settings.pharma, sources: { ...settings.pharma.sources, chemrxiv: !settings.pharma.sources.chemrxiv } } })}
-                                    />
+
+                                <div className="space-y-8">
+                                    {/* Medical & Bio */}
+                                    <div className="space-y-4">
+                                        <h4 className="text-sm font-medium text-slate-400 uppercase tracking-wider">Medical & Biology</h4>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <ToggleCard icon={Activity} label="PubMed Central" enabled={settings.pharma.sources.pmc} onClick={() => updatePharmaSource('pmc', !settings.pharma.sources.pmc)} color="blue" />
+                                            <ToggleCard icon={Activity} label="ClinicalTrials.gov" enabled={settings.pharma.sources.clinicaltrials} onClick={() => updatePharmaSource('clinicaltrials', !settings.pharma.sources.clinicaltrials)} color="emerald" />
+                                        </div>
+                                    </div>
+
+                                    {/* Broad Academic */}
+                                    <div className="space-y-4">
+                                        <h4 className="text-sm font-medium text-slate-400 uppercase tracking-wider">Broad Academic</h4>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <ToggleCard icon={Globe} label="Google Scholar" enabled={settings.pharma.sources.google_scholar} onClick={() => updatePharmaSource('google_scholar', !settings.pharma.sources.google_scholar)} color="sky" />
+                                            <ToggleCard icon={BookOpen} label="OpenAlex (Recommended)" enabled={settings.pharma.sources.openalex} onClick={() => updatePharmaSource('openalex', !settings.pharma.sources.openalex)} color="indigo" />
+                                            <ToggleCard icon={BookOpen} label="Semantic Scholar" enabled={settings.pharma.sources.semantic_scholar} onClick={() => updatePharmaSource('semantic_scholar', !settings.pharma.sources.semantic_scholar)} color="violet" />
+                                            <ToggleCard icon={BookOpen} label="IEEE Xplore" enabled={settings.pharma.sources.ieee} onClick={() => updatePharmaSource('ieee', !settings.pharma.sources.ieee)} color="blue" />
+                                        </div>
+                                    </div>
+
+                                    {/* Premium / Paid */}
+                                    <div className="space-y-4">
+                                        <h4 className="text-sm font-medium text-slate-400 uppercase tracking-wider">Premium Databases</h4>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <ToggleCard icon={Database} label="Elsevier ScienceDirect" enabled={settings.pharma.sources.elsevier} onClick={() => updatePharmaSource('elsevier', !settings.pharma.sources.elsevier)} color="orange" />
+                                            <ToggleCard icon={Database} label="Scopus" enabled={settings.pharma.sources.scopus} onClick={() => updatePharmaSource('scopus', !settings.pharma.sources.scopus)} color="orange" />
+                                            <ToggleCard icon={Database} label="Web of Science" enabled={settings.pharma.sources.wos} onClick={() => updatePharmaSource('wos', !settings.pharma.sources.wos)} color="purple" />
+                                        </div>
+                                        {/* API Key for Elsevier */}
+                                        <div className="p-3 bg-slate-950 rounded-lg border border-slate-800">
+                                            <label className="text-xs font-semibold text-slate-500 mb-2 block uppercase">Elsevier / Scopus API Key</label>
+                                            <div className="flex gap-2">
+                                                <input
+                                                    type="password"
+                                                    value={settings.ai_provider.elsevier_key || ''}
+                                                    onChange={(e) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, elsevier_key: e.target.value } })}
+                                                    placeholder="Enter Elsevier Dev Key"
+                                                    className="flex-1 bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-slate-300 focus:border-orange-500/50 focus:outline-none"
+                                                />
+                                                <button
+                                                    onClick={() => handleTestKey('elsevier', settings.ai_provider.elsevier_key, 'elsevier')}
+                                                    className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-xs font-bold transition-colors"
+                                                >
+                                                    Test
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     )}
 
-                    {/* TAB: OUTPUT & REPORTS */}
+                    {/* TAB: OUTPUT & SYSTEM & PERSONA (Corrected Logic) */}
+
                     {activeTab === 'output' && (
                         <div className="space-y-6 animate-in fade-in duration-300">
                             <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
@@ -385,14 +428,14 @@ export default function SettingsPanel() {
                                 <div className="space-y-6">
                                     <div>
                                         <label className="block text-sm font-medium text-slate-400 mb-3">Preferred Output Format</label>
-                                        <div className="flex space-x-3">
+                                        <div className="flex flex-wrap gap-3">
                                             {['markdown', 'pdf', 'docx', 'latex'].map((fmt) => (
                                                 <button
                                                     key={fmt}
                                                     onClick={() => setSettings({ ...settings, output: { ...settings.output, format: fmt as any } })}
                                                     className={`px-4 py-2 rounded-lg text-sm font-bold uppercase transition-all border ${settings.output.format === fmt
-                                                            ? 'bg-orange-500/20 text-orange-400 border-orange-500'
-                                                            : 'bg-slate-950 border-slate-700 text-slate-500 hover:text-white'
+                                                        ? 'bg-orange-500/20 text-orange-400 border-orange-500'
+                                                        : 'bg-slate-950 border-slate-700 text-slate-500 hover:text-white'
                                                         }`}
                                                 >
                                                     {fmt}
@@ -431,7 +474,6 @@ export default function SettingsPanel() {
                         </div>
                     )}
 
-                    {/* TAB: SYSTEM */}
                     {activeTab === 'system' && (
                         <div className="space-y-6 animate-in fade-in duration-300">
                             <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
@@ -439,48 +481,73 @@ export default function SettingsPanel() {
                                     <Power className="w-5 h-5 mr-2 text-rose-400" /> Lifecycle Management
                                 </h3>
                                 <div className="space-y-4">
-                                    <ToggleSetting
-                                        label="Auto-Start on Boot"
-                                        desc="Launch BioDockify automatically when you log in."
-                                        enabled={settings.system.auto_start}
-                                        onChange={() => setSettings({ ...settings, system: { ...settings.system, auto_start: !settings.system.auto_start } })}
-                                    />
-                                    <ToggleSetting
-                                        label="Minimize to System Tray"
-                                        desc="Keep agent running in background when window is closed."
-                                        enabled={settings.system.minimize_to_tray}
-                                        onChange={() => setSettings({ ...settings, system: { ...settings.system, minimize_to_tray: !settings.system.minimize_to_tray } })}
-                                    />
-                                    <ToggleSetting
-                                        label="Battery Saver Mode"
-                                        desc="Pause research automatically when on battery power."
-                                        enabled={settings.system.pause_on_battery}
-                                        onChange={() => setSettings({ ...settings, system: { ...settings.system, pause_on_battery: !settings.system.pause_on_battery } })}
-                                    />
+                                    <ToggleSetting label="Auto-Start on Boot" desc="Launch BioDockify automatically when you log in." enabled={settings.system.auto_start} onChange={() => setSettings({ ...settings, system: { ...settings.system, auto_start: !settings.system.auto_start } })} />
+                                    <ToggleSetting label="Minimize to System Tray" desc="Keep agent running in background when window is closed." enabled={settings.system.minimize_to_tray} onChange={() => setSettings({ ...settings, system: { ...settings.system, minimize_to_tray: !settings.system.minimize_to_tray } })} />
+                                    <ToggleSetting label="Battery Saver Mode" desc="Pause research automatically when on battery power." enabled={settings.system.pause_on_battery} onChange={() => setSettings({ ...settings, system: { ...settings.system, pause_on_battery: !settings.system.pause_on_battery } })} />
                                 </div>
                             </div>
                         </div>
                     )}
 
-                    {/* TAB: PERSONA */}
                     {activeTab === 'persona' && (
                         <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 animate-in fade-in duration-300">
                             <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
                                 <BookOpen className="w-5 h-5 mr-2 text-yellow-400" /> Research Persona
                             </h3>
-                            <div className="grid grid-cols-1 gap-6">
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-400 mb-2">User Role</label>
-                                    {/* ... Same as before ... */}
-                                    <select
-                                        value={settings.persona.role}
-                                        onChange={(e) => setSettings({ ...settings, persona: { ...settings.persona, role: e.target.value as any } })}
-                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white"
-                                    >
-                                        <option>PhD Student</option>
-                                        <option>Senior Researcher</option>
-                                        <option>Industry Scientist</option>
-                                    </select>
+                            <div className="space-y-6">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-medium text-slate-300">User Role</label>
+                                        <select
+                                            value={settings.persona?.role || 'PhD Student'}
+                                            onChange={(e) => setSettings({ ...settings, persona: { ...settings.persona, role: e.target.value } })}
+                                            className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-emerald-500/50"
+                                        >
+                                            <option value="PhD Student">PhD Student</option>
+                                            <option value="PG Student">PG Student</option>
+                                            <option value="Senior Researcher">Senior Researcher</option>
+                                            <option value="Industry Scientist">Industry Scientist</option>
+                                        </select>
+                                        <p className="text-xs text-slate-500">Defines the complexity of language and assumptions made by the agent.</p>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-medium text-slate-300">Strictness Level</label>
+                                        <select
+                                            value={settings.persona?.strictness || 'balanced'}
+                                            onChange={(e) => setSettings({ ...settings, persona: { ...settings.persona, strictness: e.target.value } })}
+                                            className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-emerald-500/50"
+                                        >
+                                            <option value="exploratory">Exploratory (Creative)</option>
+                                            <option value="balanced">Balanced (Standard)</option>
+                                            <option value="conservative">Conservative (High Proof)</option>
+                                        </select>
+                                        <p className="text-xs text-slate-500">Controls how much speculation is allowed in answers.</p>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-slate-300">Start Introduction (Who are you?)</label>
+                                    <textarea
+                                        value={settings.persona?.introduction || ''}
+                                        onChange={(e) => setSettings({ ...settings, persona: { ...settings.persona, introduction: e.target.value } })}
+                                        placeholder="I am a researcher specializing in neurodegenerative diseases..."
+                                        rows={3}
+                                        className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-emerald-500/50 resize-none"
+                                    />
+                                    <p className="text-xs text-slate-500">The agent will use this context to tailor its tone and examples.</p>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-slate-300">Current Work (What are you working on?)</label>
+                                    <textarea
+                                        value={settings.persona?.research_focus || ''}
+                                        onChange={(e) => setSettings({ ...settings, persona: { ...settings.persona, research_focus: e.target.value } })}
+                                        placeholder="Investigating the role of Tau proteins in early-stage Alzheimer's..."
+                                        rows={3}
+                                        className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-emerald-500/50 resize-none"
+                                    />
+                                    <p className="text-xs text-slate-500">Specific context that helps the agent prioritize relevant papers.</p>
                                 </div>
                             </div>
                         </div>
@@ -488,24 +555,29 @@ export default function SettingsPanel() {
 
                 </div>
 
-                {/* Sidebar Summary & Status */}
-                <div className="space-y-6">
+                {/* Sidebar Summary & Status (Visible on Large Screens Only) */}
+                <div className="space-y-6 hidden lg:block">
                     <div className="bg-teal-950/30 border border-teal-900/50 rounded-xl p-6">
                         <h4 className="text-sm font-bold text-teal-400 mb-3 uppercase tracking-wider">Active Status</h4>
                         <ul className="space-y-3 text-sm">
                             <li className="flex justify-between">
                                 <span className="text-slate-400">Mode</span>
-                                <span className="text-white font-mono">{settings.ai_provider.mode.toUpperCase()}</span>
+                                <span className="text-white font-mono">{settings.ai_provider?.mode?.toUpperCase()}</span>
                             </li>
                             <li className="flex justify-between">
                                 <span className="text-slate-400">Export</span>
-                                <span className="text-white font-mono">{settings.output.format.toUpperCase()}</span>
+                                <span className="text-white font-mono">{settings.output?.format?.toUpperCase()}</span>
                             </li>
                             <li className="flex justify-between">
                                 <span className="text-slate-400">Cloud Keys</span>
                                 <span className="text-white font-mono">
-                                    {[settings.ai_cloud.google_key, settings.ai_cloud.huggingface_key, settings.ai_cloud.glm_key].filter(k => k).length} Active
+                                    {/* Updated to use ai_provider keys */}
+                                    {[settings.ai_provider?.google_key, settings.ai_provider?.huggingface_key, settings.ai_provider?.glm_key].filter(k => k).length} Active
                                 </span>
+                            </li>
+                            <li className="flex justify-between">
+                                <span className="text-slate-400">Role</span>
+                                <span className="text-white font-mono truncate max-w-[100px]">{settings.persona?.role}</span>
                             </li>
                         </ul>
                     </div>
@@ -518,7 +590,7 @@ export default function SettingsPanel() {
 
 // --- Helper Components ---
 
-const CloudKeyBox = ({ name, value, icon, onChange }: any) => (
+const CloudKeyBox = ({ name, value, icon, onChange, onTest }: any) => (
     <div className="flex items-center space-x-3 p-3 bg-slate-950 border border-slate-800 rounded-lg group focus-within:border-teal-500 transition-colors">
         <div className="w-10 h-10 rounded bg-slate-900 flex items-center justify-center font-bold text-slate-400 border border-slate-800 group-focus-within:text-teal-400 group-focus-within:border-teal-500/50">
             {icon}
@@ -533,7 +605,12 @@ const CloudKeyBox = ({ name, value, icon, onChange }: any) => (
                     placeholder="sk-..."
                     className="flex-1 bg-transparent text-sm text-white placeholder-slate-700 outline-none font-mono"
                 />
-                <button className="text-xs bg-slate-800 hover:bg-slate-700 px-3 py-1 rounded text-slate-300 transition-colors">Test</button>
+                <button
+                    onClick={onTest}
+                    className="text-xs bg-slate-800 hover:bg-slate-700 px-3 py-1 rounded text-slate-300 transition-colors"
+                >
+                    Test
+                </button>
             </div>
         </div>
     </div>
@@ -554,16 +631,21 @@ const ToggleSetting = ({ label, desc, enabled, onChange }: any) => (
     </div>
 );
 
-const ToggleCheckbox = ({ label, checked, onChange }: any) => (
-    <div
-        onClick={onChange}
-        className={`flex items-center space-x-3 p-3 rounded-lg border cursor-pointer transition-all ${checked ? 'bg-teal-500/10 border-teal-500/50' : 'bg-slate-950 border-slate-800 hover:border-slate-700'
-            }`}
-    >
-        <div className={`w-5 h-5 rounded border flex items-center justify-center ${checked ? 'bg-teal-500 border-teal-500' : 'bg-slate-900 border-slate-600'
-            }`}>
-            {checked && <CheckCircle className="w-3 h-3 text-slate-950" />}
-        </div>
-        <span className={`text-sm font-medium ${checked ? 'text-teal-400' : 'text-slate-400'}`}>{label}</span>
-    </div>
-);
+const ToggleCard = ({ icon: Icon, label, enabled, onClick, color = 'teal' }: any) => {
+    const activeClass = enabled
+        ? `bg-${color}-500/10 border-${color}-500 text-white`
+        : 'bg-slate-950 border-slate-800 text-slate-500';
+
+    return (
+        <button
+            onClick={onClick}
+            className={`flex items-center p-3 rounded-lg border transition-all ${activeClass} hover:border-slate-700 w-full`}
+        >
+            <div className={`p-2 rounded-md mr-3 ${enabled ? `bg-${color}-500 text-black` : 'bg-slate-900'}`}>
+                <Icon className="w-5 h-5" />
+            </div>
+            <span className="font-semibold text-sm">{label}</span>
+            {enabled && <CheckCircle className={`ml-auto w-4 h-4 text-${color}-500`} />}
+        </button>
+    );
+};

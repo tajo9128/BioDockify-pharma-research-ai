@@ -9,7 +9,7 @@ import FirstRunWizard from '@/components/FirstRunWizard';
 
 // --- Main Component ---
 export default function PharmaceuticalResearchApp() {
-  const [activeView, setActiveView] = useState<'home' | 'settings'>('home');
+  const [activeView, setActiveView] = useState<string>('home');
   const [hasOnboarded, setHasOnboarded] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -20,10 +20,6 @@ export default function PharmaceuticalResearchApp() {
   const checkOnboardingStatus = async () => {
     try {
       const settings = await api.getSettings();
-      // Heuristic: If persona.role is generic or missing, trigger wizard
-      // For now, assuming if remote settings exist, we are good.
-      // But we want to force the new persona wizard. 
-      // Let's check for a specific flag or just always show if not set.
       if (settings?.persona?.role) {
         setHasOnboarded(true);
       }
@@ -34,7 +30,7 @@ export default function PharmaceuticalResearchApp() {
     }
   };
 
-  const handleWizardComplete = async (newSettings: any) => {
+  const c_settings = async (newSettings: any) => {
     // Merge and save
     try {
       const current = await api.getSettings() || {};
@@ -50,12 +46,32 @@ export default function PharmaceuticalResearchApp() {
 
   if (isLoading) return <div className="min-h-screen bg-slate-950 flex items-center justify-center text-teal-500">Initializing BioDockify...</div>;
 
+  // Render View Strategy
+  const renderContent = () => {
+    switch (activeView) {
+      case 'settings':
+        return (
+          <div className="h-full overflow-y-auto p-8">
+            <SettingsPanel />
+          </div>
+        );
+      case 'home':
+      case 'research':
+      case 'results':
+      case 'lab':
+      default:
+        // For now, all research activities happen in the Workstation
+        // Passing view prop to handle specific sub-views
+        return <ResearchWorkstation view={activeView} />;
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-teal-500/30">
 
       {/* First Run Wizard Overlay */}
       {!hasOnboarded && (
-        <FirstRunWizard onComplete={handleWizardComplete} />
+        <FirstRunWizard onComplete={c_settings} />
       )}
 
       {/* Background Ambience */}
@@ -63,16 +79,10 @@ export default function PharmaceuticalResearchApp() {
 
       {/* Main Layout */}
       <div className="flex h-screen overflow-hidden">
-        <Sidebar activeView={activeView} onViewChange={(view: any) => setActiveView(view)} />
+        <Sidebar activeView={activeView} onViewChange={setActiveView} />
 
         <main className="flex-1 relative overflow-hidden">
-          {activeView === 'settings' ? (
-            <div className="h-full overflow-y-auto p-8">
-              <SettingsPanel />
-            </div>
-          ) : (
-            <ResearchWorkstation />
-          )}
+          {renderContent()}
         </main>
       </div>
     </div>

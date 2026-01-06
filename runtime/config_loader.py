@@ -76,7 +76,15 @@ DEFAULT_CONFIG = {
             "pmc": True,
             "biorxiv": False,
             "chemrxiv": False,
-            "clinicaltrials": True
+            "clinicaltrials": True,
+            "google_scholar": False, # New
+            "openalex": True,        # New (High reliability)
+            "semantic_scholar": True, # New
+            "ieee": False,           # New
+            "elsevier": False,       # Paid/Key
+            "scopus": False,         # Paid/Key
+            "wos": False,            # Web of Science
+            "science_index": False   # Science Index
         }
     },
 
@@ -90,6 +98,7 @@ DEFAULT_CONFIG = {
         "openrouter_key": "",
         "huggingface_key": "",
         "glm_key": "", # GLM-4.7 Support
+        "elsevier_key": "", # For Scopus/ScienceDirect
         "pubmed_email": "",
     },
     
@@ -103,7 +112,9 @@ DEFAULT_CONFIG = {
     # NEW: User Persona
     "persona": {
         "role": "PhD Student",
-        "strictness": "conservative"
+        "strictness": "conservative",
+        "introduction": "", # Box 1: "Introduce yourself"
+        "research_focus": "" # Box 2: "His work"
     },
     
     # NEW: Output Config

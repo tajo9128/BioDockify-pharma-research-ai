@@ -195,6 +195,11 @@ def test_connection_endpoint(request: TestRequest):
                  return {"status": "warning", "message": "Invalid User Access Token (should start with hf_)"}
              return {"status": "success", "message": "HuggingFace Token is valid (Mock)"}
         
+        elif provider == "glm":
+             if "." not in request.key:
+                  return {"status": "warning", "message": "Invalid GLM Key format (usually id.secret)"}
+             return {"status": "success", "message": "GLM Key is configured (Mock)"}
+        
         return {"status": "error", "message": f"Unknown provider: {provider}"}
 
     elif request.service_type == "elsevier":
