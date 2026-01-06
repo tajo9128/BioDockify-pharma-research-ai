@@ -18,8 +18,8 @@
   ; --- BRANDING ---
   !define MUI_ICON "..\desktop\tauri\src-tauri\icons\icon.ico"
   !define MUI_UNICON "..\desktop\tauri\src-tauri\icons\icon.ico"
-  ; !define MUI_HEADERIMAGE
-  ; !define MUI_HEADERIMAGE_BITMAP "..\desktop\tauri\src-tauri\icons\icon.png" ; Might need BMP, but let's try icon first or skip bitmap if PNG not supported by NSIS standard (NSIS usually needs BMP).
+  !define MUI_HEADERIMAGE
+  !define MUI_HEADERIMAGE_BITMAP "..\desktop\tauri\src-tauri\icons\icon.bmp" ; Might need BMP, but let's try icon first or skip bitmap if PNG not supported by NSIS standard (NSIS usually needs BMP).
   ; Actually, standard NSIS requires BMP for bitmaps.
   ; Let's stick to ICONS for now to be safe, as we have .ico.
   ; If we want header image, we need a BMP. Let's rely on the Icon for window title and taskbar.
