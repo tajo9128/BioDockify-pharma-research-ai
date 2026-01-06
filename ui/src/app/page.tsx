@@ -45,7 +45,7 @@ interface ResearchStats {
 // --- Main Component ---
 export default function PharmaceuticalResearchApp() {
   // State
-  const [activeView, setActiveView] = useState<'home' | 'console' | 'settings'>('home');
+  const [activeView, setActiveView] = useState<'home' | 'research' | 'results' | 'lab' | 'settings'>('home');
   const [researchMode, setResearchMode] = useState<ResearchMode>('search');
   const [topic, setTopic] = useState('');
   const [isResearching, setIsResearching] = useState(false);
@@ -281,48 +281,34 @@ export default function PharmaceuticalResearchApp() {
           </>
         )}
 
-        {/* VIEW: CONSOLE (Expanded) */}
-        {
-          activeView === 'console' && (
-            <div className="max-w-7xl mx-auto h-[calc(100vh-6rem)] bg-black rounded-2xl border border-slate-800 p-6 flex flex-col font-mono">
-              <div className="flex items-center justify-between mb-4 pb-4 border-b border-slate-800">
-                <h2 className="text-xl text-slate-200 font-bold flex items-center">
-                  <Activity className="w-6 h-6 mr-3 text-teal-500" />
-                  Terminal Output
-                </h2>
-                <div className="flex space-x-2">
-                  <button onClick={() => setLogs([])} className="text-xs text-slate-500 hover:text-white px-3 py-1 border border-slate-800 rounded">
-                    CLEAR
-                  </button>
-                </div>
-              </div>
-              <div className="flex-1 overflow-y-auto space-y-2 custom-scrollbar">
-                {logs.map((log) => (
-                  <div key={log.id} className="border-b border-slate-900/50 pb-1">
-                    <span className="text-slate-500 mr-4">[{log.timestamp}]</span>
-                    <span className={`
-                        ${log.type === 'info' ? 'text-slate-300' : ''}
-                        ${log.type === 'success' ? 'text-green-400' : ''}
-                        ${log.type === 'error' ? 'text-red-500 font-bold' : ''}
-                        ${log.type === 'warning' ? 'text-yellow-500' : ''}
-                      `}>
-                      {log.message}
-                    </span>
-                  </div>
-                ))}
-                <div ref={consoleEndRef} />
-              </div>
-            </div>
-          )
-        }
+        {/* VIEW: RESEARCH */}
+        {activeView === 'research' && (
+          <div className="max-w-6xl mx-auto">
+            <h1 className="text-3xl font-bold text-white mb-6">Research Pipeline</h1>
+            <p className="text-slate-400">Advanced research tools and literature analysis coming soon.</p>
+          </div>
+        )}
 
+        {/* VIEW: RESULTS */}
+        {activeView === 'results' && (
+          <div className="max-w-6xl mx-auto">
+            <h1 className="text-3xl font-bold text-white mb-6">Results & Reports</h1>
+            <p className="text-slate-400">View and export your research findings.</p>
+          </div>
+        )}
+
+        {/* VIEW: LAB */}
+        {activeView === 'lab' && (
+          <div className="max-w-6xl mx-auto">
+            <h1 className="text-3xl font-bold text-white mb-6">Lab Interface</h1>
+            <p className="text-slate-400">Protocol generation and lab automation tools.</p>
+          </div>
+        )}
 
         {/* VIEW: SETTINGS */}
-        {
-          activeView === 'settings' && (
-            <SettingsPanel />
-          )
-        }
+        {activeView === 'settings' && (
+          <SettingsPanel />
+        )}
 
       </main >
     </div >

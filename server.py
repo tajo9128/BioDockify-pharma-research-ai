@@ -6,6 +6,37 @@ import sys
 # Add the current directory to sys.path so imports work
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
+# --- PROTECTIVE STARTUP CHECKS ---
+import logging
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+
+REQUIRED_ENV = [
+    # "NEO4J_URI", "NEO4J_USER", "NEO4J_PASS",  # Uncomment if Neo4j is critical for startup
+    # "OLLAMA_HOST" # Uncomment if Ollama is critical
+]
+
+# Check for .env file and load it if python-dotenv is available (optional)
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
+missing = [v for v in REQUIRED_ENV if not os.getenv(v)]
+if missing:
+    logging.warning("⚠️  Startup Warning: Missing recommended environment variables: %s", ", ".join(missing))
+    # logging.error("Startup aborted...") # Uncomment to enforce fail-fast
+    # raise SystemExit(1) 
+
+# Check for critical dependencies before importing heavy libs
+try:
+    import tensorflow
+except ImportError:
+    logging.error("CRITICAL: TensorFlow not found. Please run 'pip install tensorflow'.")
+    raise SystemExit(1)
+# ---------------------------------
+
+
 # EXPLICIT IMPORTS TO FORCE PYINSTALLER BUNDLING
 # We remove try/except to force PyInstaller to see these as hard dependencies.
 import tensorflow as tf
