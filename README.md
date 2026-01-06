@@ -1,101 +1,88 @@
-# BioDockify: Agentic AI for Pharmaceutical Knowledge Discovery
+# BioDockify v2.0.0 🧬
 
-[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
-[![Release](https://img.shields.io/github/v/release/tajo9128/BioDockify-pharma-research-ai)](https://github.com/tajo9128/BioDockify-pharma-research-ai/releases)
-[![Platform](https://img.shields.io/badge/platform-Windows-lightgrey.svg)]()
-[![Status](https://img.shields.io/badge/status-Active_Research-green.svg)]()
+**The "Always-On" Autonomous Pharmaceutical Research Agent**
 
-**BioDockify** is a local-first, privacy-preserving desktop application designed for pharmaceutical researchers, PhD students, and computational biologists. It leverages Agentic AI, Named Entity Recognition (BioNER), and Knowledge Graphs to automate the extraction and synthesis of complex relationships from biomedical literature.
+BioDockify is a local-first, privacy-preserving AI workstation designed for pharmaceutical researchers, PhD students, and drug discovery scientists. It transforms standard LLVs (Large Language Models) into "Pharma-Grade" research assistants capable of deep literature review, hypothesis generation, and academic synthesis.
 
-## 👥 Team & Contact
+![License](https://img.shields.io/badge/license-MIT-blue.svg)
+![Version](https://img.shields.io/badge/version-2.5.0-green.svg)
+![Status](https://img.shields.io/badge/status-Production-teal.svg)
 
-- **Author:** Tajuddin Shaik  
-- **Team:** BioDockify Research Lab  
-- **Contact:** biodockify@hotmail.com  
-- **Version:** v2.4.0
+## 🚀 Key Features (v2.5.0)
 
----
+### 🧠 The Intelligence Layer ("The Brain")
+*   **Multi-Model Engine**: Seamlessly route queries between **GLM-4.7**, **Google Gemini**, **Hugging Face**, **OpenRouter**, or local **Ollama** models.
+*   **Pharma-Grade Compliance**: Integrated access to **PubMed**, **PubTator** (NER), **Semantic Scholar** (Impact Ranking), and **Unpaywall** (Legal OA).
+*   **Reasoning Modes**:
+    *   `Search`: Pure evidence retrieval.
+    *   `Synthesize`: Connecting dots and finding patterns.
+    *   `Write`: Academic drafting with strict **Citation Locks**.
 
-## 🚀 Key Features
+### 🛡️ The Safety Layer
+*   **Citation Lock**: The agent refuses to generate scientific claims without cited evidence (Low/Medium/High strictness).
+*   **Conflict Detection**: Actively scans for and highlights contradictory evidence in literature.
+*   **Context Awareness**: "Perplexity-Like" intent classification steers the research strategy.
 
-*   **Automated Literature Mining:** Parses PDFs using a hybrid Deep Learning approach (BioBERT) to extract Genes, Proteins, and Chemical Compounds.
-*   **Agentic Orchestration:** "Agent Zero" autonomously breaks down complex research queries (e.g., "Find inhibitors for Alzheimer's targets") into executable sub-tasks.
-*   **Knowledge Graph Construction:** Dynamically builds a Neo4j graph to visualize hidden connections between entities.
-*   **Privacy by Design:** Runs **100% locally** on your PC. No data is sent to the cloud for inference, protecting sensitive IP.
-*   **Chemical Structure Recognition:** Integrates DECIMER to convert chemical images in papers into machine-readable SMILES strings.
+### ⚡ The System Layer ("The Body")
+*   **Always-On**: Minimizes to System Tray for background monitoring.
+*   **Hardware Aware**: Auto-pauses heavy inference when on battery power.
+*   **Local-First**: All research data, plans, and API keys are stored locally in `user_config`.
 
-## 🎯 Target Audience
+## 🛠️ Installation
 
-*   **Academic Researchers:** Accelerate literature reviews and hypothesis generation.
-*   **Pharmaceutical Scientists:** Identify novel drug repurposing candidates.
-*   **Bioinformatics Students:** Learn agentic workflows and graph database interactions.
+### Prerequisites
+*   **Python 3.10+** (Backend)
+*   **Node.js 18+** (Frontend)
+*   **Rust** (Desktop Shell)
+*   **Ollama** (Optional, for local inference)
 
----
+### Quick Start
 
-## 📥 Installation
+1.  **Clone the Repository**
+    ```bash
+    git clone https://github.com/your-org/biodockify.git
+    cd biodockify
+    ```
 
-**BioDockify** is available as a professional Windows installer.
+2.  **Install Backend Dependencies**
+    ```bash
+    pip install -r requirements.txt
+    ```
 
-1.  **Download:** Go to the [Releases Page](https://github.com/tajo9128/BioDockify-pharma-research-ai/releases) and download `BioDockify_Professional_Setup_v2.0.exe`.
-2.  **Install:** Run the installer. It will guide you through the setup.
-3.  **Docker:** BioDockify requires **Docker Desktop** for the local AI engine. The installer will check for this.
+3.  **Install Frontend Dependencies**
+    ```bash
+    cd ui
+    npm install
+    ```
 
-For detailed instructions, see [INSTALLATION.md](INSTALLATION.md).
+4.  **Run the Application**
+    ```bash
+    # From root directory
+    npm run tauri dev
+    ```
 
----
+## ⚙️ Configuration
 
-## ⚡ Quick Start
+BioDockify v2.0.0 introduces a comprehensive **Settings Panel** (Gear Icon):
 
-1.  Launch **BioDockify AI** from your Desktop.
-2.  Navigate to the **Research** tab.
-3.  Enter a query: *"Identify plant-based compounds related to BACE1 inhibition."*
-4.  The Agent will:
-    *   Search mapped literature.
-    *   Extract entities.
-    *   Construct a graph.
-    *   Generate a summary report.
+*   **Cloud Keys**: Enter your GLM-4.7, Google, or OpenRouter keys (stored locally).
+*   **Persona**: Set your role (`PhD Student`, `Industry Scientist`) to adjust agent strictness.
+*   **Literature**: Toggle specific sources (`PubMed`, `bioRxiv`, `ClinicalTrials.gov`).
+*   **Output**: Configure export formats (`PDF`, `LaTeX`, `Markdown`) and citation styles.
 
-For a full walkthrough, consult the [USER_GUIDE.md](USER_GUIDE.md).
+## 🏗️ Architecture
 
----
-
-## 🏗 Architecture
-
-BioDockify uses a modular architecture:
-*   **Frontend:** React.js (modern UI)
-*   **Desktop Shell:** Tauri (Rust-based, secure & lightweight)
-*   **Backend:** FastAPI (Python)
-*   **AI Engine:** Local TensorFlow & PyTorch models encapsulated in Docker
-
-See [ARCHITECTURE.md](ARCHITECTURE.md) for deeper technical details.
-
----
-
-## ⚠️ Disclaimer
-
-> **For Research Use Only.**
-> This software is intended for academic and research purposes. It does not provide medical, clinical, or regulatory advice. AI models can hallucinate; always verify findings with primary literature.
-> See [DISCLAIMER.md](DISCLAIMER.md) for full legal text.
+*   **Frontend**: Next.js 15 + React 19 + Tailwind CSS (Cyberpunk/Lab Aesthetics)
+*   **Orchestrator**: Python FastAPI + LangChain-style Logic
+*   **Shell**: Tauri (Rust) for native OS integration
+*   **Compliance**: Custom standard-library modules for academic rigor
 
 ## 🤝 Contributing
 
-Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
+We welcome contributions! Please see `CONTRIBUTING.md` for details on our "Pharma-Grade" code standards.
 
-## 📄 License
-
-This project is licensed under the **Apache License 2.0** - see the [LICENSE](LICENSE) file for details.
-
-## 🖊 Citation
-
-If you use BioDockify in your research, please cite it:
-
-```bibtex
-@software{BioDockify2026,
-  author = {Your Name / Team},
-  title = {BioDockify: Agentic AI for Pharmaceutical Knowledge Discovery},
-  year = {2026},
-  version = {2.0.39},
-  url = {https://github.com/tajo9128/BioDockify-pharma-research-ai}
-}
-```
-See [CITATION.cff](CITATION.cff) for more formats.
+1.  Fork the Project
+2.  Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
+3.  Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
+4.  Push to the Branch (`git push origin feature/AmazingFeature`)
+5.  Open a Pull Request

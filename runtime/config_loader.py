@@ -57,28 +57,61 @@ DEFAULT_CONFIG = {
         "failure_policy": "ask_user"  # Options: ask_user, auto_retry, abort
     },
 
-    # SECTION C: LITERATURE & EVIDENCE
+    # SECTION C: LITERATURE & EVIDENCE (Legacy + V2 Pharma)
     "literature": {
-        "sources": ["pubmed", "europe_pmc", "openalex"], # Default Active Sources
+        "sources": ["pubmed"], 
         "enable_crossref": True,
-        "enable_preprints": False, # Tier 3 (Disabled by default)
-        "year_range": 10,  # Last N years
-        "article_types": ["review", "experimental", "computational"],
-        "min_citations": 5,
-        "novelty_strictness": "medium",  # Options: low, medium, high
-        "include_preprints": False
+        "year_range": 10,  
+        "novelty_strictness": "medium"
+    },
+    
+    # NEW: Pharma Pipeline Controls
+    "pharma": {
+        "enable_pubtator": True,
+        "enable_semantic_scholar": True,
+        "enable_unpaywall": True,
+        "citation_threshold": "high",
+        "sources": {
+            "pubmed": True,
+            "pmc": True,
+            "biorxiv": False,
+            "chemrxiv": False,
+            "clinicaltrials": True
+        }
     },
 
     # SECTION E: API & AI SETTINGS
     "ai_provider": {
-        "mode": "free_api",  # Options: free_api, hybrid
-        "primary_model": "google", # Options: google, openrouter, huggingface (OpenAI deprecated)
+        "mode": "auto",  # Options: auto, ollama, z-ai
+        "primary_model": "google", 
+        "ollama_url": "http://localhost:11434",
+        "ollama_model": "llama2",
         "google_key": "",
         "openrouter_key": "",
         "huggingface_key": "",
-        "elsevier_key": "",
-        "elsevier_key": "",
-        "pubmed_email": "",  # Required for NCBI compliance
+        "glm_key": "", # GLM-4.7 Support
+        "pubmed_email": "",
+    },
+    
+    # NEW: Advanced Hardware Controls
+    "ai_advanced": {
+        "context_window": 8192,
+        "gpu_layers": -1,
+        "thread_count": 8
+    },
+    
+    # NEW: User Persona
+    "persona": {
+        "role": "PhD Student",
+        "strictness": "conservative"
+    },
+    
+    # NEW: Output Config
+    "output": {
+        "format": "markdown",
+        "citation_style": "apa",
+        "include_disclosure": True,
+        "output_dir": ""
     },
 
     # SECTION I: EXECUTION & SAFETY
@@ -89,10 +122,14 @@ DEFAULT_CONFIG = {
         "human_approval_gates": True
     },
     
-    # SYSTEM INTERNALS (Not typically exposed to user)
+    # SYSTEM INTERNALS
     "system": {
+        "auto_start": True,
+        "minimize_to_tray": True, 
+        "pause_on_battery": True,
+        "max_cpu_percent": 80,
         "log_level": "INFO",
-        "version": "2.0.43"
+        "version": "2.5.0"
     }
 }
 

@@ -10,6 +10,10 @@ from dataclasses import dataclass
 import requests
 from pydantic import BaseModel, Field
 
+from modules.bio_ner.pubtator import PubTatorValidator
+from modules.literature_search.semantic_scholar import SemanticScholarSearcher
+from modules.compliance.academic_compliance import AcademicComplianceEngine
+
 
 # =============================================================================
 # Configuration Models
@@ -34,6 +38,7 @@ class OrchestratorConfig(BaseModel):
     google_key: Optional[str] = Field(default=None)
     openrouter_key: Optional[str] = Field(default=None)
     huggingface_key: Optional[str] = Field(default=None)
+    glm_key: Optional[str] = Field(default=None) # GLM-4.7
     pubmed_email: Optional[str] = Field(default=None)
     
     # 2. Research Context (Section A)
@@ -160,6 +165,7 @@ class ResearchOrchestrator:
                 google_key=ai.get("google_key"),
                 openrouter_key=ai.get("openrouter_key"),
                 huggingface_key=ai.get("huggingface_key"),
+                glm_key=ai.get("glm_key"), # Added GLM key mapping from runtime
                 
                 pubmed_email=ai.get("pubmed_email"),
                 
@@ -177,8 +183,14 @@ class ResearchOrchestrator:
                 # Literature
                 literature_sources=lit.get("sources", []),
                 year_range=lit.get("year_range", 10),
+                year_range=lit.get("year_range", 10),
                 novelty_strictness=lit.get("novelty_strictness", "medium")
             )
+
+        # Initialize Brain Components (Phase 2)
+        self.pubtator = PubTatorValidator()
+        self.scholar = SemanticScholarSearcher()
+        self.compliance = AcademicComplianceEngine(strictness=self.config.novelty_strictness)
             
         if self.config.use_cloud_api and self.config.cloud_api_key:
             print(f"[+] Hybrid Mode Enabled: Using Cloud API")
@@ -248,6 +260,33 @@ class ResearchOrchestrator:
                     if s.step_id == 1: s.dependencies.append(0)
                     
         return plan
+
+    def classify_intent(self, query: str) -> str:
+        """
+        Determines the research intent: discovery, review, or writing.
+        """
+        query_lower = query.lower()
+        if any(x in query_lower for x in ["draft", "write", "report", "paper", "essay"]):
+            return "write"
+        elif any(x in query_lower for x in ["compare", "review", "summary", "overview"]):
+            return "synthesize" # Review mode
+        elif any(x in query_lower for x in ["find", "search", "identify", "list", "new"]):
+            return "search"
+        return "synthesize" # Default to reasoning
+
+    def enrich_context(self, query: str) -> str:
+        """
+        Fetches 'Pharma-Grade' context to prime the LLM planner.
+        """
+        context = []
+        
+        # 1. Semantic Scholar Impact Check
+        papers = self.scholar.search_impact_evidence(query, limit=3)
+        if papers:
+            titles = [f"'{p['title']}' (Inf: {p['influentialCitationCount']})" for p in papers]
+            context.append(f"Key Literature: {'; '.join(titles)}")
+            
+        return "\n".join(context)
     
     # -------------------------------------------------------------------------
     # Local Ollama Implementation
@@ -318,6 +357,14 @@ class ResearchOrchestrator:
             system_instruction += " You are encouraged to include novel, hypothesis-generating steps."
         
         context_instruction = f"User Goal: {purpose}. {mode_instruction}"
+        
+        # LOGIC RULE #4: Conflict Detection (Plan B Requirement)
+        context_instruction += "\nCRITICAL: You must actively look for and highlight CONTRADICTIONS or CONFLICTING EVIDENCE in the literature. Create specific steps to resolve these discrepancies."
+        
+        # Inject Enriched Data (Phase 2)
+        enriched_data = self.enrich_context(title)
+        if enriched_data:
+            context_instruction += f"\n\nCONTEXT FROM DATABASE:\n{enriched_data}"
 
         prompt = f"""{system_instruction}
 {context_instruction}
@@ -376,25 +423,25 @@ Provide ONLY the JSON."""
     # Cloud API Implementation (Placeholder)
     # -------------------------------------------------------------------------
     
+
     # -------------------------------------------------------------------------
     # Hybrid API Implementation with Fallback Logic
     # -------------------------------------------------------------------------
     
-    def _generate_plan_hybrid(self, title: str) -> dict:
+    def _generate_plan_hybrid(self, title: str, mode: str = "synthesize") -> dict:
         """
         Generate research plan using Cloud APIs with Fallback.
         Strategy: Primary -> Secondary -> Tertiary -> Local/Fallback
         """
         # 1. Define Priority Order
-        # We start with the user's selected primary, then try others if keys exist
         available_providers = []
         
         # Add Primary First
-        if self.config.primary_model in ["google", "openrouter", "huggingface"]:
+        if self.config.primary_model in ["google", "openrouter", "huggingface", "zhipu"]:
             available_providers.append(self.config.primary_model)
         
         # Add others as backup
-        candidates = ["google", "openrouter", "huggingface"]
+        candidates = ["google", "openrouter", "huggingface", "zhipu"]
         for c in candidates:
             if c != self.config.primary_model:
                 available_providers.append(c)
@@ -405,20 +452,19 @@ Provide ONLY the JSON."""
             try:
                 api_key = self._get_key_for_provider(provider)
                 if not api_key:
-                    # print(f"[-] Skipping {provider} (No Key)")
                     continue
                     
                 print(f"[*] Attempting generation with: {provider.upper()}")
                 
-                # router logic
+                plan = None
                 if provider == "google":
-                    plan = self._call_google_gemini(api_key, title)
+                    plan = self._call_google_gemini(api_key, title, mode)
                 elif provider == "openrouter":
-                    plan = self._call_openrouter(api_key, title)
+                    plan = self._call_openrouter(api_key, title, mode)
                 elif provider == "huggingface":
-                    plan = self._call_huggingface(api_key, title)
-                else:
-                    continue
+                    plan = self._call_huggingface(api_key, title, mode)
+                elif provider == "zhipu":
+                    plan = self._call_zhipu_glm(api_key, title, mode)
                     
                 if plan:
                     print(f"[+] Successfully generated plan using {provider.upper()}")
@@ -426,10 +472,9 @@ Provide ONLY the JSON."""
                     
             except Exception as e:
                 print(f"[!] Provider {provider} failed: {e}")
-                # Log usage limit specific errors
                 if "429" in str(e):
                     print(f"⚠ Rate Limit Hit for {provider}. Switching to next provider...")
-                continue # Try next provider
+                continue 
         
         print("[!] All cloud providers failed. Using offline fallback.")
         return self._generate_fallback_plan(title)
@@ -438,19 +483,37 @@ Provide ONLY the JSON."""
         if provider == "google": return self.config.google_key
         if provider == "openrouter": return self.config.openrouter_key
         if provider == "huggingface": return self.config.huggingface_key
-        if provider == "openai": return self.config.cloud_api_key
+        if provider == "zhipu": return self.config.glm_key
         return None
 
-    def _call_google_gemini(self, key: str, title: str) -> dict:
+    def _call_zhipu_glm(self, key: str, title: str, mode: str) -> dict:
+        """Call ZhipuAI (GLM-4) API."""
+        # Standard OpenAI-compatible format for Zhipu
+        url = "https://open.bigmodel.cn/api/paas/v4/chat/completions"
+        prompt = self._build_prompt(title, mode)
+        
+        payload = {
+            "model": "glm-4",
+            "messages": [{"role": "user", "content": prompt}],
+            "temperature": 0.7
+        }
+        
+        resp = requests.post(url, json=payload, headers={"Authorization": f"Bearer {key}"}, timeout=60)
+        resp.raise_for_status()
+        
+        data = resp.json()
+        text = data["choices"][0]["message"]["content"]
+        return self._parse_plan_response(text)
+
+    def _call_google_gemini(self, key: str, title: str, mode: str) -> dict:
         """Call Google Gemini API via REST."""
         url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={key}"
-        prompt = self._build_prompt(title)
+        prompt = self._build_prompt(title, mode)
         payload = {"contents": [{"parts": [{"text": prompt}]}]}
         
         resp = requests.post(url, json=payload, headers={"Content-Type": "application/json"}, timeout=30)
         resp.raise_for_status()
         
-        # Parse Gemini Response
         data = resp.json()
         try:
             text = data["candidates"][0]["content"]["parts"][0]["text"]
@@ -458,12 +521,12 @@ Provide ONLY the JSON."""
         except (KeyError, IndexError):
             raise ValueError("Invalid response format from Gemini")
 
-    def _call_openrouter(self, key: str, title: str) -> dict:
+    def _call_openrouter(self, key: str, title: str, mode: str) -> dict:
         """Call OpenRouter API."""
         url = "https://openrouter.ai/api/v1/chat/completions"
-        prompt = self._build_prompt(title)
+        prompt = self._build_prompt(title, mode)
         payload = {
-            "model": "mistralai/mistral-7b-instruct", # Default cheap/fast model
+            "model": "mistralai/mistral-7b-instruct", 
             "messages": [{"role": "user", "content": prompt}]
         }
         
@@ -474,19 +537,16 @@ Provide ONLY the JSON."""
         text = data["choices"][0]["message"]["content"]
         return self._parse_plan_response(text)
 
-    def _call_huggingface(self, key: str, title: str) -> dict:
+    def _call_huggingface(self, key: str, title: str, mode: str) -> dict:
         """Call HuggingFace Inference API."""
-        # Using Mixtral as it's solid for planning
         url = "https://api-inference.huggingface.co/models/mistralai/Mixtral-8x7B-Instruct-v0.1"
-        prompt = self._build_prompt(title)
-        # HF API takes raw string for text-generation
+        prompt = self._build_prompt(title, mode)
         payload = {"inputs": prompt, "parameters": {"max_new_tokens": 1024, "return_full_text": False}}
         
         resp = requests.post(url, json=payload, headers={"Authorization": f"Bearer {key}"}, timeout=30)
         resp.raise_for_status()
         
         data = resp.json()
-        # HF returns list of dicts
         text = data[0]["generated_text"]
         return self._parse_plan_response(text)
     
@@ -497,12 +557,6 @@ Provide ONLY the JSON."""
     def _generate_fallback_plan(self, title: str) -> dict:
         """
         Generate a generic fallback plan when AI fails.
-        
-        Args:
-            title: Research title
-            
-        Returns:
-            Dictionary with plan data
         """
         return {
             "objectives": [

@@ -42,6 +42,11 @@
                 "icons/icon.ico"
             ]
         },
+        "systemTray": {
+            "iconPath": "icons/icon.ico",
+            "iconAsTemplate": true,
+            "title": "BioDockify"
+        },
         "security": {
             "csp": null
         },

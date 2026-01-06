@@ -1,316 +1,80 @@
-
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
-
-import CompliancePanel from '@/components/CompliancePanel';
-import SettingsPanel from '@/components/SettingsPanel';
-// ... existing imports
-import {
-  Search,
-  FileText,
-  Cpu,
-  Settings,
-  Activity,
-  Download,
-  Play,
-  Pause,
-  RotateCcw,
-  CheckCircle,
-  AlertTriangle,
-  BookOpen,
-  Microscope,
-  Network
-} from 'lucide-react';
-import Sidebar from '@/components/Sidebar';
+import React, { useState, useEffect } from 'react';
 import { api } from '@/lib/api';
-
-// --- Types ---
-type ResearchMode = 'search' | 'synthesize' | 'write' | 'protocol';
-
-interface LogEntry {
-  id: string;
-  timestamp: string;
-  message: string;
-  type: 'info' | 'success' | 'error' | 'warning';
-}
-
-interface ResearchStats {
-  papersAnalyzed: number;
-  candidatesFound: number;
-  protocolsGenerated: number;
-  graphNodes: number;
-}
+import Sidebar from '@/components/Sidebar';
+import SettingsPanel from '@/components/SettingsPanel';
+import ResearchWorkstation from '@/components/ResearchWorkstation';
+import FirstRunWizard from '@/components/FirstRunWizard';
 
 // --- Main Component ---
 export default function PharmaceuticalResearchApp() {
-  // State
-  const [activeView, setActiveView] = useState<'home' | 'research' | 'results' | 'lab' | 'settings'>('home');
-  const [researchMode, setResearchMode] = useState<ResearchMode>('search');
-  const [topic, setTopic] = useState('');
-  const [isResearching, setIsResearching] = useState(false);
-  const [logs, setLogs] = useState<LogEntry[]>([]);
-  const [stats, setStats] = useState<ResearchStats>({
-    papersAnalyzed: 0,
-    candidatesFound: 0,
-    protocolsGenerated: 0,
-    graphNodes: 0
-  });
-
-  // Compliance State
-  const [isCompliant, setIsCompliant] = useState(false);
-
-  // Console Auto-scroll
-  const consoleEndRef = useRef<HTMLDivElement>(null);
+  const [activeView, setActiveView] = useState<'home' | 'settings'>('home');
+  const [hasOnboarded, setHasOnboarded] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (consoleEndRef.current) {
-      consoleEndRef.current.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [logs]);
+    checkOnboardingStatus();
+  }, []);
 
-  // Logging Helper
-  const addLog = (message: string, type: 'info' | 'success' | 'error' | 'warning' = 'info') => {
-    const entry: LogEntry = {
-      id: Math.random().toString(36).substring(7),
-      timestamp: new Date().toLocaleTimeString(),
-      message,
-      type
-    };
-    setLogs(prev => [...prev, entry]);
-  };
-
-  // Actions
-  const handleStartResearch = async () => {
-    if (!topic.trim()) return;
-
-    setIsResearching(true);
-    addLog(`Starting ${researchMode} research on: "${topic}"`, 'info');
-
+  const checkOnboardingStatus = async () => {
     try {
-      // API call
-      const res = await api.startResearch(topic, researchMode);
-      addLog(`Task Started: ${res.taskId} via ${res.provider}`, 'success');
-
-      addLog('Initializing Agent Zero...', 'info');
-
-      // Simulate progress for UI feedback since real socket is not fully wired in this simplified view yet
-      // But the backend DID execute the LLM call (blocking in route.ts for now)
-      if (res.result) {
-        setTimeout(() => {
-          addLog('Research Analysis Complete.', 'success');
-          addLog(`Result: ${res.result.substring(0, 50)}...`, 'info');
-          setStats(prev => ({ ...prev, papersAnalyzed: prev.papersAnalyzed + 1 }));
-          setIsResearching(false);
-        }, 1000);
+      const settings = await api.getSettings();
+      // Heuristic: If persona.role is generic or missing, trigger wizard
+      // For now, assuming if remote settings exist, we are good.
+      // But we want to force the new persona wizard. 
+      // Let's check for a specific flag or just always show if not set.
+      if (settings?.persona?.role) {
+        setHasOnboarded(true);
       }
-
-    } catch (error: any) {
-      addLog(`Failed to start research task: ${error.message}`, 'error');
-      setIsResearching(false);
+    } catch (e) {
+      console.warn("Failed to check onboarding:", e);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleStopResearch = () => {
-    setIsResearching(false);
-    addLog('Research task stopped by user', 'warning');
+  const handleWizardComplete = async (newSettings: any) => {
+    // Merge and save
+    try {
+      const current = await api.getSettings() || {};
+      const updated = { ...current, ...newSettings };
+      await api.saveSettings(updated);
+      setHasOnboarded(true);
+    } catch (e) {
+      console.error("Failed to save wizard settings", e);
+      // Allow proceed anyway for demo
+      setHasOnboarded(true);
+    }
   };
 
-  // --- Render Helpers ---
-  const renderStatCard = (label: string, value: number, Icon: any, color: string) => (
-    <div className="bg-slate-800/50 backdrop-blur-sm p-4 rounded-xl border border-slate-700 hover:border-slate-500 transition-all duration-300">
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-slate-400 text-sm font-medium">{label}</span>
-        <Icon className={`w-5 h-5 ${color}`} />
-      </div>
-      <div className="text-2xl font-bold text-white">{value.toLocaleString()}</div>
-    </div>
-  );
+  if (isLoading) return <div className="min-h-screen bg-slate-950 flex items-center justify-center text-teal-500">Initializing BioDockify...</div>;
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-teal-500/30">
+
+      {/* First Run Wizard Overlay */}
+      {!hasOnboarded && (
+        <FirstRunWizard onComplete={handleWizardComplete} />
+      )}
+
       {/* Background Ambience */}
       <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-black -z-10" />
 
-      {/* Sidebar Navigation */}
-      <Sidebar activeView={activeView} onViewChange={(view: any) => setActiveView(view)} />
+      {/* Main Layout */}
+      <div className="flex h-screen overflow-hidden">
+        <Sidebar activeView={activeView} onViewChange={(view: any) => setActiveView(view)} />
 
-      {/* Main Content Area */}
-      <main className="ml-20 p-8 min-h-screen relative z-0">
-
-        {/* VIEW: HOME */}
-        {activeView === 'home' && (
-          <>
-            <div className="max-w-6xl mx-auto space-y-10 animate-in fade-in duration-500">
-
-              {/* Header */}
-              <div className="space-y-2">
-                <h1 className="text-4xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-cyan-400">
-                  BioDockify AI
-                </h1>
-                <p className="text-slate-400 text-lg">
-                  Pharmaceutical Intelligence & Knowledge Synthesis Platform via Agentic AI
-                </p>
-              </div>
-
-              {/* Stats Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {renderStatCard('Papers Analyzed', stats.papersAnalyzed, BookOpen, 'text-blue-400')}
-                {renderStatCard('Candidates', stats.candidatesFound, Microscope, 'text-teal-400')}
-                {renderStatCard('Graph Nodes', stats.graphNodes, Network, 'text-purple-400')}
-                {renderStatCard('Protocols', stats.protocolsGenerated, FileText, 'text-orange-400')}
-              </div>
-
-              {/* Research Input Panel */}
-              <div className="bg-slate-900/80 backdrop-blur-md rounded-2xl p-8 border border-slate-700 shadow-2xl">
-                <div className="flex items-center space-x-4 mb-6">
-                  <button
-                    onClick={() => setResearchMode('search')}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${researchMode === 'search' ? 'bg-teal-500/10 text-teal-400 border border-teal-500/50' : 'text-slate-400 hover:text-white'
-                      }`}
-                  >
-                    <Search className="w-4 h-4 inline mr-2" />
-                    Literature Search
-                  </button>
-                  <button
-                    onClick={() => setResearchMode('synthesize')}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${researchMode === 'synthesize' ? 'bg-purple-500/10 text-purple-400 border border-purple-500/50' : 'text-slate-400 hover:text-white'
-                      }`}
-                  >
-                    <Cpu className="w-4 h-4 inline mr-2" />
-                    Synthesis
-                  </button>
-                  <button
-                    onClick={() => setResearchMode('write')}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${researchMode === 'write' ? 'bg-orange-500/10 text-orange-400 border border-orange-500/50' : 'text-slate-400 hover:text-white'
-                      }`}
-                  >
-                    <FileText className="w-4 h-4 inline mr-2" />
-                    Drafting
-                  </button>
-                </div>
-
-                <div className="relative">
-                  <textarea
-                    value={topic}
-                    onChange={(e) => setTopic(e.target.value)}
-                    placeholder="Describe your research goal (e.g., 'Find novel inhibitors for Tau aggregation in Alzheimer\'s disease')..."
-                    className="w-full h-32 bg-slate-950 border border-slate-700 rounded-xl p-4 text-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none resize-none placeholder-slate-600 transition-all"
-                  />
-                  <div className="absolute bottom-4 right-4 flex space-x-3">
-                    {isResearching ? (
-                      <button
-                        onClick={handleStopResearch}
-                        className="bg-red-500/10 hover:bg-red-500/20 text-red-400 px-6 py-2 rounded-lg font-medium border border-red-500/50 flex items-center transition-all"
-                      >
-                        <Pause className="w-4 h-4 mr-2" />
-                        Stop
-                      </button>
-                    ) : (
-                      <button
-                        onClick={handleStartResearch}
-                        className="bg-teal-500 hover:bg-teal-400 text-slate-950 px-8 py-2 rounded-lg font-bold flex items-center shadow-lg shadow-teal-500/20 transition-all transform hover:scale-105"
-                      >
-                        <Play className="w-4 h-4 mr-2" />
-                        Start Research
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Compliance & Export Section (Only in Write Mode) */}
-              {researchMode === 'write' && (
-                <CompliancePanel
-                  text={topic} // In real app, this would be the generated draft content
-                  onComplianceChange={setIsCompliant}
-                />
-              )}
-
-              {/* Export Actions */}
-              {researchMode === 'write' && (
-                <div className="flex justify-end mt-4 space-x-3">
-                  <button
-                    disabled={!isCompliant}
-                    className={`flex items-center space-x-2 px-6 py-2 rounded-lg font-bold transition-all ${isCompliant
-                      ? 'bg-teal-500 hover:bg-teal-400 text-slate-950 shadow-lg shadow-teal-500/20 transform hover:scale-105'
-                      : 'bg-slate-800 text-slate-500 cursor-not-allowed opacity-50'
-                      }`}
-                    onClick={() => addLog('Exporting document (Compliance Verified)...', 'success')}
-                  >
-                    <Download className="w-4 h-4" />
-                    <span>Export Manuscript</span>
-                  </button>
-                </div>
-              )}
+        <main className="flex-1 relative overflow-hidden">
+          {activeView === 'settings' ? (
+            <div className="h-full overflow-y-auto p-8">
+              <SettingsPanel />
             </div>
-
-            {/* Live Console Preview */}
-            <div className="bg-black/50 rounded-xl border border-slate-800 p-4 font-mono text-sm h-48 overflow-y-auto custom-scrollbar">
-              <div className="text-slate-500 mb-2 sticky top-0 bg-black/90 p-1 border-b border-slate-800 flex justify-between">
-                <span>SYSTEM LOGS</span>
-                <div className="flex space-x-2">
-                  <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-                  <span className="text-green-500 text-xs">ONLINE</span>
-                </div>
-              </div>
-              <div className="space-y-1.5">
-                {logs.length === 0 && (
-                  <div className="text-slate-600 italic">No activity logs recorded yet...</div>
-                )}
-                {logs.map((log) => (
-                  <div key={log.id} className="flex items-start">
-                    <span className="text-slate-600 w-24 shrink-0">[{log.timestamp}]</span>
-                    <span className={`
-                      ${log.type === 'info' ? 'text-blue-300' : ''}
-                      ${log.type === 'success' ? 'text-green-400' : ''}
-                      ${log.type === 'error' ? 'text-red-400' : ''}
-                      ${log.type === 'warning' ? 'text-yellow-400' : ''}
-                    `}>
-                      {log.type === 'success' && '✓ '}
-                      {log.type === 'error' && '✗ '}
-                      {log.type === 'warning' && '⚠ '}
-                      {log.message}
-                    </span>
-                  </div>
-                ))}
-                <div ref={consoleEndRef} />
-              </div>
-            </div>
-
-          </>
-        )}
-
-        {/* VIEW: RESEARCH */}
-        {activeView === 'research' && (
-          <div className="max-w-6xl mx-auto">
-            <h1 className="text-3xl font-bold text-white mb-6">Research Pipeline</h1>
-            <p className="text-slate-400">Advanced research tools and literature analysis coming soon.</p>
-          </div>
-        )}
-
-        {/* VIEW: RESULTS */}
-        {activeView === 'results' && (
-          <div className="max-w-6xl mx-auto">
-            <h1 className="text-3xl font-bold text-white mb-6">Results & Reports</h1>
-            <p className="text-slate-400">View and export your research findings.</p>
-          </div>
-        )}
-
-        {/* VIEW: LAB */}
-        {activeView === 'lab' && (
-          <div className="max-w-6xl mx-auto">
-            <h1 className="text-3xl font-bold text-white mb-6">Lab Interface</h1>
-            <p className="text-slate-400">Protocol generation and lab automation tools.</p>
-          </div>
-        )}
-
-        {/* VIEW: SETTINGS */}
-        {activeView === 'settings' && (
-          <SettingsPanel />
-        )}
-
-      </main >
-    </div >
+          ) : (
+            <ResearchWorkstation />
+          )}
+        </main>
+      </div>
+    </div>
   );
 }

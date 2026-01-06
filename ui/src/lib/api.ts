@@ -54,7 +54,7 @@ export interface Settings {
     failure_policy: 'ask_user' | 'auto_retry' | 'abort';
   };
   literature: {
-    sources: string[]; // ['pubmed', 'europe_pmc', 'openalex']
+    sources: string[];
     enable_crossref: boolean;
     enable_preprints: boolean;
     year_range: number;
@@ -64,15 +64,46 @@ export interface Settings {
     mode: 'auto' | 'ollama' | 'z-ai';
     ollama_url?: string;
     ollama_model?: string;
-    zai_key?: string;
-
-    // Legacy support (optional)
-    primary_model?: string;
+    google_key?: string;
+    huggingface_key?: string;
+    openrouter_key?: string;
+    glm_key?: string;
+    pubmed_email?: string;
   };
-  database?: { // Keep legacy support for now or move to 'execution'
-    host: string;
-    user: string;
-    password: string;
+  // New V2 Schema Additions
+  pharma: {
+    enable_pubtator: boolean;
+    enable_semantic_scholar: boolean;
+    enable_unpaywall: boolean;
+    citation_threshold: 'low' | 'medium' | 'high';
+    sources: {
+      pubmed: boolean;
+      pmc: boolean;
+      biorxiv: boolean;
+      chemrxiv: boolean;
+      clinicaltrials: boolean;
+    };
+  };
+  ai_advanced: {
+    context_window: number;
+    gpu_layers: number;
+    thread_count: number;
+  };
+  persona: {
+    role: 'PhD Student' | 'Senior Researcher' | 'Industry Scientist';
+    strictness: 'exploratory' | 'balanced' | 'conservative';
+  };
+  output: {
+    format: 'markdown' | 'pdf' | 'docx' | 'latex';
+    citation_style: 'apa' | 'nature' | 'ieee' | 'chicago';
+    include_disclosure: boolean;
+    output_dir: string;
+  };
+  system: {
+    auto_start: boolean;
+    minimize_to_tray: boolean;
+    pause_on_battery: boolean;
+    max_cpu_percent: number;
   };
 }
 
