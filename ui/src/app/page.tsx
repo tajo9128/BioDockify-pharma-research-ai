@@ -476,6 +476,7 @@ export default function PharmaceuticalResearchApp() {
                     </div>
                   </div>
                 </div>
+                {/* End of Progress Card */}
 
                 {/* Reasoning / Explain Why */}
                 <div className="glass-card p-1 overflow-hidden">
@@ -1301,162 +1302,163 @@ export default function PharmaceuticalResearchApp() {
           </div>
         )}
 
-        {/* === TAB: LITERATURE === */}
-        <div className="glass-card p-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <div className="flex items-center gap-4 mb-8">
-            <div className="w-12 h-12 rounded-xl bg-orange-500/20 flex items-center justify-center">
-              <Globe className="w-6 h-6 text-orange-400" />
+        {/* === TAB: LITERATURE (SETTINGS) === */}
+        {activeView === 'settings' && (
+          <div className="glass-card p-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="flex items-center gap-4 mb-8">
+              <div className="w-12 h-12 rounded-xl bg-orange-500/20 flex items-center justify-center">
+                <Globe className="w-6 h-6 text-orange-400" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-white">Literature Scope</h3>
+                <p className="text-sm text-gray-400">Define search boundaries and strictness</p>
+              </div>
             </div>
-            <div>
-              <h3 className="text-xl font-bold text-white">Literature Scope</h3>
-              <p className="text-sm text-gray-400">Define search boundaries and strictness</p>
-            </div>
-          </div>
 
-          <div className="space-y-6">
             <div className="space-y-6">
-              {/* TIER 1: CORE */}
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <label className="text-sm font-semibold text-white">Tier 1: Core Biomedical (Mandatory)</label>
-                  <span className="text-xs text-green-400 font-medium px-2 py-1 bg-green-500/10 rounded-full border border-green-500/20">Active</span>
-                </div>
-                <div className="bg-black/20 rounded-xl p-4 border border-white/5 space-y-3">
-                  <div className="flex items-center gap-3">
-                    <input type="checkbox" checked={true} disabled className="w-4 h-4 rounded border-gray-600 bg-gray-700 text-blue-500" />
-                    <div>
-                      <span className="text-white block text-sm">PubMed (NCBI)</span>
-                      <span className="text-xs text-gray-500">Abstracts, MeSH terms, Gold standard</span>
-                    </div>
+              <div className="space-y-6">
+                {/* TIER 1: CORE */}
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <label className="text-sm font-semibold text-white">Tier 1: Core Biomedical (Mandatory)</label>
+                    <span className="text-xs text-green-400 font-medium px-2 py-1 bg-green-500/10 rounded-full border border-green-500/20">Active</span>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <input type="checkbox" checked={true} disabled className="w-4 h-4 rounded border-gray-600 bg-gray-700 text-blue-500" />
-                    <div>
-                      <span className="text-white block text-sm">Europe PMC</span>
-                      <span className="text-xs text-gray-500">Full text (Open Access), Patents, Grants</span>
+                  <div className="bg-black/20 rounded-xl p-4 border border-white/5 space-y-3">
+                    <div className="flex items-center gap-3">
+                      <input type="checkbox" checked={true} disabled className="w-4 h-4 rounded border-gray-600 bg-gray-700 text-blue-500" />
+                      <div>
+                        <span className="text-white block text-sm">PubMed (NCBI)</span>
+                        <span className="text-xs text-gray-500">Abstracts, MeSH terms, Gold standard</span>
+                      </div>
                     </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* TIER 2: METADATA */}
-              <div>
-                <label className="block text-sm font-semibold text-white mb-3">Tier 2: Metadata & Discovery</label>
-                <div className="bg-black/20 rounded-xl p-4 border border-white/5 space-y-3">
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="checkbox"
-                      checked={settings.literature.sources.includes('openalex')}
-                      onChange={(e) => {
-                        const newSources = e.target.checked
-                          ? [...settings.literature.sources, 'openalex']
-                          : settings.literature.sources.filter(s => s !== 'openalex');
-                        setSettings({ ...settings, literature: { ...settings.literature, sources: newSources } });
-                      }}
-                      className="w-4 h-4 rounded border-gray-600 bg-gray-800 text-purple-500 focus:ring-purple-500"
-                    />
-                    <div>
-                      <span className="text-white block text-sm">OpenAlex</span>
-                      <span className="text-xs text-gray-400">Broad coverage, citation graphs, trend detection</span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="checkbox"
-                      checked={settings.literature.enable_crossref}
-                      onChange={(e) => setSettings({ ...settings, literature: { ...settings.literature, enable_crossref: e.target.checked } })}
-                      className="w-4 h-4 rounded border-gray-600 bg-gray-800 text-purple-500 focus:ring-purple-500"
-                    />
-                    <div>
-                      <span className="text-white block text-sm">CrossRef</span>
-                      <span className="text-xs text-gray-400">DOI validation, publisher metadata</span>
+                    <div className="flex items-center gap-3">
+                      <input type="checkbox" checked={true} disabled className="w-4 h-4 rounded border-gray-600 bg-gray-700 text-blue-500" />
+                      <div>
+                        <span className="text-white block text-sm">Europe PMC</span>
+                        <span className="text-xs text-gray-500">Full text (Open Access), Patents, Grants</span>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
 
-              {/* TIER 3: PREPRINTS */}
-              <div>
-                <label className="block text-sm font-semibold text-white mb-3">Tier 3: Preprints (Optional)</label>
-                <div className="bg-black/20 rounded-xl p-4 border border-white/5">
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="checkbox"
-                      checked={settings.literature.enable_preprints}
-                      onChange={(e) => setSettings({ ...settings, literature: { ...settings.literature, enable_preprints: e.target.checked } })}
-                      className="w-4 h-4 rounded border-gray-600 bg-gray-800 text-orange-500 focus:ring-orange-500"
-                    />
-                    <div>
-                      <span className="text-white block text-sm">bioRxiv / medRxiv</span>
-                      <span className="text-xs text-gray-400">Non-peer-reviewed results. Use with caution.</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-white mb-2">Search Sources</label>
-
-                <div className="grid grid-cols-2 gap-8">
-                  <div>
-                    <label className="block text-sm font-semibold text-white mb-4">Active Data Sources</label>
-                    <div className="space-y-3">
-                      {['pubmed', 'europe_pmc', 'openalex'].map(src => (
-                        <label key={src} className="flex items-center gap-3 p-3 bg-white/5 rounded-lg cursor-pointer hover:bg-white/10 transition-colors">
-                          <input
-                            type="checkbox"
-                            checked={settings.literature.sources.includes(src)}
-                            onChange={(e) => {
-                              if (e.target.checked) setSettings({ ...settings, literature: { ...settings.literature, sources: [...settings.literature.sources, src] } });
-                              else setSettings({ ...settings, literature: { ...settings.literature, sources: settings.literature.sources.filter(s => s !== src) } });
-                            }}
-                            className="w-5 h-5 rounded border-gray-600 bg-gray-800 text-blue-500 focus:ring-blue-500"
-                          />
-                          <span className="capitalize text-white">{src.replace('_', ' ')}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="space-y-6">
-                    <div>
-                      <label className="block text-sm font-semibold text-white mb-2">Citations Range (Years)</label>
-                      <div className="flex items-center gap-4">
-                        <input
-                          type="range"
-                          min="1" max="50"
-                          value={settings.literature.year_range}
-                          onChange={e => setSettings({ ...settings, literature: { ...settings.literature, year_range: parseInt(e.target.value) } })}
-                          className="w-full accent-blue-500"
-                        />
-                        <span className="text-xl font-bold text-blue-400 w-16 text-right">{settings.literature.year_range}y</span>
+                {/* TIER 2: METADATA */}
+                <div>
+                  <label className="block text-sm font-semibold text-white mb-3">Tier 2: Metadata & Discovery</label>
+                  <div className="bg-black/20 rounded-xl p-4 border border-white/5 space-y-3">
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="checkbox"
+                        checked={settings.literature.sources.includes('openalex')}
+                        onChange={(e) => {
+                          const newSources = e.target.checked
+                            ? [...settings.literature.sources, 'openalex']
+                            : settings.literature.sources.filter(s => s !== 'openalex');
+                          setSettings({ ...settings, literature: { ...settings.literature, sources: newSources } });
+                        }}
+                        className="w-4 h-4 rounded border-gray-600 bg-gray-800 text-purple-500 focus:ring-purple-500"
+                      />
+                      <div>
+                        <span className="text-white block text-sm">OpenAlex</span>
+                        <span className="text-xs text-gray-400">Broad coverage, citation graphs, trend detection</span>
                       </div>
                     </div>
 
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="checkbox"
+                        checked={settings.literature.enable_crossref}
+                        onChange={(e) => setSettings({ ...settings, literature: { ...settings.literature, enable_crossref: e.target.checked } })}
+                        className="w-4 h-4 rounded border-gray-600 bg-gray-800 text-purple-500 focus:ring-purple-500"
+                      />
+                      <div>
+                        <span className="text-white block text-sm">CrossRef</span>
+                        <span className="text-xs text-gray-400">DOI validation, publisher metadata</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* TIER 3: PREPRINTS */}
+                <div>
+                  <label className="block text-sm font-semibold text-white mb-3">Tier 3: Preprints (Optional)</label>
+                  <div className="bg-black/20 rounded-xl p-4 border border-white/5">
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="checkbox"
+                        checked={settings.literature.enable_preprints}
+                        onChange={(e) => setSettings({ ...settings, literature: { ...settings.literature, enable_preprints: e.target.checked } })}
+                        className="w-4 h-4 rounded border-gray-600 bg-gray-800 text-orange-500 focus:ring-orange-500"
+                      />
+                      <div>
+                        <span className="text-white block text-sm">bioRxiv / medRxiv</span>
+                        <span className="text-xs text-gray-400">Non-peer-reviewed results. Use with caution.</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-white mb-2">Search Sources</label>
+
+                  <div className="grid grid-cols-2 gap-8">
                     <div>
-                      <label className="block text-sm font-semibold text-white mb-3">Novelty Strictness</label>
-                      <div className="flex gap-2 p-1 bg-black/40 rounded-xl">
-                        {['low', 'medium', 'high'].map((lvl) => (
-                          <button
-                            key={lvl}
-                            onClick={() => setSettings({ ...settings, literature: { ...settings.literature, novelty_strictness: lvl as any } })}
-                            className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all capitalize ${settings.literature.novelty_strictness === lvl ? 'bg-blue-600 text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}
-                          >
-                            {lvl}
-                          </button>
+                      <label className="block text-sm font-semibold text-white mb-4">Active Data Sources</label>
+                      <div className="space-y-3">
+                        {['pubmed', 'europe_pmc', 'openalex'].map(src => (
+                          <label key={src} className="flex items-center gap-3 p-3 bg-white/5 rounded-lg cursor-pointer hover:bg-white/10 transition-colors">
+                            <input
+                              type="checkbox"
+                              checked={settings.literature.sources.includes(src)}
+                              onChange={(e) => {
+                                if (e.target.checked) setSettings({ ...settings, literature: { ...settings.literature, sources: [...settings.literature.sources, src] } });
+                                else setSettings({ ...settings, literature: { ...settings.literature, sources: settings.literature.sources.filter(s => s !== src) } });
+                              }}
+                              className="w-5 h-5 rounded border-gray-600 bg-gray-800 text-blue-500 focus:ring-blue-500"
+                            />
+                            <span className="capitalize text-white">{src.replace('_', ' ')}</span>
+                          </label>
                         ))}
                       </div>
                     </div>
+
+                    <div className="space-y-6">
+                      <div>
+                        <label className="block text-sm font-semibold text-white mb-2">Citations Range (Years)</label>
+                        <div className="flex items-center gap-4">
+                          <input
+                            type="range"
+                            min="1" max="50"
+                            value={settings.literature.year_range}
+                            onChange={e => setSettings({ ...settings, literature: { ...settings.literature, year_range: parseInt(e.target.value) } })}
+                            className="w-full accent-blue-500"
+                          />
+                          <span className="text-xl font-bold text-blue-400 w-16 text-right">{settings.literature.year_range}y</span>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-semibold text-white mb-3">Novelty Strictness</label>
+                        <div className="flex gap-2 p-1 bg-black/40 rounded-xl">
+                          {['low', 'medium', 'high'].map((lvl) => (
+                            <button
+                              key={lvl}
+                              onClick={() => setSettings({ ...settings, literature: { ...settings.literature, novelty_strictness: lvl as any } })}
+                              className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all capitalize ${settings.literature.novelty_strictness === lvl ? 'bg-blue-600 text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}
+                            >
+                              {lvl}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
               )}
 
+              </div>
             </div>
-          </div>
         )}
-        </div>
+          </div>
       </div>
       );
 }
