@@ -1,6 +1,10 @@
 
+'use client';
+
 import React, { useState, useEffect, useRef } from 'react';
+
 import CompliancePanel from '@/components/CompliancePanel';
+import SettingsPanel from '@/components/SettingsPanel';
 // ... existing imports
 import {
   Search,
@@ -136,193 +140,189 @@ export default function PharmaceuticalResearchApp() {
 
         {/* VIEW: HOME */}
         {activeView === 'home' && (
-          <div className="max-w-6xl mx-auto space-y-10 animate-in fade-in duration-500">
+          <>
+            <div className="max-w-6xl mx-auto space-y-10 animate-in fade-in duration-500">
 
-            {/* Header */}
-            <div className="space-y-2">
-              <h1 className="text-4xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-cyan-400">
-                BioDockify AI
-              </h1>
-              <p className="text-slate-400 text-lg">
-                Pharmaceutical Intelligence & Knowledge Synthesis Platform via Agentic AI
-              </p>
-            </div>
-
-            {/* Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {renderStatCard('Papers Analyzed', stats.papersAnalyzed, BookOpen, 'text-blue-400')}
-              {renderStatCard('Candidates', stats.candidatesFound, Microscope, 'text-teal-400')}
-              {renderStatCard('Graph Nodes', stats.graphNodes, Network, 'text-purple-400')}
-              {renderStatCard('Protocols', stats.protocolsGenerated, FileText, 'text-orange-400')}
-            </div>
-
-            {/* Research Input Panel */}
-            <div className="bg-slate-900/80 backdrop-blur-md rounded-2xl p-8 border border-slate-700 shadow-2xl">
-              <div className="flex items-center space-x-4 mb-6">
-                <button
-                  onClick={() => setResearchMode('search')}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${researchMode === 'search' ? 'bg-teal-500/10 text-teal-400 border border-teal-500/50' : 'text-slate-400 hover:text-white'
-                    }`}
-                >
-                  <Search className="w-4 h-4 inline mr-2" />
-                  Literature Search
-                </button>
-                <button
-                  onClick={() => setResearchMode('synthesize')}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${researchMode === 'synthesize' ? 'bg-purple-500/10 text-purple-400 border border-purple-500/50' : 'text-slate-400 hover:text-white'
-                    }`}
-                >
-                  <Cpu className="w-4 h-4 inline mr-2" />
-                  Synthesis
-                </button>
-                <button
-                  onClick={() => setResearchMode('write')}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${researchMode === 'write' ? 'bg-orange-500/10 text-orange-400 border border-orange-500/50' : 'text-slate-400 hover:text-white'
-                    }`}
-                >
-                  <FileText className="w-4 h-4 inline mr-2" />
-                  Drafting
-                </button>
+              {/* Header */}
+              <div className="space-y-2">
+                <h1 className="text-4xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-cyan-400">
+                  BioDockify AI
+                </h1>
+                <p className="text-slate-400 text-lg">
+                  Pharmaceutical Intelligence & Knowledge Synthesis Platform via Agentic AI
+                </p>
               </div>
 
-              <div className="relative">
-                <textarea
-                  value={topic}
-                  onChange={(e) => setTopic(e.target.value)}
-                  placeholder="Describe your research goal (e.g., 'Find novel inhibitors for Tau aggregation in Alzheimer\'s disease')..."
-                  className="w-full h-32 bg-slate-950 border border-slate-700 rounded-xl p-4 text-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none resize-none placeholder-slate-600 transition-all"
-                />
-                <div className="absolute bottom-4 right-4 flex space-x-3">
-                  {isResearching ? (
-                    <button
-                      onClick={handleStopResearch}
-                      className="bg-red-500/10 hover:bg-red-500/20 text-red-400 px-6 py-2 rounded-lg font-medium border border-red-500/50 flex items-center transition-all"
-                    >
-                      <Pause className="w-4 h-4 mr-2" />
-                      Stop
-                    </button>
-                  ) : (
-                    <button
-                      onClick={handleStartResearch}
-                      className="bg-teal-500 hover:bg-teal-400 text-slate-950 px-8 py-2 rounded-lg font-bold flex items-center shadow-lg shadow-teal-500/20 transition-all transform hover:scale-105"
-                    >
-                      <Play className="w-4 h-4 mr-2" />
-                      Start Research
-                    </button>
-                  )}
+              {/* Stats Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {renderStatCard('Papers Analyzed', stats.papersAnalyzed, BookOpen, 'text-blue-400')}
+                {renderStatCard('Candidates', stats.candidatesFound, Microscope, 'text-teal-400')}
+                {renderStatCard('Graph Nodes', stats.graphNodes, Network, 'text-purple-400')}
+                {renderStatCard('Protocols', stats.protocolsGenerated, FileText, 'text-orange-400')}
+              </div>
+
+              {/* Research Input Panel */}
+              <div className="bg-slate-900/80 backdrop-blur-md rounded-2xl p-8 border border-slate-700 shadow-2xl">
+                <div className="flex items-center space-x-4 mb-6">
+                  <button
+                    onClick={() => setResearchMode('search')}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${researchMode === 'search' ? 'bg-teal-500/10 text-teal-400 border border-teal-500/50' : 'text-slate-400 hover:text-white'
+                      }`}
+                  >
+                    <Search className="w-4 h-4 inline mr-2" />
+                    Literature Search
+                  </button>
+                  <button
+                    onClick={() => setResearchMode('synthesize')}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${researchMode === 'synthesize' ? 'bg-purple-500/10 text-purple-400 border border-purple-500/50' : 'text-slate-400 hover:text-white'
+                      }`}
+                  >
+                    <Cpu className="w-4 h-4 inline mr-2" />
+                    Synthesis
+                  </button>
+                  <button
+                    onClick={() => setResearchMode('write')}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${researchMode === 'write' ? 'bg-orange-500/10 text-orange-400 border border-orange-500/50' : 'text-slate-400 hover:text-white'
+                      }`}
+                  >
+                    <FileText className="w-4 h-4 inline mr-2" />
+                    Drafting
+                  </button>
+                </div>
+
+                <div className="relative">
+                  <textarea
+                    value={topic}
+                    onChange={(e) => setTopic(e.target.value)}
+                    placeholder="Describe your research goal (e.g., 'Find novel inhibitors for Tau aggregation in Alzheimer\'s disease')..."
+                    className="w-full h-32 bg-slate-950 border border-slate-700 rounded-xl p-4 text-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none resize-none placeholder-slate-600 transition-all"
+                  />
+                  <div className="absolute bottom-4 right-4 flex space-x-3">
+                    {isResearching ? (
+                      <button
+                        onClick={handleStopResearch}
+                        className="bg-red-500/10 hover:bg-red-500/20 text-red-400 px-6 py-2 rounded-lg font-medium border border-red-500/50 flex items-center transition-all"
+                      >
+                        <Pause className="w-4 h-4 mr-2" />
+                        Stop
+                      </button>
+                    ) : (
+                      <button
+                        onClick={handleStartResearch}
+                        className="bg-teal-500 hover:bg-teal-400 text-slate-950 px-8 py-2 rounded-lg font-bold flex items-center shadow-lg shadow-teal-500/20 transition-all transform hover:scale-105"
+                      >
+                        <Play className="w-4 h-4 mr-2" />
+                        Start Research
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* Compliance & Export Section (Only in Write Mode) */}
-            {researchMode === 'write' && (
-              <CompliancePanel
-                text={topic} // In real app, this would be the generated draft content
-                onComplianceChange={setIsCompliant}
-              />
-            )}
+              {/* Compliance & Export Section (Only in Write Mode) */}
+              {researchMode === 'write' && (
+                <CompliancePanel
+                  text={topic} // In real app, this would be the generated draft content
+                  onComplianceChange={setIsCompliant}
+                />
+              )}
 
-            {/* Export Actions */}
-            {researchMode === 'write' && (
-              <div className="flex justify-end mt-4 space-x-3">
-                <button
-                  disabled={!isCompliant}
-                  className={`flex items-center space-x-2 px-6 py-2 rounded-lg font-bold transition-all ${isCompliant
+              {/* Export Actions */}
+              {researchMode === 'write' && (
+                <div className="flex justify-end mt-4 space-x-3">
+                  <button
+                    disabled={!isCompliant}
+                    className={`flex items-center space-x-2 px-6 py-2 rounded-lg font-bold transition-all ${isCompliant
                       ? 'bg-teal-500 hover:bg-teal-400 text-slate-950 shadow-lg shadow-teal-500/20 transform hover:scale-105'
                       : 'bg-slate-800 text-slate-500 cursor-not-allowed opacity-50'
-                    }`}
-                  onClick={() => addLog('Exporting document (Compliance Verified)...', 'success')}
-                >
-                  <Download className="w-4 h-4" />
-                  <span>Export Manuscript</span>
-                </button>
-              </div>
-            )}
-          </div>
+                      }`}
+                    onClick={() => addLog('Exporting document (Compliance Verified)...', 'success')}
+                  >
+                    <Download className="w-4 h-4" />
+                    <span>Export Manuscript</span>
+                  </button>
+                </div>
+              )}
+            </div>
 
             {/* Live Console Preview */}
-        <div className="bg-black/50 rounded-xl border border-slate-800 p-4 font-mono text-sm h-48 overflow-y-auto custom-scrollbar">
-          <div className="text-slate-500 mb-2 sticky top-0 bg-black/90 p-1 border-b border-slate-800 flex justify-between">
-            <span>SYSTEM LOGS</span>
-            <div className="flex space-x-2">
-              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-              <span className="text-green-500 text-xs">ONLINE</span>
-            </div>
-          </div>
-          <div className="space-y-1.5">
-            {logs.length === 0 && (
-              <div className="text-slate-600 italic">No activity logs recorded yet...</div>
-            )}
-            {logs.map((log) => (
-              <div key={log.id} className="flex items-start">
-                <span className="text-slate-600 w-24 shrink-0">[{log.timestamp}]</span>
-                <span className={`
+            <div className="bg-black/50 rounded-xl border border-slate-800 p-4 font-mono text-sm h-48 overflow-y-auto custom-scrollbar">
+              <div className="text-slate-500 mb-2 sticky top-0 bg-black/90 p-1 border-b border-slate-800 flex justify-between">
+                <span>SYSTEM LOGS</span>
+                <div className="flex space-x-2">
+                  <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                  <span className="text-green-500 text-xs">ONLINE</span>
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                {logs.length === 0 && (
+                  <div className="text-slate-600 italic">No activity logs recorded yet...</div>
+                )}
+                {logs.map((log) => (
+                  <div key={log.id} className="flex items-start">
+                    <span className="text-slate-600 w-24 shrink-0">[{log.timestamp}]</span>
+                    <span className={`
                       ${log.type === 'info' ? 'text-blue-300' : ''}
                       ${log.type === 'success' ? 'text-green-400' : ''}
                       ${log.type === 'error' ? 'text-red-400' : ''}
                       ${log.type === 'warning' ? 'text-yellow-400' : ''}
                     `}>
-                  {log.type === 'success' && '✓ '}
-                  {log.type === 'error' && '✗ '}
-                  {log.type === 'warning' && '⚠ '}
-                  {log.message}
-                </span>
+                      {log.type === 'success' && '✓ '}
+                      {log.type === 'error' && '✗ '}
+                      {log.type === 'warning' && '⚠ '}
+                      {log.message}
+                    </span>
+                  </div>
+                ))}
+                <div ref={consoleEndRef} />
               </div>
-            ))}
-            <div ref={consoleEndRef} />
-          </div>
-        </div>
+            </div>
 
-    </div>
-  )
-}
+          </>
+        )}
 
-{/* VIEW: CONSOLE (Expanded) */ }
-{
-  activeView === 'console' && (
-    <div className="max-w-7xl mx-auto h-[calc(100vh-6rem)] bg-black rounded-2xl border border-slate-800 p-6 flex flex-col font-mono">
-      <div className="flex items-center justify-between mb-4 pb-4 border-b border-slate-800">
-        <h2 className="text-xl text-slate-200 font-bold flex items-center">
-          <Activity className="w-6 h-6 mr-3 text-teal-500" />
-          Terminal Output
-        </h2>
-        <div className="flex space-x-2">
-          <button onClick={() => setLogs([])} className="text-xs text-slate-500 hover:text-white px-3 py-1 border border-slate-800 rounded">
-            CLEAR
-          </button>
-        </div>
-      </div>
-      <div className="flex-1 overflow-y-auto space-y-2 custom-scrollbar">
-        {logs.map((log) => (
-          <div key={log.id} className="border-b border-slate-900/50 pb-1">
-            <span className="text-slate-500 mr-4">[{log.timestamp}]</span>
-            <span className={`
+        {/* VIEW: CONSOLE (Expanded) */}
+        {
+          activeView === 'console' && (
+            <div className="max-w-7xl mx-auto h-[calc(100vh-6rem)] bg-black rounded-2xl border border-slate-800 p-6 flex flex-col font-mono">
+              <div className="flex items-center justify-between mb-4 pb-4 border-b border-slate-800">
+                <h2 className="text-xl text-slate-200 font-bold flex items-center">
+                  <Activity className="w-6 h-6 mr-3 text-teal-500" />
+                  Terminal Output
+                </h2>
+                <div className="flex space-x-2">
+                  <button onClick={() => setLogs([])} className="text-xs text-slate-500 hover:text-white px-3 py-1 border border-slate-800 rounded">
+                    CLEAR
+                  </button>
+                </div>
+              </div>
+              <div className="flex-1 overflow-y-auto space-y-2 custom-scrollbar">
+                {logs.map((log) => (
+                  <div key={log.id} className="border-b border-slate-900/50 pb-1">
+                    <span className="text-slate-500 mr-4">[{log.timestamp}]</span>
+                    <span className={`
                         ${log.type === 'info' ? 'text-slate-300' : ''}
                         ${log.type === 'success' ? 'text-green-400' : ''}
                         ${log.type === 'error' ? 'text-red-500 font-bold' : ''}
                         ${log.type === 'warning' ? 'text-yellow-500' : ''}
                       `}>
-              {log.message}
-            </span>
-          </div>
-        ))}
-        <div ref={consoleEndRef} />
-      </div>
-    </div>
-  )
-}
+                      {log.message}
+                    </span>
+                  </div>
+                ))}
+                <div ref={consoleEndRef} />
+              </div>
+            </div>
+          )
+        }
 
-{/* VIEW: SETTINGS */ }
-import SettingsPanel from '@/components/SettingsPanel';
 
-// ...
-
-// In render
-{
-  activeView === 'settings' && (
-    <SettingsPanel />
-  )
-}
+        {/* VIEW: SETTINGS */}
+        {
+          activeView === 'settings' && (
+            <SettingsPanel />
+          )
+        }
 
       </main >
     </div >
