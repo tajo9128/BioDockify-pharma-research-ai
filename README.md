@@ -7,6 +7,13 @@
 
 **BioDockify** is a local-first, privacy-preserving desktop application designed for pharmaceutical researchers, PhD students, and computational biologists. It leverages Agentic AI, Named Entity Recognition (BioNER), and Knowledge Graphs to automate the extraction and synthesis of complex relationships from biomedical literature.
 
+## 👥 Team & Contact
+
+- **Author:** Tajuddin Shaik  
+- **Team:** BioDockify Research Lab  
+- **Contact:** biodockify@hotmail.com  
+- **Version:** v2.1.14
+
 ---
 
 ## 🚀 Key Features

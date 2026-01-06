@@ -1,0 +1,43 @@
+project:
+  name: My PhD Research
+  type: PhD Thesis
+  disease_context: Alzheimer's Disease
+  stage: Literature Review
+agent:
+  mode: semi-autonomous
+  reasoning_depth: standard
+  self_correction: true
+  max_retries: 3
+  failure_policy: ask_user
+literature:
+  sources:
+  - pubmed
+  - europe_pmc
+  - openalex
+  enable_crossref: true
+  enable_preprints: false
+  year_range: 10
+  article_types:
+  - review
+  - experimental
+  - computational
+  min_citations: 5
+  novelty_strictness: medium
+  include_preprints: false
+ai_provider:
+  mode: free_api
+  primary_model: google
+  openai_key: ''
+  google_key: ''
+  openrouter_key: ''
+  huggingface_key: ''
+  elsevier_key: ''
+  pubmed_email: ''
+execution:
+  mode: research
+  max_runtime_minutes: 45
+  use_knowledge_graph: true
+  human_approval_gates: true
+system:
+  log_level: INFO
+  version: 2.0.43
