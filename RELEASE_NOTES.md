@@ -2,6 +2,20 @@
 
 ## Release Notes
 
+## v2.8.0: Critical Build Fixes (Icon Format)
+**Release Date:** 2026-01-07
+
+**Status:** Stable Release.
+
+This release explicitly fixes the icon file format issue causing CI build failures.
+
+### 🛠 Critical Fixes
+- **Icon Format**: Converted `icon.png` from JPEG (mislabeled) to proper PNG format using PowerShell image processing.
+- **Build Stability**: Ensured valid assets for Tauri icon generation.
+
+---
+
+
 ## v2.7.0: Critical Build & UI Fixes
 **Release Date:** 2026-01-07
 
