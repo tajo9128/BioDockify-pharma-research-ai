@@ -127,7 +127,21 @@ jobs:
       - name: Generate Icons
         working-directory: desktop/tauri/src-tauri
         run: |
-          echo "Source icon.png exists:"
+          echo "DEBUG: Listing ALL files in src-tauri to confirm paths:"
+          Get-ChildItem -Recurse
+          
+          echo "Checking if icons/icon.png exists..."
+          if (Test-Path "icons/icon.png") {
+            echo "Icon FOUND at icons/icon.png"
+          } else {
+            echo "Icon NOT FOUND. Searching for fallback..."
+            if (Test-Path "icons/icon_fixed.png") {
+               echo "Found icon_fixed.png! Renaming..."
+               Copy-Item "icons/icon_fixed.png" "icons/icon.png" -Force
+            }
+          }
+          
+          echo "Source icon.png exists (Final Check):"
           Get-ChildItem icons/icon.png
           
           echo "Running Tauri icon generator..."
