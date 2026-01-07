@@ -2,6 +2,21 @@
 
 ## Release Notes
 
+## v2.9.1: Real API Validation
+**Release Date:** 2026-01-07
+
+**Status:** Hotfix.
+
+This patch fixes the "API Test" functionality in settings by replacing mock checks with real network verification.
+
+### 🔌 API Connections
+- **Google Gemini**: Now performs a real request to `generativelanguage.googleapis.com` to verify your key.
+- **HuggingFace**: Verifies identity via `whoami` endpoint.
+- **OpenRouter**: Verifies auth status via their API.
+- **Fix**: Removed regex restrictions that were causing valid keys to fail.
+
+---
+
 ## v2.9.0: Visual Polish (Transparent Assets)
 **Release Date:** 2026-01-07
 

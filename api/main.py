@@ -177,30 +177,48 @@ def test_connection_endpoint(request: TestRequest):
         if not request.key:
              return {"status": "error", "message": "API Key is missing"}
 
+        import requests
         provider = request.provider
-        if provider == "google":
-             # Basic regex check or lightweight call could go here
-             if not request.key.startswith("AIza"):
-                 return {"status": "warning", "message": "Invalid Google Key format (should start with AIza)"}
-             # Mock Validation success
-             return {"status": "success", "message": "Google Gemini Key is valid (Mock)"}
-             
-        elif provider == "openrouter":
-             if not request.key.startswith("sk-or-"):
-                 return {"status": "warning", "message": "Invalid OpenRouter Key format (should start with sk-or-)"}
-             return {"status": "success", "message": "OpenRouter Key is valid (Mock)"}
-       
-        elif provider == "huggingface":
-             if not request.key.startswith("hf_"):
-                 return {"status": "warning", "message": "Invalid User Access Token (should start with hf_)"}
-             return {"status": "success", "message": "HuggingFace Token is valid (Mock)"}
         
-        elif provider == "glm":
-             if "." not in request.key:
-                  return {"status": "warning", "message": "Invalid GLM Key format (usually id.secret)"}
-             return {"status": "success", "message": "GLM Key is configured (Mock)"}
-        
-        return {"status": "error", "message": f"Unknown provider: {provider}"}
+        try:
+            if provider == "google":
+                # Verify with Google Generative Language API
+                url = f"https://generativelanguage.googleapis.com/v1beta/models?key={request.key}"
+                resp = requests.get(url, timeout=5)
+                if resp.status_code == 200:
+                    return {"status": "success", "message": "Google Gemini Key Verified"}
+                else:
+                    return {"status": "error", "message": f"Google API Error: {resp.status_code} - {resp.json().get('error', {}).get('message', 'Unknown')}"}
+                 
+            elif provider == "openrouter":
+                # Verify with OpenRouter Auth API
+                headers = {"Authorization": f"Bearer {request.key}"}
+                resp = requests.get("https://openrouter.ai/api/v1/auth/key", headers=headers, timeout=5)
+                if resp.status_code == 200:
+                     return {"status": "success", "message": "OpenRouter Key Verified"}
+                else:
+                     return {"status": "error", "message": "Invalid OpenRouter Key"}
+           
+            elif provider == "huggingface":
+                # Verify with HF WhoAmI
+                headers = {"Authorization": f"Bearer {request.key}"}
+                resp = requests.get("https://huggingface.co/api/whoami", headers=headers, timeout=5)
+                if resp.status_code == 200:
+                    user = resp.json().get("name", "User")
+                    return {"status": "success", "message": f"HuggingFace Connected as {user}"}
+                else:
+                    return {"status": "error", "message": "Invalid HuggingFace Token"}
+            
+            elif provider == "glm":
+                 # Basic check for GLM (Zhipu) structure as they don't have a simple public 'whoami' without signing payload
+                 if "." not in request.key:
+                      return {"status": "warning", "message": "Invalid GLM Key format (usually id.secret)"}
+                 return {"status": "success", "message": "GLM Key format valid (No network check)"}
+            
+            return {"status": "error", "message": f"Unknown provider: {provider}"}
+            
+        except requests.exceptions.RequestException as e:
+            return {"status": "error", "message": f"Network Error: {str(e)}"}
 
     elif request.service_type == "elsevier":
         if not request.key:
