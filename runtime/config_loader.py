@@ -5,6 +5,7 @@ Implements the 'BioDockify v2 Settings Contract'.
 """
 
 import os
+import platform
 import yaml
 import shutil
 from pathlib import Path
@@ -186,10 +187,26 @@ class ConfigLoader:
         return DEFAULT_CONFIG
 
     def _save_to_disk(self, config_data: Dict[str, Any]):
-        """Helper to write YAML to disk."""
+        """Helper to write YAML to disk atomically."""
         CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
-        with open(CONFIG_PATH, "w") as f:
-            yaml.dump(config_data, f, default_flow_style=False, sort_keys=False)
+        # Write to temp file first
+        tmp_path = CONFIG_PATH.with_suffix('.tmp')
+        try:
+            with open(tmp_path, "w") as f:
+                yaml.dump(config_data, f, default_flow_style=False, sort_keys=False)
+            
+            # Atomic rename/replace
+            if list(platform.uname()).count("Windows") > 0:
+                 # Windows can't atomic replace if dest exists, need remove first
+                 if CONFIG_PATH.exists():
+                     os.remove(CONFIG_PATH)
+            
+            os.replace(tmp_path, CONFIG_PATH)
+        except Exception as e:
+            print(f"[!] Atomic save failed: {e}")
+            if tmp_path.exists():
+                os.remove(tmp_path)
+            raise e
 
     def _merge_defaults(self, defaults: Dict, user: Dict) -> Dict:
         """

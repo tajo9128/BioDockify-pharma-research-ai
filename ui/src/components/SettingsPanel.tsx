@@ -115,10 +115,14 @@ export default function SettingsPanel() {
     const handleSave = async () => {
         setSaving(true);
         try {
+            console.log('Saving settings payload:', settings);
             await api.saveSettings(settings);
+            // Force reload to verify persistence
+            await loadSettings();
             alert('Settings saved successfully!');
         } catch (e) {
-            alert('Failed to save settings');
+            console.error('Save failed:', e);
+            alert('Failed to save settings. Check console for details.');
         } finally {
             setSaving(false);
         }

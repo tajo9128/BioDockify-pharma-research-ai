@@ -2,6 +2,21 @@
 
 ## Release Notes
 
+## v2.8.4: Settings Persistence & UI Hardening
+**Release Date:** 2026-01-07
+
+**Status:** Stable Release.
+
+This patch addresses critical bugs in configuration saving and improves UI reliability.
+
+### 🛠 Fixes
+- **Config Persistence**: Implemented atomic writes for `config.yaml` to prevent file corruption and ensure reliable saving.
+- **Settings UI**: Added verification step (reload-after-save) to confirm settings are persisted.
+- **Error Handling**: Enhanced logging for save operations.
+
+---
+
+
 ## v2.8.2: CI Reliability Fixes
 **Release Date:** 2026-01-07
 
