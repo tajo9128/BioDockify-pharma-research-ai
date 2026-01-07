@@ -2,6 +2,20 @@
 
 ## Release Notes
 
+## v2.8.2: CI Reliability Fixes
+**Release Date:** 2026-01-07
+
+**Status:** Stable Release.
+
+This patch release ensures the verified icon asset is correctly committed to the repository to satisfy CI checks.
+
+### 🛠 Fixes
+- **Repo Integrity**: Restored `icon.png` which was missing from previous builds.
+- **CI**: Validated asset existence.
+
+---
+
+
 ## v2.8.1: CI Trigger Fix & Final Icon Polish
 **Release Date:** 2026-01-07
 
