@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Home, FlaskConical, FileText, Beaker, Settings, Sparkles, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Home, FlaskConical, FileText, Beaker, Settings, Sparkles, ChevronLeft, ChevronRight, BookOpen } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface SidebarProps {
@@ -16,6 +16,7 @@ export default function Sidebar({ activeView, onViewChange }: SidebarProps) {
     { id: 'home', icon: Home, label: 'Home' },
     { id: 'research', icon: FlaskConical, label: 'ResearchWorkstation' }, // Updated label for clarity
     { id: 'results', icon: FileText, label: 'Results' },
+    { id: 'notebooks', icon: BookOpen, label: 'Notebooks' },
     { id: 'lab', icon: Beaker, label: 'Lab Interface' },
     { id: 'settings', icon: Settings, label: 'Settings' },
   ];

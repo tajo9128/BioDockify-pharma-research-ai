@@ -10,50 +10,31 @@ interface Evidence { id: string; title: string; score: number; year: number; }
 
 interface ResearchWorkstationProps {
     view?: string;
+    // Agent Props
+    goal?: string;
+    onGoalChange?: (g: string) => void;
+    onExecute?: () => void;
+    isExecuting?: boolean;
+    thinkingSteps?: any[];
 }
 
-export default function ResearchWorkstation({ view = 'home' }: ResearchWorkstationProps) {
+export default function ResearchWorkstation({
+    view = 'home',
+    goal = '',
+    onGoalChange = () => { },
+    onExecute = () => { },
+    isExecuting = false,
+    thinkingSteps = []
+}: ResearchWorkstationProps) {
     // State
     const [mode, setMode] = useState<WorkMode>('search');
-    const [query, setQuery] = useState('');
-    const [isRunning, setIsRunning] = useState(false);
-    const [isPaused, setIsPaused] = useState(false);
-    const [logs, setLogs] = useState<LogEntry[]>([]);
+    // Remove local query/isRunning state in favor of props
     const [evidence, setEvidence] = useState<Evidence[]>([]);
     const [isFocusMode, setIsFocusMode] = useState(false);
 
     // Auto-scroll logic
     const logEndRef = useRef<HTMLDivElement>(null);
-    useEffect(() => { logEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [logs]);
-
-    // Handlers
-    const startResearch = async () => {
-        if (!query.trim()) return;
-        setIsRunning(true);
-        addLog('info', `Starting research task: "${query}" in MODE: ${mode.toUpperCase()}`);
-
-        try {
-            // Mocking the stream for UI demonstration
-            const taskId = await api.startTask(query, mode);
-            addLog('thought', 'Initializing Intent Engine...');
-
-            // Simulation of async events
-            setTimeout(() => addLog('thought', 'Querying Semantic Scholar for high-impact papers...'), 1500);
-            setTimeout(() => addLog('thought', 'Running PubTator entity normalization...'), 3000);
-            setTimeout(() => {
-                addLog('result', 'Found 12 relevant papers. Top result: "Amyloid-beta and Alzheimer\'s" (Inf Score: 85)');
-                setEvidence(prev => [...prev, { id: '1', title: 'Amyloid-beta and Alzheimer\'s', score: 85, year: 2023 }]);
-            }, 4500);
-
-        } catch (e: any) {
-            addLog('info', `Error: ${e.message}`);
-            setIsRunning(false);
-        }
-    };
-
-    const addLog = (type: LogEntry['type'], content: string) => {
-        setLogs(prev => [...prev, { id: Date.now().toString(), type, content, timestamp: new Date() }]);
-    };
+    useEffect(() => { logEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [thinkingSteps]); // Scroll on thinking steps
 
     // --- VIEW: RESULTS MANAGER ---
     if (view === 'results') {
@@ -120,9 +101,9 @@ export default function ResearchWorkstation({ view = 'home' }: ResearchWorkstati
                     <span className="font-bold text-white tracking-wide hidden md:inline">BioDockify <span className="text-slate-600 font-normal">Workstation</span></span>
                 </div>
                 <div className="flex items-center space-x-4">
-                    <span className={`flex items-center text-xs font-mono px-2 py-1 rounded bg-slate-900 border border-slate-700 ${isRunning ? 'text-green-400 animate-pulse' : 'text-slate-500'}`}>
+                    <span className={`flex items-center text-xs font-mono px-2 py-1 rounded bg-slate-900 border border-slate-700 ${isExecuting ? 'text-green-400 animate-pulse' : 'text-slate-500'}`}>
                         <Cpu className="w-3 h-3 mr-2" />
-                        {isRunning ? 'AGENT ACTIVE' : 'IDLE'}
+                        {isExecuting ? 'AGENT ACTIVE' : 'IDLE'}
                     </span>
                     <button
                         onClick={() => setIsFocusMode(!isFocusMode)}
@@ -158,8 +139,8 @@ export default function ResearchWorkstation({ view = 'home' }: ResearchWorkstati
                         <div className="flex-1 flex flex-col">
                             <label className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3 block">Research Goal</label>
                             <textarea
-                                value={query}
-                                onChange={(e) => setQuery(e.target.value)}
+                                value={goal}
+                                onChange={(e) => onGoalChange(e.target.value)}
                                 placeholder="Describe your research objective..."
                                 className="w-full h-32 bg-slate-900 border border-slate-700 rounded-xl p-4 text-sm text-white resize-none focus:ring-1 focus:ring-teal-500 outline-none"
                             />
@@ -168,15 +149,15 @@ export default function ResearchWorkstation({ view = 'home' }: ResearchWorkstati
                         {/* Actions */}
                         <div className="grid grid-cols-3 gap-2">
                             <button
-                                onClick={startResearch}
-                                disabled={isRunning || !query}
+                                onClick={onExecute}
+                                disabled={isExecuting || !goal}
                                 className="col-span-2 bg-teal-600 hover:bg-teal-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg py-3 font-bold flex items-center justify-center space-x-2 transition-all shadow-lg shadow-teal-900/20"
                             >
                                 <Play className="w-4 h-4 fill-current" />
                                 <span>START</span>
                             </button>
                             <button
-                                disabled={!isRunning}
+                                disabled={!isExecuting}
                                 className="bg-slate-800 hover:bg-red-500/20 hover:text-red-400 text-slate-400 rounded-lg flex items-center justify-center transition-colors"
                             >
                                 <Square className="w-4 h-4 fill-current" />
@@ -201,22 +182,22 @@ export default function ResearchWorkstation({ view = 'home' }: ResearchWorkstati
                     </div>
 
                     <div className="flex-1 overflow-y-auto p-6 space-y-6 scroll-smooth">
-                        {logs.length === 0 && (
+                        {thinkingSteps.length === 0 && (
                             <div className="h-full flex flex-col items-center justify-center text-slate-700 space-y-4">
                                 <Cpu className="w-16 h-16 opacity-20" />
                                 <p>Agent is awaiting instructions...</p>
                             </div>
                         )}
-                        {logs.map((log) => (
-                            <div key={log.id} className="group animate-in fade-in slide-in-from-bottom-2 duration-300">
+                        {thinkingSteps.map((step, idx) => (
+                            <div key={idx} className="group animate-in fade-in slide-in-from-bottom-2 duration-300">
                                 <div className="flex items-start space-x-3">
-                                    <div className={`mt-1 w-2 h-2 rounded-full flex-shrink-0 ${log.type === 'thought' ? 'bg-purple-500' :
-                                        log.type === 'result' ? 'bg-green-500' : 'bg-slate-500'
+                                    <div className={`mt-1 w-2 h-2 rounded-full flex-shrink-0 ${step.type === 'thought' ? 'bg-purple-500' :
+                                        step.type === 'result' ? 'bg-green-500' : 'bg-slate-500'
                                         }`} />
                                     <div className="space-y-1 min-w-0">
-                                        <span className="text-xs text-slate-500 font-mono uppercase">{log.type} &middot; {log.timestamp.toLocaleTimeString()}</span>
-                                        <div className={`text-sm leading-relaxed ${log.type === 'thought' ? 'text-slate-400 italic' : 'text-slate-200'} break-words`}>
-                                            <ReactMarkdown>{log.content}</ReactMarkdown>
+                                        <span className="text-xs text-slate-500 font-mono uppercase">{step.type}</span>
+                                        <div className={`text-sm leading-relaxed ${step.type === 'thought' ? 'text-slate-400 italic' : 'text-slate-200'} break-words`}>
+                                            <ReactMarkdown>{step.description || step.content}</ReactMarkdown>
                                         </div>
                                     </div>
                                 </div>

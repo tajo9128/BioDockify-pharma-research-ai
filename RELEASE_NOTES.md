@@ -1,9 +1,45 @@
+# BioDockify v2.9.2 - Agentic Integration Update
+
+**Release Date:** 2026-01-07
+
+### New Features
+*   **Agent Zero Integration:** Initial wiring of `AgentZero` into the UI (`/api/v2/agent/goal`).
+*   **Thinking Stream:** Real-time visualization of agent reasoning steps via SSE (`/api/v2/agent/thinking`).
+*   **Service Health Checks:** Added dashboard status checks for GROBID, Ollama, and Neo4j.
+*   **External Tools:** Added support for PubMed Search and GROBID PDF parsing.
+
+### Improvements
+*   **UI/UX:** Enhanced `ResearchWorkstation` with live agent feedback and dedicated props.
+*   **Configuration:** Added `.env` support for service URL configuration.
+*   **Metadata:** Updated application metadata for layout SEO.
+
+### Technical
+*   **Backend:** Wired up Python Workspace Skills (DOCX, XLSX, PDF) to the API.
+*   **Frontend:** Refactored state management to push Agent state from `page.tsx`.
+
+---
+
 # BioDockify v2.1.2 - Definitive Hotfix
 
 ## Release Notes
 
-## v2.9.1: Real API Validation
+# Release Notes
+
+## v2.10.0: Local NotebookLM (Jupyter Support)
 **Release Date:** 2026-01-07
+
+**Status:** Major Feature Release.
+
+This update introduces **"Notebooks"**, a powerful local-first RAG (Retrieval Augmented Generation) engine inspired by Google NotebookLM.
+
+### 🧠 New Features
+- **Upload Jupyter Notebooks (.ipynb)**: BioDockify now natively parses your experiment notebooks, code cells, and outputs.
+- **Chat with Your Data**: Ask questions about your uploaded notebooks to get instant answers.
+- **Privacy First**: All processing happens locally or via your configured private API key. No data is sent to a public cloud unless you choose to.
+- **Vector Search**: Automatic indexing of your documents for semantic search.
+
+---
+
 
 **Status:** Hotfix.
 

@@ -5,7 +5,7 @@
 BioDockify is a local-first, privacy-preserving AI workstation designed for pharmaceutical researchers, PhD students, and drug discovery scientists. It transforms standard LLVs (Large Language Models) into "Pharma-Grade" research assistants capable of deep literature review, hypothesis generation, and academic synthesis.
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![Version](https://img.shields.io/badge/version-2.9.1-green.svg)
+![Version](https://img.shields.io/badge/version-2.10.0-green.svg)
 ![Status](https://img.shields.io/badge/status-Production-teal.svg)
 
 ## 🚀 Key Features (v2.5.0)
