@@ -2,6 +2,19 @@
 
 ## Release Notes
 
+## v2.9.0: Visual Polish (Transparent Assets)
+**Release Date:** 2026-01-07
+
+**Status:** Stable Release.
+
+This release updates the application aesthetics with high-quality transparent assets and includes cumulative bug fixes.
+
+### 🎨 Visual Improvements
+- **New App Icon**: Modernized logomark with a transparent background (removed white square).
+- **Desktop Shortcut**: Cleaner integration with Windows desktop wallpapers.
+
+---
+
 ## v2.8.4: Settings Persistence & UI Hardening
 **Release Date:** 2026-01-07
 
