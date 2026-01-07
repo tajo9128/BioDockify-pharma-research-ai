@@ -8,7 +8,7 @@
 ;General
 
   Name "BioDockify AI"
-  OutFile "..\BioDockify_Professional_Setup_v2.8.0.exe"
+  OutFile "..\BioDockify_Professional_Setup_v2.8.1.exe"
   
   ; Request admin privileges for installation
   RequestExecutionLevel admin

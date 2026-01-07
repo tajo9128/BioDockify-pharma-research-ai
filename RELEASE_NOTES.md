@@ -2,6 +2,20 @@
 
 ## Release Notes
 
+## v2.8.1: CI Trigger Fix & Final Icon Polish
+**Release Date:** 2026-01-07
+
+**Status:** Stable Release.
+
+This patch release is issued to proactively trigger the release pipeline with the corrected assets.
+
+### 🛠 Fixes
+- **Build Trigger**: Fresh tag to ensure GitHub Actions picks up the corrected `icon.png`.
+- **Icon**: Confirmed valid PNG format.
+
+---
+
+
 ## v2.8.0: Critical Build Fixes (Icon Format)
 **Release Date:** 2026-01-07
 
