@@ -2,6 +2,25 @@
 
 ## Release Notes
 
+## v2.7.0: Critical Build & UI Fixes
+**Release Date:** 2026-01-07
+
+**Status:** Production Release.
+
+This release addresses critical CI build failures and finalizes the UI enhancements.
+
+### 🛠 Critical Fixes
+- **Icon Generation**: Resolved "Invalid PNG signature" error by replacing the corrupted source icon with a re-generated valid PNG. This ensures the installer icon is built correctly.
+- **CI Pipeline**: Verified build stability with the new assets.
+
+### 🚀 Features (Cumulative v2.4+)
+- **Sidebar Navigation**: Full support for Research, Results, and Lab views.
+- **Settings Panel**: Integrated system configuration panel.
+- **UI Structure**: Enhanced page layout with improved view routing.
+
+---
+
+
 ## v2.3.0: Academic Integrity & Compliance Layer
 **Release Date:** 2026-01-06
 
