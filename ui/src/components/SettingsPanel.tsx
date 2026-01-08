@@ -279,6 +279,66 @@ export default function SettingsPanel() {
                                         )}
                                     </div>
                                 </div>
+
+                                {/* Neo4j Graph Database Config */}
+                                <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 mt-6">
+                                    <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
+                                        <Database className="w-5 h-5 mr-2 text-purple-400" /> Graph Database (Neo4j)
+                                    </h3>
+                                    <div className="space-y-4">
+                                        <div>
+                                            <label className="block text-sm font-medium text-slate-400 mb-2">Connection URI</label>
+                                            <input
+                                                value={settings.ai_provider?.neo4j_uri || 'bolt://localhost:7687'}
+                                                onChange={(e) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, neo4j_uri: e.target.value } })}
+                                                placeholder="bolt://localhost:7687"
+                                                className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white"
+                                            />
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="block text-sm font-medium text-slate-400 mb-2">Username</label>
+                                                <input
+                                                    value={settings.ai_provider?.neo4j_user || 'neo4j'}
+                                                    onChange={(e) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, neo4j_user: e.target.value } })}
+                                                    placeholder="neo4j"
+                                                    className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-slate-400 mb-2">Password</label>
+                                                <input
+                                                    type="password"
+                                                    value={settings.ai_provider?.neo4j_password || ''}
+                                                    onChange={(e) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, neo4j_password: e.target.value } })}
+                                                    placeholder="••••••••"
+                                                    className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white"
+                                                />
+                                            </div>
+                                        </div>
+                                        <button
+                                            onClick={async () => {
+                                                try {
+                                                    const res = await api.checkNeo4j(
+                                                        settings.ai_provider?.neo4j_uri || 'bolt://localhost:7687',
+                                                        settings.ai_provider?.neo4j_user || 'neo4j',
+                                                        settings.ai_provider?.neo4j_password || ''
+                                                    );
+                                                    if (res.status === 'success') {
+                                                        alert('✅ Neo4j Connected');
+                                                    } else {
+                                                        alert(`❌ ${res.message}`);
+                                                    }
+                                                } catch (e: any) {
+                                                    alert(`❌ Connection Failed: ${e.message}`);
+                                                }
+                                            }}
+                                            className="w-full px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-sm font-medium transition-colors"
+                                        >
+                                            Test Neo4j Connection
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     )}
