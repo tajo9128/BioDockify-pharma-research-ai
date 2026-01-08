@@ -1,3 +1,16 @@
+# BioDockify v2.10.1 - Diagnostics & Reliability Update
+
+**Release Date:** 2026-01-08
+
+### New Features
+*   **Automated Diagnostics**: Implemented a comprehensive error reporting system. When issues occur, users can now generate a JSON diagnostic report and automatically open their email client to send it to support (`biodockify@hotmail.com`).
+*   **One-Click Reporting**: Simplified the support process with a "Report This Issue" button in error dialogs.
+
+### Bug Fixes
+*   **Build Configuration**: Fixed a `tauri.conf.json` validation error that was preventing the desktop app from building correctly.
+
+---
+
 # BioDockify v2.10.0 - Agent Zero Chat Interface
 
 **Release Date:** 2026-01-08

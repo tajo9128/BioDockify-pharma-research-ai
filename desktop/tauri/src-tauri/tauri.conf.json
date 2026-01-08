@@ -7,58 +7,7 @@
     },
     "package": {
         "productName": "biodockify-ai",
-        "version": "2.10.0"
-    },
-    "helpers": {
-        "allowlist": {
-            "all": false,
-            "shell": {
-                "all": false,
-                "open": true,
-                "sidecar": true,
-                "scope": [
-                    {
-                        "name": "binaries/biodockify-engine",
-                        "sidecar": true
-                    }
-                ]
-            }
-        },
-        "bundle": {
-            "active": true,
-            "targets": [
-                "nsis",
-                "msi"
-            ],
-            "externalBin": [
-                "binaries/biodockify-engine"
-            ],
-            "identifier": "com.biodockify.app",
-            "icon": [
-                "icons/32x32.png",
-                "icons/128x128.png",
-                "icons/128x128@2x.png",
-                "icons/icon.icns",
-                "icons/icon.ico"
-            ]
-        },
-        "systemTray": {
-            "iconPath": "icons/icon.ico",
-            "iconAsTemplate": true,
-            "title": "BioDockify"
-        },
-        "security": {
-            "csp": null
-        },
-        "windows": [
-            {
-                "fullscreen": false,
-                "resizable": true,
-                "title": "BioDockify AI",
-                "width": 1200,
-                "height": 800
-            }
-        ]
+        "version": "2.10.1"
     },
     "tauri": {
         "allowlist": {
