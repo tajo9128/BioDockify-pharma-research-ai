@@ -470,7 +470,24 @@ export default function SettingsPanel() {
                                                 onChange={(e) => setSettings({ ...settings, output: { ...settings.output, output_dir: e.target.value } })}
                                                 className="flex-1 bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-slate-300 font-mono text-sm"
                                             />
-                                            <button className="px-4 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-sm border border-slate-600">Browse</button>
+                                            <button
+                                                onClick={async () => {
+                                                    try {
+                                                        const { open } = await import('@tauri-apps/api/dialog');
+                                                        const selected = await open({ directory: true, multiple: false });
+                                                        if (selected && typeof selected === 'string') {
+                                                            setSettings({ ...settings, output: { ...settings.output, output_dir: selected } });
+                                                        }
+                                                    } catch (e) {
+                                                        console.error("Failed to open dialog", e);
+                                                        // Fallback or alert?
+                                                        alert("Could not open file browser. Are you running in Tauri?");
+                                                    }
+                                                }}
+                                                className="px-4 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-sm border border-slate-600"
+                                            >
+                                                Browse
+                                            </button>
                                         </div>
                                     </div>
                                 </div>
