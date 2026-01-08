@@ -19,6 +19,7 @@ interface ResearchWorkstationProps {
     goal?: string;
     onGoalChange?: (g: string) => void;
     onExecute?: () => void;
+    onStop?: () => void;
     isExecuting?: boolean;
     thinkingSteps?: any[];
     error?: string | null;
@@ -29,6 +30,7 @@ export default function ResearchWorkstation({
     goal = '',
     onGoalChange = () => { },
     onExecute = () => { },
+    onStop = () => { },
     isExecuting = false,
     thinkingSteps = [],
     error = null
@@ -176,8 +178,9 @@ export default function ResearchWorkstation({
                                 <span>START</span>
                             </button>
                             <button
+                                onClick={onStop}
                                 disabled={!isExecuting}
-                                className="bg-slate-800 hover:bg-red-500/20 hover:text-red-400 text-slate-400 rounded-lg flex items-center justify-center transition-colors"
+                                className="bg-slate-800 hover:bg-red-500/20 hover:text-red-400 text-slate-400 rounded-lg flex items-center justify-center transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 <Square className="w-4 h-4 fill-current" />
                             </button>

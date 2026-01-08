@@ -37,15 +37,8 @@ export default function AgentChat() {
         setIsLoading(true);
 
         try {
-            // Call Backend Chat API
-            // We'll create a new endpoint specifically for Agent Chat (distinct from RAG Chat)
-            const response = await fetch('http://localhost:8000/api/agent/chat', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message: userMsg.content })
-            });
-
-            const data = await response.json();
+            // Call Backend Chat API via standardized service
+            const data = await api.agentChat(userMsg.content);
 
             setMessages(prev => [...prev, {
                 role: 'assistant',
@@ -98,10 +91,10 @@ export default function AgentChat() {
 
                         <div className={`max-w-[75%] space-y-1`}>
                             <div className={`p-4 rounded-2xl ${msg.role === 'user'
-                                    ? 'bg-indigo-600 text-white rounded-tr-sm'
-                                    : msg.role === 'system'
-                                        ? 'bg-red-900/20 border border-red-900/50 text-red-200'
-                                        : 'bg-slate-900 border border-slate-800 text-slate-300 rounded-tl-sm'
+                                ? 'bg-indigo-600 text-white rounded-tr-sm'
+                                : msg.role === 'system'
+                                    ? 'bg-red-900/20 border border-red-900/50 text-red-200'
+                                    : 'bg-slate-900 border border-slate-800 text-slate-300 rounded-tl-sm'
                                 }`}>
                                 <p className="leading-relaxed whitespace-pre-wrap text-sm">{msg.content}</p>
                             </div>

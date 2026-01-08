@@ -107,6 +107,19 @@ export default function PharmaceuticalResearchApp() {
     }
   };
 
+  const handleStop = async () => {
+    if (!taskId) return;
+    try {
+      await api.cancelResearch(taskId);
+      setIsExecuting(false);
+      setError("Research cancelled by user.");
+      // Optional: Add a log entry locally or wait for poll to update
+      setThinkingSteps(prev => [...prev, { type: 'error', content: 'Process stopped by user.', id: 'cancel', timestamp: new Date() }]);
+    } catch (e: any) {
+      console.error("Failed to cancel", e);
+    }
+  };
+
 
   useEffect(() => {
     checkOnboardingStatus();
@@ -176,6 +189,7 @@ export default function PharmaceuticalResearchApp() {
             goal={goal}
             onGoalChange={setGoal}
             onExecute={handleExecute}
+            onStop={handleStop}
             isExecuting={isExecuting}
             thinkingSteps={thinkingSteps}
             error={error}

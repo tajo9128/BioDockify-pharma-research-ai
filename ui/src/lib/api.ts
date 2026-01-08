@@ -176,6 +176,12 @@ export const api = {
   getResults: (taskId: string) =>
     apiRequest<ResearchResults>(`/research/${taskId}/results`),
 
+  agentChat: (message: string) =>
+    apiRequest<{ reply: string }>('/agent/chat', {
+      method: 'POST',
+      body: JSON.stringify({ message })
+    }),
+
   cancelResearch: (taskId: string) =>
     apiRequest<{ success: boolean }>(`/research/${taskId}/cancel`, {
       method: 'POST',

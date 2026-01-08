@@ -187,6 +187,20 @@ def get_status(task_id: str):
         logs=task.get("logs", [])
     )
 
+@app.post("/api/research/{task_id}/cancel")
+def cancel_research(task_id: str):
+    """Cancel a running research task."""
+    task = task_manager.load_task(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    
+    # Mark as failed/cancelled so UI stops polling
+    task["status"] = "failed" 
+    task["message"] = "Cancelled by user"
+    task_manager.save_task(task_id, task)
+    
+    return {"success": True}
+
 
 from runtime.config_loader import load_config, save_config, reset_config
 
