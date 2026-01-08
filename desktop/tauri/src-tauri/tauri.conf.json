@@ -37,14 +37,33 @@
                 "center": true,
                 "requestUserAttention": true
             },
+            "dialog": {
+                "all": false,
+                "open": true,
+                "save": true
+            },
+            "http": {
+                "all": true,
+                "request": true,
+                "scope": [
+                    "http://**",
+                    "https://**"
+                ]
+            },
             "shell": {
                 "all": false,
                 "open": true,
                 "sidecar": true,
+                "execute": true,
                 "scope": [
                     {
                         "name": "binaries/biodockify-engine",
                         "sidecar": true
+                    },
+                    {
+                        "name": "explorer",
+                        "cmd": "explorer",
+                        "args": true
                     }
                 ]
             }
