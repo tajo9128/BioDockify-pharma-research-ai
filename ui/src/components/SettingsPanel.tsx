@@ -371,6 +371,8 @@ export default function SettingsPanel() {
                                     <CloudKeyBox
                                         name="Google Gemini"
                                         icon="G"
+                                        modelValue={settings.ai_provider?.google_model}
+                                        onModelChange={(v: string) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, google_model: v } })}
                                         value={settings.ai_provider.google_key}
                                         onChange={(v: string) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, google_key: v } })}
                                         onTest={() => handleTestKey('google', settings.ai_provider.google_key)}
@@ -380,6 +382,8 @@ export default function SettingsPanel() {
                                     <CloudKeyBox
                                         name="Hugging Face Inference"
                                         icon="🤗"
+                                        modelValue={settings.ai_provider?.huggingface_model}
+                                        onModelChange={(v: string) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, huggingface_model: v } })}
                                         value={settings.ai_provider.huggingface_key}
                                         onChange={(v: string) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, huggingface_key: v } })}
                                         onTest={() => handleTestKey('huggingface', settings.ai_provider.huggingface_key)}
@@ -389,6 +393,8 @@ export default function SettingsPanel() {
                                     <CloudKeyBox
                                         name="OpenRouter"
                                         icon="OR"
+                                        modelValue={settings.ai_provider?.openrouter_model}
+                                        onModelChange={(v: string) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, openrouter_model: v } })}
                                         value={settings.ai_provider.openrouter_key}
                                         onChange={(v: string) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, openrouter_key: v } })}
                                         onTest={() => handleTestKey('openrouter', settings.ai_provider.openrouter_key)}
@@ -403,6 +409,8 @@ export default function SettingsPanel() {
                                         <CloudKeyBox
                                             name="GLM-4.7 API Key"
                                             icon="Z"
+                                            modelValue={settings.ai_provider?.glm_model}
+                                            onModelChange={(v: string) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, glm_model: v } })}
                                             value={settings.ai_provider.glm_key}
                                             onChange={(v: string) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, glm_key: v } })}
                                             onTest={() => handleTestKey('glm', settings.ai_provider.glm_key)}
@@ -691,7 +699,7 @@ export default function SettingsPanel() {
 
 // --- Helper Components ---
 
-const CloudKeyBox = ({ name, value, icon, onChange, onTest, testStatus = 'idle' }: any) => {
+const CloudKeyBox = ({ name, value, icon, onChange, onTest, testStatus = 'idle', modelValue, onModelChange }: any) => {
     const getStatusIcon = () => {
         switch (testStatus) {
             case 'testing':
@@ -723,11 +731,24 @@ const CloudKeyBox = ({ name, value, icon, onChange, onTest, testStatus = 'idle' 
             <div className="w-10 h-10 rounded bg-slate-900 flex items-center justify-center font-bold text-slate-400 border border-slate-800 group-focus-within:text-teal-400 group-focus-within:border-teal-500/50">
                 {icon}
             </div>
-            <div className="flex-1">
+            <div className="flex-1 space-y-2">
                 <div className="text-xs text-slate-500 mb-1 flex items-center justify-between">
                     <span>{name}</span>
                     {getStatusIcon()}
                 </div>
+
+                {/* Model Name Input */}
+                {onModelChange && (
+                    <input
+                        type="text"
+                        value={modelValue || ''}
+                        onChange={(e) => onModelChange(e.target.value)}
+                        placeholder="Model name (e.g., gemini-pro, gpt-4)"
+                        className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-slate-300 placeholder-slate-600 outline-none font-mono"
+                    />
+                )}
+
+                {/* API Key Input */}
                 <div className="flex space-x-2">
                     <input
                         type="password"
