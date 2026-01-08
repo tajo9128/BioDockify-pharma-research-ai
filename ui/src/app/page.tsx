@@ -138,13 +138,21 @@ export default function PharmaceuticalResearchApp() {
     }
   };
 
-  const c_settings = async (newSettings: any) => {
+  const c_settings = async (viewOrSettings: any) => {
     // Merge and save
     try {
-      const current = await api.getSettings() || {};
-      const updated = { ...current, ...newSettings };
-      await api.saveSettings(updated);
-      setHasOnboarded(true);
+      // Check if it's a view string (from Advanced Settings button) or settings object
+      if (typeof viewOrSettings === 'string') {
+        // User clicked "Open Advanced Settings"
+        setHasOnboarded(true);
+        setActiveView(viewOrSettings); // Navigate to the specified view
+      } else {
+        // Normal completion with settings object
+        const current = await api.getSettings() || {};
+        const updated = { ...current, ...viewOrSettings };
+        await api.saveSettings(updated);
+        setHasOnboarded(true);
+      }
     } catch (e) {
       console.error("Failed to save wizard settings", e);
       // Allow proceed anyway for demo
