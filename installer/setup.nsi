@@ -128,11 +128,14 @@ SectionEnd
 
 Section "Uninstall"
 
-  ; Remove Files
+  ; Remove Files (ONLY the files we installed)
   Delete "$INSTDIR\biodockify-ai.exe"
   Delete "$INSTDIR\Uninstall.exe"
   Delete "$INSTDIR\biodockify-engine-x86_64-pc-windows-msvc.exe"
-  RMDir /r "$INSTDIR"
+  
+  ; Remove the installation directory ONLY if it's empty
+  ; This prevents deleting user data that might be in the folder
+  RMDir "$INSTDIR"
 
   ; Remove Start Menu Shortcuts
   Delete "$SMPROGRAMS\BioDockify\BioDockify AI.lnk"
