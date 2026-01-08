@@ -41,17 +41,7 @@ export default function PharmaceuticalResearchApp() {
   const [thinkingSteps, setThinkingSteps] = useState<any[]>([]);
   const [currentTask, setCurrentTask] = useState<any | null>(null);
 
-  const startThinkingStream = () => {
-    // Placeholder for Priority 1 connection
-    const eventSource = new EventSource('/api/v2/agent/thinking');
-    eventSource.onmessage = (event) => {
-      try {
-        const step = JSON.parse(event.data);
-        setThinkingSteps(prev => [...prev, step]);
-      } catch (e) { }
-    };
-    // Cleanup needed in real impl
-  }
+
 
   const handleExecute = async () => {
     if (!goal.trim()) {
@@ -64,39 +54,39 @@ export default function PharmaceuticalResearchApp() {
     setThinkingSteps([])
     setCurrentTask(null)
 
-    try {
-      const response = await fetch('/api/v2/agent/goal', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ goal, stage })
-      })
+    // Simulate Agent Start
+    setTaskId("local-sim-" + Date.now());
+    setCurrentTask({
+      id: "local-sim-" + Date.now(),
+      goal,
+      stage,
+      status: 'running',
+      progress: 0,
+      createdAt: new Date().toISOString()
+    })
 
-      if (!response.ok) {
-        throw new Error(`API error: ${response.status}`)
+    // Simulate Thinking Stream
+    const steps = [
+      { type: 'thought', content: 'Analyzing research goal: ' + goal },
+      { type: 'thought', content: 'Identifying key concepts and entities...' },
+      { type: 'thought', content: 'Checking local cache for relevant contexts...' },
+      { type: 'action', content: 'Searching PubMed for recent literature...' },
+      { type: 'thought', content: 'Filtering results by impact factor > 10...' },
+      { type: 'result', content: 'Found 12 relevant papers matching criteria.' },
+      { type: 'action', content: 'Downloading PDFs for analysis (Grobid)...' },
+      { type: 'thought', content: 'Extracting molecular structures and dosage data...' }
+    ];
+
+    let i = 0;
+    const interval = setInterval(() => {
+      if (i < steps.length) {
+        setThinkingSteps(prev => [...prev, steps[i]]);
+        i++;
+      } else {
+        clearInterval(interval);
+        // setIsExecuting(false); // Keep executing state to show results
       }
-
-      const data = await response.json()
-
-      if (!data.success) {
-        throw new Error(data.error || 'Failed to execute goal')
-      }
-
-      setTaskId(data.taskId)
-      setCurrentTask({
-        id: data.taskId,
-        goal,
-        stage,
-        status: 'running',
-        progress: 0,
-        createdAt: new Date().toISOString()
-      })
-
-      startThinkingStream()
-    } catch (err: any) {
-      console.error('Execution error:', err)
-      setError(err.message || 'Failed to start research. Please check your connection.')
-      setIsExecuting(false)
-    }
+    }, 1500);
   }
 
   useEffect(() => {
