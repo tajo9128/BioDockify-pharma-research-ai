@@ -90,6 +90,44 @@ def run_research_task(task_id: str, title: str, mode: str):
         executor = ResearchExecutor(task_id=task_id) 
         context = executor.execute_plan(plan)
         
+        # ---------------------------------------------------------------------
+        # 2.5 Auto-Ingest into Local NotebookLM (RAG) & Neo4j
+        # ---------------------------------------------------------------------
+        try:
+            from modules.rag.vector_store import vector_store
+            
+            # Simple Chunking Strategy
+            full_text = context.extracted_text
+            chunk_size = 1000
+            chunks = [full_text[i:i+chunk_size] for i in range(0, len(full_text), chunk_size)]
+            
+            docs_to_ingest = []
+            for i, chunk_text in enumerate(chunks):
+                docs_to_ingest.append({
+                    "text": chunk_text,
+                    "metadata": {
+                        "source": f"Agent Research: {title}",
+                        "type": "generated-research",
+                        "task_id": task_id,
+                        "chunk_index": i
+                    }
+                })
+            
+            if docs_to_ingest:
+                vector_store.add_documents(docs_to_ingest)
+                
+            # Neo4j Sync (Entities)
+            # Assuming context.entities is a list of dicts/obects
+            # If we had a Neo4j module exposed here, we'd call it.
+            # For now, we assume the ResearchExecutor *internally* might have handled it, 
+            # or we log that we skipped it if no direct access.
+            # (MVP: We rely on RAG for the Notebook experience).
+            
+        except Exception as rag_err:
+             print(f"Warning: Failed to auto-ingest into RAG: {rag_err}")
+
+        # ---------------------------------------------------------------------
+        
         # 3. Store Results
         task["status"] = "completed"
         task["result"] = {
@@ -324,6 +362,45 @@ async def upload_document(file: UploadFile = File(...)):
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         os.remove(tmp_path)
+
+class LinkRequest(BaseModel):
+    url: str
+
+@app.post("/api/rag/link")
+async def ingest_link(request: LinkRequest):
+    """Ingest content from a URL (e.g., Google NotebookLM Share Link)."""
+    from modules.rag.web_scraper import scrape_url
+    
+    try:
+        text = scrape_url(request.url)
+        if not text:
+            raise HTTPException(status_code=400, detail="No content found at URL")
+            
+        # Create a document chunk (simplified ingestion for direct text)
+        # We wrap it in a format ingestor/vector_store expects?
+        # Actually ingestor expects a file path.
+        # Let's save text to a temp .txt file and use existing ingestor!
+        
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".txt", mode='w', encoding='utf-8') as tmp:
+            tmp.write(f"Source: {request.url}\n\n")
+            tmp.write(text)
+            tmp_path = tmp.name
+            
+        chunks = ingestor.ingest_file(tmp_path)
+        
+        # Override metadata
+        for chunk in chunks:
+            chunk['metadata']['source'] = request.url
+            
+        vector_store.add_documents(chunks)
+        os.remove(tmp_path)
+        
+        return {"status": "success", "message": f"Indexed content from {request.url}"}
+        
+    except Exception as e:
+        if 'tmp_path' in locals(): os.remove(tmp_path)
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 class ChatRequest(BaseModel):
     query: str

@@ -1,3 +1,14 @@
+# BioDockify v2.9.9 - NotebookLM Integration & UI Refresh
+
+**Release Date:** 2026-01-08
+
+### New Features
+*   **Integrated Agent Memory**: Research results from the autonomous agent are now automatically ingested into the **Local Notebook** (RAG Vector Store).
+*   **NotebookLM UI Refresh**: Redesigned the "NotebookLM" interface to better match the Google NotebookLM experience (Clean Source Sidebar, Audio Overview placeholders, Floating Chat).
+*   **Link Ingestion**: Added support for ingesting content from direct URLs (e.g. Google NotebookLM Share Links).
+
+---
+
 # BioDockify v2.9.8 - Production Robustness Update
 
 **Release Date:** 2026-01-08
