@@ -1,7 +1,7 @@
 [package]
-name = "biodockify-desktop"
-version = "2.9.2"
-description = "BioDockify AI Desktop Application"
+name = "biodockify-ai"
+version = "2.9.3"
+description = "BioDockify AI: Pharmaceutical Research Assistant"
 authors = ["tajo9128"]
 edition = "2021"
 license = "MIT"
