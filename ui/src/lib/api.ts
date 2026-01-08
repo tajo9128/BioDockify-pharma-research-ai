@@ -222,40 +222,38 @@ export const api = {
       body: JSON.stringify({ service_type: serviceType, provider, key })
     }),
 
-  checkNeo4j: (uri: string, user: string, pass: string) =>
+  checkOllama: (baseUrl: string) =>
+    apiRequest<{ status: string; models: string[]; message?: string }>('/settings/ollama/check', {
+      method: 'POST',
+      body: JSON.stringify({ base_url: baseUrl })
+    }),
+
+  checkNeo4j: (uri: string, user: string, password: string) =>
     apiRequest<{ status: string; message: string }>('/settings/neo4j/check', {
-      checkOllama: (baseUrl: string) =>
-        apiRequest<{ status: string; models: string[]; message?: string }>(`/settings/ollama/check`, {
-          method: 'POST',
-          body: JSON.stringify({ base_url: baseUrl })
-        }),
+      method: 'POST',
+      body: JSON.stringify({ uri, user, password })
+    }),
 
-      checkNeo4j: (uri: string, user: string, password: string) =>
-        apiRequest<{ status: string; message: string }>(`/settings/neo4j/check`, {
-          method: 'POST',
-          body: JSON.stringify({ uri, user, password })
-        }),
+  getSettings: () =>
+    apiRequest<Settings>('/settings'),
 
-      getSettings: () =>
-        apiRequest<Settings>('/settings'),
+  saveSettings: (settings: Settings) =>
+    apiRequest<{ success: boolean }>('/settings', {
+      method: 'POST',
+      body: JSON.stringify(settings),
+    }),
 
-      saveSettings: (settings: Settings) =>
-        apiRequest<{ success: boolean }>('/settings', {
-          method: 'POST',
-          body: JSON.stringify(settings),
-        }),
+  resetSettings: () =>
+    apiRequest<{ success: boolean; config: Settings }>('/settings/reset', {
+      method: 'POST',
+    }),
 
-      resetSettings: () =>
-        apiRequest<{ success: boolean; config: Settings }>('/settings/reset', {
-          method: 'POST',
-        }),
+  getSystemInfo: () =>
+    apiRequest<SystemInfo>('/system/info'),
 
-      getSystemInfo: () =>
-        apiRequest<SystemInfo>('/system/info'),
+  // History endpoints
+  getResearchHistory: () =>
+    apiRequest<{ id: string; topic: string; status: string; createdAt: string }[]>('/research/history'),
+};
 
-      // History endpoints
-      getResearchHistory: () =>
-        apiRequest<{ id: string; topic: string; status: string; createdAt: string }[]>('/research/history'),
-    };
-
-  export default api;
+export default api;

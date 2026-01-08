@@ -28,9 +28,7 @@ export const metadata: Metadata = {
   },
 }
 
-import dynamic from 'next/dynamic';
-
-const TitleBar = dynamic(() => import('@/components/TitleBar'), { ssr: false });
+import TitleBar from '@/components/TitleBar';
 
 export default function RootLayout({
   children,
