@@ -178,6 +178,7 @@ export default function PharmaceuticalResearchApp() {
             onExecute={handleExecute}
             isExecuting={isExecuting}
             thinkingSteps={thinkingSteps}
+            error={error}
           />
         );
     }
