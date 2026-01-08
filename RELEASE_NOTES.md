@@ -1,3 +1,17 @@
+# BioDockify v2.10.6 - Critical Build & Installer Fixes
+
+**Release Date:** 2026-01-08
+
+### 🐛 Critical Fixes
+*   **Build System**: Fixed syntax errors in `api.ts` that prevented production builds
+*   **SSR Compatibility**: Resolved Next.js Server Component SSR configuration issues
+*   **Installer Safety**: Fixed uninstaller to only remove installed files, preventing accidental deletion of user data
+
+### ⚠️ Important
+This release fixes a **critical installer bug** where uninstalling would delete the entire installation directory and all user data. If you installed v2.10.4 or v2.10.5, please upgrade to v2.10.6 immediately.
+
+---
+
 # BioDockify v2.10.5 - UI/UX Refinements & Branding Update
 
 **Release Date:** 2026-01-08
