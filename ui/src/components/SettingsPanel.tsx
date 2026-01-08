@@ -91,6 +91,15 @@ export default function SettingsPanel() {
     const [ollamaModels, setOllamaModels] = useState<string[]>([]);
     const [connectionMsg, setConnectionMsg] = useState('');
 
+    // API Test Status Tracking
+    const [testStatus, setTestStatus] = useState<Record<string, 'idle' | 'testing' | 'success' | 'error'>>({
+        google: 'idle',
+        huggingface: 'idle',
+        openrouter: 'idle',
+        glm: 'idle',
+        elsevier: 'idle'
+    });
+
     useEffect(() => { loadSettings(); }, []);
 
     const loadSettings = async () => {
@@ -153,16 +162,23 @@ export default function SettingsPanel() {
             alert('Please enter an API key first.');
             return;
         }
+
+        setTestStatus(prev => ({ ...prev, [provider]: 'testing' }));
+
         try {
             const res = await api.testConnection(serviceType, provider, key);
             if (res.status === 'success') {
+                setTestStatus(prev => ({ ...prev, [provider]: 'success' }));
                 alert(`✅ ${res.message}`);
             } else if (res.status === 'warning') {
+                setTestStatus(prev => ({ ...prev, [provider]: 'error' }));
                 alert(`⚠️ ${res.message}`);
             } else {
+                setTestStatus(prev => ({ ...prev, [provider]: 'error' }));
                 alert(`❌ ${res.message}`);
             }
         } catch (e: any) {
+            setTestStatus(prev => ({ ...prev, [provider]: 'error' }));
             alert(`❌ API Test Failed: ${e.message}`);
         }
     };
@@ -358,6 +374,7 @@ export default function SettingsPanel() {
                                         value={settings.ai_provider.google_key}
                                         onChange={(v: string) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, google_key: v } })}
                                         onTest={() => handleTestKey('google', settings.ai_provider.google_key)}
+                                        testStatus={testStatus.google}
                                     />
                                     {/* Hugging Face */}
                                     <CloudKeyBox
@@ -366,6 +383,7 @@ export default function SettingsPanel() {
                                         value={settings.ai_provider.huggingface_key}
                                         onChange={(v: string) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, huggingface_key: v } })}
                                         onTest={() => handleTestKey('huggingface', settings.ai_provider.huggingface_key)}
+                                        testStatus={testStatus.huggingface}
                                     />
                                     {/* OpenRouter */}
                                     <CloudKeyBox
@@ -374,6 +392,7 @@ export default function SettingsPanel() {
                                         value={settings.ai_provider.openrouter_key}
                                         onChange={(v: string) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, openrouter_key: v } })}
                                         onTest={() => handleTestKey('openrouter', settings.ai_provider.openrouter_key)}
+                                        testStatus={testStatus.openrouter}
                                     />
                                     {/* GLM 4.7 (Paid) */}
                                     <div className="border-t border-slate-800 my-2 pt-4">
@@ -387,6 +406,7 @@ export default function SettingsPanel() {
                                             value={settings.ai_provider.glm_key}
                                             onChange={(v: string) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, glm_key: v } })}
                                             onTest={() => handleTestKey('glm', settings.ai_provider.glm_key)}
+                                            testStatus={testStatus.glm}
                                         />
                                     </div>
                                 </div>
@@ -671,31 +691,63 @@ export default function SettingsPanel() {
 
 // --- Helper Components ---
 
-const CloudKeyBox = ({ name, value, icon, onChange, onTest }: any) => (
-    <div className="flex items-center space-x-3 p-3 bg-slate-950 border border-slate-800 rounded-lg group focus-within:border-teal-500 transition-colors">
-        <div className="w-10 h-10 rounded bg-slate-900 flex items-center justify-center font-bold text-slate-400 border border-slate-800 group-focus-within:text-teal-400 group-focus-within:border-teal-500/50">
-            {icon}
-        </div>
-        <div className="flex-1">
-            <div className="text-xs text-slate-500 mb-1">{name}</div>
-            <div className="flex space-x-2">
-                <input
-                    type="password"
-                    value={value || ''}
-                    onChange={(e) => onChange(e.target.value)}
-                    placeholder="sk-..."
-                    className="flex-1 bg-transparent text-sm text-white placeholder-slate-700 outline-none font-mono"
-                />
-                <button
-                    onClick={onTest}
-                    className="text-xs bg-slate-800 hover:bg-slate-700 px-3 py-1 rounded text-slate-300 transition-colors"
-                >
-                    Test
-                </button>
+const CloudKeyBox = ({ name, value, icon, onChange, onTest, testStatus = 'idle' }: any) => {
+    const getStatusIcon = () => {
+        switch (testStatus) {
+            case 'testing':
+                return <RefreshCw className="w-3 h-3 animate-spin text-blue-400" />;
+            case 'success':
+                return <CheckCircle className="w-3 h-3 text-green-400" />;
+            case 'error':
+                return <AlertCircle className="w-3 h-3 text-red-400" />;
+            default:
+                return null;
+        }
+    };
+
+    const getStatusBorder = () => {
+        switch (testStatus) {
+            case 'testing':
+                return 'border-blue-500/50';
+            case 'success':
+                return 'border-green-500/50';
+            case 'error':
+                return 'border-red-500/50';
+            default:
+                return 'border-slate-800';
+        }
+    };
+
+    return (
+        <div className={`flex items-center space-x-3 p-3 bg-slate-950 border rounded-lg group focus-within:border-teal-500 transition-all ${getStatusBorder()}`}>
+            <div className="w-10 h-10 rounded bg-slate-900 flex items-center justify-center font-bold text-slate-400 border border-slate-800 group-focus-within:text-teal-400 group-focus-within:border-teal-500/50">
+                {icon}
+            </div>
+            <div className="flex-1">
+                <div className="text-xs text-slate-500 mb-1 flex items-center justify-between">
+                    <span>{name}</span>
+                    {getStatusIcon()}
+                </div>
+                <div className="flex space-x-2">
+                    <input
+                        type="password"
+                        value={value || ''}
+                        onChange={(e) => onChange(e.target.value)}
+                        placeholder="sk-..."
+                        className="flex-1 bg-transparent text-sm text-white placeholder-slate-700 outline-none font-mono"
+                    />
+                    <button
+                        onClick={onTest}
+                        disabled={testStatus === 'testing'}
+                        className="text-xs bg-slate-800 hover:bg-slate-700 px-3 py-1 rounded text-slate-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        {testStatus === 'testing' ? 'Testing...' : 'Test'}
+                    </button>
+                </div>
             </div>
         </div>
-    </div>
-);
+    );
+};
 
 const ToggleSetting = ({ label, desc, enabled, onChange }: any) => (
     <div className="flex items-center justify-between p-4 bg-slate-950 rounded-lg border border-slate-800">
