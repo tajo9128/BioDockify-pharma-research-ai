@@ -1,3 +1,14 @@
+# BioDockify v2.9.8 - Production Robustness Update
+
+**Release Date:** 2026-01-08
+
+### Critical Updates
+*   **Real-Time Research Workflow**: The main Research Workstation now executes *actual* backend tasks instead of running simulations. It connects to the orchestrator, polls for status, and streams logs in real-time.
+*   **API Standardization**: Fixed path mismatches between Frontend (`/research/status/:id`) and Backend (`/api/research/status/:id`) to ensure reliable status reporting.
+*   **Enhanced Status Reporting**: API now returns detailed execution logs in the status object, allowing the UI to visualize "Thinking Steps" accurately.
+
+---
+
 # BioDockify v2.9.7 - Virtual Lab Cloud Integration
 
 **Release Date:** 2026-01-08
