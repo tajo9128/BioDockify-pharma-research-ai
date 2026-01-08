@@ -3,31 +3,14 @@
 
 const API_BASE = 'http://localhost:8000/api';
 
-// ... (existing interfaces)
-
-export const api = {
-  // ... (existing methods)
-
-  checkNeo4j: (uri: string, user: string, pass: string) =>
-    apiRequest<{ status: string; message: string }>('/settings/neo4j/check', {
-      method: 'POST',
-      body: JSON.stringify({ uri, user, password: pass }),
-    }),
-
-  checkOllama: (baseUrl: string) =>
-    apiRequest<{ status: string, message: string, models: string[] }>('/settings/ollama/check', {
-      method: 'POST',
-      body: JSON.stringify({ base_url: baseUrl })
-    }),
-
-  export interface ResearchStatus {
-    taskId: string;
-status: 'pending' | 'running' | 'completed' | 'failed';
-progress: number;
-currentStep: number;
-logs: string[];
-phase: string;
-  }
+export interface ResearchStatus {
+  taskId: string;
+  status: 'pending' | 'running' | 'completed' | 'failed';
+  progress: number;
+  currentStep: number;
+  logs: string[];
+  phase: string;
+}
 
 export interface ResearchResults {
   taskId: string;
@@ -114,6 +97,10 @@ export interface Settings {
     context_window: number;
     gpu_layers: number;
     thread_count: number;
+    // Add missing optional settings to prevent build errors if referenced elsewhere
+    provider?: string;
+    endpoint?: string;
+    key?: string;
   };
   persona: {
     role: 'PhD Student' | 'PG Student' | 'Senior Researcher' | 'Industry Scientist';
@@ -139,6 +126,16 @@ export interface ConnectionTest {
   type: 'llm' | 'database' | 'elsevier';
   status: 'success' | 'error';
   message: string;
+}
+
+export interface SystemInfo {
+  os: string;
+  cpu_cores: number;
+  ram_total_gb: number;
+  ram_available_gb: number;
+  disk_free_gb: number;
+  temp_writable: boolean;
+  python_version: string;
 }
 
 // Helper function for API calls
@@ -242,8 +239,10 @@ export const api = {
   resetSettings: () =>
     apiRequest<{ success: boolean; config: Settings }>('/settings/reset', {
       method: 'POST',
-      body: JSON.stringify(settings),
     }),
+
+  getSystemInfo: () =>
+    apiRequest<SystemInfo>('/system/info'),
 
   // History endpoints
   getResearchHistory: () =>

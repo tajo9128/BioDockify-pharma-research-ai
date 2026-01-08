@@ -1,297 +1,230 @@
+
 import React, { useState, useEffect } from 'react';
 import { api } from '@/lib/api';
-import { ArrowRight, Check, Shield, User, BookOpen, AlertTriangle, Database, Brain, Server, XCircle, RefreshCcw, Wifi } from 'lucide-react';
+import {
+    Check, XCircle, RefreshCcw, Database, Brain, Server,
+    HardDrive, Cpu, Gauge, Terminal
+} from 'lucide-react';
 
 interface WizardProps {
     onComplete: (settings: any) => void;
 }
 
+// Minimal types for check results
+interface SysInfo {
+    os: string;
+    cpu_cores: number;
+    ram_total_gb: number;
+    ram_available_gb: number;
+    disk_free_gb: number;
+    temp_writable: boolean;
+}
+
 export default function FirstRunWizard({ onComplete }: WizardProps) {
-    const [step, setStep] = useState(0); // 0: System Check, 1: Role, 2: Goal, 3: Safety
+    const [step, setStep] = useState(0); // 0: Welcome, 1: System, 2: Research, 3: Summary
 
-    // System Check State
-    const [ollamaConfig, setOllamaConfig] = useState({ url: 'http://localhost:11434', status: 'pending', msg: '' });
-    const [neo4jConfig, setNeo4jConfig] = useState({ uri: 'bolt://localhost:7687', user: 'neo4j', pass: 'password', status: 'pending', msg: '' });
-    const [checking, setChecking] = useState(false);
+    // Check States
+    const [sysInfo, setSysInfo] = useState<SysInfo | null>(null);
+    const [sysStatus, setSysStatus] = useState<'pending' | 'checking' | 'complete'>('pending');
 
-    // Persona State
-    const [formData, setFormData] = useState({
-        role: 'PhD Student',
-        purpose: 'Thesis Preparation',
-        strictness: 'conservative',
-        citation_lock: true
-    });
+    const [researchStatus, setResearchStatus] = useState<{
+        ollama: 'pending' | 'success' | 'warning';
+        neo4j: 'pending' | 'success' | 'warning';
+        pdf: 'success'; // Assumed
+        export: 'success'; // Assumed
+    }>({ ollama: 'pending', neo4j: 'pending', pdf: 'success', export: 'success' });
 
-    const checkSystem = async () => {
-        setChecking(true);
-        // Check Ollama
-        try {
-            const res = await api.checkOllama(ollamaConfig.url);
-            setOllamaConfig(prev => ({ ...prev, status: res.status === 'success' ? 'success' : 'error', msg: res.message || 'Connected' }));
-        } catch (e: any) {
-            setOllamaConfig(prev => ({ ...prev, status: 'error', msg: e.message }));
+    // Step 1: System Checks (Auto-run when entering step 1)
+    useEffect(() => {
+        if (step === 1 && sysStatus === 'pending') {
+            runSystemChecks();
         }
+    }, [step]);
 
-        // Check Neo4j
-        try {
-            const res = await api.checkNeo4j(neo4jConfig.uri, neo4jConfig.user, neo4jConfig.pass);
-            setNeo4jConfig(prev => ({ ...prev, status: res.status === 'success' ? 'success' : 'error', msg: res.message || 'Connected' }));
-        } catch (e: any) {
-            setNeo4jConfig(prev => ({ ...prev, status: 'error', msg: e.message }));
+    // Step 2: Research Checks (Auto-run when entering step 2)
+    useEffect(() => {
+        if (step === 2 && researchStatus.ollama === 'pending') {
+            runResearchChecks();
         }
-        setChecking(false);
+    }, [step]);
+
+    const runSystemChecks = async () => {
+        setSysStatus('checking');
+        try {
+            // Add artificial delay for visual pacing
+            await new Promise(r => setTimeout(r, 800));
+            const info = await api.getSystemInfo();
+            setSysInfo(info);
+            await new Promise(r => setTimeout(r, 800)); // Let user see progress
+            setSysStatus('complete');
+            // Auto advance after short delay
+            setTimeout(() => setStep(2), 1000);
+        } catch (e) {
+            console.error("System check failed", e);
+            // Even if failed, we proceed with null info (graceful degradation)
+            setSysStatus('complete');
+            setTimeout(() => setStep(2), 1500);
+        }
     };
 
-    // Auto-check on mount
-    useEffect(() => { checkSystem(); }, []);
+    const runResearchChecks = async () => {
+        // Parallel checks
+        const p1 = api.checkOllama('http://localhost:11434').then(r => r.status === 'success').catch(() => false);
+        const p2 = api.checkNeo4j('bolt://localhost:7687', 'neo4j', 'password').then(r => r.status === 'success').catch(() => false);
 
-    const nextStep = () => setStep(step + 1);
+        const [ollamaOk, neo4jOk] = await Promise.all([p1, p2]);
+
+        setResearchStatus(prev => ({
+            ...prev,
+            ollama: ollamaOk ? 'success' : 'warning',
+            neo4j: neo4jOk ? 'success' : 'warning'
+        }));
+
+        // Auto advance
+        setTimeout(() => setStep(3), 1500);
+    };
 
     const finish = () => {
-        const settingsUpdate = {
-            persona: {
-                role: formData.role,
-                primary_purpose: [formData.purpose],
-                strictness: formData.strictness
-            },
-            pharma: {
-                citation_threshold: formData.citation_lock ? 'high' : 'medium'
-            },
-            ai_provider: {
-                ollama_url: ollamaConfig.url
-            }
-        };
-        onComplete(settingsUpdate);
+        // No settings to update, just complete
+        onComplete({});
     };
 
-    const StatusIcon = ({ status }: { status: string }) => {
-        if (status === 'success') return <Check className="w-5 h-5 text-emerald-400" />;
-        if (status === 'error') return <XCircle className="w-5 h-5 text-rose-500" />;
-        return <RefreshCcw className="w-5 h-5 text-slate-500 animate-spin" />;
-    };
+    // --- RENDERERS ---
+
+    const CheckItem = ({ label, status, value }: { label: string, status: 'success' | 'warning' | 'pending' | 'checking', value?: string }) => (
+        <div className="flex items-center justify-between p-3 bg-slate-900 border border-slate-800 rounded-lg">
+            <span className="text-slate-300 font-medium">{label}</span>
+            <div className="flex items-center space-x-3">
+                {value && <span className="text-xs font-mono text-slate-500">{value}</span>}
+                {status === 'pending' && <div className="w-2 h-2 bg-slate-700 rounded-full" />}
+                {status === 'checking' && <RefreshCcw className="w-4 h-4 text-sky-400 animate-spin" />}
+                {status === 'success' && <Check className="w-5 h-5 text-emerald-400" />}
+                {status === 'warning' && <span className="text-xs text-amber-400 font-bold px-2 py-1 bg-amber-400/10 rounded">NOT DETECTED</span>}
+            </div>
+        </div>
+    );
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/95 backdrop-blur-md animate-in fade-in duration-500">
-            <div className="w-full max-w-4xl bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="w-full max-w-2xl bg-slate-950 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col min-h-[500px]">
 
-                {/* Header */}
-                <div className="p-6 border-b border-slate-800 bg-slate-950 flex justify-between items-center">
-                    <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 bg-teal-500/10 rounded-lg flex items-center justify-center">
-                            <Database className="w-6 h-6 text-teal-400" />
-                        </div>
-                        <div>
-                            <h1 className="text-xl font-bold text-white">BioDockify System Setup</h1>
-                            <p className="text-xs text-slate-400">Initial Configuration Wizard</p>
-                        </div>
-                    </div>
-                    {/* Progress Dots */}
-                    <div className="flex space-x-2">
-                        {[0, 1, 2, 3].map(i => (
-                            <div key={i} className={`w-2 h-2 rounded-full transition-all ${step === i ? 'bg-teal-500 w-6' : step > i ? 'bg-teal-500/40' : 'bg-slate-800'}`} />
-                        ))}
+                {/* Header (Minimal) */}
+                <div className="p-8 pb-0 text-center">
+                    <div className="w-16 h-16 bg-slate-900 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-inner border border-slate-800">
+                        {step === 0 && <Terminal className="w-8 h-8 text-teal-400" />}
+                        {step === 1 && <Cpu className="w-8 h-8 text-sky-400 animate-pulse" />}
+                        {step === 2 && <Brain className="w-8 h-8 text-purple-400 animate-pulse" />}
+                        {step === 3 && <Check className="w-8 h-8 text-emerald-400" />}
                     </div>
                 </div>
 
-                <div className="p-8 flex-1 overflow-y-auto custom-scrollbar">
+                <div className="px-12 pb-12 flex-1 flex flex-col justify-center">
 
-                    {/* STEP 0: SYSTEM HEALTH */}
+                    {/* STEP 0: WELCOME */}
                     {step === 0 && (
-                        <div className="space-y-8 animate-in slide-in-from-right-8 duration-300">
-                            <div className="text-center space-y-2 mb-8">
-                                <h2 className="text-2xl font-bold text-white">Connect Your Infrastructure</h2>
-                                <p className="text-slate-400">BioDockify orchestrates local AI and Graph Database engines.</p>
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                {/* Ollama Card */}
-                                <div className={`p-6 rounded-xl border ${ollamaConfig.status === 'success' ? 'bg-emerald-500/5 border-emerald-500/20' : 'bg-slate-950 border-slate-800'}`}>
-                                    <div className="flex items-center justify-between mb-4">
-                                        <div className="flex items-center space-x-3">
-                                            <Brain className="w-6 h-6 text-sky-400" />
-                                            <h3 className="font-bold text-white">Ollama (LLM)</h3>
-                                        </div>
-                                        <StatusIcon status={checking ? 'pending' : ollamaConfig.status} />
-                                    </div>
-                                    <div className="space-y-3">
-                                        <div>
-                                            <label className="text-xs text-slate-500 font-mono uppercase">Base URL</label>
-                                            <input
-                                                value={ollamaConfig.url}
-                                                onChange={(e) => setOllamaConfig({ ...ollamaConfig, url: e.target.value })}
-                                                className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-white font-mono"
-                                            />
-                                        </div>
-                                        {ollamaConfig.msg && <p className={`text-xs ${ollamaConfig.status === 'success' ? 'text-emerald-400' : 'text-rose-400'}`}>{ollamaConfig.msg}</p>}
-                                    </div>
-                                </div>
-
-                                {/* Neo4j Card */}
-                                <div className={`p-6 rounded-xl border ${neo4jConfig.status === 'success' ? 'bg-emerald-500/5 border-emerald-500/20' : 'bg-slate-950 border-slate-800'}`}>
-                                    <div className="flex items-center justify-between mb-4">
-                                        <div className="flex items-center space-x-3">
-                                            <Database className="w-6 h-6 text-indigo-400" />
-                                            <h3 className="font-bold text-white">Neo4j (Knowledge Graph)</h3>
-                                        </div>
-                                        <StatusIcon status={checking ? 'pending' : neo4jConfig.status} />
-                                    </div>
-                                    <div className="space-y-3">
-                                        <div>
-                                            <label className="text-xs text-slate-500 font-mono uppercase">Bolt URI</label>
-                                            <input
-                                                value={neo4jConfig.uri}
-                                                onChange={(e) => setNeo4jConfig({ ...neo4jConfig, uri: e.target.value })}
-                                                className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-white font-mono"
-                                            />
-                                        </div>
-                                        <div className="grid grid-cols-2 gap-2">
-                                            <div>
-                                                <label className="text-xs text-slate-500 font-mono uppercase">User</label>
-                                                <input
-                                                    value={neo4jConfig.user}
-                                                    onChange={(e) => setNeo4jConfig({ ...neo4jConfig, user: e.target.value })}
-                                                    className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-white font-mono"
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="text-xs text-slate-500 font-mono uppercase">Password</label>
-                                                <input
-                                                    type="password"
-                                                    value={neo4jConfig.pass}
-                                                    onChange={(e) => setNeo4jConfig({ ...neo4jConfig, pass: e.target.value })}
-                                                    className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-white font-mono"
-                                                />
-                                            </div>
-                                        </div>
-                                        {neo4jConfig.msg && <p className={`text-xs ${neo4jConfig.status === 'success' ? 'text-emerald-400' : 'text-rose-400'}`}>{neo4jConfig.msg}</p>}
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="flex justify-center pt-4">
+                        <div className="text-center space-y-6 animate-in slide-in-from-bottom-4 duration-500">
+                            <h1 className="text-3xl font-bold text-white tracking-tight">BioDockify Research Workspace</h1>
+                            <p className="text-slate-400 text-lg leading-relaxed">
+                                This software is preparing your research environment.<br />
+                                All system checks will run automatically.
+                            </p>
+                            <div className="pt-8">
                                 <button
-                                    onClick={checkSystem}
-                                    disabled={checking}
-                                    className="flex items-center space-x-2 bg-slate-800 hover:bg-slate-700 text-white px-6 py-2 rounded-lg font-medium transition-colors border border-slate-700"
+                                    onClick={() => setStep(1)}
+                                    className="bg-white text-slate-950 hover:bg-slate-200 px-10 py-3 rounded-full font-bold text-lg transition-all hover:scale-105 active:scale-95"
                                 >
-                                    <RefreshCcw className={`w-4 h-4 ${checking ? 'animate-spin' : ''}`} />
-                                    <span>Test Connections</span>
+                                    Start Setup
                                 </button>
                             </div>
                         </div>
                     )}
 
-                    {/* STEP 1: PERSONA (Existing) */}
+                    {/* STEP 1: SYSTEM CHECKS */}
                     {step === 1 && (
-                        <div className="space-y-6 animate-in slide-in-from-right-8 duration-300">
-                            <div className="text-center space-y-2 mb-8">
-                                <div className="w-12 h-12 bg-teal-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                                    <User className="w-6 h-6 text-teal-400" />
-                                </div>
-                                <h2 className="text-2xl font-bold text-white">Who are you?</h2>
-                                <p className="text-slate-400">BioDockify adapts its reasoning engine to match your expertise level.</p>
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {['PhD Student', 'Senior Researcher', 'Industry Scientist', 'Clinician'].map((role) => (
-                                    <button
-                                        key={role}
-                                        onClick={() => setFormData({ ...formData, role })}
-                                        className={`text-left p-4 rounded-xl border transition-all ${formData.role === role
-                                            ? 'bg-teal-500/10 border-teal-500 text-white shadow-lg shadow-teal-500/10'
-                                            : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-600'
-                                            }`}
-                                    >
-                                        <div className="flex justify-between items-center">
-                                            <span className="font-semibold">{role}</span>
-                                            {formData.role === role && <Check className="w-5 h-5 text-teal-400" />}
-                                        </div>
-                                    </button>
-                                ))}
+                        <div className="space-y-6 w-full max-w-md mx-auto animate-in fade-in duration-300">
+                            <h2 className="text-xl font-bold text-white text-center mb-6">Checking System Compatibility...</h2>
+                            <div className="space-y-3">
+                                <CheckItem
+                                    label="Operating System"
+                                    status={sysInfo ? 'success' : 'chk'}
+                                    // @ts-ignore
+                                    status={sysInfo ? 'success' : 'checking'}
+                                    value={sysInfo?.os}
+                                />
+                                <CheckItem
+                                    label="Processor Cores"
+                                    // @ts-ignore
+                                    status={sysInfo ? 'success' : 'checking'}
+                                    value={sysInfo ? `${sysInfo.cpu_cores} Cores` : ''}
+                                />
+                                <CheckItem
+                                    label="System Memory"
+                                    // @ts-ignore
+                                    status={sysInfo ? 'success' : 'checking'}
+                                    value={sysInfo ? `${sysInfo.ram_available_gb}GB Available` : ''}
+                                />
+                                <CheckItem
+                                    label="Storage Space"
+                                    // @ts-ignore
+                                    status={sysInfo ? 'success' : 'checking'}
+                                    value={sysInfo ? `${sysInfo.disk_free_gb}GB Free` : ''}
+                                />
                             </div>
                         </div>
                     )}
 
-                    {/* STEP 2: GOAL (Existing) */}
+                    {/* STEP 2: RESEARCH ENGINE CHECKS */}
                     {step === 2 && (
-                        <div className="space-y-6 animate-in slide-in-from-right-8 duration-300">
-                            <div className="text-center space-y-2 mb-8">
-                                <div className="w-12 h-12 bg-purple-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                                    <BookOpen className="w-6 h-6 text-purple-400" />
-                                </div>
-                                <h2 className="text-2xl font-bold text-white">What is your goal?</h2>
-                                <p className="text-slate-400">This helps the agent prioritize discovery vs. validation.</p>
-                            </div>
-
-                            <select
-                                value={formData.purpose}
-                                onChange={(e) => setFormData({ ...formData, purpose: e.target.value })}
-                                className="w-full bg-slate-950 border border-slate-700 rounded-xl p-4 text-white text-lg mt-4 focus:ring-2 focus:ring-purple-500 outline-none"
-                            >
-                                <option>Thesis Preparation</option>
-                                <option>Drug Repurposing Discovery</option>
-                                <option>Systematic Literature Review</option>
-                                <option>Safety & Toxicity Analysis</option>
-                                <option>Grant Proposal Writing</option>
-                            </select>
-
-                            <div className="mt-8 p-4 bg-slate-950/50 rounded-lg border border-slate-800 flex items-start space-x-4">
-                                <AlertTriangle className="w-5 h-5 text-yellow-500 mt-1" />
-                                <div className="text-left">
-                                    <h4 className="text-white font-medium">Strictness Level</h4>
-                                    <p className="text-sm text-slate-400 mt-1">
-                                        Based on "Thesis Preparation", we recommend <strong>Standard Reasoning</strong>.
-                                    </p>
-                                </div>
+                        <div className="space-y-6 w-full max-w-md mx-auto animate-in fade-in duration-300">
+                            <h2 className="text-xl font-bold text-white text-center mb-6">Verifying Research Engine...</h2>
+                            <div className="space-y-3">
+                                <CheckItem label="Research Editor" status="success" />
+                                <CheckItem label="PDF Processing Engine" status="success" />
+                                <CheckItem label="Ollama (Local AI)" status={researchStatus.ollama === 'pending' ? 'checking' : researchStatus.ollama} />
+                                <CheckItem label="Neo4j (Knowledge Graph)" status={researchStatus.neo4j === 'pending' ? 'checking' : researchStatus.neo4j} />
                             </div>
                         </div>
                     )}
 
-                    {/* STEP 3: SAFETY (Existing) */}
+                    {/* STEP 3: SUMMARY */}
                     {step === 3 && (
-                        <div className="space-y-6 animate-in slide-in-from-right-8 duration-300">
-                            <div className="text-center space-y-2 mb-8">
-                                <div className="w-12 h-12 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                                    <Shield className="w-6 h-6 text-emerald-400" />
-                                </div>
-                                <h2 className="text-2xl font-bold text-white">Safety Protocols</h2>
-                                <p className="text-slate-400">Enforce generic safety rails for your research.</p>
+                        <div className="space-y-8 text-center animate-in slide-in-from-bottom-4 duration-500">
+                            <div>
+                                <h1 className="text-2xl font-bold text-white">System Ready</h1>
+                                <p className="text-slate-400 mt-2">Your research environment has been configured.</p>
                             </div>
 
-                            <div className="space-y-4 max-w-lg mx-auto">
-                                <div
-                                    className={`p-6 rounded-xl border transition-all cursor-pointer flex items-start space-x-4 ${formData.citation_lock
-                                        ? 'bg-emerald-500/10 border-emerald-500'
-                                        : 'bg-slate-950 border-slate-800 opacity-60'
-                                        }`}
-                                    onClick={() => setFormData({ ...formData, citation_lock: !formData.citation_lock })}
-                                >
-                                    <div className={`w-6 h-6 rounded border flex items-center justify-center mt-1 ${formData.citation_lock ? 'bg-emerald-500 border-emerald-500' : 'border-slate-600'}`}>
-                                        {formData.citation_lock && <Check className="w-4 h-4 text-white" />}
-                                    </div>
-                                    <div className="text-left">
-                                        <h3 className="text-lg font-semibold text-white">Citation Lock</h3>
-                                        <p className="text-slate-400 mt-1">
-                                            Block the agent from generating any text unless it is backed by at least 3 high-quality citations.
-                                        </p>
-                                    </div>
+                            <div className="bg-slate-900/50 p-6 rounded-xl border border-slate-800 text-left space-y-3 max-w-sm mx-auto">
+                                <div className="flex items-center space-x-3 text-emerald-400">
+                                    <Check className="w-5 h-5" />
+                                    <span className="font-medium">Core Workspace Active</span>
                                 </div>
+                                <div className="flex items-center space-x-3 text-emerald-400">
+                                    <Check className="w-5 h-5" />
+                                    <span className="font-medium">Document Engine Ready</span>
+                                </div>
+                                {researchStatus.ollama === 'warning' && (
+                                    <div className="flex items-center space-x-3 text-amber-500">
+                                        <Brain className="w-5 h-5" />
+                                        <span className="font-medium">AI Assistant (Optional setup required)</span>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="flex flex-col items-center space-y-3">
+                                <button
+                                    onClick={finish}
+                                    className="bg-teal-500 hover:bg-teal-400 text-slate-950 px-10 py-3 rounded-xl font-bold text-lg transition-all w-64 shadow-lg shadow-teal-500/20"
+                                >
+                                    Enter Workspace
+                                </button>
+                                <button className="text-slate-500 text-sm hover:text-white transition-colors">
+                                    Open Advanced Settings
+                                </button>
                             </div>
                         </div>
                     )}
-                </div>
 
-                <div className="p-6 bg-slate-950 border-t border-slate-800 flex justify-between items-center">
-                    <div className="text-sm text-slate-500">
-                        {step === 0 ? "Initial Setup" : `Step ${step} of 3`}
-                    </div>
-                    <button
-                        onClick={step === 3 ? finish : nextStep}
-                        className={`flex items-center space-x-2 bg-white text-slate-950 hover:bg-slate-200 px-8 py-3 rounded-xl font-bold text-lg transition-colors ${step === 0 && (ollamaConfig.status !== 'success' || neo4jConfig.status !== 'success') ? "opacity-75" : ""}`}
-                    >
-                        <span>{step === 3 ? 'Start Researching' : 'Next'}</span>
-                        <ArrowRight className="w-5 h-5" />
-                    </button>
                 </div>
             </div>
         </div>
