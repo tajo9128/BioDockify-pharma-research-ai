@@ -28,6 +28,8 @@ export const metadata: Metadata = {
   },
 }
 
+import TitleBar from "@/components/TitleBar";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -36,8 +38,9 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground pt-10`}
       >
+        <TitleBar />
         {children}
         <Toaster />
       </body>

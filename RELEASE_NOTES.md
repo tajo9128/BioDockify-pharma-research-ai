@@ -1,3 +1,15 @@
+# BioDockify v2.10.4 - Custom Title Bar & UI Polish
+
+**Release Date:** 2026-01-08
+
+### 🎨 UI Enhancements
+*   **Custom Title Bar**: Replaced standard Windows decoration with a custom "Scientific Glass" title bar.
+    *   **Unified Look**: Dark-themed header matching the app aesthetic.
+    *   **Window Controls**: Custom Minimize, Maximize, and Close buttons.
+    *   **Menu Bar**: Added "File", "Edit", "View" menu placeholders.
+
+---
+
 # BioDockify v2.10.3 - Feedback & Reliability Update
 
 **Release Date:** 2026-01-08
