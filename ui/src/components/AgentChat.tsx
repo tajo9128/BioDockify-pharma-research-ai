@@ -14,7 +14,7 @@ export default function AgentChat() {
     const [messages, setMessages] = useState<Message[]>([
         {
             role: 'assistant',
-            content: 'Hello, I am Agent Zero. I am your autonomous research assistant. You can ask me to plan experiments, search literature, or explain complex concepts.',
+            content: 'Hello, I am BioDockify AI. I am your autonomous research assistant. You can ask me to plan experiments, search literature, or explain complex concepts.',
             timestamp: new Date()
         }
     ]);
@@ -49,7 +49,7 @@ export default function AgentChat() {
         } catch (error) {
             setMessages(prev => [...prev, {
                 role: 'system',
-                content: "Error: Failed to reach Agent Zero. Please check backend connection.",
+                content: "Error: Failed to reach BioDockify AI. Please check backend connection.",
                 timestamp: new Date()
             }]);
         } finally {
@@ -66,7 +66,7 @@ export default function AgentChat() {
                         <Bot className="w-6 h-6 text-white" />
                     </div>
                     <div>
-                        <h2 className="font-bold text-lg tracking-tight">Agent Zero</h2>
+                        <h2 className="font-bold text-lg tracking-tight">BioDockify AI</h2>
                         <div className="flex items-center gap-2">
                             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                             <span className="text-xs text-slate-400">Online • Role: Research Assistant</span>
@@ -132,7 +132,7 @@ export default function AgentChat() {
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                        placeholder="Instruct Agent Zero..."
+                        placeholder="Ask BioDockify AI..."
                         className="w-full bg-slate-900/50 border border-slate-800 rounded-xl py-4 pl-5 pr-14 text-slate-200 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all shadow-xl"
                         disabled={isLoading}
                     />

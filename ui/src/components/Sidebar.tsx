@@ -19,7 +19,7 @@ export default function Sidebar({ activeView, onViewChange }: SidebarProps) {
     { id: 'research', icon: FlaskConical, label: 'Workstation' },
     { id: 'results', icon: FileText, label: 'Results' },
     { id: 'lab', icon: Beaker, label: 'Virtual Lab' },
-    { id: 'agent-chat', icon: Sparkles, label: 'Agent Zero' },
+    { id: 'agent-chat', icon: Sparkles, label: 'BioDockify AI' },
   ];
 
   const bottomNav = [
