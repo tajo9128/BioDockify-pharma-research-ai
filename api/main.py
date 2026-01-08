@@ -255,6 +255,27 @@ def check_ollama_endpoint(request: OllamaCheckRequest):
     except Exception as e:
         return {"status": "error", "message": str(e), "models": []}
 
+class Neo4jCheckRequest(BaseModel):
+    uri: str
+    user: str
+    password: str
+
+@app.post("/api/settings/neo4j/check")
+def check_neo4j_endpoint(request: Neo4jCheckRequest):
+    """
+    Check availability of Neo4j Graph Database.
+    """
+    from neo4j import GraphDatabase
+    try:
+        # 5 second timeout for connection verification
+        driver = GraphDatabase.driver(request.uri, auth=(request.user, request.password))
+        driver.verify_connectivity()
+        driver.close()
+        return {"status": "success", "message": "Neo4j Connected"}
+    except Exception as e:
+        return {"status": "error", "message": f"Connection Failed: {str(e)}"}
+
+
 
 # -----------------------------------------------------------------------------
 # Local NotebookLM (RAG) API
