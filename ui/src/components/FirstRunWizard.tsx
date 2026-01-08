@@ -218,7 +218,10 @@ export default function FirstRunWizard({ onComplete }: WizardProps) {
                                 >
                                     Enter Workspace
                                 </button>
-                                <button className="text-slate-500 text-sm hover:text-white transition-colors">
+                                <button
+                                    onClick={() => onComplete('settings')}
+                                    className="text-slate-500 text-sm hover:text-white transition-colors"
+                                >
                                     Open Advanced Settings
                                 </button>
                             </div>
