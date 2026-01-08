@@ -45,49 +45,67 @@ export default function PharmaceuticalResearchApp() {
 
   const handleExecute = async () => {
     if (!goal.trim()) {
-      setError("Please enter a research goal")
-      return
+      setError("Please enter a research goal");
+      return;
     }
 
-    setIsExecuting(true)
-    setError(null)
-    setThinkingSteps([])
-    setCurrentTask(null)
+    setIsExecuting(true);
+    setError(null);
+    setThinkingSteps([]);
+    setCurrentTask(null);
 
-    // Simulate Agent Start
-    setTaskId("local-sim-" + Date.now());
-    setCurrentTask({
-      id: "local-sim-" + Date.now(),
-      goal,
-      stage,
-      status: 'running',
-      progress: 0,
-      createdAt: new Date().toISOString()
-    })
+    try {
+      // 1. Start Task
+      const { taskId } = await api.startResearch(goal, 'synthesize');
 
-    // Simulate Thinking Stream
-    const steps = [
-      { type: 'thought', content: 'Analyzing research goal: ' + goal },
-      { type: 'thought', content: 'Identifying key concepts and entities...' },
-      { type: 'thought', content: 'Checking local cache for relevant contexts...' },
-      { type: 'action', content: 'Searching PubMed for recent literature...' },
-      { type: 'thought', content: 'Filtering results by impact factor > 10...' },
-      { type: 'result', content: 'Found 12 relevant papers matching criteria.' },
-      { type: 'action', content: 'Downloading PDFs for analysis (Grobid)...' },
-      { type: 'thought', content: 'Extracting molecular structures and dosage data...' }
-    ];
+      setTaskId(taskId);
+      setCurrentTask({
+        id: taskId,
+        goal,
+        status: 'pending',
+        progress: 0,
+        createdAt: new Date().toISOString()
+      });
 
-    let i = 0;
-    const interval = setInterval(() => {
-      if (i < steps.length) {
-        setThinkingSteps(prev => [...prev, steps[i]]);
-        i++;
-      } else {
-        clearInterval(interval);
-        // setIsExecuting(false); // Keep executing state to show results
-      }
-    }, 1500);
-  }
+      // 2. Poll Status
+      const interval = setInterval(async () => {
+        try {
+          const status = await api.getStatus(taskId);
+
+          // Update Task State
+          setCurrentTask(prev => prev ? { ...prev, status: status.status, progress: status.progress } : null);
+
+          // Update Thinking Steps (Logs)
+          if (status.logs && status.logs.length > 0) {
+            const steps = status.logs.map((log: string, idx: number) => {
+              let type = 'info';
+              let content = log;
+              if (log.toLowerCase().includes('thought') || log.includes('Thinking')) type = 'thought';
+              else if (log.toLowerCase().includes('action') || log.includes('Executing')) type = 'action';
+              else if (log.toLowerCase().includes('result') || log.includes('Found')) type = 'result';
+
+              return { type, content, id: `${taskId}-${idx}`, timestamp: new Date() };
+            });
+            setThinkingSteps(steps);
+          }
+
+          // Check Completion
+          if (status.status === 'completed' || status.status === 'failed') {
+            clearInterval(interval);
+            setIsExecuting(false);
+            if (status.status === 'failed') setError("Research task failed check logs.");
+          }
+        } catch (e) {
+          console.error("Polling error", e);
+        }
+      }, 2000);
+
+    } catch (e: any) {
+      setError(e.message || "Failed to start research");
+      setIsExecuting(false);
+    }
+  };
+
 
   useEffect(() => {
     checkOnboardingStatus();

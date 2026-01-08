@@ -44,6 +44,7 @@ class TaskStatus(BaseModel):
     result: Optional[Dict[str, Any]] = None
     progress: int = 0
     message: Optional[str] = None
+    logs: List[str] = []
 
 # -----------------------------------------------------------------------------
 # Background Worker
@@ -144,8 +145,10 @@ def get_status(task_id: str):
         status=task.get("status", "unknown"),
         result=task.get("result"),
         progress=task.get("progress", 0),
-        message=task.get("message")
+        message=task.get("message"),
+        logs=task.get("logs", [])
     )
+
 
 from runtime.config_loader import load_config, save_config, reset_config
 

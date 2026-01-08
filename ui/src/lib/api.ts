@@ -170,7 +170,8 @@ export const api = {
     }),
 
   getStatus: (taskId: string) =>
-    apiRequest<ResearchStatus>(`/research/${taskId}/status`),
+    apiRequest<ResearchStatus>(`/research/status/${taskId}`),
+
 
   getResults: (taskId: string) =>
     apiRequest<ResearchResults>(`/research/${taskId}/results`),
