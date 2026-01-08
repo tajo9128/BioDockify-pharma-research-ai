@@ -402,12 +402,9 @@ async def ingest_link(request: LinkRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-class ChatRequest(BaseModel):
-    query: str
-    
 @app.post("/api/rag/chat")
 async def chat_with_docs(request: ChatRequest):
-    """Retrieve context and answer via configured LLM."""
+    """Retrieve context and answer via configured LLM (Ollama/Agent)."""
     query = request.query
     
     # 1. Retrieve Context
@@ -418,31 +415,54 @@ async def chat_with_docs(request: ChatRequest):
         
     context_text = "\n\n---\n\n".join(context_list)
     
-    # 2. Construct Prompt
-    # Note: In a real architecture, we should use the Orchestrator's LLM interface.
-    # For this MVP, we will do a direct call or reuse a lightweight Agent.
+    # 2. Construct Augmented Prompt
+    system_prompt = "You are a research assistant. Answer the user's question based ONLY on the provided Context. If the answer is not in the context, say so."
+    full_prompt = f"Context:\n{context_text}\n\nQuestion: {query}\n\nAnswer:"
     
-    # Let's reuse the ConfigLoader to get the active provider keys
+    # 3. Call LLM (Ollama or Configured Provider)
     from runtime.config_loader import load_config
+    import requests
+    import json
+    
     cfg = load_config()
     ai_conf = cfg.get("ai_provider", {})
     
-    # MVP: Simple Prompt construction for the frontend to display (or backend to execute if we had the LLM client ready here).
-    # Since we don't have a unified 'LLMClient' exposed in main.py, let's look at `modules.literature_search.semantic_scholar` or similar?
-    # Better: Use `orchestration.planner.orchestrator`? That's heavy.
+    answer = "Error generating response."
     
-    # For this specific MVP step, I will return the Context + Prompt so the Frontend (or a specialized agent) can execute it,
-    # OR better yet, let's implement a quick LLM call if possible.
-    # To keep it safe and avoid breaking existing patterns, I will return the CONTEXT and let the frontend show it,
-    # or return a "Planned response" status.
-    
-    # ACTION: We will actually perform the generation using a simplified LLM util if available.
-    # Checking imports... we have `OrchestratorConfig`.
-    
+    try:
+        # Default to Ollama for "Local NotebookLM" experience
+        # Check if Ollama is configured
+        ollama_url = ai_conf.get("ollama_url", "http://localhost:11434")
+        ollama_model = ai_conf.get("ollama_model", "llama3") # Default to llama3 or mistral if not set
+        
+        # Simple Ollama Generate
+        # We use non-streaming for this simple endpoint first
+        resp = requests.post(
+            f"{ollama_url}/api/generate",
+            json={
+                "model": ollama_model,
+                "prompt": full_prompt,
+                "system": system_prompt,
+                "stream": False
+            },
+            timeout=60 
+        )
+        
+        if resp.status_code == 200:
+            answer = resp.json().get("response", "No response from model.")
+        else:
+            # Fallback if Ollama fails or not found?
+            # Maybe use the "Agent Zero" / Cloud LLM if configured?
+            # For now, return error to prompt user to check settings.
+            answer = f"Ollama Error ({resp.status_code}): {resp.text}"
+            
+    except Exception as e:
+        answer = f"Failed to connect to Local LLM: {str(e)}. Please Ensure Ollama is running."
+
     return {
-        "answer": f"Retrieval successful. Context found from {len(context_list)} sources.",
+        "answer": answer,
         "context": context_text,
-        "sources": [] # We can enhance this to return metadata source names
+        "sources": [] 
     }
 
 @app.post("/api/rag/clear")
@@ -450,5 +470,6 @@ def clear_knowledge_base():
     """Clear all indexed documents."""
     vector_store.clear()
     return {"status": "success", "message": "Knowledge base cleared."}
+
 
 
