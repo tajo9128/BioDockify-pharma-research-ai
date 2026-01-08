@@ -1,7 +1,7 @@
 // API service module for BioDockify pharmaceutical research platform
 // All API calls are relative - the gateway handles routing
 
-const API_BASE = '/api';
+const API_BASE = 'http://localhost:8000/api';
 
 // ... (existing interfaces)
 
@@ -164,7 +164,7 @@ export interface ResearchStatus {
     export const api = {
       // Research endpoints
       startResearch: (topic: string, mode: 'search' | 'synthesize' | 'write' = 'synthesize', taskId?: string) =>
-        apiRequest<{ taskId: string, status: string, result: string, provider: string }>('/research', {
+        apiRequest<{ taskId: string, status: string, result: string, provider: string }>('/research/start', {
           method: 'POST',
           body: JSON.stringify({ topic, mode, taskId }),
         }),
