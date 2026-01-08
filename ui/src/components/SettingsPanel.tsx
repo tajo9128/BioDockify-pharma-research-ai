@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api, Settings } from '@/lib/api';
-import { Save, Server, Cloud, Cpu, RefreshCw, CheckCircle, AlertCircle, Shield, Activity, Power, BookOpen, Layers, FileText, Globe, Database, Key, FlaskConical, Link } from 'lucide-react';
+import { Save, Server, Cloud, Cpu, RefreshCw, CheckCircle, AlertCircle, Shield, Activity, Power, BookOpen, Layers, FileText, Globe, Database, Key, FlaskConical, Link, FolderOpen } from 'lucide-react';
 
 // Extended Settings interface matching "Fully Loaded" specs + New User Requests
 interface AdvancedSettings extends Settings {
@@ -568,13 +568,28 @@ export default function SettingsPanel() {
                                                         }
                                                     } catch (e) {
                                                         console.error("Failed to open dialog", e);
-                                                        // Fallback or alert?
                                                         alert("Could not open file browser. Are you running in Tauri?");
                                                     }
                                                 }}
                                                 className="px-4 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-sm border border-slate-600"
                                             >
                                                 Browse
+                                            </button>
+                                            <button
+                                                onClick={async () => {
+                                                    try {
+                                                        const { Command } = await import('@tauri-apps/api/shell');
+                                                        // Open folder in file explorer
+                                                        await new Command('explorer', settings.output.output_dir).execute();
+                                                    } catch (e) {
+                                                        console.error("Failed to open folder", e);
+                                                        alert("Could not open folder in file explorer.");
+                                                    }
+                                                }}
+                                                className="px-4 bg-teal-700 hover:bg-teal-600 text-white rounded-lg text-sm border border-teal-600"
+                                                title="Open folder in file explorer"
+                                            >
+                                                <FolderOpen className="w-4 h-4" />
                                             </button>
                                         </div>
                                     </div>
