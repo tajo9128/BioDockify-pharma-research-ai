@@ -1,3 +1,14 @@
+# BioDockify v2.9.7 - Virtual Lab Cloud Integration
+
+**Release Date:** 2026-01-08
+
+### New Features
+*   **Virtual Lab Integration**: Connected the "Virtual Lab" interface directly to the [BioDockify Cloud Platform](https://www.biodockify.com), enabling seamless access to advanced Molecular Docking and Drug Discovery Simulations.
+*   **Build Pipeline Repairs**: Resolved critical syntax errors in `ResearchWorkstation.tsx` and `api.ts` that were causing build failures in remote CI/CD environments.
+*   **First-Run Wizard**: Streamlined onboarding with automated system and connectivity checks.
+
+---
+
 # BioDockify v2.9.2 - Agentic Integration Update
 
 **Release Date:** 2026-01-07

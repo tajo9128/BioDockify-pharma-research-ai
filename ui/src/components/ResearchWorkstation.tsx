@@ -92,9 +92,14 @@ export default function ResearchWorkstation({
                             Simulations for Molecular Docking (AutoDock Vina) and Protein Folding (AlphaFold adapter) are currently initializing.
                         </p>
                     </div>
-                    <button className="px-6 py-2 bg-purple-600/20 text-purple-400 border border-purple-600/50 rounded-lg hover:bg-purple-600/30 transition-colors">
-                        Connect Remote Cluster
-                    </button>
+                    <a
+                        href="https://www.biodockify.com"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-6 py-2 bg-purple-600/20 text-purple-400 border border-purple-600/50 rounded-lg hover:bg-purple-600/30 transition-colors inline-block"
+                    >
+                        Connect to BioDockify Cloud Lab
+                    </a>
                 </div>
             </div>
         );
@@ -238,7 +243,7 @@ export default function ResearchWorkstation({
                             <div key={idx} className="group animate-in fade-in slide-in-from-bottom-2 duration-300">
                                 <div className="flex items-start space-x-3">
                                     <div className={`mt-1 w-2 h-2 rounded-full flex-shrink-0 ${step.type === 'thought' ? 'bg-purple-500' :
-                                            step.type === 'result' ? 'bg-green-500' : 'bg-slate-500'
+                                        step.type === 'result' ? 'bg-green-500' : 'bg-slate-500'
                                         }`} />
                                     <div className="space-y-1 min-w-0">
                                         <span className="text-xs text-slate-500 font-mono uppercase">{step.type}</span>
@@ -292,8 +297,8 @@ const ModeBtn = ({ id, label, icon: Icon, active, onClick }: any) => (
     <button
         onClick={onClick}
         className={`w-full flex items-center p-3 rounded-lg transition-all border ${active
-                ? 'bg-teal-500/10 border-teal-500/50 text-white'
-                : 'bg-slate-900 border-transparent text-slate-500 hover:bg-slate-800 hover:text-slate-300'
+            ? 'bg-teal-500/10 border-teal-500/50 text-white'
+            : 'bg-slate-900 border-transparent text-slate-500 hover:bg-slate-800 hover:text-slate-300'
             }`}
     >
         <div className={`p-2 rounded-md mr-3 ${active ? 'bg-teal-500 text-black' : 'bg-slate-800'}`}>
