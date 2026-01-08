@@ -15,235 +15,239 @@ export const api = {
     }),
 
   checkOllama: (baseUrl: string) =>
+    apiRequest<{ status: string, message: string, models: string[] }>('/settings/ollama/check', {
+      method: 'POST',
+      body: JSON.stringify({ base_url: baseUrl })
+    }),
 
-
-export interface ResearchStatus {
+  export interface ResearchStatus {
     taskId: string;
-    status: 'pending' | 'running' | 'completed' | 'failed';
-    progress: number;
-    currentStep: number;
-    logs: string[];
-    phase: string;
+status: 'pending' | 'running' | 'completed' | 'failed';
+progress: number;
+currentStep: number;
+logs: string[];
+phase: string;
   }
 
-    export interface ResearchResults {
-      taskId: string;
-      title: string;
-      stats: {
-        papers: number;
-        entities: number;
-        nodes: number;
-        connections: number;
-      };
-      entities: {
-        drugs: string[];
-        diseases: string[];
-        proteins: string[];
-      };
-      summary: string;
-    }
+export interface ResearchResults {
+  taskId: string;
+  title: string;
+  stats: {
+    papers: number;
+    entities: number;
+    nodes: number;
+    connections: number;
+  };
+  entities: {
+    drugs: string[];
+    diseases: string[];
+    proteins: string[];
+  };
+  summary: string;
+}
 
-    export interface ProtocolRequest {
-      taskId: string;
-      type: 'liquid-handler' | 'crystallization' | 'assay';
-    }
+export interface ProtocolRequest {
+  taskId: string;
+  type: 'liquid-handler' | 'crystallization' | 'assay';
+}
 
-    export interface ReportRequest {
-      taskId: string;
-      template: 'full' | 'summary' | 'executive';
-    }
+export interface ReportRequest {
+  taskId: string;
+  template: 'full' | 'summary' | 'executive';
+}
 
-    export interface Settings {
-      project: {
-        name: string;
-        type: string;
-        disease_context: string;
-        stage: string;
-      };
-      agent: {
-        mode: 'assisted' | 'semi-autonomous' | 'autonomous';
-        reasoning_depth: 'shallow' | 'standard' | 'deep';
-        self_correction: boolean;
-        max_retries: number;
-        failure_policy: 'ask_user' | 'auto_retry' | 'abort';
-      };
-      literature: {
-        sources: string[];
-        enable_crossref: boolean;
-        enable_preprints: boolean;
-        year_range: number;
-        novelty_strictness: 'low' | 'medium' | 'high';
-      };
-      ai_provider: {
-        mode: 'auto' | 'ollama' | 'z-ai';
-        ollama_url?: string;
-        ollama_model?: string;
-        google_key?: string;
-        huggingface_key?: string;
-        openrouter_key?: string;
-        glm_key?: string;
-        elsevier_key?: string;
-        pubmed_email?: string;
-      };
-      // New V2 Schema Additions
-      pharma: {
-        enable_pubtator: boolean;
-        enable_semantic_scholar: boolean;
-        enable_unpaywall: boolean;
-        citation_threshold: 'low' | 'medium' | 'high';
-        sources: {
-          pubmed: boolean;
-          pmc: boolean;
-          biorxiv: boolean;
-          chemrxiv: boolean;
-          clinicaltrials: boolean;
-          google_scholar: boolean;
-          openalex: boolean;
-          semantic_scholar: boolean;
-          ieee: boolean;
-          elsevier: boolean;
-          scopus: boolean;
-          wos: boolean;
-          science_index: boolean;
-        };
-      };
-      ai_advanced: {
-        context_window: number;
-        gpu_layers: number;
-        thread_count: number;
-      };
-      persona: {
-        role: 'PhD Student' | 'PG Student' | 'Senior Researcher' | 'Industry Scientist';
-        strictness: 'exploratory' | 'balanced' | 'conservative';
-        introduction: string;
-        research_focus: string;
-      };
-      output: {
-        format: 'markdown' | 'pdf' | 'docx' | 'latex';
-        citation_style: 'apa' | 'nature' | 'ieee' | 'chicago';
-        include_disclosure: boolean;
-        output_dir: string;
-      };
-      system: {
-        auto_start: boolean;
-        minimize_to_tray: boolean;
-        pause_on_battery: boolean;
-        max_cpu_percent: number;
-      };
-    }
-
-    export interface ConnectionTest {
-      type: 'llm' | 'database' | 'elsevier';
-      status: 'success' | 'error';
-      message: string;
-    }
-
-    // Helper function for API calls
-    async function apiRequest<T>(
-      endpoint: string,
-      options?: RequestInit
-    ): Promise<T> {
-      const url = `${API_BASE}${endpoint}`;
-
-      const response = await fetch(url, {
-        ...options,
-        headers: {
-          'Content-Type': 'application/json',
-          ...options?.headers,
-        },
-      });
-
-      if (!response.ok) {
-        const error = await response.json().catch(() => ({ message: 'Unknown error' }));
-        throw new Error(error.message || 'API request failed');
-      }
-
-      return response.json();
-    }
-
-    export const api = {
-      // Research endpoints
-      startResearch: (topic: string, mode: 'search' | 'synthesize' | 'write' = 'synthesize', taskId?: string) =>
-        apiRequest<{ taskId: string, status: string, result: string, provider: string }>('/research/start', {
-          method: 'POST',
-          body: JSON.stringify({ topic, mode, taskId }),
-        }),
-
-      getStatus: (taskId: string) =>
-        apiRequest<ResearchStatus>(`/research/${taskId}/status`),
-
-      getResults: (taskId: string) =>
-        apiRequest<ResearchResults>(`/research/${taskId}/results`),
-
-      cancelResearch: (taskId: string) =>
-        apiRequest<{ success: boolean }>(`/research/${taskId}/cancel`, {
-          method: 'POST',
-        }),
-
-      // Lab interface endpoints
-      generateProtocol: (request: ProtocolRequest) =>
-        apiRequest<{ url: string; filename: string }>('/lab/protocol', {
-          method: 'POST',
-          body: JSON.stringify(request),
-        }),
-
-      generateReport: (request: ReportRequest) =>
-        apiRequest<{ url: string; filename: string }>('/lab/report', {
-          method: 'POST',
-          body: JSON.stringify(request),
-        }),
-
-      getRecentExports: () =>
-        apiRequest<{ id: string; type: string; filename: string; createdAt: string }[]>('/lab/exports'),
-
-      exportResult: (format: 'pdf' | 'docx' | 'xlsx', data: any) =>
-        apiRequest<{ path: string }>('/export', {
-          method: 'POST',
-          body: JSON.stringify({ format, data }),
-        }),
-
-      checkCompliance: (text: string) =>
-        apiRequest<{ compliant: boolean, scores: any, issues: any[] }>('/compliance/check', {
-          method: 'POST',
-          body: JSON.stringify({ text })
-        }),
-
-      // Settings endpoints
-      testConnection: (serviceType: 'llm' | 'elsevier', provider?: string, key?: string) =>
-        apiRequest<ConnectionTest>('/settings/test', {
-          method: 'POST',
-          body: JSON.stringify({ service_type: serviceType, provider, key })
-        }),
-
-      checkNeo4j: (uri: string, user: string, pass: string) =>
-        apiRequest<{ status: string; message: string }>('/settings/neo4j/check', {
-          method: 'POST',
-          body: JSON.stringify({ uri, user, password: pass }),
-        }),
-
-      checkOllama: (baseUrl: string) =>
-        apiRequest<{ status: string, message: string, models: string[] }>('/settings/ollama/check', {
-          method: 'POST',
-          body: JSON.stringify({ base_url: baseUrl })
-        }),
-
-      getSettings: () =>
-        apiRequest<Settings>('/settings'),
-
-      saveSettings: (settings: Settings) =>
-        apiRequest<{ success: boolean }>('/settings', {
-          method: 'POST',
-          body: JSON.stringify(settings),
-        }),
-
-      resetSettings: () =>
-        apiRequest<{ success: boolean; config: Settings }>('/settings/reset', {
-          method: 'POST',
-        }),
-
-      // History endpoints
-      getResearchHistory: () =>
-        apiRequest<{ id: string; topic: string; status: string; createdAt: string }[]>('/research/history'),
+export interface Settings {
+  project: {
+    name: string;
+    type: string;
+    disease_context: string;
+    stage: string;
+  };
+  agent: {
+    mode: 'assisted' | 'semi-autonomous' | 'autonomous';
+    reasoning_depth: 'shallow' | 'standard' | 'deep';
+    self_correction: boolean;
+    max_retries: number;
+    failure_policy: 'ask_user' | 'auto_retry' | 'abort';
+  };
+  literature: {
+    sources: string[];
+    enable_crossref: boolean;
+    enable_preprints: boolean;
+    year_range: number;
+    novelty_strictness: 'low' | 'medium' | 'high';
+  };
+  ai_provider: {
+    mode: 'auto' | 'ollama' | 'z-ai';
+    ollama_url?: string;
+    ollama_model?: string;
+    google_key?: string;
+    huggingface_key?: string;
+    openrouter_key?: string;
+    glm_key?: string;
+    elsevier_key?: string;
+    pubmed_email?: string;
+  };
+  // New V2 Schema Additions
+  pharma: {
+    enable_pubtator: boolean;
+    enable_semantic_scholar: boolean;
+    enable_unpaywall: boolean;
+    citation_threshold: 'low' | 'medium' | 'high';
+    sources: {
+      pubmed: boolean;
+      pmc: boolean;
+      biorxiv: boolean;
+      chemrxiv: boolean;
+      clinicaltrials: boolean;
+      google_scholar: boolean;
+      openalex: boolean;
+      semantic_scholar: boolean;
+      ieee: boolean;
+      elsevier: boolean;
+      scopus: boolean;
+      wos: boolean;
+      science_index: boolean;
     };
+  };
+  ai_advanced: {
+    context_window: number;
+    gpu_layers: number;
+    thread_count: number;
+  };
+  persona: {
+    role: 'PhD Student' | 'PG Student' | 'Senior Researcher' | 'Industry Scientist';
+    strictness: 'exploratory' | 'balanced' | 'conservative';
+    introduction: string;
+    research_focus: string;
+  };
+  output: {
+    format: 'markdown' | 'pdf' | 'docx' | 'latex';
+    citation_style: 'apa' | 'nature' | 'ieee' | 'chicago';
+    include_disclosure: boolean;
+    output_dir: string;
+  };
+  system: {
+    auto_start: boolean;
+    minimize_to_tray: boolean;
+    pause_on_battery: boolean;
+    max_cpu_percent: number;
+  };
+}
 
-    export default api;
+export interface ConnectionTest {
+  type: 'llm' | 'database' | 'elsevier';
+  status: 'success' | 'error';
+  message: string;
+}
+
+// Helper function for API calls
+async function apiRequest<T>(
+  endpoint: string,
+  options?: RequestInit
+): Promise<T> {
+  const url = `${API_BASE}${endpoint}`;
+
+  const response = await fetch(url, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options?.headers,
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ message: 'Unknown error' }));
+    throw new Error(error.message || 'API request failed');
+  }
+
+  return response.json();
+}
+
+export const api = {
+  // Research endpoints
+  startResearch: (topic: string, mode: 'search' | 'synthesize' | 'write' = 'synthesize', taskId?: string) =>
+    apiRequest<{ taskId: string, status: string, result: string, provider: string }>('/research/start', {
+      method: 'POST',
+      body: JSON.stringify({ topic, mode, taskId }),
+    }),
+
+  getStatus: (taskId: string) =>
+    apiRequest<ResearchStatus>(`/research/${taskId}/status`),
+
+  getResults: (taskId: string) =>
+    apiRequest<ResearchResults>(`/research/${taskId}/results`),
+
+  cancelResearch: (taskId: string) =>
+    apiRequest<{ success: boolean }>(`/research/${taskId}/cancel`, {
+      method: 'POST',
+    }),
+
+  // Lab interface endpoints
+  generateProtocol: (request: ProtocolRequest) =>
+    apiRequest<{ url: string; filename: string }>('/lab/protocol', {
+      method: 'POST',
+      body: JSON.stringify(request),
+    }),
+
+  generateReport: (request: ReportRequest) =>
+    apiRequest<{ url: string; filename: string }>('/lab/report', {
+      method: 'POST',
+      body: JSON.stringify(request),
+    }),
+
+  getRecentExports: () =>
+    apiRequest<{ id: string; type: string; filename: string; createdAt: string }[]>('/lab/exports'),
+
+  exportResult: (format: 'pdf' | 'docx' | 'xlsx', data: any) =>
+    apiRequest<{ path: string }>('/export', {
+      method: 'POST',
+      body: JSON.stringify({ format, data }),
+    }),
+
+  checkCompliance: (text: string) =>
+    apiRequest<{ compliant: boolean, scores: any, issues: any[] }>('/compliance/check', {
+      method: 'POST',
+      body: JSON.stringify({ text })
+    }),
+
+  // Settings endpoints
+  testConnection: (serviceType: 'llm' | 'elsevier', provider?: string, key?: string) =>
+    apiRequest<ConnectionTest>('/settings/test', {
+      method: 'POST',
+      body: JSON.stringify({ service_type: serviceType, provider, key })
+    }),
+
+  checkNeo4j: (uri: string, user: string, pass: string) =>
+    apiRequest<{ status: string; message: string }>('/settings/neo4j/check', {
+      method: 'POST',
+      body: JSON.stringify({ uri, user, password: pass }),
+    }),
+
+  checkOllama: (baseUrl: string) =>
+    apiRequest<{ status: string, message: string, models: string[] }>('/settings/ollama/check', {
+      method: 'POST',
+      body: JSON.stringify({ base_url: baseUrl })
+    }),
+
+  getSettings: () =>
+    apiRequest<Settings>('/settings'),
+
+  saveSettings: (settings: Settings) =>
+    apiRequest<{ success: boolean }>('/settings', {
+      method: 'POST',
+      body: JSON.stringify(settings),
+    }),
+
+  resetSettings: () =>
+    apiRequest<{ success: boolean; config: Settings }>('/settings/reset', {
+      method: 'POST',
+      body: JSON.stringify(settings),
+    }),
+
+  // History endpoints
+  getResearchHistory: () =>
+    apiRequest<{ id: string; topic: string; status: string; createdAt: string }[]>('/research/history'),
+};
+
+export default api;

@@ -1,4 +1,3 @@
-```
 import React, { useState, useEffect, useRef } from 'react';
 import { api } from '@/lib/api';
 import { Search, PenTool, Layout, Play, Pause, Square, AlertCircle, FileText, Globe, Cpu, ChevronRight, Maximize2, Beaker, Save, RotateCcw, Database, X, Plus } from 'lucide-react';
@@ -111,13 +110,13 @@ export default function ResearchWorkstation({
                     <span className="font-bold text-white tracking-wide hidden md:inline">BioDockify <span className="text-slate-600 font-normal">Workstation</span></span>
                 </div>
                 <div className="flex items-center space-x-4">
-                    <span className={`flex items - center text - xs font - mono px - 2 py - 1 rounded bg - slate - 900 border border - slate - 700 ${ isExecuting ? 'text-green-400 animate-pulse' : 'text-slate-500' } `}>
+                    <span className={`flex items-center text-xs font-mono px-2 py-1 rounded bg-slate-900 border border-slate-700 ${isExecuting ? 'text-green-400 animate-pulse' : 'text-slate-500'}`}>
                         <Cpu className="w-3 h-3 mr-2" />
                         {isExecuting ? 'AGENT ACTIVE' : 'IDLE'}
                     </span>
                     <button
                         onClick={() => setIsFocusMode(!isFocusMode)}
-                        className={`p - 2 rounded - lg transition - colors ${ isFocusMode ? 'bg-teal-500/20 text-teal-400' : 'hover:bg-slate-800 text-slate-400' } `}
+                        className={`p-2 rounded-lg transition-colors ${isFocusMode ? 'bg-teal-500/20 text-teal-400' : 'hover:bg-slate-800 text-slate-400'}`}
                         title="Toggle Focus Mode"
                     >
                         <Maximize2 className="w-4 h-4" />
@@ -129,10 +128,10 @@ export default function ResearchWorkstation({
             <div className="flex-1 flex overflow-hidden relative">
 
                 {/* COL 1: CONTROL PANEL (Hidden in Focus Mode or Small Screens) */}
-                <div className={`border - r border - slate - 800 bg - slate - 950 flex flex - col transition - all duration - 300 ease -in -out
-                    ${ isFocusMode ? 'w-0 opacity-0 overflow-hidden' : 'w-80 opacity-100' }
-                    ${/* Mobile: Hide by default if streaming - simplistic responsive logic */ '' }
-                    hidden md:flex flex - shrink - 0
+                <div className={`border-r border-slate-800 bg-slate-950 flex flex-col transition-all duration-300 ease-in-out
+                    ${isFocusMode ? 'w-0 opacity-0 overflow-hidden' : 'w-80 opacity-100'}
+                    ${/* Mobile: Hide by default if streaming - simplistic responsive logic */ ''}
+                    hidden md:flex flex-shrink-0
     `}>
                     <div className="p-6 space-y-6 w-80">
                         {/* Mode Selector */}
@@ -177,7 +176,7 @@ export default function ResearchWorkstation({
 
                     {/* Status Footer */}
                     <div className="mt-auto p-4 border-t border-slate-800 bg-slate-900/50 w-80">
-                         {/* Imported Insights List Mini-View */}
+                        {/* Imported Insights List Mini-View */}
                         <div className="mb-4">
                             <div className="flex items-center justify-between mb-2">
                                 <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">External Context</label>
@@ -185,14 +184,14 @@ export default function ResearchWorkstation({
                                     <Plus className="w-3 h-3" />
                                 </button>
                             </div>
-                            
+
                             {showImporter && (
                                 <div className="absolute left-6 z-50 w-96 shadow-2xl animate-in slide-in-from-left-4 fade-in duration-200">
                                     <div className="relative">
-                                         <button onClick={() => setShowImporter(false)} className="absolute right-2 top-2 text-slate-500 hover:text-white z-10">
+                                        <button onClick={() => setShowImporter(false)} className="absolute right-2 top-2 text-slate-500 hover:text-white z-10">
                                             <X className="w-4 h-4" />
-                                         </button>
-                                         <ExternalInsightImporter onImport={handleImportInsight} />
+                                        </button>
+                                        <ExternalInsightImporter onImport={handleImportInsight} />
                                     </div>
                                 </div>
                             )}
@@ -205,7 +204,7 @@ export default function ResearchWorkstation({
                                         <div key={insight.id} className="bg-slate-900 p-2 rounded border border-slate-800 text-xs">
                                             <div className="flex justify-between text-slate-500 mb-1">
                                                 <span className="font-bold">{insight.tool}</span>
-                                                <span>{new Date(insight.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                                                <span>{new Date(insight.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                                             </div>
                                             <p className="text-slate-300 line-clamp-2">{insight.summary}</p>
                                         </div>
@@ -238,13 +237,12 @@ export default function ResearchWorkstation({
                         {thinkingSteps.map((step, idx) => (
                             <div key={idx} className="group animate-in fade-in slide-in-from-bottom-2 duration-300">
                                 <div className="flex items-start space-x-3">
-                                    <div className={`mt - 1 w - 2 h - 2 rounded - full flex - shrink - 0 ${
-    step.type === 'thought' ? 'bg-purple-500' :
-        step.type === 'result' ? 'bg-green-500' : 'bg-slate-500'
-} `} />
+                                    <div className={`mt-1 w-2 h-2 rounded-full flex-shrink-0 ${step.type === 'thought' ? 'bg-purple-500' :
+                                            step.type === 'result' ? 'bg-green-500' : 'bg-slate-500'
+                                        }`} />
                                     <div className="space-y-1 min-w-0">
                                         <span className="text-xs text-slate-500 font-mono uppercase">{step.type}</span>
-                                        <div className={`text - sm leading - relaxed ${ step.type === 'thought' ? 'text-slate-400 italic' : 'text-slate-200' } break-words`}>
+                                        <div className={`text-sm leading-relaxed ${step.type === 'thought' ? 'text-slate-400 italic' : 'text-slate-200'} break-words`}>
                                             <ReactMarkdown>{step.description || step.content}</ReactMarkdown>
                                         </div>
                                     </div>
@@ -256,9 +254,9 @@ export default function ResearchWorkstation({
                 </div>
 
                 {/* COL 3: KNOWLEDGE GRAPH (Evidence) - Hidden in Focus Mode, Stacked? */}
-                <div className={`bg - slate - 950 flex flex - col transition - all duration - 300 ease -in -out
-                     ${ isFocusMode ? 'w-0 opacity-0 overflow-hidden' : 'w-96 opacity-100' }
-border - l border - slate - 800 hidden xl:flex flex - shrink - 0
+                <div className={`bg-slate-950 flex flex-col transition-all duration-300 ease-in-out
+                     ${isFocusMode ? 'w-0 opacity-0 overflow-hidden' : 'w-96 opacity-100'}
+border-l border-slate-800 hidden xl:flex flex-shrink-0
     `}>
                     <div className="p-4 border-b border-slate-800 bg-slate-950/80 backdrop-blur sticky top-0 z-10">
                         <h2 className="text-sm font-bold text-slate-300">Live Evidence</h2>
@@ -293,17 +291,16 @@ border - l border - slate - 800 hidden xl:flex flex - shrink - 0
 const ModeBtn = ({ id, label, icon: Icon, active, onClick }: any) => (
     <button
         onClick={onClick}
-        className={`w - full flex items - center p - 3 rounded - lg transition - all border ${
-    active
-        ? 'bg-teal-500/10 border-teal-500/50 text-white'
-        : 'bg-slate-900 border-transparent text-slate-500 hover:bg-slate-800 hover:text-slate-300'
-} `}
+        className={`w-full flex items-center p-3 rounded-lg transition-all border ${active
+                ? 'bg-teal-500/10 border-teal-500/50 text-white'
+                : 'bg-slate-900 border-transparent text-slate-500 hover:bg-slate-800 hover:text-slate-300'
+            }`}
     >
-        <div className={`p - 2 rounded - md mr - 3 ${ active ? 'bg-teal-500 text-black' : 'bg-slate-800' } `}>
+        <div className={`p-2 rounded-md mr-3 ${active ? 'bg-teal-500 text-black' : 'bg-slate-800'}`}>
             <Icon className="w-4 h-4" />
         </div>
         <div className="text-left">
-            <span className={`block text - sm font - bold ${ active ? 'text-teal-400' : 'text-slate-400' } `}>{label}</span>
+            <span className={`block text-sm font-bold ${active ? 'text-teal-400' : 'text-slate-400'}`}>{label}</span>
         </div>
         {active && <ChevronRight className="w-4 h-4 ml-auto text-teal-500" />}
     </button>
