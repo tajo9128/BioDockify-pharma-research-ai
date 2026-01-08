@@ -213,7 +213,7 @@ export default function PharmaceuticalResearchApp() {
       <div className="flex h-screen overflow-hidden">
         <Sidebar activeView={activeView} onViewChange={setActiveView} />
 
-        <main className="flex-1 relative overflow-hidden">
+        <main className="flex-1 relative overflow-hidden ml-20">
           {renderContent()}
         </main>
       </div>
