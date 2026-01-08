@@ -1,3 +1,17 @@
+# BioDockify v2.10.3 - Feedback & Reliability Update
+
+**Release Date:** 2026-01-08
+
+### ✨ New UX Features
+*   **Feedback System**: Added a direct **Contact & Feedback Form** accessible from the Sidebar. Users can now report bugs or request features without leaving the app.
+*   **Sidebar Dock Layout**: Reorganized the sidebar navigation into clustered groups (Main vs. Utilities) for better usability.
+
+### 🐛 Bug Fixes & Reliability
+*   **Research Cancellation**: Fixed the "Stop" button in the Research Workstation. It now properly terminates running agent tasks via a new backend cancellation endpoint.
+*   **System Diagnostics**: Patched the `First Run Wizard` to correctly detect system hardware information (added missing `/api/system/info` endpoint).
+
+---
+
 # BioDockify v2.10.2 - Scientific Glass UI Modernization
 
 **Release Date:** 2026-01-08
