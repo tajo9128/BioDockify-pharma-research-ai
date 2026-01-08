@@ -1,3 +1,24 @@
+# BioDockify v2.10.7 - UI/UX Polish & Enhanced Functionality
+
+**Release Date:** 2026-01-08
+
+### ✨ New Features
+*   **Model Name Configuration**: Added model name input fields for all Cloud API providers (Google, Hugging Face, OpenRouter, GLM)
+*   **Open Output Folder**: New button to directly open output directory in Windows Explorer
+*   **Advanced Settings Access**: First-run wizard now has functional "Open Advanced Settings" button
+
+### 🎨 UI Improvements
+*   **Clickable Title Bar Controls**: Fixed minimize/maximize/close buttons with proper pointer events
+*   **Responsive Menu Items**: Title bar menu items (File/Edit/View) are now interactive
+*   **BioDockify Branding**: Updated title bar from "Antigravity" to "BioDockify"
+
+### 🐛 Bug Fixes
+*   Fixed window control buttons not responding to clicks
+*   Resolved output directory browser functionality
+*   Improved SSR compatibility for client-side components
+
+---
+
 # BioDockify v2.10.6 - Critical Build & Installer Fixes
 
 **Release Date:** 2026-01-08
