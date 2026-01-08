@@ -1,20 +1,51 @@
 'use client';
 
 import React from 'react';
-import { appWindow } from '@tauri-apps/api/window';
 import { Minus, Square, X, ChevronDown } from 'lucide-react';
 
 export default function TitleBar() {
     const [isMaximized, setIsMaximized] = React.useState(false);
+    const [isClient, setIsClient] = React.useState(false);
+
+    React.useEffect(() => {
+        setIsClient(true);
+    }, []);
+
+    if (!isClient) {
+        return <div className="fixed top-0 left-0 right-0 h-10 bg-slate-950 border-b border-white/5 z-[60]" />;
+    }
 
     const toggleMaximize = async () => {
-        const max = await appWindow.isMaximized();
-        if (max) {
-            appWindow.unmaximize();
-            setIsMaximized(false);
-        } else {
-            appWindow.maximize();
-            setIsMaximized(true);
+        try {
+            const { appWindow } = await import('@tauri-apps/api/window');
+            const max = await appWindow.isMaximized();
+            if (max) {
+                appWindow.unmaximize();
+                setIsMaximized(false);
+            } else {
+                appWindow.maximize();
+                setIsMaximized(true);
+            }
+        } catch (e) {
+            console.error('Failed to toggle maximize', e);
+        }
+    };
+
+    const handleMinimize = async () => {
+        try {
+            const { appWindow } = await import('@tauri-apps/api/window');
+            appWindow.minimize();
+        } catch (e) {
+            console.error('Failed to minimize', e);
+        }
+    };
+
+    const handleClose = async () => {
+        try {
+            const { appWindow } = await import('@tauri-apps/api/window');
+            appWindow.close();
+        } catch (e) {
+            console.error('Failed to close', e);
         }
     };
 
@@ -46,7 +77,7 @@ export default function TitleBar() {
             {/* Right: Window Controls */}
             <div className="flex items-center h-full">
                 <button
-                    onClick={() => appWindow.minimize()}
+                    onClick={handleMinimize}
                     className="w-12 h-full flex items-center justify-center text-slate-400 hover:bg-white/10 hover:text-white transition-colors"
                 >
                     <Minus className="w-4 h-4" />
@@ -58,7 +89,7 @@ export default function TitleBar() {
                     <Square className="w-3.5 h-3.5" />
                 </button>
                 <button
-                    onClick={() => appWindow.close()}
+                    onClick={handleClose}
                     className="w-12 h-full flex items-center justify-center text-slate-400 hover:bg-red-500 hover:text-white transition-colors"
                 >
                     <X className="w-4 h-4" />
