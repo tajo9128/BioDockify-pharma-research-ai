@@ -50,7 +50,7 @@ export default function TitleBar() {
     };
 
     const MenuItem = ({ label }: { label: string }) => (
-        <button className="px-3 h-full hover:bg-white/10 text-xs font-medium text-slate-300 transition-colors flex items-center gap-1 rounded-md mx-0.5">
+        <button className="px-3 h-full hover:bg-white/10 text-xs font-medium text-slate-300 transition-colors flex items-center gap-1 rounded-md mx-0.5 pointer-events-auto cursor-pointer">
             {label}
         </button>
     );
@@ -75,27 +75,24 @@ export default function TitleBar() {
             </div>
 
             {/* Right: Window Controls */}
-            <div className="flex items-center h-full">
+            <div className="flex items-center h-full pointer-events-auto">
                 <button
                     onClick={handleMinimize}
-                    className="w-12 h-full flex items-center justify-center text-slate-400 hover:bg-white/10 hover:text-white transition-colors"
-                    style={{ WebkitAppRegion: 'no-drag' } as any}
+                    className="w-12 h-full flex items-center justify-center text-slate-400 hover:bg-white/10 hover:text-white transition-colors pointer-events-auto cursor-pointer"
                 >
-                    <Minus className="w-4 h-4" />
+                    <Minus className="w-4 h-4 pointer-events-none" />
                 </button>
                 <button
                     onClick={toggleMaximize}
-                    className="w-12 h-full flex items-center justify-center text-slate-400 hover:bg-white/10 hover:text-white transition-colors"
-                    style={{ WebkitAppRegion: 'no-drag' } as any}
+                    className="w-12 h-full flex items-center justify-center text-slate-400 hover:bg-white/10 hover:text-white transition-colors pointer-events-auto cursor-pointer"
                 >
-                    <Square className="w-3.5 h-3.5" />
+                    <Square className="w-3.5 h-3.5 pointer-events-none" />
                 </button>
                 <button
                     onClick={handleClose}
-                    className="w-12 h-full flex items-center justify-center text-slate-400 hover:bg-red-500 hover:text-white transition-colors"
-                    style={{ WebkitAppRegion: 'no-drag' } as any}
+                    className="w-12 h-full flex items-center justify-center text-slate-400 hover:bg-red-500 hover:text-white transition-colors pointer-events-auto cursor-pointer"
                 >
-                    <X className="w-4 h-4" />
+                    <X className="w-4 h-4 pointer-events-none" />
                 </button>
             </div>
         </div>
