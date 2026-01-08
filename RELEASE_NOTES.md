@@ -1,3 +1,25 @@
+# BioDockify v2.10.5 - UI/UX Refinements & Branding Update
+
+**Release Date:** 2026-01-08
+
+### 🎨 UI/UX Improvements
+*   **Custom Title Bar**: Professional desktop app title bar with File/Edit/View menus and custom window controls (minimize, maximize, close)
+*   **Fixed Sidebar Layout**: Sidebar now flush with left edge, preventing content overlap
+*   **Settings Enhancements**:
+    *   Added Neo4j Graph Database configuration section
+    *   Visual feedback for API key testing (loading spinner, success/error indicators)
+    *   Fixed Browse button for output directory selection (native folder picker)
+
+### 🏷️ Branding
+*   Renamed "Agent Zero" to "BioDockify AI" throughout the interface
+*   Updated chat interface, sidebar labels, and all user-facing text
+
+### 🐛 Bug Fixes
+*   **Build Stability**: Fixed SSR "window is not defined" error with client-side rendering guard
+*   **Layout**: Resolved sidebar overlap with main content area
+
+---
+
 # BioDockify v2.10.4 - Custom Title Bar & UI Polish
 
 **Release Date:** 2026-01-08
