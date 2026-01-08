@@ -12,6 +12,31 @@
     "tauri": {
         "allowlist": {
             "all": false,
+            "window": {
+                "all": false,
+                "close": true,
+                "hide": true,
+                "show": true,
+                "maximize": true,
+                "minimize": true,
+                "unmaximize": true,
+                "unminimize": true,
+                "startDragging": true,
+                "setResizable": true,
+                "setTitle": true,
+                "setSize": true,
+                "setMinSize": true,
+                "setMaxSize": true,
+                "setPosition": true,
+                "setFullscreen": true,
+                "setFocus": true,
+                "setIcon": true,
+                "setSkipTaskbar": true,
+                "setDecorations": true,
+                "setAlwaysOnTop": true,
+                "center": true,
+                "requestUserAttention": true
+            },
             "shell": {
                 "all": false,
                 "open": true,
