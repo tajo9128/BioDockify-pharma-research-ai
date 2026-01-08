@@ -18,6 +18,7 @@ export default function Sidebar({ activeView, onViewChange }: SidebarProps) {
     { id: 'results', icon: FileText, label: 'Results' },
     { id: 'notebooks', icon: BookOpen, label: 'Notebooks' },
     { id: 'lab', icon: Beaker, label: 'Lab Interface' },
+    { id: 'agent-chat', icon: Sparkles, label: 'Agent Zero' },
     { id: 'settings', icon: Settings, label: 'Settings' },
   ];
 

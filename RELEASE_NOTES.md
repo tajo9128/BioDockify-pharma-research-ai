@@ -1,3 +1,13 @@
+# BioDockify v2.10.0 - Agent Zero Chat Interface
+
+**Release Date:** 2026-01-08
+
+### Major Features
+*   **Talk to Agent Zero**: Added a dedicated **Agent Chat Interface** (Sidebar > Agent Zero). You can now chat directly with your autonomous research assistant, give it instructions, and ask it to explain concepts using your configured LLM (Ollama/Cloud).
+*   **Role-Based Persona**: Agent Zero now acts according to your defined "User Persona" (e.g., "PhD Student", "Conservative Researcher") during chat interactions.
+
+---
+
 # BioDockify v2.9.9 - NotebookLM Integration & UI Refresh
 
 **Release Date:** 2026-01-08

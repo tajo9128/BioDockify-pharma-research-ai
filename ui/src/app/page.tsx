@@ -7,6 +7,7 @@ import SettingsPanel from '@/components/SettingsPanel';
 import ResearchWorkstation from '@/components/ResearchWorkstation';
 import NotebookLM from '@/components/NotebookLM';
 import FirstRunWizard from '@/components/FirstRunWizard';
+import AgentChat from '@/components/AgentChat';
 import { Target, Network, Activity, CheckCircle2, Brain, Clock } from 'lucide-react';
 
 const getStepIcon = (type: string) => {
@@ -153,6 +154,13 @@ export default function PharmaceuticalResearchApp() {
         return (
           <div className="h-full overflow-hidden p-8">
             <NotebookLM />
+          </div>
+        );
+      case 'agent-chat':
+        return (
+          <div className="h-full overflow-hidden">
+            {/* Import dynamically if needed but we'll import top level for now */}
+            <AgentChat />
           </div>
         );
       case 'home':

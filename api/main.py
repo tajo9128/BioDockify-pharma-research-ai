@@ -477,4 +477,61 @@ def clear_knowledge_base():
     return {"status": "success", "message": "Knowledge base cleared."}
 
 
+# -----------------------------------------------------------------------------
+# Agent Zero Chat API
+# -----------------------------------------------------------------------------
+class AgentChatRequest(BaseModel):
+    message: str
+
+@app.post("/api/agent/chat")
+async def agent_chat(request: AgentChatRequest):
+    """
+    Direct conversational interface with 'Agent Zero'.
+    Uses configured Persona and Tools access (simulated or real).
+    """
+    from runtime.config_loader import load_config
+    import requests
+    
+    cfg = load_config()
+    ai_conf = cfg.get("ai_provider", {})
+    persona = cfg.get("persona", {})
+    
+    # Construct System Persona
+    role = persona.get("role", "Research Assistant")
+    strictness = persona.get("strictness", "conservative")
+    
+    system_prompt = (
+        f"You are Agent Zero, a pharmaceutical AI research assistant based in the BioDockify Virtual Lab. "
+        f"Your role is: {role}. Your style is: {strictness}. "
+        f"You have access to: PubMed, Local Knowledge Base (RAG), and Molecular Docking Tools (AutoDock Vina). "
+        f"If the user asks to perform complex research, explain how you would plan it, or suggest they start a 'Research Task' in the Workstation. "
+        f"Answer concisely and helpfully."
+    )
+    
+    # Call LLM (Ollama)
+    ollama_url = ai_conf.get("ollama_url", "http://localhost:11434")
+    ollama_model = ai_conf.get("ollama_model", "llama3")
+    
+    try:
+        resp = requests.post(
+            f"{ollama_url}/api/generate",
+            json={
+                "model": ollama_model,
+                "prompt": request.message,
+                "system": system_prompt,
+                "stream": False
+            },
+            timeout=60
+        )
+        if resp.status_code == 200:
+            reply = resp.json().get("response", "I'm sorry, I couldn't generate a response.")
+            return {"reply": reply}
+        else:
+            return {"reply": f"Error interacting with my neural core (Ollama {resp.status_code})."}
+            
+    except Exception as e:
+        return {"reply": f"Connection error: {str(e)}. Is Ollama running?"}
+
+
+
 
