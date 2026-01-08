@@ -533,5 +533,71 @@ async def agent_chat(request: AgentChatRequest):
         return {"reply": f"Connection error: {str(e)}. Is Ollama running?"}
 
 
+# -----------------------------------------------------------------------------
+# System Info API (For First Run Wizard)
+# -----------------------------------------------------------------------------
+
+@app.get("/api/system/info")
+def get_system_info():
+    """
+    Retrieve system hardware and environment information.
+    Used by the First Run Wizard to validate compatibility.
+    """
+    import platform
+    import os
+    import shutil
+    import sys
+    import tempfile
+    
+    # OS Info
+    os_name = f"{platform.system()} {platform.release()}"
+    
+    # CPU
+    cpu_cores = os.cpu_count() or 1
+    
+    # RAM (Approximate using psutil if available, else vague or skip)
+    ram_total_gb = 0
+    ram_available_gb = 0
+    
+    try:
+        import psutil
+        mem = psutil.virtual_memory()
+        ram_total_gb = round(mem.total / (1024**3), 1)
+        ram_available_gb = round(mem.available / (1024**3), 1)
+    except ImportError:
+        # Fallback if psutil not installed
+        ram_total_gb = 0 
+        ram_available_gb = 0
+        
+    # Disk Usage
+    try:
+        total, used, free = shutil.disk_usage(".")
+        disk_free_gb = round(free / (1024**3), 1)
+    except:
+        disk_free_gb = 0
+        
+    # Python
+    python_version = sys.version.split(" ")[0]
+    
+    # Temp Writable Check
+    temp_writable = False
+    try:
+        with tempfile.TemporaryFile() as f:
+            f.write(b"test")
+            temp_writable = True
+    except:
+        temp_writable = False
+        
+    return {
+        "os": os_name,
+        "cpu_cores": cpu_cores,
+        "ram_total_gb": ram_total_gb,
+        "ram_available_gb": ram_available_gb,
+        "disk_free_gb": disk_free_gb,
+        "temp_writable": temp_writable,
+        "python_version": python_version
+    }
+
+
 
 
