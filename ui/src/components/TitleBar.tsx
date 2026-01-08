@@ -60,7 +60,7 @@ export default function TitleBar() {
 
             {/* Left: Branding & Menu */}
             <div className="flex items-center px-4 h-full">
-                <span className="text-teal-500 font-bold text-sm tracking-wide mr-6 pointer-events-none">Antigravity</span>
+                <span className="text-teal-500 font-bold text-sm tracking-wide mr-6 pointer-events-none">BioDockify</span>
 
                 <div className="flex items-center h-6">
                     <MenuItem label="File" />
