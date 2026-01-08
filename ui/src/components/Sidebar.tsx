@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Home, FlaskConical, FileText, Beaker, Settings, Sparkles, ChevronLeft, ChevronRight, BookOpen } from 'lucide-react';
+import React from 'react';
+import { Home, FlaskConical, FileText, Beaker, Settings, Sparkles, BookOpen, Fingerprint } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import Image from 'next/image';
 
 interface SidebarProps {
   activeView: string;
@@ -10,86 +11,63 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ activeView, onViewChange }: SidebarProps) {
-  const [isCollapsed, setIsCollapsed] = useState(false);
-
   const menuItems = [
     { id: 'home', icon: Home, label: 'Home' },
-    { id: 'research', icon: FlaskConical, label: 'ResearchWorkstation' }, // Updated label for clarity
+    { id: 'research', icon: FlaskConical, label: 'Workstation' },
     { id: 'results', icon: FileText, label: 'Results' },
     { id: 'notebooks', icon: BookOpen, label: 'Notebooks' },
-    { id: 'lab', icon: Beaker, label: 'Lab Interface' },
+    { id: 'lab', icon: Beaker, label: 'Virtual Lab' },
     { id: 'agent-chat', icon: Sparkles, label: 'Agent Zero' },
     { id: 'settings', icon: Settings, label: 'Settings' },
   ];
 
   return (
-    <div
-      className={cn(
-        "h-full bg-gradient-to-b from-[#0D0E12] to-[#14161B] border-r border-white/5 flex flex-col items-center py-6 z-50 transition-all duration-300 ease-in-out flex-shrink-0 relative",
-        isCollapsed ? "w-5" : "w-20"
-      )}
-    >
-      {/* Toggle Button */}
-      <button
-        onClick={() => setIsCollapsed(!isCollapsed)}
-        className="absolute -right-3 top-10 w-6 h-6 bg-slate-800 border border-slate-700 rounded-full flex items-center justify-center text-slate-400 hover:text-white transition-colors z-50 shadow-lg"
-      >
-        {isCollapsed ? <ChevronRight className="w-3 h-3" /> : <ChevronLeft className="w-3 h-3" />}
-      </button>
+    <aside className="fixed left-6 top-1/2 -translate-y-1/2 z-50 flex flex-col items-center gap-6">
 
-      {/* Logo */}
-      <div className={cn("mb-8 transition-opacity duration-200", isCollapsed ? "opacity-0 pointer-events-none" : "opacity-100")}>
-        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#5B9FF0] to-[#4A90E2] flex items-center justify-center shadow-lg shadow-[#5B9FF0]/20">
-          <Sparkles className="w-5 h-5 text-white" />
-        </div>
+      {/* Brand Logo - Floating */}
+      <div className="w-14 h-14 rounded-2xl glass-panel flex items-center justify-center p-3 animate-float shadow-2xl relative group cursor-default">
+        <Image src="/logo_small.svg" alt="BioDockify" width={32} height={32} className="w-full h-full drop-shadow-lg group-hover:drop-shadow-[0_0_15px_rgba(0,212,170,0.5)] transition-all" />
       </div>
 
-      {/* Menu Items */}
-      <div className="flex-1 flex flex-col gap-3 w-full px-2 items-center">
+      {/* Navigation Dock - Floating Glass Strip */}
+      <nav className="glass-panel rounded-3xl p-3 flex flex-col gap-4 shadow-2xl border border-white/5 backdrop-blur-2xl">
         {menuItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeView === item.id;
 
-          if (isCollapsed) return null; // Hide icons when collapsed effectively, or we could keep small ones? User said "hide".
-          // Let's hide them to make it very slim (5px strip) as implied by "disturbing". 
-          // Actually, standard behavior is icon-only mode vs text. This WAS icon-only. 
-          // So "hide" implies making it gone. 
-          // If I make width w-4 (1rem), it's basically a strip.
-
           return (
-            <button
-              key={item.id}
-              onClick={() => onViewChange(item.id)}
-              className={cn(
-                'relative w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-300 group',
-                isActive
-                  ? 'bg-gradient-to-br from-[#5B9FF0] to-[#4A90E2] shadow-md shadow-[#5B9FF0]/30'
-                  : 'bg-white/[0.02] hover:bg-white/10'
-              )}
-            >
-              {isActive && (
-                <div className="absolute -left-[9px] w-1 h-6 bg-gradient-to-b from-[#5B9FF0] to-[#4A90E2] rounded-r-full" />
-              )}
-              <Icon
+            <div key={item.id} className="relative group">
+              <button
+                onClick={() => onViewChange(item.id)}
                 className={cn(
-                  'w-5 h-5 transition-colors',
-                  isActive ? 'text-white' : 'text-gray-500 group-hover:text-gray-300'
+                  "w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-300 relative",
+                  isActive
+                    ? "bg-gradient-to-br from-teal-500/20 to-teal-400/5 text-teal-400 border border-teal-500/30 shadow-[0_0_20px_-5px_rgba(20,184,166,0.3)]"
+                    : "text-slate-500 hover:text-slate-200 hover:bg-white/5 hover:scale-105"
                 )}
-              />
+              >
+                <Icon className={cn("w-5 h-5", isActive && "animate-pulse-soft")} strokeWidth={isActive ? 2.5 : 2} />
+
+                {/* Active Indicator Dot */}
+                {isActive && (
+                  <div className="absolute -right-1 top-1/2 -translate-y-1/2 w-1 h-4 bg-teal-400 rounded-full shadow-[0_0_10px_#00D4AA]" />
+                )}
+              </button>
+
               {/* Tooltip */}
-              <div className={cn(
-                'absolute left-full ml-4 px-3 py-2 bg-[#1A1D24] text-white text-xs font-medium rounded-lg border border-white/10 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50',
-                'shadow-xl'
-              )}>
+              <div className="absolute left-full top-1/2 -translate-y-1/2 ml-4 px-3 py-1.5 glass-panel rounded-lg text-xs font-semibold text-slate-200 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all pointer-events-none whitespace-nowrap border border-white/10 shadow-xl z-50">
                 {item.label}
               </div>
-            </button>
+            </div>
           );
         })}
+      </nav>
+
+      {/* User Status / Fingerprint - Floating */}
+      <div className="w-10 h-10 glass-panel rounded-full flex items-center justify-center text-slate-600 hover:text-teal-500 transition-colors cursor-pointer" title="Secure Session Active">
+        <Fingerprint className="w-5 h-5" />
       </div>
 
-      {/* Bottom Indicator */}
-      {!isCollapsed && <div className="w-8 h-1 rounded-full bg-gradient-to-r from-[#5B9FF0] via-[#8B7CFD] to-[#4A90E2] opacity-30" />}
-    </div>
+    </aside>
   );
 }

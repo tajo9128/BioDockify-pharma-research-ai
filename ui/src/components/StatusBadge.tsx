@@ -14,63 +14,37 @@ interface StatusBadgeProps {
 export default function StatusBadge({ status, label, size = 'md' }: StatusBadgeProps) {
   const getSizeClasses = () => {
     switch (size) {
-      case 'sm':
-        return 'px-3 py-1 text-xs';
-      case 'lg':
-        return 'px-5 py-2 text-base';
-      default:
-        return 'px-4 py-1.5 text-sm';
+      case 'sm': return 'px-2.5 py-0.5 text-[10px] gap-1';
+      case 'lg': return 'px-4 py-1.5 text-sm gap-2';
+      default: return 'px-3 py-1 text-xs gap-1.5';
     }
   };
 
-  const getStatusConfig = (s: Status) => {
+  const getConfig = (s: Status) => {
     switch (s) {
       case 'pending':
-        return {
-          className: 'bg-gray-800/50 text-gray-400 border-gray-700/50',
-          defaultLabel: 'Pending',
-          icon: <Clock className="w-3.5 h-3.5" />,
-        };
+        return { style: 'bg-slate-500/10 text-slate-400 border-slate-500/20', icon: Clock, label: 'Pending' };
       case 'running':
-        return {
-          className: 'bg-[#5B9FF0]/10 text-[#5B9FF0] border-[#5B9FF0]/30 animate-pulse',
-          defaultLabel: 'Running',
-          icon: <Loader2 className="w-3.5 h-3.5 animate-spin" />,
-        };
+        return { style: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/30 animate-pulse-soft', icon: Loader2, label: 'Running', spin: true };
       case 'completed':
-        return {
-          className: 'bg-[#00D4AA]/10 text-[#00D4AA] border-[#00D4AA]/30',
-          defaultLabel: 'Completed',
-          icon: <CheckCircle2 className="w-3.5 h-3.5" />,
-        };
+        return { style: 'bg-teal-500/10 text-teal-400 border-teal-500/30', icon: CheckCircle2, label: 'Completed' };
       case 'failed':
-        return {
-          className: 'bg-[#FC8181]/10 text-[#FC8181] border-[#FC8181]/30',
-          defaultLabel: 'Failed',
-          icon: <XCircle className="w-3.5 h-3.5" />,
-        };
+        return { style: 'bg-red-500/10 text-red-400 border-red-500/30', icon: XCircle, label: 'Failed' };
       default:
-        return {
-          className: 'bg-gray-800/50 text-gray-400 border-gray-700/50',
-          defaultLabel: 'Unknown',
-          icon: <Clock className="w-3.5 h-3.5" />,
-        };
+        return { style: 'bg-slate-500/10 text-slate-400', icon: Clock, label: 'Unknown' };
     }
   };
 
-  const config = getStatusConfig(status);
-  const displayLabel = label || config.defaultLabel;
+  const { style, icon: Icon, label: defaultLabel, spin } = getConfig(status);
 
   return (
-    <div
-      className={cn(
-        'inline-flex items-center gap-2 rounded-full font-semibold backdrop-blur-md border',
-        getSizeClasses(),
-        config.className
-      )}
-    >
-      {config.icon}
-      <span>{displayLabel}</span>
+    <div className={cn(
+      'inline-flex items-center rounded-full border font-medium uppercase tracking-wider shadow-sm backdrop-blur-sm',
+      getSizeClasses(),
+      style
+    )}>
+      <Icon className={cn("w-3 h-3", spin && "animate-spin")} />
+      <span>{label || defaultLabel}</span>
     </div>
   );
 }
