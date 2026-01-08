@@ -402,7 +402,12 @@ async def ingest_link(request: LinkRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+
+class ChatRequest(BaseModel):
+    query: str
+
 @app.post("/api/rag/chat")
+
 async def chat_with_docs(request: ChatRequest):
     """Retrieve context and answer via configured LLM (Ollama/Agent)."""
     query = request.query
