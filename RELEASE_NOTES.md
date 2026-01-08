@@ -1,3 +1,25 @@
+# BioDockify v2.10.8 - Critical Tauri Permission Fixes
+
+**Release Date:** 2026-01-08
+
+### 🔐 Critical Fixes - Tauri API Permissions
+*   **Window Controls**: Added complete window API permissions (minimize, maximize, close, etc.)
+*   **File Dialogs**: Added dialog permissions for Browse button functionality
+*   **HTTP Requests**: Added HTTP permissions for API testing and settings persistence
+*   **Shell Commands**: Added execute permission for "Open Folder" button to launch Explorer
+
+### 🐛 Bug Fixes
+*   Fixed minimize/maximize/close buttons not responding due to missing window permissions
+*   Fixed Browse button for output directory selection
+*   Fixed API key testing functionality
+*   Fixed settings save functionality
+*   Fixed "Open Folder" button for output directory
+
+### ⚠️ Important
+This release fixes fundamental permission issues that were preventing most UI interactions from working. All users should upgrade to v2.10.8 immediately for full functionality.
+
+---
+
 # BioDockify v2.10.7 - UI/UX Polish & Enhanced Functionality
 
 **Release Date:** 2026-01-08
