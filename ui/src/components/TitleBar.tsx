@@ -1,7 +1,10 @@
 'use client';
 
-import React from 'react';
-import { Minus, Square, X, Settings, FileText, Download, Eye, ZoomIn, ZoomOut } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { appWindow } from '@tauri-apps/api/window';
+import { open } from '@tauri-apps/api/dialog';
+import { Minus, Square, X, FolderOpen, FileText, Settings, Type, ZoomIn, ZoomOut, Eye, BookOpen, Mail, Activity } from 'lucide-react';
+import MenuItem from './MenuItem';
 
 export default function TitleBar() {
     const [isMaximized, setIsMaximized] = React.useState(false);
