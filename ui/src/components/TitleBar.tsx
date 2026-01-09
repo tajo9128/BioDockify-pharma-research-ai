@@ -92,11 +92,29 @@ export default function TitleBar() {
         );
     };
 
+    const handleFileImport = async (type: string) => {
+        try {
+            const { open } = await import('@tauri-apps/api/dialog');
+            const extensions = type === 'pdf' ? ['pdf'] : type === 'doc' ? ['doc', 'docx'] : ['txt', 'md'];
+            const selected = await open({
+                multiple: true,
+                filters: [{ name: type.toUpperCase(), extensions }]
+            });
+            if (selected) {
+                console.log(`Importing ${type} files:`, selected);
+                window.dispatchEvent(new CustomEvent('import-to-notebook', { detail: { files: selected, type } }));
+            }
+        } catch (e) {
+            console.error('File import failed:', e);
+        }
+    };
+
     const fileMenuItems = [
-        { label: 'New Research', icon: FileText, action: () => console.log('New Research') },
-        { label: 'Open Settings', icon: Settings, action: () => window.dispatchEvent(new CustomEvent('navigate-to-settings')) },
-        { divider: true, label: 'Export Results', icon: Download, action: () => console.log('Export') },
-        { label: 'Exit', action: handleClose },
+        { label: 'Import PDF to Notebook', icon: FileText, action: () => handleFileImport('pdf') },
+        { label: 'Import Document to Notebook', icon: FileText, action: () => handleFileImport('doc') },
+        { label: 'Import Text File to Notebook', icon: FileText, action: () => handleFileImport('text') },
+        { divider: true, label: 'Open Settings', icon: Settings, action: () => window.dispatchEvent(new CustomEvent('navigate-to-settings')) },
+        { divider: true, label: 'Exit', action: handleClose },
     ];
 
     const editMenuItems = [
