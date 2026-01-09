@@ -257,12 +257,24 @@ def test_connection_endpoint(request: TestRequest):
                  
             elif provider == "openrouter":
                 # Verify with OpenRouter Auth API
-                headers = {"Authorization": f"Bearer {request.key}"}
-                resp = requests.get("https://openrouter.ai/api/v1/auth/key", headers=headers, timeout=5)
+                # OpenRouter requires Referer and Title headers for best practice/compliance
+                headers = {
+                    "Authorization": f"Bearer {request.key}",
+                    "HTTP-Referer": "http://localhost:3000", # Localhost for dev/desktop app
+                    "X-Title": "BioDockify"
+                }
+                resp = requests.get("https://openrouter.ai/api/v1/auth/key", headers=headers, timeout=10)
+                
                 if resp.status_code == 200:
+                     data = resp.json()
+                     # Optional: Start checking strict key info if needed
                      return {"status": "success", "message": "OpenRouter Key Verified"}
                 else:
-                     return {"status": "error", "message": "Invalid OpenRouter Key"}
+                     try:
+                         err_msg = resp.json().get('error', {}).get('message', 'Unknown Error')
+                     except:
+                         err_msg = f"Status {resp.status_code}"
+                     return {"status": "error", "message": f"OpenRouter Error: {err_msg}"}
            
             elif provider == "huggingface":
                 # Verify with HF WhoAmI
