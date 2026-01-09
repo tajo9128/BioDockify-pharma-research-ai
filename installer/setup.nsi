@@ -7,9 +7,16 @@
 ;--------------------------------
 ;General
 
-  Name "BioDockify AI"
-  OutFile "..\BioDockify_Professional_Setup_v2.10.8.exe"
+  !define APPNAME "BioDockify"
+  Name "${APPNAME} AI"
+  OutFile "..\BioDockify_Professional_Setup_v2.10.10.exe"
   
+  ; safe install directory
+  InstallDir "$PROGRAMFILES64\${APPNAME}"
+  
+  ; Get installation folder from registry if available
+  InstallDirRegKey HKCU "Software\${APPNAME}" ""
+
   ; Request admin privileges for installation
   RequestExecutionLevel admin
 
@@ -19,10 +26,7 @@
   !define MUI_ICON "..\desktop\tauri\src-tauri\icons\icon.ico"
   !define MUI_UNICON "..\desktop\tauri\src-tauri\icons\icon.ico"
   !define MUI_HEADERIMAGE
-  !define MUI_HEADERIMAGE_BITMAP "..\desktop\tauri\src-tauri\icons\icon.bmp" ; Might need BMP, but let's try icon first or skip bitmap if PNG not supported by NSIS standard (NSIS usually needs BMP).
-  ; Actually, standard NSIS requires BMP for bitmaps.
-  ; Let's stick to ICONS for now to be safe, as we have .ico.
-  ; If we want header image, we need a BMP. Let's rely on the Icon for window title and taskbar.
+  !define MUI_HEADERIMAGE_BITMAP "..\desktop\tauri\src-tauri\icons\icon.bmp"
   
   ; Pages
 
