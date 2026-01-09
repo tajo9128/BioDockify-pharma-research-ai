@@ -1,5 +1,11 @@
 # Release Notes
 
+## v2.13.2 - Emergency Build Trigger
+*Released: January 9, 2026*
+
+- **Emergency Release**: Fresh build trigger to bypass previous CI cache/stale state.
+- **Verification**: Confirmed `page.tsx` syntax fix is present in this build.
+
 ## v2.13.1 - Robustness Application
 *Released: January 9, 2026*
 
