@@ -216,10 +216,10 @@ export const api = {
     }),
 
   // Settings endpoints
-  testConnection: (serviceType: 'llm' | 'elsevier', provider?: string, key?: string) =>
+  testConnection: (serviceType: 'llm' | 'elsevier', provider?: string, key?: string, baseUrl?: string) =>
     apiRequest<ConnectionTest>('/settings/test', {
       method: 'POST',
-      body: JSON.stringify({ service_type: serviceType, provider, key })
+      body: JSON.stringify({ service_type: serviceType, provider, key, base_url: baseUrl })
     }),
 
   checkOllama: (baseUrl: string) =>

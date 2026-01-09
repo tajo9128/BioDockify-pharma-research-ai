@@ -407,8 +407,80 @@ def check_neo4j_endpoint(request: Neo4jCheckRequest):
 
 
 # -----------------------------------------------------------------------------
-# Local NotebookLM (RAG) API
+# Agent Chat API
 # -----------------------------------------------------------------------------
+class AgentChatRequest(BaseModel):
+    message: str
+
+@app.post("/api/agent/chat")
+def agent_chat_endpoint(request: AgentChatRequest):
+    """
+    Simple chat endpoint for the Agent.
+    Routes to the configured LLM provider (Ollama, Custom, etc).
+    """
+    config = load_config()
+    provider_config = config.get('ai_provider', {})
+    mode = provider_config.get('mode', 'auto')
+    
+    # 1. Determine Provider
+    # For now, default to Ollama if auto/ollama, or Custom if custom keys present
+    # Simplified logic:
+    
+    import requests
+    
+    prompt = request.message
+    system_prompt = "You are BioDockify Agent Zero, an expert pharmaceutical research assistant. Answer the user's questions based on the provided context (if any) and your knowledge. Be concise and scientific."
+    
+    # Try Custom/Paid API first if configured
+    if provider_config.get('custom_key') and provider_config.get('custom_base_url'):
+        try:
+            base_url = provider_config['custom_base_url'].rstrip('/')
+            key = provider_config['custom_key']
+            model = provider_config.get('custom_model', 'gpt-3.5-turbo')
+            
+            # OpenAI Compatible Completion
+            url = f"{base_url}/chat/completions"
+            headers = {"Authorization": f"Bearer {key}"}
+            payload = {
+                "model": model,
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": prompt}
+                ]
+            }
+            resp = requests.post(url, json=payload, headers=headers, timeout=30)
+            if resp.status_code == 200:
+                content = resp.json()['choices'][0]['message']['content']
+                return {"reply": content}
+            else:
+                 print(f"Custom API failed: {resp.text}")
+        except Exception as e:
+            print(f"Custom API Exception: {e}")
+
+    # Fallback to Ollama
+    try:
+        ollama_url = provider_config.get('ollama_url', 'http://localhost:11434')
+        model = provider_config.get('ollama_model', 'llama2')
+        
+        url = f"{ollama_url}/api/chat"
+        payload = {
+            "model": model,
+            "messages": [
+                 {"role": "system", "content": system_prompt},
+                 {"role": "user", "content": prompt}
+            ],
+            "stream": False
+        }
+        resp = requests.post(url, json=payload, timeout=30)
+        if resp.status_code == 200:
+             content = resp.json()['message']['content']
+             return {"reply": content}
+        else:
+             return {"reply": f"Error from Ollama: {resp.text}"}
+             
+    except Exception as e:
+        return {"reply": f"Agent Error: {str(e)}. Please check your connections."}
+
 from fastapi import UploadFile, File
 from modules.rag.ingestor import ingestor
 from modules.rag.vector_store import vector_store

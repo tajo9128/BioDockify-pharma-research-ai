@@ -1,13 +1,15 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Bot, User, Sparkles, Terminal, Play } from 'lucide-react';
+import { Send, Bot, User, Sparkles, Terminal, Play, Globe } from 'lucide-react';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { api } from '@/lib/api';
+import { searchWeb, fetchWebPage } from '@/lib/web_fetcher';
 
 interface Message {
     role: 'user' | 'assistant' | 'system';
     content: string;
     timestamp: Date;
+    source?: string;
 }
 
 export default function AgentChat() {
@@ -20,6 +22,7 @@ export default function AgentChat() {
     ]);
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [status, setStatus] = useState(''); // "Searching...", "Reading..."
     const scrollRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -35,15 +38,47 @@ export default function AgentChat() {
         setMessages(prev => [...prev, userMsg]);
         setInput('');
         setIsLoading(true);
+        setStatus('Thinking...');
 
         try {
-            // Call Backend Chat API via standardized service
-            const data = await api.agentChat(userMsg.content);
+            // 1. Check Settings for Internet Research
+            let context = "";
+            let sourceUrl = "";
+
+            // Note: In a real app we'd fetch settings here or have them in context. 
+            // For now, assume it's enabled if we detect intent.
+            const needsResearch = input.toLowerCase().includes('search') ||
+                input.toLowerCase().includes('find') ||
+                input.toLowerCase().includes('who') ||
+                input.toLowerCase().includes('what is') ||
+                input.toLowerCase().includes('latest');
+
+            if (needsResearch) {
+                setStatus('Searching Web...');
+                const urls = await searchWeb(input);
+                if (urls.length > 0) {
+                    sourceUrl = urls[0];
+                    setStatus(`Reading ${new URL(sourceUrl).hostname}...`);
+                    try {
+                        const page = await fetchWebPage(sourceUrl);
+                        context = `[Context retrieved from Internet (${sourceUrl})]:\n${page.markdown.slice(0, 4000)}\n\n`;
+                    } catch (e) {
+                        console.warn("Retreival failed", e);
+                    }
+                }
+            }
+
+            // 2. Prepare Prompt
+            const finalPrompt = context ? `${context}User Query: ${input}` : input;
+
+            setStatus('Generating Answer...');
+            const data = await api.agentChat(finalPrompt);
 
             setMessages(prev => [...prev, {
                 role: 'assistant',
                 content: data.reply,
-                timestamp: new Date()
+                timestamp: new Date(),
+                source: sourceUrl ? `Source: ${sourceUrl}` : undefined
             }]);
 
         } catch (error) {
@@ -54,6 +89,7 @@ export default function AgentChat() {
             }]);
         } finally {
             setIsLoading(false);
+            setStatus('');
         }
     };
 
