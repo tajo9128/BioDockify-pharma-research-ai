@@ -1,5 +1,12 @@
 # Release Notes
 
+## v2.13.3 - Critical UI Fix & Service Manager
+*Released: January 9, 2026*
+
+- **Bug Fix**: Resolved critical syntax error in `ResearchWorkstation.tsx`.
+- **Feature**: Added silent auto-start for Ollama and Neo4j (`ServiceManager`).
+- **Stability**: Integrated offline mode indicators and auto-save hooks properly.
+
 ## v2.13.2 - Emergency Build Trigger
 *Released: January 9, 2026*
 

@@ -98,7 +98,37 @@ async def startup_event():
 
     # 2. Check Resource Availability
     mem = psutil.virtual_memory()
-    if mem.percent > 90:
+    logger.info(f"System Memory: {mem.percent}% used ({mem.available / (1024**3):.2f} GB available)")
+    
+    # 3. Start Background Services (Ollama/Neo4j)
+    # Only if configured to do so (default True)
+    from runtime.config_loader import load_config
+    from runtime.service_manager import get_service_manager
+    
+    config = load_config()
+    if config.get("system", {}).get("auto_start_services", True):
+        logger.info("Auto-starting background services...")
+        svc_mgr = get_service_manager(config)
+        
+        # Check if we should start Ollama (from ai_provider config or system default)
+        if config.get("ai_provider", {}).get("mode") in ["auto", "ollama"]:
+             svc_mgr.start_ollama()
+             
+        # Check Neo4j
+        # Assuming we start it if configured, or just always try for robustness as requested
+        svc_mgr.start_neo4j()
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Cleanup resources on shutdown."""
+    logger.info("Shutting down BioDockify Backend...")
+    
+    # Stop Background Services
+    from runtime.service_manager import service_manager
+    if service_manager:
+        service_manager.stop_all()
+        
+    logger.info("Services stopped.")    if mem.percent > 90:
         logger.warning(f"High Memory Usage on Startup: {mem.percent}%")
 
     # 3. Start Background Monitoring Loop
