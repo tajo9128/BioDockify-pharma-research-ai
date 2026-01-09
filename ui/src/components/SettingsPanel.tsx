@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api, Settings } from '@/lib/api';
-import { Save, Server, Cloud, Cpu, RefreshCw, CheckCircle, AlertCircle, Shield, Activity, Power, BookOpen, Layers, FileText, Globe, Database, Key, FlaskConical, Link, FolderOpen } from 'lucide-react';
+import { AGENT_PERSONAS } from '@/lib/personas';
+import { Save, Server, Cloud, Cpu, RefreshCw, CheckCircle, AlertCircle, Shield, Activity, Power, BookOpen, Layers, FileText, Globe, Database, Key, FlaskConical, Link, FolderOpen, UserCircle } from 'lucide-react';
 
 // Extended Settings interface matching "Fully Loaded" specs + New User Requests
 interface AdvancedSettings extends Settings {
@@ -189,6 +190,13 @@ export default function SettingsPanel() {
         }
     };
 
+    const handleSettingChange = (section: keyof AdvancedSettings, value: any) => {
+        setSettings(prev => ({
+            ...prev,
+            [section]: value
+        }));
+    };
+
     const updatePharmaSource = (key: keyof typeof settings.pharma.sources, val: boolean) => {
         setSettings({
             ...settings,
@@ -251,6 +259,38 @@ export default function SettingsPanel() {
                     {/* TAB: AI & BRAIN (Local) */}
                     {activeTab === 'brain' && (
                         <div className="space-y-6 animate-in fade-in duration-300">
+
+                            {/* Agent Zero Persona (Phase 6) */}
+                            <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
+                                <h3 className="text-lg font-medium text-white mb-4 flex items-center gap-2">
+                                    <UserCircle className="w-5 h-5 text-indigo-400" />
+                                    Agent Zero Persona
+                                </h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {AGENT_PERSONAS.map(persona => (
+                                        <div
+                                            key={persona.id}
+                                            onClick={() => handleSettingChange('persona', { ...settings.persona, role: persona.id })}
+                                            className={`cursor-pointer p-4 rounded-lg border transition-all ${settings.persona?.role === persona.id
+                                                ? 'bg-indigo-500/10 border-indigo-500 ring-1 ring-indigo-500/50'
+                                                : 'bg-slate-950 border-slate-800 hover:border-slate-600'
+                                                }`}
+                                        >
+                                            <div className="flex items-center justify-between mb-2">
+                                                <span className={`font-semibold ${settings.persona?.role === persona.id ? 'text-indigo-400' : 'text-slate-200'
+                                                    }`}>
+                                                    {persona.label}
+                                                </span>
+                                                {settings.persona?.role === persona.id && <CheckCircle className="w-4 h-4 text-indigo-500" />}
+                                            </div>
+                                            <p className="text-xs text-slate-400 leading-relaxed">
+                                                {persona.description}
+                                            </p>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
                             <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
                                 <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
                                     <Server className="w-5 h-5 mr-2 text-blue-400" /> Primary Provider

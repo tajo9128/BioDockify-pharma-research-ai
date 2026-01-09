@@ -23,7 +23,11 @@ export default function TitleBar() {
             appWindow.maximize();
         }
     };
-    const handleClose = () => appWindow.close();
+    const handleClose = () => {
+        if (typeof window !== 'undefined') {
+            appWindow.close();
+        }
+    };
 
     const handleFileImport = async (type: string) => {
         try {

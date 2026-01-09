@@ -4,6 +4,7 @@ import { Send, Bot, User, Sparkles, Terminal, Play, Globe } from 'lucide-react';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { api } from '@/lib/api';
 import { searchWeb, fetchWebPage } from '@/lib/web_fetcher';
+import { getPersonaById } from '@/lib/personas';
 
 interface Message {
     role: 'user' | 'assistant' | 'system';
@@ -68,8 +69,20 @@ export default function AgentChat() {
                 }
             }
 
-            // 2. Prepare Prompt
-            const finalPrompt = context ? `${context}User Query: ${input}` : input;
+            // 2. Prepare Prompt with Persona (Phase 6)
+            let systemInstruction = "";
+            try {
+                // Fetch settings to get current persona
+                // Opt: Cache this or pass as prop
+                const settings = await api.getSettings();
+                const roleId = settings?.persona?.role || 'pg_student';
+                const persona = getPersonaById(roleId);
+                systemInstruction = `[SYSTEM]: ${persona.systemPrompt}\n\n`;
+            } catch (e) {
+                console.warn("Failed to load persona", e);
+            }
+
+            const finalPrompt = `${systemInstruction}${context}User Query: ${input}`;
 
             setStatus('Generating Answer...');
             const data = await api.agentChat(finalPrompt);

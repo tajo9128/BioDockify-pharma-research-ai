@@ -32,7 +32,7 @@ class LibraryIngestor:
             elif ext in [".md", ".txt"]:
                  content, chunks = self._parse_text(file_path)
             elif ext == ".docx":
-                 content, chunks = self._parse_docx_stub(file_path) # Future extension
+                 content, chunks = self._parse_docx(file_path)
             else:
                 # Fallback binary/unsupported
                 return {"text": "", "meta": {"error": "Unsupported format"}, "chunks": []}
@@ -90,8 +90,23 @@ class LibraryIngestor:
             text = f.read()
         return text, [{"text": text, "metadata": {"type": "full_text"}}]
 
-    def _parse_docx_stub(self, path: Path):
-        # Placeholder for python-docx implementation
-        return "[DOCX Parsing not yet enabled]", []
+    def _parse_docx(self, path: Path):
+        """Parses DOCX files using python-docx."""
+        chunks = []
+        full_text = []
+        try:
+            import docx
+            doc = docx.Document(path)
+            for para in doc.paragraphs:
+                if para.text.strip():
+                    full_text.append(para.text)
+                    chunks.append({
+                        "text": para.text,
+                        "metadata": {"type": "paragraph"}
+                    })
+        except ImportError:
+            raise ImportError("python-docx is required. Please install it.")
+            
+        return "\n\n".join(full_text), chunks
 
 library_ingestor = LibraryIngestor()

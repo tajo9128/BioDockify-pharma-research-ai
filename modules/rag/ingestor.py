@@ -25,10 +25,42 @@ class DocumentIngestor:
             return self._parse_notebook(path)
         elif ext == ".pdf":
             return self._parse_pdf(path)
+        elif ext == ".docx":
+            return self._parse_docx(path)
         elif ext in [".md", ".txt"]:
             return self._parse_text(path)
         else:
             raise ValueError(f"Unsupported file format: {ext}")
+
+    def _parse_docx(self, path: Path) -> List[Dict[str, Any]]:
+        """Parses DOCX files using python-docx."""
+        chunks = []
+        try:
+            import docx
+            doc = docx.Document(path)
+            full_text = []
+            for para in doc.paragraphs:
+                if para.text.strip():
+                    full_text.append(para.text)
+            
+            # For now, treat as one big chunk or meaningful sections?
+            # Let's clean and join
+            text = "\n\n".join(full_text)
+            
+            if text:
+                chunks.append({
+                    "text": text,
+                    "metadata": {
+                        "source": path.name,
+                        "type": "docx_document"
+                    }
+                })
+        except ImportError:
+            raise ImportError("python-docx is required for .docx files. Please install it.")
+        except Exception as e:
+            raise ValueError(f"Failed to parse DOCX: {e}")
+            
+        return chunks
 
     def _parse_notebook(self, path: Path) -> List[Dict[str, Any]]:
         """Parses Jupyter Notebooks into cell-based chunks."""
