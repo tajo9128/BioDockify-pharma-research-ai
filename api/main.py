@@ -230,8 +230,9 @@ def reset_settings():
 
 class TestRequest(BaseModel):
     service_type: str # llm, elsevier
-    provider: Optional[str] = None # google, openrouter, huggingface
+    provider: Optional[str] = None # google, openrouter, huggingface, custom
     key: Optional[str] = None
+    base_url: Optional[str] = None # For custom provider
 
 @app.post("/api/settings/test")
 def test_connection_endpoint(request: TestRequest):
@@ -296,10 +297,48 @@ def test_connection_endpoint(request: TestRequest):
                     return {"status": "error", "message": f"HuggingFace Error: {err_msg}"}
             
             elif provider == "glm":
-                 # Basic check for GLM (Zhipu) structure as they don't have a simple public 'whoami' without signing payload
+                 # Removed: Migrated to 'custom' generic provider, but keeping for backward compat if needed
                  if "." not in request.key:
-                      return {"status": "warning", "message": "Invalid GLM Key format (usually id.secret)"}
-                 return {"status": "success", "message": "GLM Key format valid (No network check)"}
+                      return {"status": "warning", "message": "Invalid GLM Key format"}
+                 return {"status": "success", "message": "GLM Key valid"}
+
+            elif provider == "custom":
+                # Verify Generic OpenAI Compatible API
+                # Requires Base URL + Key
+                if not request.base_url:
+                    return {"status": "error", "message": "Base URL required for Custom API"}
+                
+                # Normalize URL: Ensure it doesn't end in / and append /models if likely needed
+                # However, user might give full path. Let's try to list models on the given base.
+                # Standard OpenAI: https://api.openai.com/v1 -> https://api.openai.com/v1/models
+                base = request.base_url.rstrip("/")
+                if not base.endswith("/models"):
+                    check_url = f"{base}/models"
+                else:
+                    check_url = base
+
+                headers = {"Authorization": f"Bearer {request.key}"}
+                
+                # Timeout 10s for custom endpoints (might be local)
+                resp = requests.get(check_url, headers=headers, timeout=10)
+                
+                if resp.status_code == 200:
+                    try:
+                        data = resp.json()
+                        # OpenAI format: { data: [...] }
+                        if 'data' in data and isinstance(data['data'], list):
+                             count = len(data['data'])
+                             return {"status": "success", "message": f"Connected! Found {count} models."}
+                        return {"status": "success", "message": "Connected! (Unknown response format)"}
+                    except:
+                        return {"status": "success", "message": "Connected! (Response not JSON)"}
+                else:
+                     try:
+                         # Try to parse error
+                         err = resp.json().get('error', {}).get('message', 'Unknown Error')
+                         return {"status": "error", "message": f"API Error {resp.status_code}: {err}"}
+                     except:
+                         return {"status": "error", "message": f"Connection Failed: Status {resp.status_code}"}
             
             return {"status": "error", "message": f"Unknown provider: {provider}"}
             
