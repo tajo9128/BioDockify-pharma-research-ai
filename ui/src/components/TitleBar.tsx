@@ -95,10 +95,39 @@ export default function TitleBar() {
     const handleFileImport = async (type: string) => {
         try {
             const { open } = await import('@tauri-apps/api/dialog');
-            const extensions = type === 'pdf' ? ['pdf'] : type === 'doc' ? ['doc', 'docx'] : ['txt', 'md'];
+            let extensions: string[] = [];
+            let filterName = '';
+
+            switch (type) {
+                case 'pdf':
+                    extensions = ['pdf'];
+                    filterName = 'PDF Documents';
+                    break;
+                case 'doc':
+                    extensions = ['doc', 'docx'];
+                    filterName = 'Word Documents';
+                    break;
+                case 'text':
+                    extensions = ['txt', 'md'];
+                    filterName = 'Text Files';
+                    break;
+                case 'notebook':
+                    extensions = ['ipynb'];
+                    filterName = 'Jupyter Notebooks';
+                    break;
+                case 'data':
+                    extensions = ['csv', 'json'];
+                    filterName = 'Data Files';
+                    break;
+                case 'all':
+                    extensions = ['pdf', 'doc', 'docx', 'txt', 'md', 'ipynb', 'csv', 'json'];
+                    filterName = 'All Supported Files';
+                    break;
+            }
+
             const selected = await open({
                 multiple: true,
-                filters: [{ name: type.toUpperCase(), extensions }]
+                filters: [{ name: filterName, extensions }]
             });
             if (selected) {
                 console.log(`Importing ${type} files:`, selected);
@@ -110,9 +139,12 @@ export default function TitleBar() {
     };
 
     const fileMenuItems = [
-        { label: 'Import PDF to Notebook', icon: FileText, action: () => handleFileImport('pdf') },
-        { label: 'Import Document to Notebook', icon: FileText, action: () => handleFileImport('doc') },
-        { label: 'Import Text File to Notebook', icon: FileText, action: () => handleFileImport('text') },
+        { label: 'Import Any File to Notebook', icon: FileText, action: () => handleFileImport('all') },
+        { divider: true, label: 'Import PDF', icon: FileText, action: () => handleFileImport('pdf') },
+        { label: 'Import Word Document', icon: FileText, action: () => handleFileImport('doc') },
+        { label: 'Import Text/Markdown', icon: FileText, action: () => handleFileImport('text') },
+        { label: 'Import Jupyter Notebook', icon: FileText, action: () => handleFileImport('notebook') },
+        { label: 'Import Data (CSV/JSON)', icon: FileText, action: () => handleFileImport('data') },
         { divider: true, label: 'Open Settings', icon: Settings, action: () => window.dispatchEvent(new CustomEvent('navigate-to-settings')) },
         { divider: true, label: 'Exit', action: handleClose },
     ];
