@@ -55,18 +55,35 @@ fn main() {
         .setup(|app| {
             let window = app.get_window("main").unwrap();
             
-            // Spawn the Agent Zero Backend Sidecar
+            // Spawn the Agent Zero Backend Sidecar (Auto-Restart Monitor)
             tauri::async_runtime::spawn(async move {
-                let (mut rx, mut child) = Command::new_sidecar("biodockify-engine")
-                    .expect("failed to create sidecar configuration")
-                    .spawn()
-                    .expect("failed to spawn sidecar");
+                loop {
+                    println!("[BioDockify Host] Spawning Backend Sidecar...");
+                    let (mut rx, mut child) = match Command::new_sidecar("biodockify-engine")
+                        .expect("failed to create sidecar configuration")
+                        .spawn() {
+                            Ok(res) => res,
+                            Err(e) => {
+                                eprintln!("[BioDockify Host] Failed to spawn sidecar: {}", e);
+                                std::thread::sleep(std::time::Duration::from_secs(5));
+                                continue;
+                            }
+                        };
 
-                // Monitor sidecar events (optional, for debug)
-                while let Some(event) = rx.recv().await {
-                   if let CommandEvent::Stdout(line) = event {
-                       println!("[AGENT ZERO]: {}", line);
-                   }
+                    println!("[BioDockify Host] Backend started. Monitoring...");
+
+                    // Monitor sidecar events
+                    while let Some(event) = rx.recv().await {
+                       if let CommandEvent::Stdout(line) = event {
+                           println!("[AGENT ZERO]: {}", line);
+                       }
+                       // If process exits, the channel might close or sending a specific event?
+                       // CommandEvent doesn't explicitly have "Exit" in simple mode, 
+                       // but rx.recv() returns None when channel closes (process dies).
+                    }
+                    
+                    println!("[BioDockify Host] Sidecar exited unexpectedly. Restarting in 2s...");
+                    std::thread::sleep(std::time::Duration::from_secs(2));
                 }
             });
             

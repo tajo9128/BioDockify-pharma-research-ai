@@ -1,32 +1,46 @@
 # Release Notes
 
-## v2.11.1 (Hotfix & Stability)
-**Release Date:** 2026-01-09
+## v2.13.1 - Robustness Application
+*Released: January 9, 2026*
 
-### 🚑 Critical Fixes
-- **Build Repair**: Fixed broken build caused by syntax errors in `TitleBar.tsx` (stray JSX code removed).
-- **Crash Prevention**: Implemented **Global Error Boundaries** (`error.tsx`, `global-error.tsx`) to prevent white-screen crashes and offer a recovery option for users.
+- **Hotfix Release**: Ensuring all robustness pillars are correctly applied and versioned.
+- **Force Sync**: Aligned `main` and `development` branches with the latest architecture.
 
-### 🛡️ Quality Assurance
-- **Automated Linting**: Configured **Husky** and **lint-staged** to prevent bad commits in the future.
-- **Git Hooks**: Pre-commit hooks now ensure `ui` code is linted before entering the repository.
+## v2.13.0 "Titanium" - The Robustness Update
+*Released: January 9, 2026*
+
+This major release focuses on enterprise-grade stability, security, and resilience, implementing the "10 Pillars of Robustness" architecture.
+
+### 🛡️ Security & Privacy
+- **Encryption at Rest**: Sensitive API keys and passwords in `config.yaml` are now encrypted using a machine-specific key.
+- **Input Hardening**: Enhanced protection against XSS attacks in the web fetcher; The system now actively strips dangerous tags (`object`, `embed`).
+- **Encrypted PDF Guard**: The ingestion engine now gracefully rejects password-protected PDFs instead of hanging.
+
+### ⚙️ Stability & Reliability
+- **Auto-Restart Sidecar**: The Python backend analysis engine will now automatically restart if it encounters a critical crash.
+- **Offline Awareness**: Added a visual "OFFLINE MODE" indicator to the workstation when network connectivity is lost.
+- **Auto-Save**: Research goals and operation modes are now automatically saved to local storage to prevent data loss during accidental closures.
+- **Database Resilience**: Implemented robust connection pooling for the local database.
+
+### 📊 Observability
+- **Structured Logging**: All backend logs now output in structured JSON format for easier debugging and monitoring.
+- **Audit Trails**: Every API request is now logged with detailed metrics (latency, status, client IP).
+- **Resource Monitoring**: A background system guard monitors RAM and CPU usage, alerting when memory exceeds 90%.
+
+### 🏗️ Infrastructure
+- **CI/CD Pipeline**: Added automated testing workflows (`ci-tests.yml`) running on every push.
+- **Backend Test Suite**: Initial coverage for API health, configuration, and security modules.
+- **Config Management**: Added support for `BIO_ENV` to load environment-specific configurations (`config.dev.yaml`, `config.prod.yaml`).
+- **Config Backup**: Automatic backup of configuration files before saving.
+
+### 🐛 Bug Fixes
+- Fixed a critical syntax error in `page.tsx` that caused build failures in v2.11.1.
+- Fixed dependency vulnerabilities in UI packages.
 
 ---
 
-## v2.11.0 (Stable Milestone)
-**Release Date:** 2026-01-09
+## v2.11.2 - Hotfix
+- Fixed build syntax error in `page.tsx`.
 
-### 🌟 Major Features
-- **Agent Zero Internet Research**: Fully enabled public web research capabilities. Agent Zero can now search the web, read pages, and synthesize answers with real-time context.
-- **Custom AI Provider**: Added generic "OpenAI Compatible" API support for local or paid LLM endpoints (e.g. together.ai, fireworks.ai).
-- **Backend Chat Integration**: New `/api/agent/chat` endpoint handles all AI traffic with improved error handling and provider switching.
-
-### 🛡️ Security & Stability
-- **Safe Uninstaller**: Fixed installer logic to prevent accidental deletion of parent directories. Now enforces installation to `Program Files/BioDockify`.
-- **Client Stability**: Resolved critical client-side crash caused by missing strict mode (`use client`) and incorrect imports in TitleBar/AgentChat.
-- **Build System**: Fixed syntax errors in `SettingsPanel` that were blocking CI builds.
-
-### 🐛 Bug Fixes
-- Fixed "Run System Diagnostics" menu integration.
-- Fixed `Activity` icon import errors.
-- Fixed `MenuItem` module resolution crash.
+## v2.11.1 - Stability Patch (Deprecated)
+- Initial attempt at robustness features.

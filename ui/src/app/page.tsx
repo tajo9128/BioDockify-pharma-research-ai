@@ -229,53 +229,54 @@ export default function PharmaceuticalResearchApp() {
       default:
         // For now, all research activities happen in the Workstation
         // Passing view prop to handle specific sub-views
-        <ErrorBoundary name="Workstation">
-          <ResearchWorkstation
-            view={activeView}
-            goal={goal}
-            onGoalChange={setGoal}
-            onExecute={handleExecute}
-            onStop={handleStop}
-            isExecuting={isExecuting}
-            thinkingSteps={thinkingSteps}
-            error={error}
-          />
-        </ErrorBoundary>
+        return (
+          <ErrorBoundary name="Workstation">
+            <ResearchWorkstation
+              view={activeView}
+              goal={goal}
+              onGoalChange={setGoal}
+              onExecute={handleExecute}
+              onStop={handleStop}
+              isExecuting={isExecuting}
+              thinkingSteps={thinkingSteps}
+              error={error}
+            />
+          </ErrorBoundary>
         );
-}
+    }
   };
 
-return (
-  <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-teal-500/30">
+  return (
+    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-teal-500/30">
 
-    {/* First Run Wizard Overlay */}
-    {!hasOnboarded && (
-      <FirstRunWizard onComplete={c_settings} />
-    )}
+      {/* First Run Wizard Overlay */}
+      {!hasOnboarded && (
+        <FirstRunWizard onComplete={c_settings} />
+      )}
 
-    {/* Background Ambience */}
-    <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-black -z-10" />
+      {/* Background Ambience */}
+      <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-black -z-10" />
 
-    {/* Main Layout */}
-    <div className="flex h-screen overflow-hidden">
-      <Sidebar activeView={activeView} onViewChange={setActiveView} />
+      {/* Main Layout */}
+      <div className="flex h-screen overflow-hidden">
+        <Sidebar activeView={activeView} onViewChange={setActiveView} />
 
-      <main className="flex-1 relative overflow-hidden ml-20">
-        {renderContent()}
-      </main>
+        <main className="flex-1 relative overflow-hidden ml-20">
+          {renderContent()}
+        </main>
+      </div>
+
+      {/* Global Dialogs */}
+      <FeedbackDialog
+        isOpen={isFeedbackOpen}
+        onClose={() => setIsFeedbackOpen(false)}
+      />
+      <DiagnosisDialog
+        isOpen={!!diagError}
+        onClose={() => setDiagError(null)}
+        error={diagError}
+        component="System"
+      />
     </div>
-
-    {/* Global Dialogs */}
-    <FeedbackDialog
-      isOpen={isFeedbackOpen}
-      onClose={() => setIsFeedbackOpen(false)}
-    />
-    <DiagnosisDialog
-      isOpen={!!diagError}
-      onClose={() => setDiagError(null)}
-      error={diagError}
-      component="System"
-    />
-  </div>
-);
+  );
 }

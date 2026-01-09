@@ -16,7 +16,7 @@ export function cleanHtml(html: string, url?: string): CleanedWebPage {
 
     // 1. Remove clutter
     const removeSelectors = [
-        'script', 'style', 'noscript', 'iframe', 'svg',
+        'script', 'style', 'noscript', 'iframe', 'svg', 'object', 'embed', 'form',
         'nav', 'footer', 'header', 'aside',
         '.ad', '.ads', '.advertisement', '.banner',
         '#cookie-banner', '#newsletter',

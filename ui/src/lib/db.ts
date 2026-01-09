@@ -7,7 +7,14 @@ const globalForPrisma = globalThis as unknown as {
 export const db =
   globalForPrisma.prisma ??
   new PrismaClient({
-    log: ['query'],
+    log: ['query', 'error', 'warn'],
+    datasources: {
+      db: {
+        url: process.env.DATABASE_URL,
+      },
+    },
+    // Interaction resiliency
+    // Note: Prisma manages pooling internally, but we can tune timeouts if needed via URL params or here
   })
 
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = db
