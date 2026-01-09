@@ -68,7 +68,10 @@ export default function SettingsPanel() {
             google_key: '',
             huggingface_key: '',
             openrouter_key: '',
-            glm_key: '', // GLM-4 key
+            // Generic Custom API (formerly GLM hardcoded)
+            custom_base_url: '',
+            custom_key: '',
+            custom_model: '',
             neo4j_uri: 'bolt://localhost:7687',
             neo4j_user: 'neo4j',
             neo4j_password: ''
@@ -426,22 +429,37 @@ return (
                                     onTest={() => handleTestKey('openrouter', settings.ai_provider.openrouter_key)}
                                     testStatus={testStatus.openrouter}
                                 />
-                                {/* GLM 4.7 (Paid) */}
+                                {/* Generic Paid / Custom API */}
                                 <div className="border-t border-slate-800 my-2 pt-4">
                                     <div className="flex items-center space-x-2 mb-3">
-                                        <span className="text-xs font-bold text-yellow-500 px-2 py-0.5 rounded bg-yellow-500/10 border border-yellow-500/20">PAID</span>
-                                        <h4 className="text-sm font-semibold text-white">ZhipuGLM (GLM-4.7)</h4>
+                                        <span className="text-xs font-bold text-yellow-500 px-2 py-0.5 rounded bg-yellow-500/10 border border-yellow-500/20">CUSTOM</span>
+                                        <h4 className="text-sm font-semibold text-white">Custom / Paid API (OpenAI Compatible)</h4>
                                     </div>
-                                    <CloudKeyBox
-                                        name="GLM-4.7 API Key"
-                                        icon="Z"
-                                        modelValue={settings.ai_provider?.glm_model}
-                                        onModelChange={(v: string) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, glm_model: v } })}
-                                        value={settings.ai_provider.glm_key}
-                                        onChange={(v: string) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, glm_key: v } })}
-                                        onTest={() => handleTestKey('glm', settings.ai_provider.glm_key)}
-                                        testStatus={testStatus.glm}
-                                    />
+                                    <div className="space-y-3 p-3 bg-slate-800/50 rounded-lg border border-slate-700/50">
+                                        {/* Base URL Input */}
+                                        <div>
+                                            <label className="text-xs text-slate-400 mb-1 block">Base URL</label>
+                                            <input
+                                                type="text"
+                                                placeholder="https://api.openai.com/v1"
+                                                className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-sm text-white focus:outline-none focus:border-teal-500/50"
+                                                value={settings.ai_provider.custom_base_url || ''}
+                                                onChange={(e) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, custom_base_url: e.target.value } })}
+                                            />
+                                        </div>
+
+                                        <CloudKeyBox
+                                            name="API Key"
+                                            icon="Key"
+                                            modelValue={settings.ai_provider?.custom_model}
+                                            modelPlaceholder="Model ID (e.g. gpt-4, deepseek-chat)"
+                                            onModelChange={(v: string) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, custom_model: v } })}
+                                            value={settings.ai_provider.custom_key}
+                                            onChange={(v: string) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, custom_key: v } })}
+                                            onTest={() => handleTestKey('custom', settings.ai_provider.custom_key)}
+                                            testStatus={testStatus.custom}
+                                        />
+                                    </div>
                                 </div>
                             </div>
                         </div>
