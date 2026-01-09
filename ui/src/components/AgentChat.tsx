@@ -1,4 +1,4 @@
-
+'use client';
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Bot, User, Sparkles, Terminal, Play, Globe } from 'lucide-react';
 import { ScrollArea } from "@/components/ui/scroll-area";
