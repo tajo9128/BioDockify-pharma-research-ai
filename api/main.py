@@ -249,12 +249,18 @@ def test_connection_endpoint(request: TestRequest):
             if provider == "google":
                 # Verify with Google Generative Language API
                 url = f"https://generativelanguage.googleapis.com/v1beta/models?key={request.key}"
-                resp = requests.get(url, timeout=5)
+                resp = requests.get(url, timeout=10)
                 if resp.status_code == 200:
-                    return {"status": "success", "message": "Google Gemini Key Verified"}
+                     return {"status": "success", "message": "Google Gemini Key Verified"}
                 else:
-                    return {"status": "error", "message": f"Google API Error: {resp.status_code} - {resp.json().get('error', {}).get('message', 'Unknown')}"}
-                 
+                    try:
+                        err = resp.json().get('error', {})
+                        msg = err.get('message', 'Unknown Google API Error')
+                        status = err.get('status', resp.status_code)
+                        return {"status": "error", "message": f"Google Error ({status}): {msg}"}
+                    except:
+                        return {"status": "error", "message": f"Google API Error: {resp.status_code}"}
+            
             elif provider == "openrouter":
                 # Verify with OpenRouter Auth API
                 # OpenRouter requires Referer and Title headers for best practice/compliance
@@ -267,7 +273,6 @@ def test_connection_endpoint(request: TestRequest):
                 
                 if resp.status_code == 200:
                      data = resp.json()
-                     # Optional: Start checking strict key info if needed
                      return {"status": "success", "message": "OpenRouter Key Verified"}
                 else:
                      try:
@@ -279,12 +284,16 @@ def test_connection_endpoint(request: TestRequest):
             elif provider == "huggingface":
                 # Verify with HF WhoAmI
                 headers = {"Authorization": f"Bearer {request.key}"}
-                resp = requests.get("https://huggingface.co/api/whoami", headers=headers, timeout=5)
+                resp = requests.get("https://huggingface.co/api/whoami", headers=headers, timeout=10)
                 if resp.status_code == 200:
                     user = resp.json().get("name", "User")
                     return {"status": "success", "message": f"HuggingFace Connected as {user}"}
                 else:
-                    return {"status": "error", "message": "Invalid HuggingFace Token"}
+                    try:
+                        err_msg = resp.json().get('error', 'Invalid Token')
+                    except:
+                        err_msg = f"Status {resp.status_code}"
+                    return {"status": "error", "message": f"HuggingFace Error: {err_msg}"}
             
             elif provider == "glm":
                  # Basic check for GLM (Zhipu) structure as they don't have a simple public 'whoami' without signing payload
