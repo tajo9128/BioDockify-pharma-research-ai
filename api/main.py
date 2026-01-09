@@ -134,6 +134,51 @@ async def shutdown_event():
     # 3. Start Background Monitoring Loop
     asyncio.create_task(background_monitor())
 
+# -----------------------------------------------------------------------------
+# DIGITAL LIBRARY ENDPOINTS (Phase 5)
+# -----------------------------------------------------------------------------
+from fastapi import UploadFile, File, Form
+from modules.library.store import library_store
+from modules.library.ingestor import library_ingestor
+
+@app.post("/api/library/upload")
+async def upload_file(file: UploadFile = File(...)):
+    """Uploads a file to the Digital Library."""
+    try:
+        content = await file.read()
+        record = library_store.add_file(content, file.filename)
+        
+        # Async Processing (Simple Trigger)
+        # Ideally this goes to a background task
+        try:
+             fpath = library_store.get_file_path(record['id'])
+             if fpath:
+                 result = library_ingestor.process_file(fpath)
+                 library_store.update_metadata(record['id'], {
+                     "processed": True, 
+                     "char_count": len(result['text'])
+                 })
+        except Exception as e:
+            logger.warning(f"Auto-processing failed for {file.filename}: {e}")
+            
+        return {"status": "success", "file": record}
+    except Exception as e:
+        logger.error(f"Upload failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/library/files")
+async def list_files():
+    """Lists all files in the library."""
+    return library_store.list_files()
+
+@app.delete("/api/library/files/{file_id}")
+async def delete_file(file_id: str):
+    """Deletes a file from the library."""
+    success = library_store.remove_file(file_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="File not found or failed to delete")
+    return {"status": "success"}
+
 async def background_monitor():
     """
     Periodic system health logging loop.

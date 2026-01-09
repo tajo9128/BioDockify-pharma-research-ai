@@ -254,6 +254,23 @@ export const api = {
   // History endpoints
   getResearchHistory: () =>
     apiRequest<{ id: string; topic: string; status: string; createdAt: string }[]>('/research/history'),
+
+  // Digital Library Endpoints (Phase 5)
+  uploadFile: (formData: FormData) =>
+    apiRequest<{ status: string; file: any }>('/library/upload', {
+      method: 'POST',
+      body: formData,
+      // Note: No Content-Type header needed for FormData; browser sets boundary
+      headers: {}
+    }),
+
+  getLibraryFiles: () =>
+    apiRequest<{ id: string; filename: string; size_bytes: number; added_at: string; processed: boolean; metadata: any }[]>('/library/files'),
+
+  deleteLibraryFile: (fileId: string) =>
+    apiRequest<{ status: string }>(`/library/files/${fileId}`, {
+      method: 'DELETE',
+    }),
 };
 
 export default api;
