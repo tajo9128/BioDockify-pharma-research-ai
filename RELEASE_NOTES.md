@@ -1,5 +1,18 @@
 # Release Notes
 
+## v2.11.1 (Hotfix & Stability)
+**Release Date:** 2026-01-09
+
+### 🚑 Critical Fixes
+- **Build Repair**: Fixed broken build caused by syntax errors in `TitleBar.tsx` (stray JSX code removed).
+- **Crash Prevention**: Implemented **Global Error Boundaries** (`error.tsx`, `global-error.tsx`) to prevent white-screen crashes and offer a recovery option for users.
+
+### 🛡️ Quality Assurance
+- **Automated Linting**: Configured **Husky** and **lint-staged** to prevent bad commits in the future.
+- **Git Hooks**: Pre-commit hooks now ensure `ui` code is linted before entering the repository.
+
+---
+
 ## v2.11.0 (Stable Milestone)
 **Release Date:** 2026-01-09
 

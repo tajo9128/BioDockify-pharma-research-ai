@@ -6,8 +6,9 @@
         "distDir": "../dist"
     },
     "package": {
-        "productName": "biodockify-ai",
-        "version": "2.11.0"
+        "productName": "BioDockify",
+        "version": "2.11.1",
+        "identifier": "com.biodockify.app"
     },
     "tauri": {
         "allowlist": {

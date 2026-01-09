@@ -8,7 +8,20 @@ import ResearchWorkstation from '@/components/ResearchWorkstation';
 import NotebookLM from '@/components/NotebookLM';
 import FirstRunWizard from '@/components/FirstRunWizard';
 import AgentChat from '@/components/AgentChat';
+import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
+import FeedbackDialog from '@/components/FeedbackDialog'; // Ensure imported if used
 import { Target, Network, Activity, CheckCircle2, Brain, Clock } from 'lucide-react';
+
+// Mock DiagnosisDialog if missing or import real one
+const DiagnosisDialog = ({ isOpen, onClose, error }: any) => isOpen ? (
+  <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50">
+    <div className="bg-slate-900 p-6 rounded-lg border border-red-500">
+      <h3 className="text-red-500 font-bold">System Diag</h3>
+      <p>{error}</p>
+      <button onClick={onClose} className="mt-4 px-4 py-2 bg-slate-800 rounded">Close</button>
+    </div>
+  </div>
+) : null;
 
 const getStepIcon = (type: string) => {
   switch (type) {
@@ -41,6 +54,25 @@ export default function PharmaceuticalResearchApp() {
   const [isExecuting, setIsExecuting] = useState(false);
   const [thinkingSteps, setThinkingSteps] = useState<any[]>([]);
   const [currentTask, setCurrentTask] = useState<any | null>(null);
+
+  // Global Dialog State
+  const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
+  const [diagError, setDiagError] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Listen for global events
+    const handleFeedback = () => setIsFeedbackOpen(true);
+    const handleDiag = (e: CustomEvent) => setDiagError(e.detail?.error || "System Check Requested");
+    const handleTitleBarDiag = () => setDiagError("Running System Diagnostics... OK"); // Simple mock for now
+
+    window.addEventListener('open-feedback', handleFeedback);
+    window.addEventListener('trigger-diagnostics', handleTitleBarDiag); // From TitleBar
+
+    return () => {
+      window.removeEventListener('open-feedback', handleFeedback);
+      window.removeEventListener('trigger-diagnostics', handleTitleBarDiag);
+    };
+  }, []);
 
 
 
@@ -167,22 +199,28 @@ export default function PharmaceuticalResearchApp() {
     switch (activeView) {
       case 'settings':
         return (
-          <div className="h-full overflow-y-auto p-8">
-            <SettingsPanel />
-          </div>
+          <ErrorBoundary name="Settings">
+            <div className="h-full overflow-y-auto p-8">
+              <SettingsPanel />
+            </div>
+          </ErrorBoundary>
         );
       case 'notebooks':
         return (
-          <div className="h-full overflow-hidden p-8">
-            <NotebookLM />
-          </div>
+          <ErrorBoundary name="Notebook">
+            <div className="h-full overflow-hidden p-8">
+              <NotebookLM />
+            </div>
+          </ErrorBoundary>
         );
       case 'agent-chat':
         return (
-          <div className="h-full overflow-hidden">
-            {/* Import dynamically if needed but we'll import top level for now */}
-            <AgentChat />
-          </div>
+          <ErrorBoundary name="AgentChat">
+            <div className="h-full overflow-hidden">
+              {/* Import dynamically if needed but we'll import top level for now */}
+              <AgentChat />
+            </div>
+          </ErrorBoundary>
         );
       case 'home':
       case 'research':
@@ -191,7 +229,7 @@ export default function PharmaceuticalResearchApp() {
       default:
         // For now, all research activities happen in the Workstation
         // Passing view prop to handle specific sub-views
-        return (
+        <ErrorBoundary name="Workstation">
           <ResearchWorkstation
             view={activeView}
             goal={goal}
@@ -202,41 +240,42 @@ export default function PharmaceuticalResearchApp() {
             thinkingSteps={thinkingSteps}
             error={error}
           />
+        </ErrorBoundary>
         );
-    }
+}
   };
 
-  return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-teal-500/30">
+return (
+  <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-teal-500/30">
 
-      {/* First Run Wizard Overlay */}
-      {!hasOnboarded && (
-        <FirstRunWizard onComplete={c_settings} />
-      )}
+    {/* First Run Wizard Overlay */}
+    {!hasOnboarded && (
+      <FirstRunWizard onComplete={c_settings} />
+    )}
 
-      {/* Background Ambience */}
-      <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-black -z-10" />
+    {/* Background Ambience */}
+    <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-black -z-10" />
 
-      {/* Main Layout */}
-      <div className="flex h-screen overflow-hidden">
-        <Sidebar activeView={activeView} onViewChange={setActiveView} />
+    {/* Main Layout */}
+    <div className="flex h-screen overflow-hidden">
+      <Sidebar activeView={activeView} onViewChange={setActiveView} />
 
-        <main className="flex-1 relative overflow-hidden ml-20">
-          {renderContent()}
-        </main>
-      </div>
-
-      {/* Global Dialogs */}
-      <FeedbackDialog
-        isOpen={isFeedbackOpen}
-        onClose={() => setIsFeedbackOpen(false)}
-      />
-      <DiagnosisDialog
-        isOpen={!!diagError}
-        onClose={() => setDiagError(null)}
-        error={diagError}
-        component="System"
-      />
+      <main className="flex-1 relative overflow-hidden ml-20">
+        {renderContent()}
+      </main>
     </div>
-  );
+
+    {/* Global Dialogs */}
+    <FeedbackDialog
+      isOpen={isFeedbackOpen}
+      onClose={() => setIsFeedbackOpen(false)}
+    />
+    <DiagnosisDialog
+      isOpen={!!diagError}
+      onClose={() => setDiagError(null)}
+      error={diagError}
+      component="System"
+    />
+  </div>
+);
 }

@@ -26,6 +26,42 @@ app.add_middleware(
 )
 
 # -----------------------------------------------------------------------------
+# Global Error Handling & Resilience
+# -----------------------------------------------------------------------------
+from fastapi import Request
+from fastapi.responses import JSONResponse
+import logging
+import time
+import requests
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("biodockify_api")
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    logger.error(f"Global Exception: {str(exc)}", exc_info=True)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal Server Error", "message": str(exc)},
+    )
+
+def safe_request(method, url, **kwargs):
+    """
+    Resilient HTTP request with retries (Circuit Breaker Lite).
+    """
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            resp = requests.request(method, url, **kwargs)
+            return resp
+        except requests.exceptions.RequestException as e:
+            logger.warning(f"Request failed (Attempt {attempt+1}/{max_retries}): {e}")
+            if attempt == max_retries - 1:
+                raise e
+            time.sleep(1 * (attempt + 1)) # Linear backoff
+
+
+# -----------------------------------------------------------------------------
 # Persistence Layer (Disk-Based)
 # -----------------------------------------------------------------------------
 from runtime.task_manager import task_manager
@@ -151,7 +187,56 @@ def run_research_task(task_id: str, title: str, mode: str):
 
 @app.get("/health")
 def health_check():
-    return {"status": "ok", "service": "BioDockify API"}
+    """
+    Comprehensive System Health Check.
+    Monitors: API, Ollama, Vector Store, Neo4j (optional), System Resources.
+    """
+    import psutil
+    import shutil
+    
+    status = {"status": "ok", "components": {}}
+    
+    # 1. API Service
+    status["components"]["api"] = {"status": "ok", "version": "1.0.0"}
+    
+    # 2. Ollama / AI Provider
+    try:
+        from runtime.config_loader import load_config
+        cfg = load_config()
+        ai_conf = cfg.get("ai_provider", {})
+        ollama_url = ai_conf.get("ollama_url", "http://localhost:11434")
+        
+        # Ping
+        resp = safe_request('GET', f"{ollama_url}/api/tags", timeout=2)
+        if resp.status_code == 200:
+             status["components"]["ai_core"] = {"status": "ok", "provider": "ollama"}
+        else:
+             status["components"]["ai_core"] = {"status": "degraded", "message": f"Ollama Unreachable ({resp.status_code})"}
+    except Exception as e:
+         status["components"]["ai_core"] = {"status": "error", "message": str(e)}
+
+    # 3. Vector DB (Chroma/FAISS)
+    try:
+         from modules.rag.vector_store import vector_store
+         # Simple count check
+         count = vector_store.client.count() if hasattr(vector_store, 'client') else 0
+         status["components"]["vector_db"] = {"status": "ok", "documents": count}
+    except Exception as e:
+         status["components"]["vector_db"] = {"status": "degraded", "message": "Store not initialized"}
+
+    # 4. System Resources
+    try:
+        mem = psutil.virtual_memory()
+        disk = shutil.disk_usage(".")
+        status["components"]["system"] = {
+            "status": "ok", 
+            "ram_free_gb": round(mem.available / (1024**3), 1),
+            "disk_free_gb": round(disk.free / (1024**3), 1)
+        }
+    except:
+        status["components"]["system"] = {"status": "unknown"}
+        
+    return status
 
 @app.post("/api/research/start", response_model=Dict[str, str])
 async def start_research(request: ResearchRequest, background_tasks: BackgroundTasks):
@@ -448,7 +533,8 @@ def agent_chat_endpoint(request: AgentChatRequest):
                     {"role": "user", "content": prompt}
                 ]
             }
-            resp = requests.post(url, json=payload, headers=headers, timeout=30)
+            # Use Resilient Request
+            resp = safe_request('POST', url, json=payload, headers=headers, timeout=30)
             if resp.status_code == 200:
                 content = resp.json()['choices'][0]['message']['content']
                 return {"reply": content}
@@ -471,7 +557,8 @@ def agent_chat_endpoint(request: AgentChatRequest):
             ],
             "stream": False
         }
-        resp = requests.post(url, json=payload, timeout=30)
+        # Use Resilient Request
+        resp = safe_request('POST', url, json=payload, timeout=30)
         if resp.status_code == 200:
              content = resp.json()['message']['content']
              return {"reply": content}
@@ -627,60 +714,8 @@ def clear_knowledge_base():
     return {"status": "success", "message": "Knowledge base cleared."}
 
 
-# -----------------------------------------------------------------------------
-# Agent Zero Chat API
-# -----------------------------------------------------------------------------
-class AgentChatRequest(BaseModel):
-    message: str
-
-@app.post("/api/agent/chat")
-async def agent_chat(request: AgentChatRequest):
-    """
-    Direct conversational interface with 'Agent Zero'.
-    Uses configured Persona and Tools access (simulated or real).
-    """
-    from runtime.config_loader import load_config
-    import requests
-    
-    cfg = load_config()
-    ai_conf = cfg.get("ai_provider", {})
-    persona = cfg.get("persona", {})
-    
-    # Construct System Persona
-    role = persona.get("role", "Research Assistant")
-    strictness = persona.get("strictness", "conservative")
-    
-    system_prompt = (
-        f"You are Agent Zero, a pharmaceutical AI research assistant based in the BioDockify Virtual Lab. "
-        f"Your role is: {role}. Your style is: {strictness}. "
-        f"You have access to: PubMed, Local Knowledge Base (RAG), and Molecular Docking Tools (AutoDock Vina). "
-        f"If the user asks to perform complex research, explain how you would plan it, or suggest they start a 'Research Task' in the Workstation. "
-        f"Answer concisely and helpfully."
-    )
-    
-    # Call LLM (Ollama)
-    ollama_url = ai_conf.get("ollama_url", "http://localhost:11434")
-    ollama_model = ai_conf.get("ollama_model", "llama3")
-    
-    try:
-        resp = requests.post(
-            f"{ollama_url}/api/generate",
-            json={
-                "model": ollama_model,
-                "prompt": request.message,
-                "system": system_prompt,
-                "stream": False
-            },
-            timeout=60
-        )
-        if resp.status_code == 200:
-            reply = resp.json().get("response", "I'm sorry, I couldn't generate a response.")
-            return {"reply": reply}
-        else:
-            return {"reply": f"Error interacting with my neural core (Ollama {resp.status_code})."}
-            
-    except Exception as e:
-        return {"reply": f"Connection error: {str(e)}. Is Ollama running?"}
+# Duplicate Agent Chat Endpoint Removed.
+# The robust implementations is at line 416.
 
 
 # -----------------------------------------------------------------------------
