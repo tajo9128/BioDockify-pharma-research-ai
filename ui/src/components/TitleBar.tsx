@@ -172,6 +172,12 @@ export default function TitleBar() {
                     <MenuItem label="File" items={fileMenuItems} />
                     <MenuItem label="Edit" items={editMenuItems} />
                     <MenuItem label="View" items={viewMenuItems} />
+                    <MenuItem label="Help" items={[
+                        { label: 'Documentation', icon: BookOpen, action: () => window.open('https://biodockify.com/docs', '_blank') },
+                        { divider: true },
+                        { label: 'Run System Diagnostics', icon: Activity, action: () => window.dispatchEvent(new CustomEvent('trigger-diagnostics')) },
+                        { label: 'Send Feedback', icon: Mail, action: () => window.dispatchEvent(new CustomEvent('open-feedback')) }
+                    ]} />
                 </div>
             </div>
 

@@ -225,6 +225,18 @@ export default function PharmaceuticalResearchApp() {
           {renderContent()}
         </main>
       </div>
+
+      {/* Global Dialogs */}
+      <FeedbackDialog
+        isOpen={isFeedbackOpen}
+        onClose={() => setIsFeedbackOpen(false)}
+      />
+      <DiagnosisDialog
+        isOpen={!!diagError}
+        onClose={() => setDiagError(null)}
+        error={diagError}
+        component="System"
+      />
     </div>
   );
 }
