@@ -10,20 +10,7 @@ import FirstRunWizard from '@/components/FirstRunWizard';
 import AgentChat from '@/components/AgentChat';
 import LibraryView from '@/components/LibraryView';
 
-// ... (in renderContent)
-      case 'notebooks':
-return (
-  <ErrorBoundary name="Notebooks">
-    <NotebookLM />
-  </ErrorBoundary>
-);
-      case 'library':
-return (
-  <ErrorBoundary name="Library">
-    <LibraryView />
-  </ErrorBoundary>
-);
-      case 'agent-chat':
+
 import FeedbackDialog from '@/components/FeedbackDialog'; // Ensure imported if used
 import { Target, Network, Activity, CheckCircle2, Brain, Clock } from 'lucide-react';
 
