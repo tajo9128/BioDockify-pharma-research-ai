@@ -146,7 +146,6 @@ export default function FirstRunWizard({ onComplete }: WizardProps) {
                             <div className="space-y-3">
                                 <CheckItem
                                     label="Operating System"
-                                    status={sysInfo ? 'success' : 'chk'}
                                     // @ts-ignore
                                     status={sysInfo ? 'success' : 'checking'}
                                     value={sysInfo?.os}

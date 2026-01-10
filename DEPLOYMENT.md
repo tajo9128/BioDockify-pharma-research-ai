@@ -14,8 +14,8 @@ Complete PhD Research Automation Platform with Agent Zero orchestration, 40+ int
 
 1. **Clone the repository**
    ```bash
-   git clone <repository-url>
-   cd my-project
+   git clone https://github.com/tajo9128/BioDockify-pharma-research-ai.git
+   cd BioDockify-pharma-research-ai
    ```
 
 2. **Install dependencies**

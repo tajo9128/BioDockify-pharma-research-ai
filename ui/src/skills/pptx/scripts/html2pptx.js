@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 /**
  * html2pptx - Convert HTML slide to pptxgenjs slide with positioned elements
  *
@@ -539,10 +540,10 @@ async function extractSlideData(page) {
         const computed = window.getComputedStyle(el);
         const hasBg = computed.backgroundColor && computed.backgroundColor !== 'rgba(0, 0, 0, 0)';
         const hasBorder = (computed.borderWidth && parseFloat(computed.borderWidth) > 0) ||
-                          (computed.borderTopWidth && parseFloat(computed.borderTopWidth) > 0) ||
-                          (computed.borderRightWidth && parseFloat(computed.borderRightWidth) > 0) ||
-                          (computed.borderBottomWidth && parseFloat(computed.borderBottomWidth) > 0) ||
-                          (computed.borderLeftWidth && parseFloat(computed.borderLeftWidth) > 0);
+          (computed.borderTopWidth && parseFloat(computed.borderTopWidth) > 0) ||
+          (computed.borderRightWidth && parseFloat(computed.borderRightWidth) > 0) ||
+          (computed.borderBottomWidth && parseFloat(computed.borderBottomWidth) > 0) ||
+          (computed.borderLeftWidth && parseFloat(computed.borderLeftWidth) > 0);
         const hasShadow = computed.boxShadow && computed.boxShadow !== 'none';
 
         if (hasBg || hasBorder || hasShadow) {

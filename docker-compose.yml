@@ -5,7 +5,7 @@ version: '3.8'
 services:
   # GROBID for PDF parsing
   grobid:
-    image: lfoppiano/grobid:0.8.0
+    image: lfoppiano/grobid:0.8.1
     container_name: biodockify-grobid
     ports:
       - "8070:8070"
