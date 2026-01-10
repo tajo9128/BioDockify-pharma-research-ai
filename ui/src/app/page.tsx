@@ -13,6 +13,7 @@ import LibraryView from '@/components/LibraryView';
 
 import FeedbackDialog from '@/components/FeedbackDialog'; // Ensure imported if used
 import { Target, Network, Activity, CheckCircle2, Brain, Clock } from 'lucide-react';
+import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 
 // Mock DiagnosisDialog if missing or import real one
 const DiagnosisDialog = ({ isOpen, onClose, error }: any) => isOpen ? (

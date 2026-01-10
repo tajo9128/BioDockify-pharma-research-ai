@@ -179,6 +179,24 @@ async def delete_file(file_id: str):
         raise HTTPException(status_code=404, detail="File not found or failed to delete")
     return {"status": "success"}
 
+class LibraryQuery(BaseModel):
+    query: str
+    top_k: int = 5
+
+@app.post("/api/library/query")
+async def query_library(request: LibraryQuery):
+    """
+    Semantic search over the digital library.
+    """
+    try:
+        from modules.rag.vector_store import get_vector_store
+        store = get_vector_store()
+        results = store.search(request.query, request.top_k)
+        return {"results": results}
+    except Exception as e:
+        logger.error(f"Library search failed: {e}")
+        return {"results": [], "error": str(e)}
+
 async def background_monitor():
     """
     Periodic system health logging loop.

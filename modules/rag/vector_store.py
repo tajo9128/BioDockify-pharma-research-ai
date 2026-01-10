@@ -1,81 +1,151 @@
-
-import chromadb
-from chromadb.utils import embedding_functions
 import os
-from pathlib import Path
-from typing import List, Dict, Any
+import json
+import numpy as np
+import logging
+from typing import List, Dict, Any, Optional
 
-# Define persistence path
-DB_PATH = Path(os.getenv('APPDATA', '.')) / "BioDockify" / "rag_db"
+# Lazy imports to avoid startup overhead if RAG is unused
+try:
+    import faiss
+    from sentence_transformers import SentenceTransformer
+except ImportError:
+    faiss = None
+    SentenceTransformer = None
+
+logger = logging.getLogger(__name__)
 
 class VectorStore:
-    def __init__(self):
-        # Ensure directory exists
-        DB_PATH.mkdir(parents=True, exist_ok=True)
+    def __init__(self, storage_dir: str = "data/vectors", model_name: str = "all-MiniLM-L6-v2"):
+        self.storage_dir = storage_dir
+        self.model_name = model_name
+        self.index = None
+        self.model = None
+        self.metadata: List[Dict[str, Any]] = []
+        self.dimension = 384  # Default for all-MiniLM-L6-v2
         
-        # Initialize Client
-        self.client = chromadb.PersistentClient(path=str(DB_PATH))
-        
-        # Default Embedding Function (all-MiniLM-L6-v2 is standard, fast, local)
-        self.ef = embedding_functions.SentenceTransformerEmbeddingFunction(
-            model_name="all-MiniLM-L6-v2"
-        )
-        
-        # Get or Create Collection
-        self.collection = self.client.get_or_create_collection(
-            name="biodockify_knowledge",
-            embedding_function=self.ef
-        )
+        if not os.path.exists(storage_dir):
+            os.makedirs(storage_dir)
+            
+        self._load_dependencies()
+        self._load_index()
 
-    def add_documents(self, documents: List[Dict[str, Any]]):
+    def _load_dependencies(self):
+        if not faiss or not SentenceTransformer:
+            logger.warning("RAG dependencies (faiss/sentence-transformers) not installed. Vector search disabled.")
+            return
+
+        try:
+            logger.info(f"Loading embedding model: {self.model_name}")
+            self.model = SentenceTransformer(self.model_name)
+        except Exception as e:
+            logger.error(f"Failed to load embedding model: {e}")
+
+    def _load_index(self):
+        if not faiss:
+            return
+
+        index_path = os.path.join(self.storage_dir, "index.faiss")
+        meta_path = os.path.join(self.storage_dir, "metadata.json")
+
+        if os.path.exists(index_path) and os.path.exists(meta_path):
+            try:
+                self.index = faiss.read_index(index_path)
+                with open(meta_path, 'r', encoding='utf-8') as f:
+                    self.metadata = json.load(f)
+                logger.info(f"Loaded existing index with {self.index.ntotal} vectors.")
+            except Exception as e:
+                logger.error(f"Failed to load index: {e}")
+                self._create_new_index()
+        else:
+            self._create_new_index()
+
+    def _create_new_index(self):
+        if not faiss:
+            return
+        # L2 Distance Index (Euclidean)
+        self.index = faiss.IndexFlatL2(self.dimension)
+        self.metadata = []
+        logger.info("Created new FAISS index.")
+
+    def add_documents(self, documents: List[str], metadatas: List[Dict[str, Any]]):
         """
-        Adds parsed documents to the vector store.
-        Expects list of dicts with 'text' and 'metadata'.
+        Add documents to the vector store.
+        documents: List of text strings
+        metadatas: List of dicts containing source info (e.g., filename, page)
         """
-        if not documents:
+        if not self.model or not self.index:
+            logger.error("VectorStore not initialized properly.")
+            return
+
+        if len(documents) != len(metadatas):
+            raise ValueError("Number of documents must match number of metadata entries.")
+
+        try:
+            embeddings = self.model.encode(documents)
+            embeddings = np.array(embeddings).astype('float32')
+            
+            # Normalize for cosine similarity if needed, but L2 is fine for basic RAG
+            # faiss.normalize_L2(embeddings)
+
+            self.index.add(embeddings)
+            self.metadata.extend(metadatas)
+            
+            self._save_index()
+            logger.info(f"Added {len(documents)} documents to index. Total: {self.index.ntotal}")
+        except Exception as e:
+            logger.error(f"Error adding documents: {e}")
+
+    def search(self, query: str, k: int = 5) -> List[Dict[str, Any]]:
+        """
+        Search for relevant documents.
+        Returns list of results with text and metadata.
+        """
+        if not self.model or not self.index or self.index.ntotal == 0:
+            return []
+
+        try:
+            query_vector = self.model.encode([query])
+            query_vector = np.array(query_vector).astype('float32')
+            
+            distances, indices = self.index.search(query_vector, k)
+            
+            results = []
+            for i, idx in enumerate(indices[0]):
+                if idx != -1 and idx < len(self.metadata):
+                    meta = self.metadata[idx]
+                    results.append({
+                        "score": float(distances[0][i]),
+                        "metadata": meta,
+                        # Note: We currently don't store the full text in metadata to save space,
+                        # but we might want to if snippet retrieval is needed directly from here.
+                        # Ideally, metadata points to file/page, and we retrieve text from there.
+                        # For RAG, storing snippet in metadata is convenient.
+                    })
+            
+            return results
+        except Exception as e:
+            logger.error(f"Error during search: {e}")
+            return []
+
+    def _save_index(self):
+        if not self.index:
             return
             
-        ids = []
-        texts = []
-        metadatas = []
+        index_path = os.path.join(self.storage_dir, "index.faiss")
+        meta_path = os.path.join(self.storage_dir, "metadata.json")
         
-        for i, doc in enumerate(documents):
-            # Generate deterministic or random ID. 
-            # Combining source + index is good for uniqueness per file upload session
-            source = doc['metadata'].get('source', 'unknown')
-            idx = doc['metadata'].get('cell_index', doc['metadata'].get('page_number', i))
-            unique_id = f"{source}_{idx}"
-            
-            ids.append(unique_id)
-            texts.append(doc['text'])
-            metadatas.append(doc['metadata'])
-            
-        self.collection.upsert(
-            ids=ids,
-            documents=texts,
-            metadatas=metadatas
-        )
+        try:
+            faiss.write_index(self.index, index_path)
+            with open(meta_path, 'w', encoding='utf-8') as f:
+                json.dump(self.metadata, f, ensure_ascii=False, indent=2)
+        except Exception as e:
+            logger.error(f"Failed to save index: {e}")
 
-    def query(self, query_text: str, n_results: int = 5) -> List[str]:
-        """
-        Semantic search for relevant context.
-        """
-        results = self.collection.query(
-            query_texts=[query_text],
-            n_results=n_results
-        )
-        
-        # Flatten results (results['documents'] is list of list)
-        if results['documents']:
-            return results['documents'][0]
-        return []
+# Global instance
+_vector_store = None
 
-    def clear(self):
-        """Wipes the database."""
-        self.client.delete_collection("biodockify_knowledge")
-        self.collection = self.client.get_or_create_collection(
-            name="biodockify_knowledge",
-            embedding_function=self.ef
-        )
-
-vector_store = VectorStore()
+def get_vector_store():
+    global _vector_store
+    if _vector_store is None:
+        _vector_store = VectorStore()
+    return _vector_store

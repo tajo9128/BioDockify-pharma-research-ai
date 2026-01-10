@@ -1,6 +1,7 @@
 {
-  "name": "biodockify-root",
-  "version": "2.13.37",
+  "name": "biodockify",
+  "version": "2.13.38",
+  "description": "BioDockify AI: Advanced Pharmaceutical Research Platform",
   "private": true,
   "scripts": {
     "dev": "next dev -p 3000 2>&1 | tee dev.log",

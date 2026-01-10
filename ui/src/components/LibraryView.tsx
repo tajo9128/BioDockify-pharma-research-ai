@@ -3,10 +3,11 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '@/lib/api';
 import { UploadZone } from '@/components/library/UploadZone';
-import { FileText, Trash2, Search, Filter, BookOpen, Clock, FileType } from 'lucide-react';
+import { FileText, Trash2, Search, Filter, BookOpen, Clock, FileType, BrainCircuit, Loader2 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface LibraryFile {
     id: string;
@@ -17,10 +18,24 @@ interface LibraryFile {
     metadata: any;
 }
 
+interface SearchResult {
+    score: number;
+    metadata: {
+        source: string;
+        type?: string;
+        page?: number;
+    }
+}
+
 export default function LibraryPage() {
     const [files, setFiles] = useState<LibraryFile[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
+
+    // RAG State
+    const [isSearching, setIsSearching] = useState(false);
+    const [ragResults, setRagResults] = useState<SearchResult[]>([]);
+    const [showRag, setShowRag] = useState(false);
 
     useEffect(() => {
         loadFiles();
@@ -36,6 +51,33 @@ export default function LibraryPage() {
             toast.error('Failed to load library files');
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    const handleSemanticSearch = async () => {
+        if (!searchQuery.trim()) return;
+
+        setIsSearching(true);
+        setShowRag(true);
+        try {
+            const res = await fetch('http://localhost:8000/api/library/query', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query: searchQuery, top_k: 5 })
+            });
+
+            if (res.ok) {
+                const data = await res.json();
+                setRagResults(data.results || []);
+                if (data.results?.length === 0) toast.info("No relevant excerpts found.");
+            } else {
+                toast.error("Search failed");
+            }
+        } catch (error) {
+            console.error('Semantic search error:', error);
+            toast.error('Semantic search failed');
+        } finally {
+            setIsSearching(false);
         }
     };
 
@@ -80,15 +122,26 @@ export default function LibraryPage() {
                 </div>
 
                 <div className="flex items-center gap-4">
-                    <div className="relative">
-                        <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
-                        <input
-                            type="text"
-                            placeholder="Search files..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-64 bg-slate-900 border border-slate-800 text-sm rounded-full pl-9 pr-4 py-1.5 focus:outline-none focus:border-indigo-500 transition-colors"
-                        />
+                    <div className="relative flex gap-2">
+                        <div className="relative">
+                            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                            <input
+                                type="text"
+                                placeholder="Search files or ask a question..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                onKeyDown={(e) => e.key === 'Enter' && handleSemanticSearch()}
+                                className="w-80 bg-slate-900 border border-slate-800 text-sm rounded-full pl-9 pr-4 py-1.5 focus:outline-none focus:border-indigo-500 transition-colors"
+                            />
+                        </div>
+                        <button
+                            onClick={handleSemanticSearch}
+                            disabled={isSearching}
+                            className="bg-indigo-600 hover:bg-indigo-700 text-white p-1.5 rounded-full transition-colors disabled:opacity-50"
+                            title="Run Semantic Search"
+                        >
+                            {isSearching ? <Loader2 className="w-4 h-4 animate-spin" /> : <BrainCircuit className="w-4 h-4" />}
+                        </button>
                     </div>
                 </div>
             </header>
@@ -96,6 +149,42 @@ export default function LibraryPage() {
             {/* Content */}
             <div className="flex-1 overflow-y-auto p-8">
                 <div className="max-w-5xl mx-auto space-y-8">
+
+                    {/* RAG Results Area */}
+                    {showRag && searchQuery && (
+                        <section className="space-y-4 animate-in fade-in slide-in-from-top-4">
+                            <div className="flex items-center justify-between">
+                                <h2 className="text-sm font-medium text-indigo-400 uppercase tracking-wider flex items-center gap-2">
+                                    <BrainCircuit className="w-4 h-4" />
+                                    Semantic Search Results
+                                </h2>
+                                <button onClick={() => setShowRag(false)} className="text-xs text-slate-500 hover:text-white">Close Results</button>
+                            </div>
+
+                            <div className="grid grid-cols-1 gap-3">
+                                {ragResults.length === 0 && !isSearching ? (
+                                    <div className="p-4 text-slate-500 text-sm italic">No semantic matches found.</div>
+                                ) : (
+                                    ragResults.map((result, idx) => (
+                                        <div key={idx} className="p-4 bg-slate-900/50 rounded-xl border border-indigo-500/20 hover:border-indigo-500/40 transition-colors">
+                                            <div className="flex justify-between items-start mb-2">
+                                                <span className="text-teal-400 font-medium text-xs flex items-center gap-1.5">
+                                                    <FileText className="w-3.5 h-3.5" />
+                                                    {result.metadata?.source || 'Unknown Source'}
+                                                </span>
+                                                <span className="text-indigo-400 text-xs font-mono">{(result.score * 100).toFixed(0)}% Relevance</span>
+                                            </div>
+                                            <p className="text-slate-300 text-sm leading-relaxed">
+                                                {/* Visual placeholder for result content. In Phase 1 we verify metadata retrieval. */}
+                                                Matched Metadata: {JSON.stringify(result.metadata)}
+                                            </p>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                            <div className="h-px bg-slate-800 my-6" />
+                        </section>
+                    )}
 
                     {/* Upload Section */}
                     <section>

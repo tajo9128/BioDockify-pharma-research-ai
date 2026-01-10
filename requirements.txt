@@ -9,6 +9,11 @@ requests==2.31.0
 # Literature Search
 biopython==1.83
 
+# RAG & Embeddings
+sentence-transformers>=2.2.2
+faiss-cpu>=1.7.4
+numpy>=1.26.3
+
 # Molecular Vision (Offline)
 # Note: DECIMER pulls in TensorFlow; ensure you have the CPU version if no GPU.
 DECIMER-Image2SMILES==2.2.0

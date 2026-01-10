@@ -146,6 +146,7 @@ DEFAULT_CONFIG = {
         "enable_semantic_scholar": True,
         "enable_unpaywall": True,
         "citation_threshold": "high",
+
         "sources": {
             "pubmed": True,
             "pmc": True,
@@ -218,7 +219,7 @@ DEFAULT_CONFIG = {
         "pause_on_battery": True,
         "max_cpu_percent": 80,
         "log_level": "INFO",
-        "version": "2.13.37"
+        "version": "2.13.38"
     }
 }
 
