@@ -2,19 +2,19 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   output: "export",
-  /* Static export for Tauri desktop app */
   typescript: {
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: false, // Enable type checking
   },
-  reactStrictMode: false,
+  reactStrictMode: true,       // Better for React 19
   eslint: {
-    ignoreDuringBuilds: true,
+    ignoreDuringBuilds: false, // Enable linting
   },
   images: {
     unoptimized: true,
   },
   trailingSlash: true,
+  // Add this for Tauri compatibility
+  distDir: 'out',
 };
 
 export default nextConfig;
-

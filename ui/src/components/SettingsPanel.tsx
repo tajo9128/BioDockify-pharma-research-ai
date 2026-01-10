@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api, Settings } from '@/lib/api';
 import { AGENT_PERSONAS } from '@/lib/personas';
+import { THINKING_CONSTITUTION_TEXT } from '@/lib/agent/full_constitution_text';
 import { Save, Server, Cloud, Cpu, RefreshCw, CheckCircle, AlertCircle, Shield, Activity, Power, BookOpen, Layers, FileText, Globe, Database, Key, FlaskConical, Link, FolderOpen, UserCircle } from 'lucide-react';
 
 // Extended Settings interface matching "Fully Loaded" specs + New User Requests
@@ -244,6 +245,7 @@ export default function SettingsPanel() {
             {/* Navigation */}
             <div className="flex space-x-2 border-b border-slate-800 pb-2 overflow-x-auto scrollbar-hide">
                 <TabButton id="brain" label="AI & Brain" icon={Cpu} />
+                <TabButton id="governance" label="Governance" icon={Shield} />
                 <TabButton id="cloud" label="Cloud APIs" icon={Cloud} />
                 <TabButton id="pharma" label="Pharma & Sources" icon={Database} />
                 <TabButton id="output" label="Output & Reports" icon={FileText} />
@@ -404,6 +406,30 @@ export default function SettingsPanel() {
                             </div>
                         </div>
                     )}
+
+                    {/* TAB: GOVERNANCE (New) */}
+                    {activeTab === 'governance' && (
+                        <div className="space-y-6 animate-in fade-in duration-300">
+                            <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
+                                <div className="flex items-center gap-3 mb-6">
+                                    <Shield className="w-6 h-6 text-emerald-400" />
+                                    <div>
+                                        <h3 className="font-bold text-white text-lg">Agent Zero Charter (v1.1)</h3>
+                                        <p className="text-sm text-slate-400">The immutable governance framework active on this system.</p>
+                                    </div>
+                                </div>
+                                <div className="h-96 overflow-y-auto bg-slate-950 p-4 rounded-lg border border-slate-800 font-mono text-xs text-slate-400 whitespace-pre-wrap shadow-inner">
+                                    {THINKING_CONSTITUTION_TEXT}
+                                </div>
+                                <div className="mt-4 flex items-center gap-2 text-xs font-bold text-emerald-400 uppercase tracking-wider">
+                                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                                    System Active & Enforcing
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+
 
                     {/* TAB: CLOUD APIS */}
                     {activeTab === 'cloud' && (

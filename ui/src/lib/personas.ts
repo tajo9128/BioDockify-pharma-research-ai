@@ -4,6 +4,7 @@ export interface AgentPersona {
     description: string;
     systemPrompt: string;
     strictness: 'low' | 'medium' | 'high';
+    specificRules: string[];
 }
 
 export const AGENT_PERSONAS: AgentPersona[] = [
@@ -16,7 +17,12 @@ export const AGENT_PERSONAS: AgentPersona[] = [
         - Gently check for foundational understanding.
         - Encourage exploration but warn about basic pitfalls.
         - Focus on learning and growth over strict critique.`,
-        strictness: 'low'
+        strictness: 'low',
+        specificRules: [
+            "Simplify jargon where possible.",
+            "Always offer a 'next step' for learning.",
+            "Be encouraging but correct misconceptions gently."
+        ]
     },
     {
         id: 'phd_scholar',
@@ -27,7 +33,12 @@ export const AGENT_PERSONAS: AgentPersona[] = [
         - Scrutinize methodology for flaws or missing controls.
         - Focus intensely on novelty and contribution to the field.
         - Be direct, professional, and rigorous. Do not sugarcoat weak arguments.`,
-        strictness: 'high'
+        strictness: 'high',
+        specificRules: [
+            "Demand citations for every claim.",
+            "Highlight potential methodological flaws immediately.",
+            "Focus on 'Novelty' and 'Gap Analysis'."
+        ]
     },
     {
         id: 'faculty',
@@ -38,7 +49,12 @@ export const AGENT_PERSONAS: AgentPersona[] = [
         - Focus on high-level impact, funding potential, and publication strategy.
         - Assume deep expertise; do not explain basics.
         - Summarize vast information into key decision points.`,
-        strictness: 'medium'
+        strictness: 'medium',
+        specificRules: [
+            "Limit responses to key bullet points.",
+            "Highlight funding risks and opportunities.",
+            "Assume expert knowledge (no definitions)."
+        ]
     },
     {
         id: 'industry',
@@ -49,7 +65,12 @@ export const AGENT_PERSONAS: AgentPersona[] = [
         - Always consider regulatory compliance (FDA/EMA) and safety.
         - Focus on actionable outcomes and competitive advantage.
         - Be objective and data-driven.`,
-        strictness: 'high'
+        strictness: 'high',
+        specificRules: [
+            "Flag FDA/EMA regulatory risks immediately.",
+            "Assess scalability and cost-efficiency.",
+            "Prioritize patentability and IP protection."
+        ]
     }
 ];
 
