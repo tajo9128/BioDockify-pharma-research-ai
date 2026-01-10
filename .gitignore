@@ -42,3 +42,4 @@ data/exports/
 tmp/
 *_backup.tsx
 *.tar
+RELEASE_NOTES_TEMP*.md
