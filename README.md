@@ -1,14 +1,14 @@
-# BioDockify v2.0.0 🧬
+# BioDockify v2.13.12 🧬
 
 **The "Always-On" Autonomous Pharmaceutical Research Agent**
 
 BioDockify is a local-first, privacy-preserving AI workstation designed for pharmaceutical researchers, PhD students, and drug discovery scientists. It transforms standard LLVs (Large Language Models) into "Pharma-Grade" research assistants capable of deep literature review, hypothesis generation, and academic synthesis.
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![Version](https://img.shields.io/badge/version-2.10.0-green.svg)
+![Version](https://img.shields.io/badge/version-2.13.12-green.svg)
 ![Status](https://img.shields.io/badge/status-Production-teal.svg)
 
-## 🚀 Key Features (v2.5.0)
+## 🚀 Key Features (v2.13.12)
 
 ### 🧠 The Intelligence Layer ("The Brain")
 *   **Multi-Model Engine**: Seamlessly route queries between **GLM-4.7**, **Google Gemini**, **Hugging Face**, **OpenRouter**, or local **Ollama** models.
@@ -22,6 +22,7 @@ BioDockify is a local-first, privacy-preserving AI workstation designed for phar
 *   **Citation Lock**: The agent refuses to generate scientific claims without cited evidence (Low/Medium/High strictness).
 *   **Conflict Detection**: Actively scans for and highlights contradictory evidence in literature.
 *   **Context Awareness**: "Perplexity-Like" intent classification steers the research strategy.
+*   **Governance & Audit**: Built-in system drift detection and audit logs ensuring long-term reliability.
 
 ### ⚡ The System Layer ("The Body")
 *   **Always-On**: Minimizes to System Tray for background monitoring.
@@ -40,8 +41,8 @@ BioDockify is a local-first, privacy-preserving AI workstation designed for phar
 
 1.  **Clone the Repository**
     ```bash
-    git clone https://github.com/your-org/biodockify.git
-    cd biodockify
+    git clone https://github.com/tajo9128/BioDockify-pharma-research-ai.git
+    cd BioDockify-pharma-research-ai
     ```
 
 2.  **Install Backend Dependencies**

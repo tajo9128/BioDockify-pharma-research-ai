@@ -25,8 +25,7 @@ except ImportError:
 missing = [v for v in REQUIRED_ENV if not os.getenv(v)]
 if missing:
     logging.warning("⚠️  Startup Warning: Missing recommended environment variables: %s", ", ".join(missing))
-    # logging.error("Startup aborted...") # Uncomment to enforce fail-fast
-    # raise SystemExit(1) 
+    logging.info("Continuing start-up sequence...") 
 
 # Check for critical dependencies before importing heavy libs
 try:
