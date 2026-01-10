@@ -28,9 +28,7 @@ export const metadata: Metadata = {
   },
 }
 
-import dynamic from 'next/dynamic';
-
-const TitleBar = dynamic(() => import('@/components/TitleBar'), { ssr: false });
+import TitleBarLoader from '@/components/TitleBarLoader';
 
 export default function RootLayout({
   children,
@@ -42,7 +40,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground pt-10`}
       >
-        <TitleBar />
+        <TitleBarLoader />
         {children}
         <Toaster />
       </body>
