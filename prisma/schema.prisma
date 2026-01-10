@@ -13,30 +13,19 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model Post {
+model ResearchTask {
   id        String   @id @default(cuid())
   title     String
-  content   String?
-  published Boolean  @default(false)
-  authorId  String
+  status    String   @default("pending")
+  mode      String   @default("synthesize")
+  result    String?  // JSON blob
+  logs      String?  // JSON blob
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
-model PhDProgress {
-  id        String   @id @default(cuid())
-  stage     String   @default("early")
-  progress  Float    @default(0)
-  milestones String  @default("[]")
-  metadata   String?
-  createdAt DateTime @default(now())
+model Settings {
+  id        String   @id @default("global")
+  config    String   // JSON blob
   updatedAt DateTime @updatedAt
 }

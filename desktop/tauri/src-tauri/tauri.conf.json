@@ -6,8 +6,8 @@
         "distDir": "../dist"
     },
     "package": {
-        "productName": "BioDockify",
-        "version": "2.13.13",
+        "productName": "BioDockify-AI",
+        "version": "2.13.14",
         "identifier": "com.biodockify.app"
     },
     "tauri": {
