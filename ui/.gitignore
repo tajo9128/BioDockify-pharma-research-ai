@@ -55,6 +55,7 @@ __MACOSX/
 # Backup and temporary files
 *_backup.*
 *.backup
+page_backup.*
 *.tmp
 *.temp
 RELEASE_NOTES_TEMP*.md
