@@ -39,7 +39,6 @@ BioDockify is a local-first, privacy-preserving AI workstation designed for phar
 
 ### Quick Start
 
-1.  **Clone the Repository**
     ```bash
     git clone https://github.com/tajo9128/BioDockify-pharma-research-ai.git
     cd BioDockify-pharma-research-ai

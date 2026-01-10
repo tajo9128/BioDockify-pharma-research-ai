@@ -3,9 +3,16 @@ BioDockify API Backend
 FastAPI service exposing research capabilities to the UI.
 """
 
+import sys
+import os
+
+# Ensure root directory is in sys.path so 'orchestration' and 'modules' can be imported
+# This allows running 'uvicorn api.main:app' directly or 'python api/main.py'
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from fastapi import FastAPI, BackgroundTasks, HTTPException
 from pydantic import BaseModel
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 import uuid
 
 # Import Core Systems
