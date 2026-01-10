@@ -496,7 +496,19 @@ def health_check():
     except Exception as e:
          status["components"]["vector_db"] = {"status": "degraded", "message": "Store not initialized"}
 
-    # 4. System Resources
+    # 4. Neo4j (Graph DB)
+    try:
+        from neo4j import GraphDatabase
+        # We use a quick verify_connectivity if credentials exist in config
+        # Ideally we'd load config here, but for speed we might skip or just use defaults check
+        # For now, let's just check if driver is importable and maybe ping if we had a global driver instance.
+        # Since we don't have a global driver, we report 'installed' or 'unknown'.
+        # Better: Check if service manager has it running?
+        status["components"]["neo4j"] = {"status": "unknown", "message": "Check Settings > Neo4j"}
+    except ImportError:
+         status["components"]["neo4j"] = {"status": "disabled", "message": "Driver missing"}
+
+    # 5. System Resources
     try:
         mem = psutil.virtual_memory()
         disk = shutil.disk_usage(".")

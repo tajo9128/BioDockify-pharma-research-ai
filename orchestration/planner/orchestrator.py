@@ -39,6 +39,9 @@ class OrchestratorConfig(BaseModel):
     openrouter_key: Optional[str] = Field(default=None)
     huggingface_key: Optional[str] = Field(default=None)
     glm_key: Optional[str] = Field(default=None) # GLM-4.7
+    custom_key: Optional[str] = Field(default=None)
+    custom_base_url: Optional[str] = Field(default=None)
+    custom_model: str = Field(default="gpt-3.5-turbo")
     pubmed_email: Optional[str] = Field(default=None)
     
     # 2. Research Context (Section A)
@@ -165,7 +168,11 @@ class ResearchOrchestrator:
                 google_key=ai.get("google_key"),
                 openrouter_key=ai.get("openrouter_key"),
                 huggingface_key=ai.get("huggingface_key"),
+                huggingface_key=ai.get("huggingface_key"),
                 glm_key=ai.get("glm_key"), # Added GLM key mapping from runtime
+                custom_key=ai.get("custom_key"),
+                custom_base_url=ai.get("custom_base_url"),
+                custom_model=ai.get("custom_model", "gpt-3.5-turbo"),
                 
                 pubmed_email=ai.get("pubmed_email"),
                 
@@ -437,11 +444,11 @@ Provide ONLY the JSON."""
         available_providers = []
         
         # Add Primary First
-        if self.config.primary_model in ["google", "openrouter", "huggingface", "zhipu"]:
+        if self.config.primary_model in ["google", "openrouter", "huggingface", "zhipu", "custom"]:
             available_providers.append(self.config.primary_model)
         
         # Add others as backup
-        candidates = ["google", "openrouter", "huggingface", "zhipu"]
+        candidates = ["google", "openrouter", "huggingface", "zhipu", "custom"]
         for c in candidates:
             if c != self.config.primary_model:
                 available_providers.append(c)
@@ -465,6 +472,8 @@ Provide ONLY the JSON."""
                     plan = self._call_huggingface(api_key, title, mode)
                 elif provider == "zhipu":
                     plan = self._call_zhipu_glm(api_key, title, mode)
+                elif provider == "custom":
+                    plan = self._call_custom_provider(api_key, title, mode)
                     
                 if plan:
                     print(f"[+] Successfully generated plan using {provider.upper()}")
@@ -483,7 +492,9 @@ Provide ONLY the JSON."""
         if provider == "google": return self.config.google_key
         if provider == "openrouter": return self.config.openrouter_key
         if provider == "huggingface": return self.config.huggingface_key
+        if provider == "huggingface": return self.config.huggingface_key
         if provider == "zhipu": return self.config.glm_key
+        if provider == "custom": return self.config.custom_key
         return None
 
     def _call_zhipu_glm(self, key: str, title: str, mode: str) -> dict:
@@ -503,7 +514,31 @@ Provide ONLY the JSON."""
         
         data = resp.json()
         text = data["choices"][0]["message"]["content"]
+        data = resp.json()
+        text = data["choices"][0]["message"]["content"]
         return self._parse_plan_response(text)
+
+    def _call_custom_provider(self, key: str, title: str, mode: str) -> dict:
+        """Call Generic OpenAI-Compatible API (e.g. Groq)."""
+        base = self.config.custom_base_url.rstrip('/')
+        url = f"{base}/chat/completions"
+        prompt = self._build_prompt(title, mode)
+        
+        payload = {
+            "model": self.config.custom_model,
+            "messages": [{"role": "user", "content": prompt}],
+            "temperature": 0.7
+        }
+        
+        resp = requests.post(url, json=payload, headers={"Authorization": f"Bearer {key}"}, timeout=60)
+        resp.raise_for_status()
+        
+        data = resp.json()
+        try:
+             text = data["choices"][0]["message"]["content"]
+             return self._parse_plan_response(text)
+        except:
+             raise ValueError(f"Unexpected response format from Custom Provider: {data}")
 
     def _call_google_gemini(self, key: str, title: str, mode: str) -> dict:
         """Call Google Gemini API via REST."""

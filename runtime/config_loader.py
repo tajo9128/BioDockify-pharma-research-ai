@@ -136,7 +136,8 @@ DEFAULT_CONFIG = {
         "sources": ["pubmed"], 
         "enable_crossref": True,
         "year_range": 10,  
-        "novelty_strictness": "medium"
+        "novelty_strictness": "medium",
+        "grobid_url": "http://localhost:8070"  # Default GROBID URL
     },
     
     # NEW: Pharma Pipeline Controls
@@ -174,6 +175,10 @@ DEFAULT_CONFIG = {
         "glm_key": "", # GLM-4.7 Support
         "elsevier_key": "", # For Scopus/ScienceDirect
         "pubmed_email": "",
+        # Custom / Groq / OpenAI Compatible
+        "custom_key": "",
+        "custom_base_url": "", 
+        "custom_model": "gpt-3.5-turbo",
     },
     
     # NEW: Advanced Hardware Controls
@@ -214,7 +219,7 @@ DEFAULT_CONFIG = {
         "pause_on_battery": True,
         "max_cpu_percent": 80,
         "log_level": "INFO",
-        "version": "2.13.34"
+        "version": "2.13.35"
     }
 }
 

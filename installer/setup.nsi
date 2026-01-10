@@ -9,7 +9,7 @@
 
   !define APPNAME "BioDockify"
   Name "${APPNAME} AI"
-  OutFile "BioDockify_Setup_v2.13.34.exe"
+  OutFile "BioDockify_Professional_Setup_v2.13.35.exe"
   
   ; safe install directory
   InstallDir "$PROGRAMFILES64\${APPNAME}"
@@ -96,7 +96,7 @@ Section "Install Files" SecInstall
   SetOutPath "$INSTDIR"
   
   ; Install the Main Application Binary
-  File "..\desktop\tauri\src-tauri\target\release\BioDockify-AI.exe"
+  File "..\desktop\tauri\src-tauri\target\release\BioDockify.exe"
   
   ; Install the Sidecar (AI Engine)
   ; Note: Tauri expects sidecars to be named specifically with architecture in target triple
@@ -114,16 +114,16 @@ Section "Install Files" SecInstall
 
   ; Create Shortcuts
   CreateDirectory "$SMPROGRAMS\BioDockify"
-  CreateShortcut "$SMPROGRAMS\BioDockify\BioDockify AI.lnk" "$INSTDIR\biodockify-ai.exe"
+  CreateShortcut "$SMPROGRAMS\BioDockify\BioDockify AI.lnk" "$INSTDIR\BioDockify.exe"
   CreateShortcut "$SMPROGRAMS\BioDockify\Uninstall.lnk" "$INSTDIR\Uninstall.exe"
   
   ; Auto-Start on System Boot
-  CreateShortcut "$SMSTARTUP\BioDockify AI.lnk" "$INSTDIR\biodockify-ai.exe"
+  CreateShortcut "$SMSTARTUP\BioDockify AI.lnk" "$INSTDIR\BioDockify.exe"
   
 SectionEnd
 
 Section "Desktop Shortcut" SecDesktop
-  CreateShortcut "$DESKTOP\BioDockify AI.lnk" "$INSTDIR\biodockify-ai.exe"
+  CreateShortcut "$DESKTOP\BioDockify AI.lnk" "$INSTDIR\BioDockify.exe"
 SectionEnd
 
 
@@ -133,7 +133,7 @@ SectionEnd
 Section "Uninstall"
 
   ; Remove Files (ONLY the files we installed)
-  Delete "$INSTDIR\biodockify-ai.exe"
+  Delete "$INSTDIR\BioDockify.exe"
   Delete "$INSTDIR\Uninstall.exe"
   Delete "$INSTDIR\biodockify-engine-x86_64-pc-windows-msvc.exe"
   
