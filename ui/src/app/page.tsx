@@ -25,22 +25,29 @@ const DiagnosisDialog = ({ isOpen, onClose, error }: any) => isOpen ? (
   </div>
 ) : null;
 
-const getStepIcon = (type: string) => {
-  switch (type) {
-    case 'decomposition':
-      return <Target className="h-4 w-4" />
-    case 'tool_selection':
-      return <Network className="h-4 w-4" />
-    case 'execution':
-      return <Activity className="h-4 w-4" />
-    case 'validation':
-      return <CheckCircle2 className="h-4 w-4" />
-    case 'analysis':
-      return <Brain className="h-4 w-4" />
-    default:
-      return <Clock className="h-4 w-4" />
+class ErrorBoundary extends React.Component<{ children: React.ReactNode, name: string }, { hasError: boolean }> {
+  constructor(props: any) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError() { return { hasError: true }; }
+  componentDidCatch(error: any, info: any) { console.error("ErrorBoundary caught:", error, info); }
+  render() {
+    if (this.state.hasError) return <div className="p-4 text-red-500 border border-red-500 rounded bg-red-900/10">Error in {this.props.name}</div>;
+    return this.props.children;
   }
 }
+
+const getStepIcon = (type: string) => {
+  const icons: Record<string, React.ReactNode> = {
+    decomposition: <Target className="h-4 w-4" />,
+    tool_selection: <Network className="h-4 w-4" />,
+    execution: <Activity className="h-4 w-4" />,
+    validation: <CheckCircle2 className="h-4 w-4" />,
+    analysis: <Brain className="h-4 w-4" />,
+  };
+  return icons[type] || <Clock className="h-4 w-4" />;
+};
 
 // --- Main Component ---
 export default function PharmaceuticalResearchApp() {
