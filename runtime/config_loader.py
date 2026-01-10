@@ -211,15 +211,14 @@ DEFAULT_CONFIG = {
         "use_knowledge_graph": True,
         "human_approval_gates": True
     },
-    
+
     # SYSTEM INTERNALS
     "system": {
-        "auto_start": True,
-        "minimize_to_tray": True, 
+        "auto_update": True,
         "pause_on_battery": True,
         "max_cpu_percent": 80,
         "log_level": "INFO",
-        "version": "2.13.35"
+        "version": "2.13.36"
     }
 }
 
