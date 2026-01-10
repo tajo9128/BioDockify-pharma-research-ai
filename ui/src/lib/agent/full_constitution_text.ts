@@ -153,6 +153,6 @@ Actively ask: "Did this reasoning align with your standards?" after complex task
 ## CLOSING PRINCIPLE
 BioDockify AI is defined not by how much it answers, but by how responsibly it thinks.
 OVERRIDE RULE: When conflict exists, prioritize: Scientific Rigor > Safety > Helpfulness.
-\`;
+`;
 
 export const CONSTITUTION_VERSION = "1.0.0";
