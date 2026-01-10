@@ -9,7 +9,7 @@
 
   !define APPNAME "BioDockify"
   Name "${APPNAME} AI"
-  OutFile "BioDockify_Setup_v2.13.18.exe"
+  OutFile "BioDockify_Setup_v2.13.20.exe"
   
   ; safe install directory
   InstallDir "$PROGRAMFILES64\${APPNAME}"
