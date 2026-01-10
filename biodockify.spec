@@ -99,12 +99,22 @@ a = Analysis(
     hiddenimports=final_hidden + [
         'uvicorn.loops.auto', 
         'uvicorn.protocols.http.auto', 
-        'simple_websocket'
+        'simple_websocket',
+        'tensorflow', 
+        'numpy', 
+        'neo4j', 
+        'uvicorn', 
+        'fastapi'
     ],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=['tkinter', 'matplotlib', 'PyQt5'],
+    excludes=[
+        'tkinter', 
+        'matplotlib', 
+        'PyQt5',
+        'tensorflow.python.keras.applications.*'
+    ],
     win_no_prefer_redirects=False,
     win_private_assemblies=False,
     cipher=block_cipher,
