@@ -1,6 +1,6 @@
 {
   "name": "biodockify-ui",
-  "version": "2.13.21",
+  "version": "2.13.22",
   "private": true,
   "scripts": {
     "dev": "next dev -p 3000 2>&1 | tee dev.log",
@@ -10,7 +10,11 @@
     "db:push": "prisma db push",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
-    "db:reset": "prisma migrate reset"
+    "db:reset": "prisma migrate reset",
+    "validate:templates": "node scripts/validate-templates.js",
+    "validate:versions": "node scripts/validate-versions.js",
+    "validate:all": "npm run validate:templates && npm run validate:versions && cd ui && npm run validate",
+    "pre-commit": "npm run validate:all"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

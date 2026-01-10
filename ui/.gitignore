@@ -47,3 +47,15 @@ test
 prompt
 
 server.log
+
+# macOS artifacts
+__MACOSX/
+._*
+
+# Backup and temporary files
+*_backup.*
+*.backup
+*.tmp
+*.temp
+RELEASE_NOTES_TEMP*.md
+workspace-*.tar
