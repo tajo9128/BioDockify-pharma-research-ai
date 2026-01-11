@@ -41,3 +41,8 @@ chromadb>=0.4.22
 sentence-transformers>=2.2.2
 langchain>=0.1.0
 
+
+# Statistics & Data Analysis
+pandas>=2.0.0
+scipy>=1.10.0
+statsmodels>=0.14.0

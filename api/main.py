@@ -899,7 +899,7 @@ class Neo4jCheckRequest(BaseModel):
     password: str
 
     @app.post("/api/settings/neo4j/check")
-def check_neo4j_endpoint(request: Neo4jCheckRequest):
+    def check_neo4j_endpoint(request: Neo4jCheckRequest):
     """
     Check availability of Neo4j Graph Database.
     """
