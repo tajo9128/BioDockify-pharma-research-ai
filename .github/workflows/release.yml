@@ -71,14 +71,11 @@ jobs:
           
       - name: Prepare Tauri Binaries
         run: |
-          echo "Creating binaries directory..."
-          New-Item -ItemType Directory -Force -Path "desktop/tauri/src-tauri/binaries"
-          
-          echo "Moving backend executable..."
-          Move-Item -Path "binaries/biodockify-engine.exe" -Destination "desktop/tauri/src-tauri/binaries/biodockify-engine-x86_64-pc-windows-msvc.exe" -Force
+          echo "Moving backend executable to src-tauri root..."
+          Move-Item -Path "binaries/biodockify-engine.exe" -Destination "desktop/tauri/src-tauri/biodockify-engine-x86_64-pc-windows-msvc.exe" -Force
           
           echo "Verifying binary exists and is valid size (approx >50MB expected)..."
-          $file = Get-Item "desktop/tauri/src-tauri/binaries/biodockify-engine-x86_64-pc-windows-msvc.exe"
+          $file = Get-Item "desktop/tauri/src-tauri/biodockify-engine-x86_64-pc-windows-msvc.exe"
           echo "Binary Size: $($file.Length / 1MB) MB"
           
           if ($file.Length -lt 50000000) {
@@ -178,7 +175,7 @@ jobs:
           
           echo ""
           echo "Debug: Checking Binary Sizes..."
-          Get-ChildItem -Path "desktop/tauri/src-tauri/binaries/biodockify-engine-x86_64-pc-windows-msvc.exe" | Select-Object Name, Length
+          Get-ChildItem -Path "desktop/tauri/src-tauri/biodockify-engine-x86_64-pc-windows-msvc.exe" | Select-Object Name, Length
           Get-ChildItem -Path "desktop/tauri/src-tauri/target/release/BioDockify.exe" | Select-Object Name, Length
           
       - name: Install NSIS

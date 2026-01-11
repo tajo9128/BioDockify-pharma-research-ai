@@ -58,7 +58,7 @@
                 "execute": true,
                 "scope": [
                     {
-                        "name": "binaries/biodockify-engine",
+                        "name": "biodockify-engine",
                         "sidecar": true
                     },
                     {
@@ -76,7 +76,7 @@
                 "msi"
             ],
             "externalBin": [
-                "binaries/biodockify-engine"
+                "biodockify-engine"
             ],
             "identifier": "com.biodockify.app",
             "icon": [

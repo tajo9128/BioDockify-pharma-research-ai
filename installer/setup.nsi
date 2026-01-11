@@ -104,7 +104,7 @@ Section "Install Files" SecInstall
   ; Install the Sidecar (AI Engine)
   ; Note: Tauri expects sidecars to be named specifically with architecture in target triple
   ; We manually renamed it in the workflow to: biodockify-engine-x86_64-pc-windows-msvc.exe
-  File "..\desktop\tauri\src-tauri\binaries\biodockify-engine-x86_64-pc-windows-msvc.exe"
+  File "..\desktop\tauri\src-tauri\biodockify-engine-x86_64-pc-windows-msvc.exe"
   
   ; Copy any other resources/dlls if needed
   ; (Usually Tauri statically links mostly, but WebView2 is system dep)
