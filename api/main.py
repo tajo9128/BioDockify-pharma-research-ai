@@ -768,29 +768,7 @@ def check_ollama_endpoint(request: OllamaCheckRequest):
     except Exception as e:
         return {"status": "error", "message": str(e), "models": []}
 
-class Neo4jCheckRequest(BaseModel):
-    uri: str
-    user: str
-    password: str
 
-    @app.post("/api/settings/neo4j/check")
-def check_neo4j_endpoint(request: Neo4jCheckRequest):
-    """
-    Check availability of Neo4j Graph Database.
-    """
-    try:
-        from neo4j import GraphDatabase
-    except ImportError:
-        return {"status": "error", "message": "Neo4j driver not installed. Run 'pip install neo4j'"}
-
-    try:
-        # 5 second timeout for connection verification
-        driver = GraphDatabase.driver(request.uri, auth=(request.user, request.password))
-        driver.verify_connectivity()
-        driver.close()
-        return {"status": "success", "message": "Connected to Neo4j successfully"}
-    except Exception as e:
-        return {"status": "error", "message": f"Neo4j Connection Failed: {str(e)}"}
 
 
 
