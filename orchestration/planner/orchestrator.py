@@ -190,7 +190,7 @@ class ResearchOrchestrator:
                 # Literature
                 literature_sources=lit.get("sources", []),
                 year_range=lit.get("year_range", 10),
-                year_range=lit.get("year_range", 10),
+
                 novelty_strictness=lit.get("novelty_strictness", "medium")
             )
 
