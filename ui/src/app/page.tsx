@@ -9,6 +9,7 @@ import NotebookLM from '@/components/NotebookLM';
 import FirstRunWizard from '@/components/FirstRunWizard';
 import AgentChat from '@/components/AgentChat';
 import LibraryView from '@/components/LibraryView';
+import HypothesisView from '@/components/HypothesisView';
 
 
 import FeedbackDialog from '@/components/FeedbackDialog'; // Ensure imported if used
@@ -220,6 +221,12 @@ export default function PharmaceuticalResearchApp() {
         return (
           <ErrorBoundary name="Library">
             <LibraryView />
+          </ErrorBoundary>
+        );
+      case 'hypothesis':
+        return (
+          <ErrorBoundary name="Hypothesis">
+            <HypothesisView />
           </ErrorBoundary>
         );
       case 'agent-chat':

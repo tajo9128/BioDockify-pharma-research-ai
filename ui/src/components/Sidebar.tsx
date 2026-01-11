@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Home, FlaskConical, FileText, Beaker, Settings, Sparkles, BookOpen, Fingerprint, Globe, Lightbulb } from 'lucide-react';
+import { Home, FlaskConical, FileText, Beaker, Settings, Sparkles, BookOpen, Fingerprint, Globe, Lightbulb, Brain } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
 import FeedbackDialog from './FeedbackDialog';
@@ -17,6 +17,7 @@ export default function Sidebar({ activeView, onViewChange }: SidebarProps) {
   const mainNav = [
     { id: 'home', icon: Home, label: 'Home' },
     { id: 'research', icon: FlaskConical, label: 'Workstation' },
+    { id: 'hypothesis', icon: Brain, label: 'Scientific Method' },
     { id: 'library', icon: BookOpen, label: 'Library' },
     { id: 'results', icon: FileText, label: 'Results' },
     { id: 'lab', icon: Beaker, label: 'Virtual Lab' },

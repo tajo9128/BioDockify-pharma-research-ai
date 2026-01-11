@@ -141,6 +141,85 @@ from fastapi import UploadFile, File, Form
 from modules.library.store import library_store
 from modules.library.ingestor import library_ingestor
 
+# -----------------------------------------------------------------------------
+# HYPOTHESIS & SCIENTIFIC METHOD ENDPOINTS (Phase 11.2)
+# -----------------------------------------------------------------------------
+from modules.scientific_method.models import Hypothesis, HypothesisStatus, EvidenceType
+from modules.scientific_method.hypothesis_engine import get_hypothesis_engine
+
+@app.post("/api/hypothesis", response_model=Hypothesis)
+def create_hypothesis(statement: str, rationale: str):
+    """Create a new scientific hypothesis."""
+    engine = get_hypothesis_engine()
+    return engine.create_hypothesis(statement, rationale)
+
+@app.get("/api/hypothesis", response_model=list[Hypothesis])
+def list_hypotheses():
+    """List all tracked hypotheses."""
+    engine = get_hypothesis_engine()
+    return engine.list_hypotheses()
+
+@app.get("/api/hypothesis/{h_id}", response_model=Hypothesis)
+def get_hypothesis(h_id: str):
+    """Get details of a specific hypothesis."""
+    engine = get_hypothesis_engine()
+    h = engine.get_hypothesis(h_id)
+    if not h: raise HTTPException(status_code=404, detail="Hypothesis not found")
+    return h
+
+class StatusUpdate(BaseModel):
+    status: HypothesisStatus
+
+@app.patch("/api/hypothesis/{h_id}/status")
+def update_hypothesis_status(h_id: str, update: StatusUpdate):
+    """Update the lifecycle status of a hypothesis."""
+    engine = get_hypothesis_engine()
+    engine.update_status(h_id, update.status)
+    return {"status": "success", "new_status": update.status}
+
+class EvidenceAdd(BaseModel):
+    description: str
+    type: EvidenceType
+    source_id: Optional[str] = None
+
+# -----------------------------------------------------------------------------
+# PUBLICATION & EXPORT ENDPOINTS (Phase 11.3)
+# -----------------------------------------------------------------------------
+from modules.publication.latex_exporter import LaTeXExporter
+from modules.publication.figure_manager import FigureManager
+
+class ExportRequest(BaseModel):
+    title: str
+    author: str
+    affiliation: str
+    abstract: str
+    content_markdown: str
+
+@app.post("/api/publication/export/latex")
+def export_to_latex(req: ExportRequest):
+    """Generate LaTeX source from Markdown report."""
+    try:
+        exporter = LaTeXExporter()
+        latex_source = exporter.generate_latex(
+            title=req.title,
+            author=req.author,
+            affiliation=req.affiliation,
+            abstract=req.abstract,
+            content_markdown=req.content_markdown
+        )
+        return {"latex_source": latex_source}
+    except Exception as e:
+        logger.error(f"Export failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/publication/figures")
+def register_figure(title: str, caption: str, code: str, path: str):
+    """Register a scientific figure for reproducibility."""
+    fm = FigureManager()
+    fig_id = fm.register_figure(title, caption, code, path)
+    return {"figure_id": fig_id}
+
+
 @app.post("/api/library/upload")
 async def upload_file(file: UploadFile = File(...)):
     """Uploads a file to the Digital Library."""
