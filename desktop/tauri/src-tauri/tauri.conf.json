@@ -7,7 +7,7 @@
     },
     "package": {
         "productName": "BioDockify",
-        "version": "2.13.40",
+        "version": "2.13.41",
         "identifier": "com.biodockify.ai"
     },
     "tauri": {
