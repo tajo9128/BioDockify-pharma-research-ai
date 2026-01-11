@@ -1,7 +1,10 @@
 'use client';
 
 import React from 'react';
-import { Home, FlaskConical, FileText, Beaker, Settings, Sparkles, BookOpen, Fingerprint, Globe, Lightbulb, Brain } from 'lucide-react';
+import { Home, FlaskConical, FileText, Beaker, Settings, Sparkles, BookOpen, Fingerprint, Globe, Lightbulb, Brain, Printer, Calculator, ShieldCheck } from 'lucide-react';
+
+
+
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
 import FeedbackDialog from './FeedbackDialog';
@@ -22,6 +25,9 @@ export default function Sidebar({ activeView, onViewChange }: SidebarProps) {
     { id: 'results', icon: FileText, label: 'Results' },
     { id: 'lab', icon: Beaker, label: 'Virtual Lab' },
     { id: 'agent-chat', icon: Sparkles, label: 'BioDockify AI' },
+    { id: 'publication', icon: Printer, label: 'Publication' },
+    { id: 'statistics', icon: Calculator, label: 'Statistics' },
+    { id: 'journal-check', icon: ShieldCheck, label: 'Journal Authenticity' },
   ];
 
   const bottomNav = [

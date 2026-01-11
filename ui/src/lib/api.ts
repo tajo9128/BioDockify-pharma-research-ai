@@ -271,6 +271,33 @@ export const api = {
     apiRequest<{ status: string }>(`/library/files/${fileId}`, {
       method: 'DELETE',
     }),
+
+  // Publication Endpoints (Phase 3)
+  exportToLatex: (request: { title: string; author: string; affiliation: string; abstract: string; content_markdown: string }) =>
+    apiRequest<{ latex_source: string }>('/publication/export/latex', {
+      method: 'POST',
+      body: JSON.stringify(request),
+    }),
+
+  registerFigure: (figure: { title: string; caption: string; code: string; path: string }) =>
+    apiRequest<{ figure_id: string }>('/publication/figures', {
+      method: 'POST',
+      body: JSON.stringify(figure),
+    }),
+
+  // Statistics (Phase 4)
+  analyzeStatistics: (data: any[], design: string, tier: string) =>
+    apiRequest<any>('/statistics/analyze', {
+      method: 'POST',
+      body: JSON.stringify({ data, design, tier }),
+    }),
+
+  // Journal Intelligence (Phase 5)
+  verifyJournal: (data: { title: string; issn: string; url?: string }) =>
+    apiRequest<any>('/journal/verify', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
 };
 
 export default api;

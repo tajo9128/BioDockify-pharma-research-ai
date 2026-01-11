@@ -118,6 +118,13 @@ async def startup_event():
         # Assuming we start it if configured, or just always try for robustness as requested
         svc_mgr.start_neo4j()
 
+    # 4. Check for high memory usage warning
+    if mem.percent > 90:
+        logger.warning(f"High Memory Usage on Startup: {mem.percent}%")
+
+    # 5. Start Background Monitoring Loop
+    asyncio.create_task(background_monitor())
+
 @app.on_event("shutdown")
 async def shutdown_event():
     """Cleanup resources on shutdown."""
@@ -128,11 +135,7 @@ async def shutdown_event():
     if service_manager:
         service_manager.stop_all()
         
-    logger.info("Services stopped.")    if mem.percent > 90:
-        logger.warning(f"High Memory Usage on Startup: {mem.percent}%")
-
-    # 3. Start Background Monitoring Loop
-    asyncio.create_task(background_monitor())
+    logger.info("Services stopped.")
 
 # -----------------------------------------------------------------------------
 # DIGITAL LIBRARY ENDPOINTS (Phase 5)
@@ -219,6 +222,50 @@ def register_figure(title: str, caption: str, code: str, path: str):
     fig_id = fm.register_figure(title, caption, code, path)
     return {"figure_id": fig_id}
 
+# -----------------------------------------------------------------------------
+# STATISTICS & QC ENDPOINTS (Phase 4)
+# -----------------------------------------------------------------------------
+from modules.statistics.engine import StatisticalEngine
+
+class StatisticsRequest(BaseModel):
+    data: List[Dict[str, Any]]
+    design: str = "descriptive" # descriptive, two_group, anova, correlation
+    tier: str = "basic" # basic, analytical, advanced
+
+@app.post("/api/statistics/analyze")
+def analyze_statistics(req: StatisticsRequest):
+    """
+    Unified Statistical Analysis Endpoint.
+    Routes to the 3-Tier Statistical Engine.
+    """
+    engine = StatisticalEngine()
+    result = engine.analyze(req.data, req.design, req.tier)
+    
+    if "error" in result:
+        # We don't raise HTTP 500 for data errors, we return the error structure
+        # so the UI can explain it to the user (especially Tier 1).
+        return JSONResponse(status_code=400, content=result)
+        
+    return result
+
+# -----------------------------------------------------------------------------
+# JOURNAL INTELLIGENCE (Phase 5)
+# -----------------------------------------------------------------------------
+from modules.journal_intel import DecisionEngine
+
+class JournalRequest(BaseModel):
+    title: str
+    issn: str
+    url: Optional[str] = None
+
+@app.post("/api/journal/verify")
+def verify_journal(req: JournalRequest):
+    """
+    Verify potential journal authenticity using 6-Pillar Logic.
+    """
+    engine = DecisionEngine()
+    result = engine.verify(req.issn, req.title, req.url)
+    return result
 
 @app.post("/api/library/upload")
 async def upload_file(file: UploadFile = File(...)):
