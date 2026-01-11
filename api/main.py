@@ -102,6 +102,8 @@ async def startup_event():
     
     # 3. Start Background Services (Ollama/Neo4j)
     # Only if configured to do so (default True)
+    # 3. Start Background Services (Ollama/Neo4j)
+    # Only if configured to do so (default True)
     from runtime.config_loader import load_config
     from runtime.service_manager import get_service_manager
     
@@ -118,6 +120,9 @@ async def startup_event():
         # Assuming we start it if configured, or just always try for robustness as requested
         svc_mgr.start_neo4j()
 
+    # 4. Start Background Monitoring Loop
+    asyncio.create_task(background_monitor())
+
 @app.on_event("shutdown")
 async def shutdown_event():
     """Cleanup resources on shutdown."""
@@ -128,11 +133,7 @@ async def shutdown_event():
     if service_manager:
         service_manager.stop_all()
         
-    logger.info("Services stopped.")    if mem.percent > 90:
-        logger.warning(f"High Memory Usage on Startup: {mem.percent}%")
-
-    # 3. Start Background Monitoring Loop
-    asyncio.create_task(background_monitor())
+    logger.info("Services stopped.")
 
 # -----------------------------------------------------------------------------
 # DIGITAL LIBRARY ENDPOINTS (Phase 5)
