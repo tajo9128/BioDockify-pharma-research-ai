@@ -89,9 +89,14 @@ async def startup_event():
     # 1. Warm up Embedding Model (Lazy loading is default, we force it here)
     try:
         logger.info("Pre-loading Embedding Model...")
-        from modules.rag.vector_store import vector_store
-        # Trigger model load by embedding a dummy string
-        vector_store.ef(["warmup"]) 
+        from modules.rag.vector_store import get_vector_store
+        # Trigger model load by accessing the singleton
+        vs = get_vector_store()
+        # Initialize dependencies if lazy loaded
+        if vs.model is None:
+             vs._load_dependencies()
+        if vs.model:
+             vs.model.encode(["warmup"])
         logger.info("Embedding Model Loaded.")
     except Exception as e:
         logger.warning(f"Failed to pre-load embedding model: {e}")
