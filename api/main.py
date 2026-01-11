@@ -865,7 +865,7 @@ def agent_chat_endpoint(request: AgentChatRequest):
 
 from fastapi import UploadFile, File
 from modules.rag.ingestor import ingestor
-from modules.rag.vector_store import vector_store
+from modules.rag.vector_store import get_vector_store
 import shutil
 import tempfile
 import os
@@ -904,7 +904,7 @@ async def upload_document(file: UploadFile = File(...)):
         for chunk in chunks:
             chunk['metadata']['source'] = clean_name
             
-        vector_store.add_documents(chunks)
+        get_vector_store().add_documents(chunks)
         return {"status": "success", "message": f"Indexed {len(chunks)} chunks from {clean_name}"}
         
     except HTTPException:
@@ -970,7 +970,7 @@ async def ingest_link(request: LinkRequest):
         for chunk in chunks:
             chunk['metadata']['source'] = request.url
             
-        vector_store.add_documents(chunks)
+        get_vector_store().add_documents(chunks)
         os.remove(tmp_path)
         
         return {"status": "success", "message": f"Indexed content from {request.url}"}
@@ -991,7 +991,9 @@ async def chat_with_docs(request: ChatRequest):
     query = request.query
     
     # 1. Retrieve Context
-    context_list = vector_store.query(query, n_results=5) # Top 5 chunks
+    vector_store = get_vector_store()
+    results = vector_store.search(query, k=5) # Top 5 chunks
+    context_list = [r['text'] for r in results]
     
     if not context_list:
         return {"answer": "I don't have enough context from your uploaded documents to answer that.", "sources": []}
@@ -1051,7 +1053,7 @@ async def chat_with_docs(request: ChatRequest):
 @app.post("/api/rag/clear")
 def clear_knowledge_base():
     """Clear all indexed documents."""
-    vector_store.clear()
+    get_vector_store().clear()
     return {"status": "success", "message": "Knowledge base cleared."}
 
 

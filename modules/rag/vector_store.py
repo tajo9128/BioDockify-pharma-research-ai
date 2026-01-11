@@ -67,31 +67,60 @@ class VectorStore:
         self.metadata = []
         logger.info("Created new FAISS index.")
 
-    def add_documents(self, documents: List[str], metadatas: List[Dict[str, Any]]):
+    def add_documents(self, documents: List[Any], metadatas: Optional[List[Dict[str, Any]]] = None):
         """
         Add documents to the vector store.
-        documents: List of text strings
-        metadatas: List of dicts containing source info (e.g., filename, page)
+        Can accept:
+        1. documents as List[str] and metadatas as List[Dict]
+        2. documents as List[Dict] (chunks from ingestor) with 'text' and 'metadata' keys
         """
         if not self.model or not self.index:
             logger.error("VectorStore not initialized properly.")
             return
 
-        if len(documents) != len(metadatas):
-            raise ValueError("Number of documents must match number of metadata entries.")
+        texts = []
+        final_metadatas = []
+
+        # Handle List of Dicts (Chunks)
+        if metadatas is None and isinstance(documents, list) and len(documents) > 0 and isinstance(documents[0], dict):
+            for chunk in documents:
+                if 'text' in chunk:
+                    texts.append(chunk['text'])
+                    # Store text in metadata for retrieval
+                    meta = chunk.get('metadata', {}).copy()
+                    meta['text'] = chunk['text']
+                    final_metadatas.append(meta)
+        else:
+            # Handle standard list of strings
+            if metadatas is None:
+                raise ValueError("metadatas argument is required when providing text documents.")
+            
+            if len(documents) != len(metadatas):
+                raise ValueError("Number of documents must match number of metadata entries.")
+            
+            texts = documents
+            # Ensure text is in metadata
+            for text, meta in zip(documents, metadatas):
+                new_meta = meta.copy()
+                new_meta['text'] = text
+                final_metadatas.append(new_meta)
+
+        if not texts:
+            logger.warning("No documents to add.")
+            return
 
         try:
-            embeddings = self.model.encode(documents)
+            embeddings = self.model.encode(texts)
             embeddings = np.array(embeddings).astype('float32')
             
             # Normalize for cosine similarity if needed, but L2 is fine for basic RAG
             # faiss.normalize_L2(embeddings)
 
             self.index.add(embeddings)
-            self.metadata.extend(metadatas)
+            self.metadata.extend(final_metadatas)
             
             self._save_index()
-            logger.info(f"Added {len(documents)} documents to index. Total: {self.index.ntotal}")
+            logger.info(f"Added {len(texts)} documents to index. Total: {self.index.ntotal}")
         except Exception as e:
             logger.error(f"Error adding documents: {e}")
 
@@ -116,10 +145,7 @@ class VectorStore:
                     results.append({
                         "score": float(distances[0][i]),
                         "metadata": meta,
-                        # Note: We currently don't store the full text in metadata to save space,
-                        # but we might want to if snippet retrieval is needed directly from here.
-                        # Ideally, metadata points to file/page, and we retrieve text from there.
-                        # For RAG, storing snippet in metadata is convenient.
+                        "text": meta.get('text', "") # Expose text directly
                     })
             
             return results
@@ -127,6 +153,15 @@ class VectorStore:
             logger.error(f"Error during search: {e}")
             return []
 
+    def clear(self):
+        """Clear the vector index and metadata."""
+        if not faiss:
+            return
+        self.index.reset()
+        self.metadata = []
+        self._save_index()
+        logger.info("Vector store cleared.")
+            
     def _save_index(self):
         if not self.index:
             return
