@@ -96,8 +96,7 @@ SectionEnd
 
 Section "Install Files" SecInstall
 
-  ; Create bin directory
-  SetOutPath "$INSTDIR\bin"
+  SetOutPath "$INSTDIR"
   
   ; Install the Main Application Binary
   File "..\desktop\tauri\src-tauri\target\release\BioDockify.exe"
@@ -105,9 +104,14 @@ Section "Install Files" SecInstall
   ; Install the Sidecar (AI Engine)
   File "..\desktop\tauri\src-tauri\binaries\biodockify-engine-x86_64-pc-windows-msvc.exe"
   
-  ; Reset OutPath for Uninstaller (Root of generic folder)
-  SetOutPath "$INSTDIR"
+  ; Install README
+  File "..\README.txt"
   
+  ; Create Structure Directories
+  CreateDirectory "$INSTDIR\data"
+  CreateDirectory "$INSTDIR\assets"
+  CreateDirectory "$INSTDIR\certs"
+
   ; Store installation folder
   WriteRegStr HKCU "Software\BioDockify" "" $INSTDIR
   
@@ -116,17 +120,16 @@ Section "Install Files" SecInstall
 
   ; Create Shortcuts
   CreateDirectory "$SMPROGRAMS\BioDockify"
-  ; Point shortcut to the bin/ executable
-  CreateShortcut "$SMPROGRAMS\BioDockify\BioDockify AI.lnk" "$INSTDIR\bin\BioDockify.exe"
+  CreateShortcut "$SMPROGRAMS\BioDockify\BioDockify AI.lnk" "$INSTDIR\BioDockify.exe"
   CreateShortcut "$SMPROGRAMS\BioDockify\Uninstall.lnk" "$INSTDIR\Uninstall.exe"
   
   ; Auto-Start on System Boot
-  CreateShortcut "$SMSTARTUP\BioDockify AI.lnk" "$INSTDIR\bin\BioDockify.exe"
+  CreateShortcut "$SMSTARTUP\BioDockify AI.lnk" "$INSTDIR\BioDockify.exe"
   
 SectionEnd
 
 Section "Desktop Shortcut" SecDesktop
-  CreateShortcut "$DESKTOP\BioDockify AI.lnk" "$INSTDIR\bin\BioDockify.exe"
+  CreateShortcut "$DESKTOP\BioDockify AI.lnk" "$INSTDIR\BioDockify.exe"
 SectionEnd
 
 
@@ -135,26 +138,25 @@ SectionEnd
 
 Section "Uninstall"
 
-  ; Remove Files from bin
-  Delete "$INSTDIR\bin\BioDockify.exe"
-  Delete "$INSTDIR\bin\biodockify-engine-x86_64-pc-windows-msvc.exe"
-  RMDir "$INSTDIR\bin"
-
-  ; Remove Uninstaller
+  ; Remove Files
+  Delete "$INSTDIR\BioDockify.exe"
+  Delete "$INSTDIR\biodockify-engine-x86_64-pc-windows-msvc.exe"
+  Delete "$INSTDIR\README.txt"
   Delete "$INSTDIR\Uninstall.exe"
+  
+  ; Remove Directories (empty only)
+  RMDir "$INSTDIR\data"
+  RMDir "$INSTDIR\assets"
+  RMDir "$INSTDIR\certs"
   
   ; Remove the installation directory ONLY if it's empty
   RMDir "$INSTDIR"
 
-  ; Remove Start Menu Shortcuts
+  ; Remove Shortcuts
   Delete "$SMPROGRAMS\BioDockify\BioDockify AI.lnk"
   Delete "$SMPROGRAMS\BioDockify\Uninstall.lnk"
   RMDir "$SMPROGRAMS\BioDockify"
-
-  ; Remove Startup Shortcut
   Delete "$SMSTARTUP\BioDockify AI.lnk"
-  
-  ; Remove Desktop Shortcut
   Delete "$DESKTOP\BioDockify AI.lnk"
 
   ; Remove Registry Keys
