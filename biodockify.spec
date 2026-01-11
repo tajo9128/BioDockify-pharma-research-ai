@@ -42,6 +42,7 @@ def robust_collect(name):
     return [], [], []
 
 # --- COLLECT LIBS ---
+# --- COLLECT LIBS ---
 libs = [
     'tensorflow', 
     'numpy', 
@@ -51,7 +52,10 @@ libs = [
     'neo4j',
     'pypdf',
     'pdfminer',
-    'DECIMER'
+    'DECIMER',
+    'pandas',
+    'scipy',
+    'statsmodels'
 ]
 
 final_datas = []
@@ -90,17 +94,36 @@ manual_datas = [
     ('export', 'export')
 ]
 
+# --- EXTENDED HIDDEN IMPORTS ---
+# Explicitly force common missing modules for Data Science stack
+extended_hidden_imports = [
+    'uvicorn.loops.auto', 
+    'uvicorn.protocols.http.auto', 
+    'simple_websocket',
+    'pandas._libs.tslibs.base',
+    'pandas._libs.tslibs.np_datetime',
+    'pandas._libs.tslibs.nattype',
+    'pandas._libs.tslibs.timedeltas',
+    'scipy.special.cython_special',
+    'scipy.spatial.transform._rotation_groups',
+    'sklearn.utils._cython_blas',
+    'sklearn.neighbors._typedefs',
+    'sklearn.neighbors._quad_tree',
+    'sklearn.tree',
+    'sklearn.tree._utils',
+    'tensorflow.python.framework.dtypes',
+    'tensorflow.python.keras.engine',
+    'statsmodels.tsa.statespace._filters',
+    'statsmodels.tsa.statespace._smoothers'
+]
+
 # --- ANALYSIS ---
 a = Analysis(
     ['server.py'],
     pathex=[],
     binaries=final_binaries,
     datas=final_datas + manual_datas,
-    hiddenimports=final_hidden + [
-        'uvicorn.loops.auto', 
-        'uvicorn.protocols.http.auto', 
-        'simple_websocket'
-    ],
+    hiddenimports=final_hidden + extended_hidden_imports,
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
