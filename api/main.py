@@ -269,7 +269,7 @@ async def security_middleware(request: Request, call_next):
              return JSONResponse(status_code=413, content={"detail": "File too large. Maximum size is 50MB."})
 
     # 2. Rate Limiting (Simple Token Bucket per IP)
-    client_ip = request.client.host
+    client_ip = request.client.host if request.client else "testclient"
     now = time.time()
     
     # Clean old requests
@@ -309,7 +309,7 @@ async def audit_log_middleware(request: Request, call_next):
             "event": "api_request",
             "method": request.method,
             "path": request.url.path,
-            "client_ip": request.client.host,
+            "client_ip": request.client.host if request.client else "testclient",
             "status_code": status_code,
             "duration_ms": round(process_time, 2),
             "user_agent": request.headers.get("user-agent", "unknown")
