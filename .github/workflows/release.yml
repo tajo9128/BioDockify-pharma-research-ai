@@ -87,7 +87,7 @@ jobs:
         working-directory: ui
         run: |
           npm install
-          npx prisma generate --schema=../prisma/schema.prisma
+          npx prisma generate
           npm run build
           
           echo "Verifying build output..."
