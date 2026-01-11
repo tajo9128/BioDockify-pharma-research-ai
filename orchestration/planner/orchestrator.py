@@ -168,7 +168,7 @@ class ResearchOrchestrator:
                 google_key=ai.get("google_key"),
                 openrouter_key=ai.get("openrouter_key"),
                 huggingface_key=ai.get("huggingface_key"),
-                huggingface_key=ai.get("huggingface_key"),
+
                 glm_key=ai.get("glm_key"), # Added GLM key mapping from runtime
                 custom_key=ai.get("custom_key"),
                 custom_base_url=ai.get("custom_base_url"),
