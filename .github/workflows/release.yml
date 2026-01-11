@@ -160,7 +160,7 @@ jobs:
 
       - name: Build Tauri Desktop App
         working-directory: desktop/tauri
-        run: npm run tauri build -- --verbose
+        run: npm run tauri build -- --verbose --config src-tauri/tauri.conf.json
         env:
           CI: true
 
