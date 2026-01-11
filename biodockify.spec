@@ -52,7 +52,7 @@ libs = [
     'neo4j',
     'pypdf',
     'pdfminer',
-    'DECIMER',
+    'decimer',
     'pandas',
     'scipy',
     'statsmodels'
