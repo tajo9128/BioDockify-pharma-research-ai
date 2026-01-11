@@ -96,18 +96,17 @@ SectionEnd
 
 Section "Install Files" SecInstall
 
-  SetOutPath "$INSTDIR"
+  ; Create bin directory
+  SetOutPath "$INSTDIR\bin"
   
   ; Install the Main Application Binary
   File "..\desktop\tauri\src-tauri\target\release\BioDockify.exe"
   
   ; Install the Sidecar (AI Engine)
-  ; Note: Tauri expects sidecars to be named specifically with architecture in target triple
-  ; We manually renamed it in the workflow to: biodockify-engine-x86_64-pc-windows-msvc.exe
   File "..\desktop\tauri\src-tauri\binaries\biodockify-engine-x86_64-pc-windows-msvc.exe"
   
-  ; Copy any other resources/dlls if needed
-  ; (Usually Tauri statically links mostly, but WebView2 is system dep)
+  ; Reset OutPath for Uninstaller (Root of generic folder)
+  SetOutPath "$INSTDIR"
   
   ; Store installation folder
   WriteRegStr HKCU "Software\BioDockify" "" $INSTDIR
@@ -117,16 +116,17 @@ Section "Install Files" SecInstall
 
   ; Create Shortcuts
   CreateDirectory "$SMPROGRAMS\BioDockify"
-  CreateShortcut "$SMPROGRAMS\BioDockify\BioDockify AI.lnk" "$INSTDIR\BioDockify.exe"
+  ; Point shortcut to the bin/ executable
+  CreateShortcut "$SMPROGRAMS\BioDockify\BioDockify AI.lnk" "$INSTDIR\bin\BioDockify.exe"
   CreateShortcut "$SMPROGRAMS\BioDockify\Uninstall.lnk" "$INSTDIR\Uninstall.exe"
   
   ; Auto-Start on System Boot
-  CreateShortcut "$SMSTARTUP\BioDockify AI.lnk" "$INSTDIR\BioDockify.exe"
+  CreateShortcut "$SMSTARTUP\BioDockify AI.lnk" "$INSTDIR\bin\BioDockify.exe"
   
 SectionEnd
 
 Section "Desktop Shortcut" SecDesktop
-  CreateShortcut "$DESKTOP\BioDockify AI.lnk" "$INSTDIR\BioDockify.exe"
+  CreateShortcut "$DESKTOP\BioDockify AI.lnk" "$INSTDIR\bin\BioDockify.exe"
 SectionEnd
 
 
@@ -135,13 +135,15 @@ SectionEnd
 
 Section "Uninstall"
 
-  ; Remove Files (ONLY the files we installed)
-  Delete "$INSTDIR\BioDockify.exe"
+  ; Remove Files from bin
+  Delete "$INSTDIR\bin\BioDockify.exe"
+  Delete "$INSTDIR\bin\biodockify-engine-x86_64-pc-windows-msvc.exe"
+  RMDir "$INSTDIR\bin"
+
+  ; Remove Uninstaller
   Delete "$INSTDIR\Uninstall.exe"
-  Delete "$INSTDIR\biodockify-engine-x86_64-pc-windows-msvc.exe"
   
   ; Remove the installation directory ONLY if it's empty
-  ; This prevents deleting user data that might be in the folder
   RMDir "$INSTDIR"
 
   ; Remove Start Menu Shortcuts
