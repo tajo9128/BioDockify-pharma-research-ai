@@ -5,7 +5,7 @@ FastAPI service exposing research capabilities to the UI.
 
 from fastapi import FastAPI, BackgroundTasks, HTTPException
 from pydantic import BaseModel
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 import uuid
 
 # Import Core Systems
