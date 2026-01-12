@@ -7,7 +7,7 @@
     },
     "package": {
         "productName": "BioDockify",
-        "version": "2.13.47"
+        "version": "2.13.48"
     },
     "tauri": {
         "allowlist": {
@@ -63,6 +63,11 @@
                     {
                         "name": "explorer",
                         "cmd": "explorer",
+                        "args": true
+                    },
+                    {
+                        "name": "curl",
+                        "cmd": "curl",
                         "args": true
                     }
                 ]
