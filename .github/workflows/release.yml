@@ -124,8 +124,14 @@ jobs:
       - name: Generate Icons
         working-directory: desktop/tauri/src-tauri
         run: |
-          echo "DEBUG: Listing ALL files in src-tauri to confirm paths:"
-          Get-ChildItem -Recurse
+          echo "DEBUG: Listing ALL files in src-tauri icons to confirm paths:"
+          Get-ChildItem icons/
+          
+          echo "Backing up icon.bmp for NSIS installer (if exists)..."
+          if (Test-Path "icons/icon.bmp") {
+            Copy-Item "icons/icon.bmp" "icons/icon.bmp.backup" -Force
+            echo "✓ Backed up icon.bmp"
+          }
           
           echo "Checking if icons/icon.png exists..."
           if (Test-Path "icons/icon.png") {
@@ -144,6 +150,12 @@ jobs:
           echo "Running Tauri icon generator..."
           npx @tauri-apps/cli icon icons/icon.png --output icons
           
+          echo "Restoring icon.bmp for NSIS installer..."
+          if (Test-Path "icons/icon.bmp.backup") {
+            Move-Item "icons/icon.bmp.backup" "icons/icon.bmp" -Force
+            echo "✓ Restored icon.bmp"
+          }
+          
           echo "Generated icons:"
           Get-ChildItem icons/
           
@@ -153,6 +165,13 @@ jobs:
             exit 1
           }
           echo "SUCCESS: icon.ico found!"
+          
+          echo "Verifying icon.bmp exists for NSIS..."
+          if (!(Test-Path "icons/icon.bmp")) {
+            Write-Warning "icon.bmp not found - NSIS header may show default image"
+          } else {
+            echo "SUCCESS: icon.bmp found!"
+          }
 
       - name: Install Tauri Dependencies
         working-directory: desktop/tauri
