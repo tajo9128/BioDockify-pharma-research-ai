@@ -176,7 +176,8 @@ exe = EXE(
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
-    upx=True,
+    # IMPORTANT: Disable UPX - it triggers antivirus false positives
+    upx=False,
     upx_exclude=[],
     runtime_tmpdir=None,
     console=True,
@@ -185,4 +186,8 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
+    # Add version info to help antivirus trust the file
+    version='version_info.txt',
+    icon='desktop/tauri/src-tauri/icons/icon.ico',
 )
+
