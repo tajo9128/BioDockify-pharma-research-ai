@@ -150,7 +150,7 @@ export default function SettingsPanel() {
         setOllamaStatus('unknown');
         try {
             const res = await api.checkOllama(settings.ai_provider.ollama_url);
-            if (res.status === 'ok') {
+            if (res.status === 'success') {
                 setOllamaStatus('success');
                 setOllamaModels(res.models || []);
                 setConnectionMsg('Online');
@@ -160,7 +160,7 @@ export default function SettingsPanel() {
             }
         } catch (e: any) {
             setOllamaStatus('error');
-            setConnectionMsg(e.message || 'Failed');
+            setConnectionMsg(e.message || 'Failed to connect');
         }
     };
 
