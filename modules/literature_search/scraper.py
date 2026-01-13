@@ -255,8 +255,46 @@ class LiteratureAggregator:
         # (For V1, we resolve URLs. Actual file downloading happens in Executor phase)
         # We ensure metadata is scientifically auditible.
         
+        results = [p.to_dict() for p in processed_papers]
+        
+        # --- SURFSENSE INTEGRATION ---
+        if results:
+            try:
+                from modules.knowledge.client import surfsense
+                import asyncio
+                import json
+                
+                # Format as structured Markdown for better RAG retrieval
+                md_lines = [f"# Literature Review: {query}", f"Date: {time.strftime('%Y-%m-%d')}", ""]
+                for p in results:
+                    md_lines.append(f"## {p.get('title')}")
+                    md_lines.append(f"**Source:** {p.get('source')} | **Year:** {p.get('year')}")
+                    md_lines.append(f"**Authors:** {', '.join(p.get('authors', [])[:3])}")
+                    md_lines.append(f"**Abstract:** {p.get('abstract')}")
+                    md_lines.append(f"**Link:** {p.get('full_text_url') or p.get('doi')}")
+                    md_lines.append(f"---")
+                
+                content = "\n".join(md_lines).encode('utf-8')
+                filename = f"lit_review_{int(time.time())}.md"
+                
+                # Async Handling (similar to web_scraper)
+                try:
+                    loop = asyncio.get_event_loop()
+                except RuntimeError:
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
+
+                if loop.is_running():
+                     asyncio.create_task(surfsense.upload_file(content, filename))
+                else:
+                     loop.run_until_complete(surfsense.upload_file(content, filename))
+
+                logger.info(f"Uploaded literature review to SurfSense: {filename}")
+            except Exception as e:
+                logger.error(f"Failed to upload literature review to SurfSense: {e}")
+
         logger.info(f"Harvest Complete. Found {len(processed_papers)} papers ({sum(1 for p in processed_papers if p.is_open_access)} Open Access).")
-        return [p.to_dict() for p in processed_papers]
+        return results
 
     def _layer_1_discovery(self, query: str) -> List[Dict]:
         """Query indexes to find everything that exists."""

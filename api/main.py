@@ -121,9 +121,8 @@ async def startup_event():
         if config.get("ai_provider", {}).get("mode") in ["auto", "ollama"]:
              svc_mgr.start_ollama()
              
-        # Check Neo4j
-        # Assuming we start it if configured, or just always try for robustness as requested
-        svc_mgr.start_neo4j()
+        # Check SurfSense (Replaces Neo4j)
+        svc_mgr.start_surfsense()
 
     # 4. Start Background Monitoring Loop
     asyncio.create_task(background_monitor())
@@ -149,25 +148,46 @@ from modules.library.ingestor import library_ingestor
 
 @app.post("/api/library/upload")
 async def upload_file(file: UploadFile = File(...)):
-    """Uploads a file to the Digital Library."""
+    """
+    Uploads a file to BOTH SurfSense (Analysis) and Local Library (UI/Backup).
+    """
     try:
+        from modules.knowledge.client import surfsense
+        
+        # 1. Read File Content
         content = await file.read()
+        
+        # 2. Upload to SurfSense (Knowledge Engine)
+        # We do this first to ensure it enters the brain.
+        ss_status = "skipped"
+        ss_details = {}
+        try:
+            ss_result = await surfsense.upload_file(content, file.filename)
+            if ss_result.get("status") == "failed" or "error" in ss_result:
+                logger.warning(f"SurfSense upload warning: {ss_result.get('error')}")
+                ss_status = "failed"
+            else:
+                ss_status = "success"
+                ss_details = ss_result
+        except Exception as e:
+            logger.error(f"SurfSense connection failed: {e}")
+            ss_status = "failed"
+
+        # 3. Store Locally (for UI listing and consistency)
         record = library_store.add_file(content, file.filename)
         
-        # Async Processing (Simple Trigger)
-        # Ideally this goes to a background task
-        try:
-             fpath = library_store.get_file_path(record['id'])
-             if fpath:
-                 result = library_ingestor.process_file(fpath)
-                 library_store.update_metadata(record['id'], {
-                     "processed": True, 
-                     "char_count": len(result['text'])
-                 })
-        except Exception as e:
-            logger.warning(f"Auto-processing failed for {file.filename}: {e}")
-            
-        return {"status": "success", "file": record}
+        # 4. Update Metadata with SurfSense status
+        library_store.update_metadata(record['id'], {
+            "surfsense_status": ss_status,
+            "surfsense_id": ss_details.get("id")
+        })
+
+        return {
+            "status": "success", 
+            "file": record, 
+            "surfsense": ss_status
+        }
+        
     except Exception as e:
         logger.error(f"Upload failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -185,10 +205,6 @@ async def delete_file(file_id: str):
         raise HTTPException(status_code=404, detail="File not found or failed to delete")
     return {"status": "success"}
 
-class LibraryQuery(BaseModel):
-    query: str
-    top_k: int = 5
-
 @app.post("/api/library/query")
 async def query_library(request: LibraryQuery):
     """
@@ -199,6 +215,80 @@ async def query_library(request: LibraryQuery):
         store = get_vector_store()
         results = store.search(request.query, request.top_k)
         return {"results": results}
+    except Exception as e:
+         # Graceful fallback if RAG is offline
+         logger.warning(f"RAG Search failed: {e}")
+         return {"results": []}
+
+# -----------------------------------------------------------------------------
+# OMNI-TOOLS NATIVE ENDPOINTS
+# -----------------------------------------------------------------------------
+from fastapi.responses import StreamingResponse
+import io
+
+@app.post("/api/tools/pdf/merge")
+async def merge_pdfs(files: List[UploadFile] = File(...)):
+    """Merges multiple PDFs into one."""
+    try:
+        from modules.tools_native.processor import tool_processor
+        file_contents = []
+        for f in files:
+            file_contents.append(await f.read())
+            
+        merged_pdf = tool_processor.merge_pdfs(file_contents)
+        
+        return StreamingResponse(
+            io.BytesIO(merged_pdf),
+            media_type="application/pdf",
+            headers={"Content-Disposition": "attachment; filename=merged.pdf"}
+        )
+    except Exception as e:
+         raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/tools/image/convert")
+async def convert_image(file: UploadFile = File(...), format: str = Form(...)):
+    """Converts image to target format."""
+    try:
+        from modules.tools_native.processor import tool_processor
+        content = await file.read()
+        converted = tool_processor.convert_image(content, format)
+        
+        mime_map = {"png": "image/png", "jpeg": "image/jpeg", "webp": "image/webp"}
+        mime = mime_map.get(format.lower(), "application/octet-stream")
+        
+        return StreamingResponse(
+            io.BytesIO(converted),
+            media_type=mime,
+            headers={"Content-Disposition": f"attachment; filename=converted.{format.lower()}"}
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/tools/data/process")
+async def process_data(file: UploadFile = File(...), operation: str = Form(...)):
+    """Processes data files (CSV/JSON/Excel)."""
+    try:
+        from modules.tools_native.processor import tool_processor
+        content = await file.read()
+        # Returns string (JSON/CSV)
+        result = tool_processor.process_data(content, file.filename, operation)
+        
+        # Determine media type
+        if operation == "to_csv":
+            media = "text/csv"
+            ext = "csv"
+        else:
+            media = "application/json"
+            ext = "json"
+            
+        return StreamingResponse(
+            io.BytesIO(result.encode('utf-8')),
+            media_type=media,
+            headers={"Content-Disposition": f"attachment; filename=result.{ext}"}
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
     except Exception as e:
         logger.error(f"Library search failed: {e}")
         return {"results": [], "error": str(e)}

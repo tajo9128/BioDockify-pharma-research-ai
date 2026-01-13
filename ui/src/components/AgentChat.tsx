@@ -1,11 +1,12 @@
 'use client';
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Bot, User, Sparkles, Terminal, Play, Globe, ShieldAlert } from 'lucide-react';
+import { Send, Bot, User, Sparkles, Terminal, Play, Globe, ShieldAlert, Brain } from 'lucide-react';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { api } from '@/lib/api';
 import { searchWeb, fetchWebPage } from '@/lib/web_fetcher';
 import { getPersonaById } from '@/lib/personas';
 import DiagnosisDialog from '@/components/DiagnosisDialog';
+import DeepResearchPanel from '@/components/DeepResearchPanel';
 
 interface Message {
     role: 'user' | 'assistant' | 'system';
@@ -25,6 +26,14 @@ const REPAIR_TRIGGERS = [
     'repair system'
 ];
 
+const DEEP_RESEARCH_TRIGGERS = [
+    'deep research',
+    'research plan',
+    'generate podcast',
+    'audio briefing',
+    'analyzing complex'
+];
+
 export default function AgentChat() {
     const [messages, setMessages] = useState<Message[]>([
         {
@@ -37,6 +46,7 @@ export default function AgentChat() {
     const [isLoading, setIsLoading] = useState(false);
     const [status, setStatus] = useState(''); // "Searching...", "Reading..."
     const [isDiagnosisOpen, setIsDiagnosisOpen] = useState(false);
+    const [deepResearchQuery, setDeepResearchQuery] = useState<string | null>(null);
     const scrollRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -52,22 +62,30 @@ export default function AgentChat() {
         setMessages(prev => [...prev, userMsg]);
         setInput('');
 
-        // 0. Check for Self-Repair Trigger
         const lowerInput = userMsg.content.toLowerCase();
+
+        // 0. Check for Self-Repair Trigger
         if (REPAIR_TRIGGERS.some(trigger => lowerInput.includes(trigger))) {
             setIsLoading(true);
             setStatus('Initializing Self-Repair...');
-
-            // Brief pause to simulate "intent recognition"
             await new Promise(r => setTimeout(r, 600));
-
             setIsDiagnosisOpen(true);
             setIsLoading(false);
             setStatus('');
-
             setMessages(prev => [...prev, {
                 role: 'assistant',
                 content: 'I have initiated the system diagnosis and repair protocol. Please follow the instructions in the dialog.',
+                timestamp: new Date()
+            }]);
+            return;
+        }
+
+        // 0.5 Check for Deep Research Trigger
+        if (DEEP_RESEARCH_TRIGGERS.some(trigger => lowerInput.includes(trigger))) {
+            setDeepResearchQuery(userMsg.content);
+            setMessages(prev => [...prev, {
+                role: 'assistant',
+                content: 'Initializing Deep Research Agent with SurfSense architecture...',
                 timestamp: new Date()
             }]);
             return;
@@ -80,14 +98,11 @@ export default function AgentChat() {
             // 1. Check Settings for Internet Research
             let context = "";
             let sourceUrl = "";
-
-            // Note: In a real app we'd fetch settings here or have them in context. 
-            // For now, assume it's enabled if we detect intent.
-            const needsResearch = input.toLowerCase().includes('search') ||
-                input.toLowerCase().includes('find') ||
-                input.toLowerCase().includes('who') ||
-                input.toLowerCase().includes('what is') ||
-                input.toLowerCase().includes('latest');
+            const needsResearch = lowerInput.includes('search') ||
+                lowerInput.includes('find') ||
+                lowerInput.includes('who') ||
+                lowerInput.includes('what is') ||
+                lowerInput.includes('latest');
 
             if (needsResearch) {
                 setStatus('Searching Web...');
@@ -104,11 +119,9 @@ export default function AgentChat() {
                 }
             }
 
-            // 2. Prepare Prompt with Persona (Phase 6)
+            // 2. Prepare Prompt with Persona
             let systemInstruction = "";
             try {
-                // Fetch settings to get current persona
-                // Opt: Cache this or pass as prop
                 const settings = await api.getSettings();
                 const roleId = settings?.persona?.role || 'pg_student';
                 const persona = getPersonaById(roleId);
@@ -163,13 +176,22 @@ export default function AgentChat() {
                     </div>
                 </div>
                 {/* Actions */}
-                <button
-                    onClick={() => setIsDiagnosisOpen(true)}
-                    className="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium rounded-full border border-slate-700 transition-colors flex items-center gap-2"
-                    title="Launch Self-Repair"
-                >
-                    <ShieldAlert className="w-3 h-3 text-amber-500" /> Diagnose
-                </button>
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={() => setDeepResearchQuery("New Research")}
+                        className="px-4 py-1.5 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 text-xs font-medium rounded-full border border-indigo-500/30 transition-colors flex items-center gap-2"
+                        title="Start Deep Research"
+                    >
+                        <Brain className="w-3 h-3" /> Deep Research
+                    </button>
+                    <button
+                        onClick={() => setIsDiagnosisOpen(true)}
+                        className="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium rounded-full border border-slate-700 transition-colors flex items-center gap-2"
+                        title="Launch Self-Repair"
+                    >
+                        <ShieldAlert className="w-3 h-3 text-amber-500" /> Diagnose
+                    </button>
+                </div>
             </div>
 
             {/* Chat Area */}
@@ -203,6 +225,16 @@ export default function AgentChat() {
                         )}
                     </div>
                 ))}
+
+                {deepResearchQuery && (
+                    <div className="mb-6">
+                        <DeepResearchPanel
+                            query={deepResearchQuery}
+                            onClose={() => setDeepResearchQuery(null)}
+                        />
+                    </div>
+                )}
+
                 {isLoading && (
                     <div className="flex gap-4">
                         <div className="w-8 h-8 rounded-full bg-indigo-500/10 flex items-center justify-center flex-shrink-0">

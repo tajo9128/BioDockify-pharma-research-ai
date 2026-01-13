@@ -257,6 +257,7 @@ class ConfigLoader:
 
     def save_config(self, new_config: Dict[str, Any]) -> bool:
         """Save new configuration to disk."""
+        print(f"[*] Saving configuration to: {CONFIG_PATH}")
         try:
             # 1. Validate
             if not self._validate_config(new_config):
@@ -292,7 +293,16 @@ class ConfigLoader:
             if list(platform.uname()).count("Windows") > 0:
                  # Windows can't atomic replace if dest exists, need remove first
                  if CONFIG_PATH.exists():
-                     os.remove(CONFIG_PATH)
+                     try:
+                         os.remove(CONFIG_PATH)
+                     except Exception as e:
+                         print(f"[!] Warning: Could not remove old config ({e}). Attempting direct overwrite fallback.")
+                         # Fallback: direct write to target, ignoring temp file
+                         with open(CONFIG_PATH, "w") as f:
+                             yaml.dump(config_data, f, default_flow_style=False, sort_keys=False)
+                         if tmp_path.exists():
+                             os.remove(tmp_path)
+                         return
             
             os.replace(tmp_path, CONFIG_PATH)
         except Exception as e:

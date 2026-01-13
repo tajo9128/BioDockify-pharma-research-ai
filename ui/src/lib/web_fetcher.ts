@@ -1,13 +1,42 @@
 import { fetch } from '@tauri-apps/api/http';
 import { cleanHtml, CleanedWebPage } from './html_cleaner';
 
+// Configuration for HeadlessX
+// TODO: Move these to App Settings in a future update
+const HEADLESSX_CONFIG = {
+    baseUrl: 'http://localhost:3000', // Default HeadlessX local port
+    endpoint: '/api/v1/scrape',
+    token: '', // Add your token here if configured
+    enabled: true // Set to false to disable attempts
+};
+
 /**
  * Fetches and cleans a public web page using Tauri's native HTTP client.
  * Bypasses CORS issues present in standard browser fetch.
+ * 
+ * Strategy:
+ * 1. Attempt HeadlessX (if enabled) for anti-detect/dynamic scraping.
+ * 2. Fallback to Simple Fetch (Tauri) if HeadlessX is unreachable or fails.
  */
 export async function fetchWebPage(url: string): Promise<CleanedWebPage> {
     console.log(`[WebFetcher] Fetching: ${url}`);
 
+    // 1. Try HeadlessX
+    if (HEADLESSX_CONFIG.enabled) {
+        try {
+            console.log('[WebFetcher] Attempting HeadlessX scrape...');
+            const result = await fetchWithHeadlessX(url);
+            if (result) {
+                console.log('[WebFetcher] HeadlessX success!');
+                // HeadlessX usually returns rendered HTML. We still clean it.
+                return cleanHtml(result.content, url);
+            }
+        } catch (e) {
+            console.warn('[WebFetcher] HeadlessX failed or unreachable, falling back to standard fetch.');
+        }
+    }
+
+    // 2. Fallback to Standard Fetch
     try {
         const response = await fetch(url, {
             method: 'GET',
@@ -29,6 +58,57 @@ export async function fetchWebPage(url: string): Promise<CleanedWebPage> {
     } catch (e: any) {
         console.error(`[WebFetcher] Error fetching ${url}:`, e);
         throw new Error(`Failed to fetch webpage: ${e.message || 'Unknown error'}`);
+    }
+}
+
+/**
+ * Connector for HeadlessX Scraper
+ */
+async function fetchWithHeadlessX(targetUrl: string): Promise<{ content: string } | null> {
+    const apiUrl = `${HEADLESSX_CONFIG.baseUrl}${HEADLESSX_CONFIG.endpoint}`;
+
+    try {
+        const response = await fetch(apiUrl, {
+            method: 'POST',
+            timeout: 30000, // Longer timeout for browser rendering
+            headers: {
+                'Content-Type': 'application/json',
+                ...(HEADLESSX_CONFIG.token ? { 'Authorization': `Bearer ${HEADLESSX_CONFIG.token}` } : {})
+            },
+            body: {
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+                },
+                url: targetUrl,
+                options: {
+                    content: true,
+                    screenshot: false, // We don't need screenshots yet
+                    premium_proxy: false // Use if available
+                }
+            }
+        });
+
+        console.log(`[HeadlessX] Status: ${response.status}`);
+
+        if (!response.ok) {
+            return null; // Let fallback handle it
+        }
+
+        // Parse response (Assuming standard Scraping/HeadlessX format)
+        // Usually { success: true, data: { content: "<html>..." } } OR directly the data
+        const data = response.data as any;
+
+        // Handle varying API response structures safely
+        if (data.content) return { content: data.content };
+        if (data.data?.content) return { content: data.data.content };
+        if (typeof data === 'string') return { content: data };
+
+        return null;
+
+    } catch (error) {
+        // Quietly fail (connection refused usually)
+        // console.debug('HeadlessX not reachable');
+        throw error;
     }
 }
 

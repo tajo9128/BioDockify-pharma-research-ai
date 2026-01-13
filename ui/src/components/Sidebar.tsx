@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Home, FlaskConical, FileText, Beaker, Settings, Sparkles, BookOpen, Fingerprint, Globe, Lightbulb } from 'lucide-react';
+import { Home, FlaskConical, FileText, Beaker, Settings, Sparkles, BookOpen, Fingerprint, Globe, Lightbulb, Brain, Hammer } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
 import FeedbackDialog from './FeedbackDialog';
@@ -24,8 +24,8 @@ export default function Sidebar({ activeView, onViewChange }: SidebarProps) {
   ];
 
   const bottomNav = [
-    { id: 'notebooks', icon: BookOpen, label: 'Knowledge' }, // Renamed from Notebooks as per request
-    { id: 'browser', icon: Globe, label: 'Browser' }, // New Item
+    { id: 'surfsense', icon: Brain, label: 'Knowledge' }, // Integrated SurfSense
+    { id: 'omnitools', icon: Hammer, label: 'Tools' }, // Replaced Browser
     { id: 'settings', icon: Settings, label: 'Settings' },
   ];
 

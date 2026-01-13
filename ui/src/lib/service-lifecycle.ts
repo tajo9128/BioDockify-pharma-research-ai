@@ -30,7 +30,8 @@ export interface ModelInfo {
 
 export interface LifecycleConfig {
     autoStartOllama: boolean;
-    autoStartNeo4j: boolean;
+    autoStartSurfSense: boolean;
+    autoStartOmniTools: boolean;
     autoPullModels: boolean;
     healthCheckInterval: number; // ms
     autoRecovery: boolean;
@@ -42,7 +43,8 @@ export interface LifecycleConfig {
 
 const DEFAULT_CONFIG: LifecycleConfig = {
     autoStartOllama: false,
-    autoStartNeo4j: false,
+    autoStartSurfSense: false,
+    autoStartOmniTools: false,
     autoPullModels: false,
     healthCheckInterval: 30000, // 30 seconds
     autoRecovery: true
@@ -78,12 +80,13 @@ export class ServiceLifecycleManager {
             url: 'http://localhost:11434',
             lastCheck: new Date()
         });
-        this.services.set('neo4j', {
-            name: 'Neo4j',
+        this.services.set('surfsense', {
+            name: 'SurfSense',
             running: false,
-            url: 'bolt://localhost:7687',
+            url: 'http://localhost:8000',
             lastCheck: new Date()
         });
+
         this.services.set('backend', {
             name: 'Backend API',
             running: false,
@@ -122,8 +125,8 @@ export class ServiceLifecycleManager {
                 case 'ollama':
                     running = await this.checkOllama();
                     break;
-                case 'neo4j':
-                    running = await this.checkNeo4j();
+                case 'surfsense':
+                    running = await this.checkSurfSense();
                     break;
                 case 'backend':
                     running = await this.checkBackend();
@@ -162,12 +165,23 @@ export class ServiceLifecycleManager {
         }
     }
 
-    private async checkNeo4j(): Promise<boolean> {
+    private async checkSurfSense(): Promise<boolean> {
         try {
-            const res = await fetch('http://localhost:7474', {
+            const res = await fetch('http://localhost:8000/health', {
                 signal: AbortSignal.timeout(3000)
             });
-            return res.ok || res.status === 401; // 401 means it's running but needs auth
+            return res.ok;
+        } catch {
+            return false;
+        }
+    }
+
+    private async checkSurfSense(): Promise<boolean> {
+        try {
+            const res = await fetch('http://localhost:8000/health', {
+                signal: AbortSignal.timeout(3000)
+            });
+            return res.ok;
         } catch {
             return false;
         }
@@ -187,7 +201,7 @@ export class ServiceLifecycleManager {
     async checkAllServices(): Promise<Map<string, ServiceStatus>> {
         await Promise.all([
             this.checkService('ollama'),
-            this.checkService('neo4j'),
+            this.checkService('surfsense'),
             this.checkService('backend')
         ]);
         this.notifyListeners();
@@ -219,18 +233,26 @@ export class ServiceLifecycleManager {
             }
         }
 
-        // Auto-start Neo4j if consented and not running
-        if (this.config.autoStartNeo4j && state.consent.auto_start_neo4j) {
-            const neo4j = this.services.get('neo4j');
-            if (neo4j && !neo4j.running) {
-                const success = await this.startNeo4j();
+        // Auto-start SurfSense if consented and not running
+        if (this.config.autoStartSurfSense && state.consent.auto_start_neo4j) { // Reuse old consent key for now or rename? 
+            // Better to use state.consent.auto_start_neo4j as "Database" consent for migration stability
+            const ss = this.services.get('surfsense');
+            if (ss && !ss.running) {
+                // We rely on Backend to auto-start SurfSense usually. 
+                // But if we want frontend to trigger it via shell command:
+                // For now, let's assume Backend handles it via main.py we updated.
+                // Or implementing a simple trigger here.
+
+                // Let's implement startSurfSense using docker compose command
+                const success = await this.startSurfSense();
                 if (success) {
-                    started.push('Neo4j');
+                    started.push('SurfSense');
                 } else {
-                    failed.push('Neo4j');
+                    failed.push('SurfSense');
                 }
             }
         }
+
 
         return { started, failed };
     }
@@ -262,32 +284,26 @@ export class ServiceLifecycleManager {
         }
     }
 
-    private async startNeo4j(): Promise<boolean> {
-        console.log('[Lifecycle] Attempting to start Neo4j...');
+    private async startSurfSense(): Promise<boolean> {
+        console.log('[Lifecycle] Attempting to start SurfSense...');
 
-        if (!this.isTauri()) {
-            console.log('[Lifecycle] Not in Tauri environment, cannot start Neo4j');
-            return false;
-        }
+        if (!this.isTauri()) return false;
 
         try {
             const { Command } = await import('@tauri-apps/api/shell');
-
-            // Try to start Neo4j console
-            const cmd = new Command('cmd', ['/c', 'start', '/b', 'neo4j', 'console']);
+            // Assuming docker-compose is in path
+            const cmd = new Command('cmd', ['/c', 'docker-compose', '-f', 'modules/surfsense/docker-compose.yml', 'up', '-d']);
             await cmd.execute();
 
-            // Wait and verify
             await new Promise(r => setTimeout(r, 5000));
-            const status = await this.checkService('neo4j');
-
-            console.log('[Lifecycle] Neo4j start result:', status.running);
-            return status.running;
+            return (await this.checkService('surfsense')).running;
         } catch (e) {
-            console.error('[Lifecycle] Failed to start Neo4j:', e);
+            console.error('[Lifecycle] Failed to start SurfSense:', e);
             return false;
         }
     }
+
+
 
     // -------------------------------------------------------------------------
     // Model Management
@@ -449,7 +465,8 @@ export async function initializeAgentZeroServices(): Promise<{
     // Configure based on user consent
     manager.updateConfig({
         autoStartOllama: state.consent.auto_start_ollama,
-        autoStartNeo4j: state.consent.auto_start_neo4j,
+        autoStartSurfSense: state.consent.auto_start_neo4j, // Mapping old consent to new service
+        autoStartOmniTools: true, // Default to true for now as it's lightweight
         autoPullModels: true, // Default to true for models
         autoRecovery: true
     });

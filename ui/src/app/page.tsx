@@ -5,7 +5,8 @@ import { api } from '@/lib/api';
 import Sidebar from '@/components/Sidebar';
 import SettingsPanel from '@/components/SettingsPanel';
 import ResearchWorkstation from '@/components/ResearchWorkstation';
-import NotebookLM from '@/components/NotebookLM';
+import SurfSenseView from '@/components/SurfSenseView';
+import OmniToolsView from '@/components/OmniToolsView';
 import FirstRunWizard from '@/components/FirstRunWizard';
 import AgentChat from '@/components/AgentChat';
 import LibraryView from '@/components/LibraryView';
@@ -208,11 +209,19 @@ export default function PharmaceuticalResearchApp() {
             </div>
           </ErrorBoundary>
         );
-      case 'notebooks':
+      case 'surfsense':
         return (
-          <ErrorBoundary name="Notebook">
-            <div className="h-full overflow-hidden p-8">
-              <NotebookLM />
+          <ErrorBoundary name="SurfSense">
+            <div className="h-full overflow-hidden">
+              <SurfSenseView />
+            </div>
+          </ErrorBoundary>
+        );
+      case 'omnitools':
+        return (
+          <ErrorBoundary name="OmniTools">
+            <div className="h-full overflow-hidden">
+              <OmniToolsView />
             </div>
           </ErrorBoundary>
         );

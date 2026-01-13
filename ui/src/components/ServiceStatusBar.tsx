@@ -61,8 +61,8 @@ export default function ServiceStatusBar({ compact = false, showLabels = true }:
         switch (name.toLowerCase()) {
             case 'ollama':
                 return <Brain className="w-4 h-4" />;
-            case 'neo4j':
-                return <Database className="w-4 h-4" />;
+            case 'surfsense':
+                return <Database className="w-4 h-4 text-indigo-400" />;
             case 'backend api':
                 return <Server className="w-4 h-4" />;
             default:
