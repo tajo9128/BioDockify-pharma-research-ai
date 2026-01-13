@@ -176,17 +176,6 @@ export class ServiceLifecycleManager {
         }
     }
 
-    private async checkSurfSense(): Promise<boolean> {
-        try {
-            const res = await fetch('http://localhost:8000/health', {
-                signal: AbortSignal.timeout(3000)
-            });
-            return res.ok;
-        } catch {
-            return false;
-        }
-    }
-
     private async checkBackend(): Promise<boolean> {
         try {
             const res = await fetch('http://localhost:8234/api/health', {
@@ -265,23 +254,44 @@ export class ServiceLifecycleManager {
             return false;
         }
 
-        try {
-            const { Command } = await import('@tauri-apps/api/shell');
+        // Retry logic with exponential backoff
+        const MAX_RETRIES = 3;
+        for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+            try {
+                const { Command } = await import('@tauri-apps/api/shell');
 
-            // Try to start Ollama serve
-            const cmd = new Command('cmd', ['/c', 'start', '/b', 'ollama', 'serve']);
-            await cmd.execute();
+                // First, try to kill any existing hung Ollama process
+                if (attempt > 1) {
+                    console.log(`[Lifecycle] Attempt ${attempt}: Killing existing Ollama processes...`);
+                    try {
+                        const killCmd = new Command('cmd', ['/c', 'taskkill', '/f', '/im', 'ollama.exe']);
+                        await killCmd.execute();
+                        await new Promise(r => setTimeout(r, 1000));
+                    } catch {
+                        // Ignore kill errors
+                    }
+                }
 
-            // Wait and verify
-            await new Promise(r => setTimeout(r, 3000));
-            const status = await this.checkService('ollama');
+                // Start Ollama serve
+                const cmd = new Command('cmd', ['/c', 'start', '/b', 'ollama', 'serve']);
+                await cmd.execute();
 
-            console.log('[Lifecycle] Ollama start result:', status.running);
-            return status.running;
-        } catch (e) {
-            console.error('[Lifecycle] Failed to start Ollama:', e);
-            return false;
+                // Wait and verify with increasing delay
+                const waitTime = 2000 + (attempt * 1000);
+                await new Promise(r => setTimeout(r, waitTime));
+
+                const status = await this.checkService('ollama');
+                if (status.running) {
+                    console.log('[Lifecycle] Ollama start successful');
+                    return true;
+                }
+            } catch (e) {
+                console.error(`[Lifecycle] Ollama start attempt ${attempt} failed:`, e);
+            }
         }
+
+        console.error('[Lifecycle] Failed to start Ollama after all retries');
+        return false;
     }
 
     private async startSurfSense(): Promise<boolean> {
