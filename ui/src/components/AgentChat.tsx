@@ -1,10 +1,11 @@
 'use client';
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Bot, User, Sparkles, Terminal, Play, Globe } from 'lucide-react';
+import { Send, Bot, User, Sparkles, Terminal, Play, Globe, ShieldAlert } from 'lucide-react';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { api } from '@/lib/api';
 import { searchWeb, fetchWebPage } from '@/lib/web_fetcher';
 import { getPersonaById } from '@/lib/personas';
+import DiagnosisDialog from '@/components/DiagnosisDialog';
 
 interface Message {
     role: 'user' | 'assistant' | 'system';
@@ -12,6 +13,17 @@ interface Message {
     timestamp: Date;
     source?: string;
 }
+
+const REPAIR_TRIGGERS = [
+    'fix the system',
+    'repair agent zero',
+    'diagnose and repair',
+    'recover ai services',
+    'chat not working',
+    'fix chat',
+    'system health',
+    'repair system'
+];
 
 export default function AgentChat() {
     const [messages, setMessages] = useState<Message[]>([
@@ -24,6 +36,7 @@ export default function AgentChat() {
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [status, setStatus] = useState(''); // "Searching...", "Reading..."
+    const [isDiagnosisOpen, setIsDiagnosisOpen] = useState(false);
     const scrollRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -38,6 +51,28 @@ export default function AgentChat() {
         const userMsg: Message = { role: 'user', content: input, timestamp: new Date() };
         setMessages(prev => [...prev, userMsg]);
         setInput('');
+
+        // 0. Check for Self-Repair Trigger
+        const lowerInput = userMsg.content.toLowerCase();
+        if (REPAIR_TRIGGERS.some(trigger => lowerInput.includes(trigger))) {
+            setIsLoading(true);
+            setStatus('Initializing Self-Repair...');
+
+            // Brief pause to simulate "intent recognition"
+            await new Promise(r => setTimeout(r, 600));
+
+            setIsDiagnosisOpen(true);
+            setIsLoading(false);
+            setStatus('');
+
+            setMessages(prev => [...prev, {
+                role: 'assistant',
+                content: 'I have initiated the system diagnosis and repair protocol. Please follow the instructions in the dialog.',
+                timestamp: new Date()
+            }]);
+            return;
+        }
+
         setIsLoading(true);
         setStatus('Thinking...');
 
@@ -107,7 +142,12 @@ export default function AgentChat() {
     };
 
     return (
-        <div className="flex flex-col h-full bg-slate-950 text-slate-100 font-sans">
+        <div className="flex flex-col h-full bg-slate-950 text-slate-100 font-sans relative">
+            <DiagnosisDialog
+                isOpen={isDiagnosisOpen}
+                onClose={() => setIsDiagnosisOpen(false)}
+            />
+
             {/* Header */}
             <div className="h-16 border-b border-slate-800 flex items-center justify-between px-6 bg-slate-900/50 backdrop-blur-sm">
                 <div className="flex items-center gap-3">
@@ -123,8 +163,12 @@ export default function AgentChat() {
                     </div>
                 </div>
                 {/* Actions */}
-                <button className="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium rounded-full border border-slate-700 transition-colors flex items-center gap-2">
-                    <Terminal className="w-3 h-3" /> View Logs
+                <button
+                    onClick={() => setIsDiagnosisOpen(true)}
+                    className="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium rounded-full border border-slate-700 transition-colors flex items-center gap-2"
+                    title="Launch Self-Repair"
+                >
+                    <ShieldAlert className="w-3 h-3 text-amber-500" /> Diagnose
                 </button>
             </div>
 
