@@ -205,6 +205,10 @@ async def delete_file(file_id: str):
         raise HTTPException(status_code=404, detail="File not found or failed to delete")
     return {"status": "success"}
 
+class LibraryQuery(BaseModel):
+    query: str
+    top_k: int = 5
+
 @app.post("/api/library/query")
 async def query_library(request: LibraryQuery):
     """
