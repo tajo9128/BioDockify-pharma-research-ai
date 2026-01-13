@@ -5,7 +5,7 @@ FastAPI service exposing research capabilities to the UI.
 
 from fastapi import FastAPI, BackgroundTasks, HTTPException
 from pydantic import BaseModel
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 import uuid
 
 # Import Core Systems
@@ -89,9 +89,14 @@ async def startup_event():
     # 1. Warm up Embedding Model (Lazy loading is default, we force it here)
     try:
         logger.info("Pre-loading Embedding Model...")
-        from modules.rag.vector_store import vector_store
-        # Trigger model load by embedding a dummy string
-        vector_store.ef(["warmup"]) 
+        from modules.rag.vector_store import get_vector_store
+        # Trigger model load by accessing the singleton
+        vs = get_vector_store()
+        # Initialize dependencies if lazy loaded
+        if vs.model is None:
+             vs._load_dependencies()
+        if vs.model:
+             vs.model.encode(["warmup"])
         logger.info("Embedding Model Loaded.")
     except Exception as e:
         logger.warning(f"Failed to pre-load embedding model: {e}")
@@ -114,16 +119,17 @@ async def startup_event():
         if config.get("ai_provider", {}).get("mode") in ["auto", "ollama"]:
              svc_mgr.start_ollama()
              
-        # Check Neo4j
-        # Assuming we start it if configured, or just always try for robustness as requested
-        svc_mgr.start_neo4j()
+        # Check SurfSense (Replaces Neo4j)
+        svc_mgr.start_surfsense()
+
+    # 4. Start Background Monitoring Loop
+    asyncio.create_task(background_monitor())
 
     # 4. Check for high memory usage warning
     if mem.percent > 90:
         logger.warning(f"High Memory Usage on Startup: {mem.percent}%")
 
-    # 5. Start Background Monitoring Loop
-    asyncio.create_task(background_monitor())
+
 
 @app.on_event("shutdown")
 async def shutdown_event():
@@ -269,25 +275,46 @@ def verify_journal(req: JournalRequest):
 
 @app.post("/api/library/upload")
 async def upload_file(file: UploadFile = File(...)):
-    """Uploads a file to the Digital Library."""
+    """
+    Uploads a file to BOTH SurfSense (Analysis) and Local Library (UI/Backup).
+    """
     try:
+        from modules.knowledge.client import surfsense
+        
+        # 1. Read File Content
         content = await file.read()
+        
+        # 2. Upload to SurfSense (Knowledge Engine)
+        # We do this first to ensure it enters the brain.
+        ss_status = "skipped"
+        ss_details = {}
+        try:
+            ss_result = await surfsense.upload_file(content, file.filename)
+            if ss_result.get("status") == "failed" or "error" in ss_result:
+                logger.warning(f"SurfSense upload warning: {ss_result.get('error')}")
+                ss_status = "failed"
+            else:
+                ss_status = "success"
+                ss_details = ss_result
+        except Exception as e:
+            logger.error(f"SurfSense connection failed: {e}")
+            ss_status = "failed"
+
+        # 3. Store Locally (for UI listing and consistency)
         record = library_store.add_file(content, file.filename)
         
-        # Async Processing (Simple Trigger)
-        # Ideally this goes to a background task
-        try:
-             fpath = library_store.get_file_path(record['id'])
-             if fpath:
-                 result = library_ingestor.process_file(fpath)
-                 library_store.update_metadata(record['id'], {
-                     "processed": True, 
-                     "char_count": len(result['text'])
-                 })
-        except Exception as e:
-            logger.warning(f"Auto-processing failed for {file.filename}: {e}")
-            
-        return {"status": "success", "file": record}
+        # 4. Update Metadata with SurfSense status
+        library_store.update_metadata(record['id'], {
+            "surfsense_status": ss_status,
+            "surfsense_id": ss_details.get("id")
+        })
+
+        return {
+            "status": "success", 
+            "file": record, 
+            "surfsense": ss_status
+        }
+        
     except Exception as e:
         logger.error(f"Upload failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -319,6 +346,80 @@ async def query_library(request: LibraryQuery):
         store = get_vector_store()
         results = store.search(request.query, request.top_k)
         return {"results": results}
+    except Exception as e:
+         # Graceful fallback if RAG is offline
+         logger.warning(f"RAG Search failed: {e}")
+         return {"results": []}
+
+# -----------------------------------------------------------------------------
+# OMNI-TOOLS NATIVE ENDPOINTS
+# -----------------------------------------------------------------------------
+from fastapi.responses import StreamingResponse
+import io
+
+@app.post("/api/tools/pdf/merge")
+async def merge_pdfs(files: List[UploadFile] = File(...)):
+    """Merges multiple PDFs into one."""
+    try:
+        from modules.tools_native.processor import tool_processor
+        file_contents = []
+        for f in files:
+            file_contents.append(await f.read())
+            
+        merged_pdf = tool_processor.merge_pdfs(file_contents)
+        
+        return StreamingResponse(
+            io.BytesIO(merged_pdf),
+            media_type="application/pdf",
+            headers={"Content-Disposition": "attachment; filename=merged.pdf"}
+        )
+    except Exception as e:
+         raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/tools/image/convert")
+async def convert_image(file: UploadFile = File(...), format: str = Form(...)):
+    """Converts image to target format."""
+    try:
+        from modules.tools_native.processor import tool_processor
+        content = await file.read()
+        converted = tool_processor.convert_image(content, format)
+        
+        mime_map = {"png": "image/png", "jpeg": "image/jpeg", "webp": "image/webp"}
+        mime = mime_map.get(format.lower(), "application/octet-stream")
+        
+        return StreamingResponse(
+            io.BytesIO(converted),
+            media_type=mime,
+            headers={"Content-Disposition": f"attachment; filename=converted.{format.lower()}"}
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/tools/data/process")
+async def process_data(file: UploadFile = File(...), operation: str = Form(...)):
+    """Processes data files (CSV/JSON/Excel)."""
+    try:
+        from modules.tools_native.processor import tool_processor
+        content = await file.read()
+        # Returns string (JSON/CSV)
+        result = tool_processor.process_data(content, file.filename, operation)
+        
+        # Determine media type
+        if operation == "to_csv":
+            media = "text/csv"
+            ext = "csv"
+        else:
+            media = "application/json"
+            ext = "json"
+            
+        return StreamingResponse(
+            io.BytesIO(result.encode('utf-8')),
+            media_type=media,
+            headers={"Content-Disposition": f"attachment; filename=result.{ext}"}
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
     except Exception as e:
         logger.error(f"Library search failed: {e}")
         return {"results": [], "error": str(e)}
@@ -389,7 +490,7 @@ async def security_middleware(request: Request, call_next):
              return JSONResponse(status_code=413, content={"detail": "File too large. Maximum size is 50MB."})
 
     # 2. Rate Limiting (Simple Token Bucket per IP)
-    client_ip = request.client.host
+    client_ip = request.client.host if request.client else "testclient"
     now = time.time()
     
     # Clean old requests
@@ -429,7 +530,7 @@ async def audit_log_middleware(request: Request, call_next):
             "event": "api_request",
             "method": request.method,
             "path": request.url.path,
-            "client_ip": request.client.host,
+            "client_ip": request.client.host if request.client else "testclient",
             "status_code": status_code,
             "duration_ms": round(process_time, 2),
             "user_agent": request.headers.get("user-agent", "unknown")
@@ -893,29 +994,8 @@ def check_ollama_endpoint(request: OllamaCheckRequest):
     except Exception as e:
         return {"status": "error", "message": str(e), "models": []}
 
-class Neo4jCheckRequest(BaseModel):
-    uri: str
-    user: str
-    password: str
 
-    @app.post("/api/settings/neo4j/check")
-    def check_neo4j_endpoint(request: Neo4jCheckRequest):
-        """
-        Check availability of Neo4j Graph Database.
-        """
-        try:
-            from neo4j import GraphDatabase
-        except ImportError:
-            return {"status": "error", "message": "Neo4j driver not installed. Run 'pip install neo4j'"}
 
-        try:
-            # 5 second timeout for connection verification
-            driver = GraphDatabase.driver(request.uri, auth=(request.user, request.password))
-            driver.verify_connectivity()
-            driver.close()
-            return {"status": "success", "message": "Connected to Neo4j successfully"}
-        except Exception as e:
-            return {"status": "error", "message": f"Neo4j Connection Failed: {str(e)}"}
 
 
 
@@ -1007,7 +1087,7 @@ def agent_chat_endpoint(request: AgentChatRequest):
 
 from fastapi import UploadFile, File
 from modules.rag.ingestor import ingestor
-from modules.rag.vector_store import vector_store
+from modules.rag.vector_store import get_vector_store
 import shutil
 import tempfile
 import os
@@ -1046,7 +1126,7 @@ async def upload_document(file: UploadFile = File(...)):
         for chunk in chunks:
             chunk['metadata']['source'] = clean_name
             
-        vector_store.add_documents(chunks)
+        get_vector_store().add_documents(chunks)
         return {"status": "success", "message": f"Indexed {len(chunks)} chunks from {clean_name}"}
         
     except HTTPException:
@@ -1057,6 +1137,31 @@ async def upload_document(file: UploadFile = File(...)):
     finally:
         if 'tmp_path' in locals() and os.path.exists(tmp_path):
             os.remove(tmp_path)
+
+
+class Neo4jCheckRequest(BaseModel):
+    uri: str
+    user: str
+    password: str
+
+@app.post("/api/settings/neo4j/check")
+def check_neo4j_endpoint(request: Neo4jCheckRequest):
+    """
+    Check availability of Neo4j Graph Database.
+    """
+    try:
+        from neo4j import GraphDatabase
+    except ImportError:
+        return {"status": "error", "message": "Neo4j driver not installed. Run 'pip install neo4j'"}
+
+    try:
+        # 5 second timeout for connection verification
+        driver = GraphDatabase.driver(request.uri, auth=(request.user, request.password))
+        driver.verify_connectivity()
+        driver.close()
+        return {"status": "success", "message": "Connected to Neo4j successfully"}
+    except Exception as e:
+        return {"status": "error", "message": f"Neo4j Connection Failed: {str(e)}"}
 
 class LinkRequest(BaseModel):
     url: str
@@ -1087,7 +1192,7 @@ async def ingest_link(request: LinkRequest):
         for chunk in chunks:
             chunk['metadata']['source'] = request.url
             
-        vector_store.add_documents(chunks)
+        get_vector_store().add_documents(chunks)
         os.remove(tmp_path)
         
         return {"status": "success", "message": f"Indexed content from {request.url}"}
@@ -1108,7 +1213,9 @@ async def chat_with_docs(request: ChatRequest):
     query = request.query
     
     # 1. Retrieve Context
-    context_list = vector_store.query(query, n_results=5) # Top 5 chunks
+    vector_store = get_vector_store()
+    results = vector_store.search(query, k=5) # Top 5 chunks
+    context_list = [r['text'] for r in results]
     
     if not context_list:
         return {"answer": "I don't have enough context from your uploaded documents to answer that.", "sources": []}
@@ -1168,7 +1275,7 @@ async def chat_with_docs(request: ChatRequest):
 @app.post("/api/rag/clear")
 def clear_knowledge_base():
     """Clear all indexed documents."""
-    vector_store.clear()
+    get_vector_store().clear()
     return {"status": "success", "message": "Knowledge base cleared."}
 
 

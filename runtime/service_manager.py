@@ -52,37 +52,35 @@ class ServiceManager:
         except Exception as e:
             logger.error(f"Failed to start Ollama: {e}")
 
-    def start_neo4j(self):
-        """Starts Neo4j if configured."""
-        # Neo4j is trickier as it varies by install type (Desktop vs Service vs Console)
-        # This assumes 'neo4j' is in path and 'console' or 'start' works.
-        # For Desktop users, this might not work without specific path config.
-        # We will try a standard command.
+    def start_surfsense(self):
+        """Starts SurfSense via Docker Compose."""
         try:
-            cmd = "neo4j start" 
+            # Assume we are in root, need to point to module
+            compose_file = Path("modules/surfsense/docker-compose.yml")
+            if not compose_file.exists():
+                logger.warning("SurfSense docker-compose.yml not found.")
+                return
+
+            cmd = f"docker-compose -f {compose_file} up -d"
             logger.info(f"Starting Service: {cmd}")
             
             startupinfo, flags = self._get_startup_flags()
-
-            # Neo4j 'start' usually exits immediately as it spawns a daemon, 
-            # so Popen might complete. 'console' runs in foreground.
-            # providing 'console' might keep it alive as a child process we can kill.
-            if self.is_windows:
-                 cmd = "neo4j console" # Console keeps it attached so we can kill it later
             
             proc = subprocess.Popen(
                 cmd,
-                shell=True, # Often needs shell for batch files on Windows
+                shell=True,
                 startupinfo=startupinfo,
                 creationflags=flags,
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL
             )
-            self.processes.append(proc)
-            logger.info("Neo4j Service started in background.")
+            # Docker compose up returns, no need to keep proc in list unless tracking logs
+            # Actually better to just run it and forget, or check status later.
+            proc.wait() 
+            logger.info("SurfSense initiated (Docker).")
             
         except Exception as e:
-            logger.warning(f"Failed to start Neo4j (may not be installed or in PATH): {e}")
+            logger.warning(f"Failed to start SurfSense: {e}")
 
     def stop_all(self):
         """Terminates all managed subprocesses."""

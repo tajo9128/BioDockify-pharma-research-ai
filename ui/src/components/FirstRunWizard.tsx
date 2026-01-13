@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { api } from '@/lib/api';
+import { detectAllServices, DetectedServices } from '@/lib/services/auto-config';
 import {
     Check, XCircle, RefreshCcw, Database, Brain, Server,
     HardDrive, Cpu, Gauge, Terminal
@@ -26,6 +27,7 @@ export default function FirstRunWizard({ onComplete }: WizardProps) {
     // Check States
     const [sysInfo, setSysInfo] = useState<SysInfo | null>(null);
     const [sysStatus, setSysStatus] = useState<'pending' | 'checking' | 'complete'>('pending');
+    const [detectedServices, setDetectedServices] = useState<DetectedServices | null>(null);
 
     const [researchStatus, setResearchStatus] = useState<{
         ollama: 'pending' | 'success' | 'warning';
@@ -68,25 +70,36 @@ export default function FirstRunWizard({ onComplete }: WizardProps) {
     };
 
     const runResearchChecks = async () => {
-        // Parallel checks
-        const p1 = api.checkOllama('http://localhost:11434').then(r => r.status === 'success').catch(() => false);
-        const p2 = api.checkNeo4j('bolt://localhost:7687', 'neo4j', 'password').then(r => r.status === 'success').catch(() => false);
+        console.log('[FirstRunWizard] Starting autonomous service detection...');
 
-        const [ollamaOk, neo4jOk] = await Promise.all([p1, p2]);
+        try {
+            // Use the new autonomous detection system
+            const detected = await detectAllServices();
+            setDetectedServices(detected);
 
-        setResearchStatus(prev => ({
-            ...prev,
-            ollama: ollamaOk ? 'success' : 'warning',
-            neo4j: neo4jOk ? 'success' : 'warning'
-        }));
+            setResearchStatus(prev => ({
+                ...prev,
+                ollama: detected.ollama ? 'success' : 'warning',
+                neo4j: detected.neo4j ? 'success' : 'warning'
+            }));
+
+            console.log('[FirstRunWizard] Detection complete:', detected);
+        } catch (e) {
+            console.error('[FirstRunWizard] Service detection failed:', e);
+            setResearchStatus(prev => ({
+                ...prev,
+                ollama: 'warning',
+                neo4j: 'warning'
+            }));
+        }
 
         // Auto advance
         setTimeout(() => setStep(3), 1500);
     };
 
     const finish = () => {
-        // No settings to update, just complete
-        onComplete({});
+        // Pass detected services to parent for auto-configuration
+        onComplete({ detectedServices });
     };
 
     // --- RENDERERS ---

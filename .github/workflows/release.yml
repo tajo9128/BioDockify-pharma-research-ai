@@ -71,14 +71,11 @@ jobs:
           
       - name: Prepare Tauri Binaries
         run: |
-          echo "Creating binaries directory..."
-          New-Item -ItemType Directory -Force -Path "desktop/tauri/src-tauri/binaries"
-          
-          echo "Moving backend executable..."
-          Move-Item -Path "binaries/biodockify-engine.exe" -Destination "desktop/tauri/src-tauri/binaries/biodockify-engine-x86_64-pc-windows-msvc.exe" -Force
+          echo "Moving backend executable to src-tauri root..."
+          Move-Item -Path "binaries/biodockify-engine.exe" -Destination "desktop/tauri/src-tauri/biodockify-engine-x86_64-pc-windows-msvc.exe" -Force
           
           echo "Verifying binary exists and is valid size (approx >50MB expected)..."
-          $file = Get-Item "desktop/tauri/src-tauri/binaries/biodockify-engine-x86_64-pc-windows-msvc.exe"
+          $file = Get-Item "desktop/tauri/src-tauri/biodockify-engine-x86_64-pc-windows-msvc.exe"
           echo "Binary Size: $($file.Length / 1MB) MB"
           
           if ($file.Length -lt 50000000) {
@@ -90,7 +87,7 @@ jobs:
         working-directory: ui
         run: |
           npm install
-          npx prisma generate --schema=../prisma/schema.prisma
+          npx prisma generate
           npm run build
           
           echo "Verifying build output..."
@@ -127,8 +124,14 @@ jobs:
       - name: Generate Icons
         working-directory: desktop/tauri/src-tauri
         run: |
-          echo "DEBUG: Listing ALL files in src-tauri to confirm paths:"
-          Get-ChildItem -Recurse
+          echo "DEBUG: Listing ALL files in src-tauri icons to confirm paths:"
+          Get-ChildItem icons/
+          
+          echo "Backing up icon.bmp for NSIS installer (if exists)..."
+          if (Test-Path "icons/icon.bmp") {
+            Copy-Item "icons/icon.bmp" "icons/icon.bmp.backup" -Force
+            echo "✓ Backed up icon.bmp"
+          }
           
           echo "Checking if icons/icon.png exists..."
           if (Test-Path "icons/icon.png") {
@@ -147,6 +150,12 @@ jobs:
           echo "Running Tauri icon generator..."
           npx @tauri-apps/cli icon icons/icon.png --output icons
           
+          echo "Restoring icon.bmp for NSIS installer..."
+          if (Test-Path "icons/icon.bmp.backup") {
+            Move-Item "icons/icon.bmp.backup" "icons/icon.bmp" -Force
+            echo "✓ Restored icon.bmp"
+          }
+          
           echo "Generated icons:"
           Get-ChildItem icons/
           
@@ -156,6 +165,13 @@ jobs:
             exit 1
           }
           echo "SUCCESS: icon.ico found!"
+          
+          echo "Verifying icon.bmp exists for NSIS..."
+          if (!(Test-Path "icons/icon.bmp")) {
+            Write-Warning "icon.bmp not found - NSIS header may show default image"
+          } else {
+            echo "SUCCESS: icon.bmp found!"
+          }
 
       - name: Install Tauri Dependencies
         working-directory: desktop/tauri
@@ -163,7 +179,7 @@ jobs:
 
       - name: Build Tauri Desktop App
         working-directory: desktop/tauri
-        run: npm run tauri build -- --verbose
+        run: npm run tauri build -- --verbose --config src-tauri/tauri.conf.json
         env:
           CI: true
 
@@ -178,7 +194,7 @@ jobs:
           
           echo ""
           echo "Debug: Checking Binary Sizes..."
-          Get-ChildItem -Path "desktop/tauri/src-tauri/binaries/biodockify-engine-x86_64-pc-windows-msvc.exe" | Select-Object Name, Length
+          Get-ChildItem -Path "desktop/tauri/src-tauri/biodockify-engine-x86_64-pc-windows-msvc.exe" | Select-Object Name, Length
           Get-ChildItem -Path "desktop/tauri/src-tauri/target/release/BioDockify.exe" | Select-Object Name, Length
           
       - name: Install NSIS
@@ -204,6 +220,10 @@ jobs:
         with:
           files: |
             BioDockify_Professional_Setup*.exe
+            desktop/tauri/src-tauri/target/release/bundle/nsis/*.exe
+            desktop/tauri/src-tauri/target/release/bundle/msi/*.msi
+            desktop/tauri/src-tauri/target/release/BioDockify.exe
           fail_on_unmatched_files: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+

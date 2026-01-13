@@ -298,6 +298,34 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(data),
     }),
+
+  // OmniTools Native (Phase 14)
+  tools: {
+    mergePDFs: async (formData: FormData) => {
+      const response = await fetch(`${API_BASE}/tools/pdf/merge`, {
+        method: 'POST',
+        body: formData
+      });
+      if (!response.ok) throw new Error('Merge failed');
+      return response.blob();
+    },
+    convertImage: async (formData: FormData) => {
+      const response = await fetch(`${API_BASE}/tools/image/convert`, {
+        method: 'POST',
+        body: formData
+      });
+      if (!response.ok) throw new Error('Conversion failed');
+      return response.blob();
+    },
+    processData: async (formData: FormData) => {
+      const response = await fetch(`${API_BASE}/tools/data/process`, {
+        method: 'POST',
+        body: formData
+      });
+      if (!response.ok) throw new Error('Data processing failed');
+      return response.blob();
+    }
+  }
 };
 
 export default api;

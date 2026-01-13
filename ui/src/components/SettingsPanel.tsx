@@ -150,7 +150,7 @@ export default function SettingsPanel() {
         setOllamaStatus('unknown');
         try {
             const res = await api.checkOllama(settings.ai_provider.ollama_url);
-            if (res.status === 'ok') {
+            if (res.status === 'success') {
                 setOllamaStatus('success');
                 setOllamaModels(res.models || []);
                 setConnectionMsg('Online');
@@ -160,11 +160,11 @@ export default function SettingsPanel() {
             }
         } catch (e: any) {
             setOllamaStatus('error');
-            setConnectionMsg(e.message || 'Failed');
+            setConnectionMsg(e.message || 'Failed to connect');
         }
     };
 
-    const handleTestKey = async (provider: string, key?: string, serviceType: 'llm' | 'elsevier' = 'llm') => {
+    const handleTestKey = async (provider: string, key?: string, serviceType: 'llm' | 'elsevier' = 'llm', baseUrl?: string) => {
         if (!key) {
             alert('Please enter an API key first.');
             return;
@@ -173,7 +173,7 @@ export default function SettingsPanel() {
         setTestStatus(prev => ({ ...prev, [provider]: 'testing' }));
 
         try {
-            const res = await api.testConnection(serviceType, provider, key);
+            const res = await api.testConnection(serviceType, provider, key, baseUrl);
             if (res.status === 'success') {
                 setTestStatus(prev => ({ ...prev, [provider]: 'success' }));
                 alert(`✅ ${res.message}`);
@@ -473,7 +473,7 @@ export default function SettingsPanel() {
                                                 onModelChange={(v: string) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, custom_model: v } })}
                                                 value={settings.ai_provider.custom_key}
                                                 onChange={(v: string) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, custom_key: v } })}
-                                                onTest={() => handleTestKey('custom', settings.ai_provider.custom_key)}
+                                                onTest={() => handleTestKey('custom', settings.ai_provider.custom_key, 'llm', settings.ai_provider.custom_base_url)}
                                                 testStatus={testStatus.custom}
                                             />
                                         </div>

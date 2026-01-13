@@ -1,43 +1,74 @@
-project:
+﻿project:
   name: My PhD Research
   type: PhD Thesis
   disease_context: Alzheimer's Disease
   stage: Literature Review
+
 agent:
   mode: semi-autonomous
   reasoning_depth: standard
   self_correction: true
   max_retries: 3
   failure_policy: ask_user
+
 literature:
   sources:
-  - pubmed
-  - europe_pmc
-  - openalex
+    - pubmed
   enable_crossref: true
   enable_preprints: false
   year_range: 10
-  article_types:
-  - review
-  - experimental
-  - computational
-  min_citations: 5
   novelty_strictness: medium
-  include_preprints: false
+
+pharma:
+  enable_pubtator: true
+  enable_semantic_scholar: true
+  enable_unpaywall: true
+  citation_threshold: high
+  sources:
+    pubmed: true
+    pmc: true
+    biorxiv: false
+    chemrxiv: false
+    clinicaltrials: true
+    google_scholar: false
+    openalex: true
+    semantic_scholar: true
+    ieee: false
+    elsevier: false
+    scopus: false
+    wos: false
+    science_index: false
+
 ai_provider:
-  mode: free_api
-  primary_model: google
-  openai_key: ''
-  google_key: ''
-  openrouter_key: ''
-  huggingface_key: ''
-  elsevier_key: ''
-  pubmed_email: ''
-execution:
-  mode: research
-  max_runtime_minutes: 45
-  use_knowledge_graph: true
-  human_approval_gates: true
+  mode: auto
+  ollama_url: "http://localhost:11434"
+  ollama_model: ""
+  google_key: ""
+  huggingface_key: ""
+  openrouter_key: ""
+  custom_key: ""
+  custom_base_url: ""
+
+ai_advanced:
+  context_window: 8192
+  gpu_layers: -1
+  thread_count: 8
+
+persona:
+  role: PhD Student
+  strictness: balanced
+  introduction: "I am a researcher specializing in neurodegenerative diseases..."
+  research_focus: "Investigating the role of Tau proteins in early-stage Alzheimer's..."
+
+output:
+  format: markdown
+  citation_style: apa
+  include_disclosure: true
+  output_dir: ""
+
 system:
-  log_level: INFO
-  version: 2.0.43
+  auto_start: true
+  minimize_to_tray: true
+  pause_on_battery: true
+  max_cpu_percent: 80
+  version: "2.13.38"

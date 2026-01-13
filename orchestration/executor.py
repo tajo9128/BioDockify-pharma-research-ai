@@ -16,7 +16,7 @@ from modules.bio_ner.ner_engine import BioNER
 from modules.graph_builder.loader import add_paper, connect_compound, create_constraints
 from modules.analyst.analytics_engine import ResearchAnalyst
 try:
-    from modules.molecular_vision.im2smiles import Im2SMILES
+    from modules.molecular_vision.im2smiles import extract_smiles_from_image, is_decimer_available
     has_molecular_vision = True
 except ImportError:
     has_molecular_vision = False
@@ -46,8 +46,7 @@ class ResearchExecutor:
         self.task_id = task_id
         self.ner = BioNER()
         self.analyst = ResearchAnalyst()
-        if has_molecular_vision:
-            self.vision = Im2SMILES()
+        # Vision is purely functional, no init needed
         
         # Ensure graph constraints
         try:
@@ -119,7 +118,11 @@ class ResearchExecutor:
         elif category == "data_analysis":
             self._handle_data_analysis(step, context)
         elif category == "molecular_analysis" and has_molecular_vision:
-             self._handle_molecular_vision(step, context)
+             # Just verify availability
+             if is_decimer_available():
+                 self._handle_molecular_vision(step, context)
+             else:
+                 logger.warning("Molecular Vision requested but DECIMER is unavailable.")
         elif category == "final_report":
             self._handle_final_report(step, context)
         else:

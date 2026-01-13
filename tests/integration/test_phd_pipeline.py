@@ -7,13 +7,23 @@ These tests verify the complete integration of all components:
 - Docker services (GROBID, Neo4j, Ollama)
 - API endpoints
 - Memory persistence
+
+NOTE: These tests require a running development server and Docker services.
+      They are automatically skipped in CI environments.
 """
 
 import pytest
 import asyncio
 import requests
 import time
+import os
 from typing import Dict, Any
+
+# Skip all tests in this module if running in CI (no live server)
+pytestmark = pytest.mark.skipif(
+    os.getenv("CI", "false").lower() == "true",
+    reason="Integration tests require a live server, skipping in CI"
+)
 
 
 class TestPhDPipeline:

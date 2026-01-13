@@ -168,7 +168,7 @@ class ResearchOrchestrator:
                 google_key=ai.get("google_key"),
                 openrouter_key=ai.get("openrouter_key"),
                 huggingface_key=ai.get("huggingface_key"),
-                huggingface_key=ai.get("huggingface_key"),
+
                 glm_key=ai.get("glm_key"), # Added GLM key mapping from runtime
                 custom_key=ai.get("custom_key"),
                 custom_base_url=ai.get("custom_base_url"),
@@ -190,7 +190,7 @@ class ResearchOrchestrator:
                 # Literature
                 literature_sources=lit.get("sources", []),
                 year_range=lit.get("year_range", 10),
-                year_range=lit.get("year_range", 10),
+
                 novelty_strictness=lit.get("novelty_strictness", "medium")
             )
 
@@ -491,7 +491,6 @@ Provide ONLY the JSON."""
     def _get_key_for_provider(self, provider: str) -> Optional[str]:
         if provider == "google": return self.config.google_key
         if provider == "openrouter": return self.config.openrouter_key
-        if provider == "huggingface": return self.config.huggingface_key
         if provider == "huggingface": return self.config.huggingface_key
         if provider == "zhipu": return self.config.glm_key
         if provider == "custom": return self.config.custom_key

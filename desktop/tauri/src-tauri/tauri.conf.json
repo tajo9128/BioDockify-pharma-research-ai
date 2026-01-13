@@ -7,8 +7,7 @@
     },
     "package": {
         "productName": "BioDockify",
-        "version": "2.13.38",
-        "identifier": "com.biodockify.ai"
+        "version": "2.14.0"
     },
     "tauri": {
         "allowlist": {
@@ -58,12 +57,17 @@
                 "execute": true,
                 "scope": [
                     {
-                        "name": "binaries/biodockify-engine",
+                        "name": "biodockify-engine",
                         "sidecar": true
                     },
                     {
                         "name": "explorer",
                         "cmd": "explorer",
+                        "args": true
+                    },
+                    {
+                        "name": "curl",
+                        "cmd": "curl",
                         "args": true
                     }
                 ]
@@ -76,7 +80,7 @@
                 "msi"
             ],
             "externalBin": [
-                "binaries/biodockify-engine"
+                "biodockify-engine"
             ],
             "identifier": "com.biodockify.app",
             "icon": [
