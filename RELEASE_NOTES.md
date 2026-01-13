@@ -1,5 +1,12 @@
 # Release Notes
 
+## v2.14.0 - Backend Stability & Fixes
+*Released: January 13, 2026*
+
+- **Bug Fix**: Resolved `NameError` in `api/main.py` causing backend test failures.
+- **Dependency**: Fixed missing `nbformat` and `tensorflow` compatibility issues in test environment.
+- **Stability**: Validated `LibraryQuery` model definition ordering.
+
 ## v2.13.3 - Critical UI Fix & Service Manager
 *Released: January 9, 2026*
 
