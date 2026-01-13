@@ -101,14 +101,8 @@ Section "Install Files" SecInstall
   ; Install the Main Application Binary
   File "..\desktop\tauri\src-tauri\target\release\BioDockify.exe"
   
-  ; Install the Sidecar (AI Engine)
-<<<<<<< HEAD
+  ; Install the Sidecar (AI Engine) - Note: Tauri expects sidecars named with architecture
   File "..\desktop\tauri\src-tauri\binaries\biodockify-engine-x86_64-pc-windows-msvc.exe"
-=======
-  ; Note: Tauri expects sidecars to be named specifically with architecture in target triple
-  ; We manually renamed it in the workflow to: biodockify-engine-x86_64-pc-windows-msvc.exe
-  File "..\desktop\tauri\src-tauri\biodockify-engine-x86_64-pc-windows-msvc.exe"
->>>>>>> development
   
   ; Install README
   File "..\README.txt"
