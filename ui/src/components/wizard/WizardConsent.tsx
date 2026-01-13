@@ -2,7 +2,7 @@
  * WizardConsent Component
  * 
  * Handles explicit user consent during First-Run Wizard.
- * Follows Antigravity RULE 4: Non-negotiable user consent.
+ * Follows Agent Zero RULE 4: Non-negotiable user consent.
  * 
  * If consent not granted:
  * - DO NOT automate
@@ -68,8 +68,8 @@ export default function WizardConsent({ onConsentComplete }: WizardConsentProps)
                                 className="sr-only"
                             />
                             <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${request.granted
-                                    ? 'bg-sky-500 border-sky-500'
-                                    : 'border-slate-600 hover:border-slate-500'
+                                ? 'bg-sky-500 border-sky-500'
+                                : 'border-slate-600 hover:border-slate-500'
                                 }`}>
                                 {request.granted && <Check className="w-3 h-3 text-white" />}
                             </div>
@@ -103,8 +103,8 @@ export default function WizardConsent({ onConsentComplete }: WizardConsentProps)
                     className="sr-only"
                 />
                 <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${acknowledged
-                        ? 'bg-emerald-500 border-emerald-500'
-                        : 'border-slate-600 hover:border-slate-500'
+                    ? 'bg-emerald-500 border-emerald-500'
+                    : 'border-slate-600 hover:border-slate-500'
                     }`}>
                     {acknowledged && <Check className="w-3 h-3 text-white" />}
                 </div>
@@ -118,8 +118,8 @@ export default function WizardConsent({ onConsentComplete }: WizardConsentProps)
                 onClick={handleContinue}
                 disabled={!acknowledged}
                 className={`w-full py-3 rounded-lg font-semibold transition-all ${acknowledged
-                        ? 'bg-sky-500 hover:bg-sky-400 text-white'
-                        : 'bg-slate-800 text-slate-500 cursor-not-allowed'
+                    ? 'bg-sky-500 hover:bg-sky-400 text-white'
+                    : 'bg-slate-800 text-slate-500 cursor-not-allowed'
                     }`}
             >
                 Continue Setup

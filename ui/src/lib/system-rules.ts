@@ -1,5 +1,5 @@
 /**
- * Antigravity System Control Rules
+ * Agent Zero System Control Rules
  * 
  * Governs Agent Zero's behavior during FIRST-RUN WIZARD MODE.
  * These rules are MANDATORY and override all other behaviors.

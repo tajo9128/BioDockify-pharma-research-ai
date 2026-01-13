@@ -2,7 +2,7 @@
  * SystemModeDisplay Component
  * 
  * Shows the current system mode (LIMITED or FULL).
- * Follows Antigravity RULE 6: Never pretend full functionality.
+ * Follows Agent Zero RULE 6: Never pretend full functionality.
  */
 
 'use client';
@@ -34,8 +34,8 @@ export default function SystemModeDisplay({ mode, compact = false }: SystemModeD
     if (compact) {
         return (
             <div className={`inline-flex items-center space-x-2 px-3 py-1.5 rounded-full text-xs font-medium ${isLimited
-                    ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                    : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
                 }`}>
                 {isLimited ? (
                     <AlertTriangle className="w-3 h-3" />
@@ -49,8 +49,8 @@ export default function SystemModeDisplay({ mode, compact = false }: SystemModeD
 
     return (
         <div className={`p-6 rounded-xl border ${isLimited
-                ? 'bg-amber-500/5 border-amber-500/20'
-                : 'bg-emerald-500/5 border-emerald-500/20'
+            ? 'bg-amber-500/5 border-amber-500/20'
+            : 'bg-emerald-500/5 border-emerald-500/20'
             }`}>
             {/* Header */}
             <div className="flex items-center space-x-3 mb-4">
@@ -77,8 +77,8 @@ export default function SystemModeDisplay({ mode, compact = false }: SystemModeD
                     <div
                         key={idx}
                         className={`flex items-center space-x-2 p-2 rounded-lg ${cap.enabled
-                                ? 'bg-slate-800/50 text-slate-300'
-                                : 'bg-slate-900/50 text-slate-500'
+                            ? 'bg-slate-800/50 text-slate-300'
+                            : 'bg-slate-900/50 text-slate-500'
                             }`}
                     >
                         <div className={cap.enabled ? 'text-emerald-400' : 'text-slate-600'}>

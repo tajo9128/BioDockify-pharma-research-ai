@@ -1,7 +1,7 @@
 /**
  * System Controller
  * 
- * Orchestrates the Antigravity rules during First-Run Wizard.
+ * Orchestrates the Agent Zero rules during First-Run Wizard.
  * This is the main entry point for system control behavior.
  */
 
