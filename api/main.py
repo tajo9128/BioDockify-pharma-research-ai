@@ -1087,12 +1087,138 @@ async def surfsense_search(request: SurfSenseSearchRequest):
     results = await client.search(request.query, top_k=request.top_k)
     return {"results": results, "source": "surfsense"}
 
+# -----------------------------------------------------------------------------
+# AGENT ZERO: Central Brain with Full Software Control
+# -----------------------------------------------------------------------------
+
+# Agent Zero Constitution & Roles
+AGENT_ZERO_CONSTITUTION = """
+## IDENTITY
+You are Agent Zero, the central intelligence of BioDockify - a pharmaceutical research platform.
+
+## CONSTITUTION (Core Principles)
+1. ACCURACY: Provide scientifically accurate, evidence-based information
+2. SAFETY: Never provide dangerous drug synthesis or harmful advice
+3. TRANSPARENCY: Always cite sources and acknowledge uncertainty
+4. EFFICIENCY: Choose the optimal tool for each task
+5. PRIVACY: Never share user data outside the system
+
+## ROLES (You can fulfill all these roles)
+- RESEARCHER: Search literature, find papers, summarize findings
+- ANALYST: Perform statistical analysis on data
+- LIBRARIAN: Manage knowledge base, index documents, retrieve information
+- AUDITOR: Verify journal legitimacy, detect predatory publishers
+- ASSISTANT: Answer questions, explain concepts, help with workflows
+
+## AVAILABLE ACTIONS (Use when appropriate)
+- [ACTION: research | query=<topic>] - Search PubMed/literature
+- [ACTION: search_kb | query=<topic>] - Search user's knowledge base
+- [ACTION: verify_journal | issn=<issn>, title=<name>] - Check journal legitimacy
+- [ACTION: analyze_stats | data=<json>, design=<type>] - Statistical analysis
+- [ACTION: podcast | text=<content>] - Generate audio podcast
+- [ACTION: web_search | query=<topic>] - Search the web
+
+## OPERATING MODES
+1. CHAT (Default): Answer questions, provide guidance
+2. SEMI-AUTONOMOUS: Execute actions when user requests
+3. AUTONOMOUS: Proactively complete complex multi-step tasks
+
+## RESPONSE FORMAT
+- For simple questions: Just answer
+- For actions: Include [ACTION: ...] tags
+- For multi-step: Break down and explain each step
+"""
+
+class AgentExecuteRequest(BaseModel):
+    action: str  # "research", "search_kb", "verify_journal", "analyze_stats", "podcast", "web_search"
+    params: Dict[str, Any] = {}
+
+@app.post("/api/agent/execute")
+async def agent_execute(request: AgentExecuteRequest):
+    """
+    Universal Agent Zero execution endpoint.
+    Allows Agent Zero (or direct API calls) to invoke any software function.
+    """
+    action = request.action.lower()
+    params = request.params
+    
+    try:
+        # RESEARCH: Search literature
+        if action == "research":
+            query = params.get("query", "")
+            from modules.literature import search_pubmed
+            results = search_pubmed(query, max_results=10)
+            return {"status": "success", "action": "research", "results": results}
+        
+        # SEARCH_KB: Search knowledge base
+        elif action == "search_kb":
+            query = params.get("query", "")
+            from modules.rag.vector_store import get_vector_store
+            vs = get_vector_store()
+            results = vs.search(query, k=5)
+            return {"status": "success", "action": "search_kb", "results": results}
+        
+        # VERIFY_JOURNAL: Check journal legitimacy
+        elif action == "verify_journal":
+            issn = params.get("issn", "")
+            title = params.get("title", "")
+            url = params.get("url")
+            from modules.journal_intel import DecisionEngine
+            engine = DecisionEngine()
+            result = engine.verify(issn=issn, title=title, url=url)
+            return {
+                "status": "success", 
+                "action": "verify_journal",
+                "decision": result.decision,
+                "confidence": result.confidence_level,
+                "risk_factors": result.risk_factors
+            }
+        
+        # ANALYZE_STATS: Run statistical analysis
+        elif action == "analyze_stats":
+            data = params.get("data", [])
+            design = params.get("design", "descriptive")
+            tier = params.get("tier", "basic")
+            from modules.statistics.engine import StatisticalEngine
+            engine = StatisticalEngine()
+            result = engine.analyze(data, design=design, tier=tier)
+            return {"status": "success", "action": "analyze_stats", "result": result}
+        
+        # PODCAST: Generate audio (via SurfSense)
+        elif action == "podcast":
+            text = params.get("text", "")
+            chat_id = params.get("chat_id", "")
+            from modules.surfsense import get_surfsense_client
+            client = get_surfsense_client()
+            if await client.health_check():
+                result = await client.generate_podcast(chat_id)
+                return {"status": "success", "action": "podcast", "result": result}
+            return {"status": "error", "action": "podcast", "error": "SurfSense offline"}
+        
+        # WEB_SEARCH: Search the web (via SurfSense/Tavily)
+        elif action == "web_search":
+            query = params.get("query", "")
+            from modules.surfsense import get_surfsense_client
+            client = get_surfsense_client()
+            if await client.health_check():
+                results = await client.search(query, top_k=5)
+                return {"status": "success", "action": "web_search", "results": results}
+            return {"status": "error", "action": "web_search", "error": "SurfSense offline"}
+        
+        else:
+            return {"status": "error", "error": f"Unknown action: {action}"}
+            
+    except Exception as e:
+        logger.error(f"Agent Execute Error: {e}")
+        return {"status": "error", "action": action, "error": str(e)}
+
 
 # -----------------------------------------------------------------------------
-# Agent Chat API
+# Agent Chat API (with multi-mode support)
 # -----------------------------------------------------------------------------
 class AgentChatRequest(BaseModel):
     message: str
+    mode: str = "chat"  # "chat", "semi-autonomous", "autonomous"
 
 @app.post("/api/agent/chat")
 def agent_chat_endpoint(request: AgentChatRequest):
@@ -1162,11 +1288,14 @@ def agent_chat_endpoint(request: AgentChatRequest):
             logger.warning(f"Internal KB search failed: {e}")
     
     # =========================================================================
-    # STEP 2: Build Enhanced Prompt with KB Context
+    # STEP 2: Build Enhanced Prompt with KB Context and Constitution
     # =========================================================================
-    system_prompt = """You are BioDockify Agent Zero, an intelligent pharmaceutical research assistant.
-You analyze research, automate academic workflows, and provide evidence-driven answers.
-Be concise, scientific, and always cite your sources when using provided context."""
+    # Use the full Agent Zero Constitution as system prompt
+    system_prompt = AGENT_ZERO_CONSTITUTION + f"""
+
+## CURRENT MODE: {request.mode.upper()}
+## CONTEXT SOURCE: {context_source}
+"""
 
     if kb_context:
         enhanced_prompt = f"""Use the following context from the Knowledge Base to answer the question:
