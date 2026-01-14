@@ -5,7 +5,7 @@ import { api } from '@/lib/api';
 import Sidebar from '@/components/Sidebar';
 import SettingsPanel from '@/components/SettingsPanel';
 import ResearchWorkstation from '@/components/ResearchWorkstation';
-import SurfSenseView from '@/components/SurfSenseView';
+import KnowledgeBaseView from '@/components/KnowledgeBaseView';
 import OmniToolsView from '@/components/OmniToolsView';
 import FirstRunWizard from '@/components/FirstRunWizard';
 import AgentChat from '@/components/AgentChat';
@@ -214,9 +214,9 @@ export default function PharmaceuticalResearchApp() {
         );
       case 'surfsense':
         return (
-          <ErrorBoundary name="SurfSense">
+          <ErrorBoundary name="KnowledgeBase">
             <div className="h-full overflow-hidden">
-              <SurfSenseView />
+              <KnowledgeBaseView />
             </div>
           </ErrorBoundary>
         );

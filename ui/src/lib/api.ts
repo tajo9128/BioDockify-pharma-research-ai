@@ -280,6 +280,26 @@ export const api = {
       method: 'DELETE',
     }),
 
+  // Convenience methods for KnowledgeBaseView
+  listLibraryFiles: () =>
+    apiRequest<{ id: string; filename: string; size_bytes: number; added_at: string; processed: boolean; metadata: any }[]>('/library/files'),
+
+  uploadLibraryFile: async (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return apiRequest<{ status: string; file: any }>('/library/upload', {
+      method: 'POST',
+      body: formData,
+      headers: {}
+    });
+  },
+
+  queryLibrary: (query: string, topK: number = 5) =>
+    apiRequest<{ text: string; score: number; metadata: any }[]>('/library/search', {
+      method: 'POST',
+      body: JSON.stringify({ query, top_k: topK }),
+    }),
+
   // Publication Endpoints (Phase 3)
   exportToLatex: (request: { title: string; author: string; affiliation: string; abstract: string; content_markdown: string }) =>
     apiRequest<{ latex_source: string }>('/publication/export/latex', {

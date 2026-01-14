@@ -27,8 +27,8 @@ export default function Sidebar({ activeView, onViewChange }: SidebarProps) {
   ];
 
   const bottomNav = [
-    { id: 'surfsense', icon: Brain, label: 'Knowledge' }, // Integrated SurfSense
-    { id: 'omnitools', icon: Hammer, label: 'Tools' }, // Replaced Browser
+    { id: 'surfsense', icon: Brain, label: 'Knowledge Base' }, // Built-in Knowledge Base
+    { id: 'omnitools', icon: Hammer, label: 'Tools' },
     { id: 'settings', icon: Settings, label: 'Settings' },
   ];
 
