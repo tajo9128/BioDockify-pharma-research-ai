@@ -1022,6 +1022,73 @@ def check_ollama_endpoint(request: OllamaCheckRequest):
 
 
 # -----------------------------------------------------------------------------
+# SurfSense Integration Endpoints
+# -----------------------------------------------------------------------------
+
+class SurfSenseCheckRequest(BaseModel):
+    base_url: str = "http://localhost:8000"
+
+@app.post("/api/surfsense/check")
+async def check_surfsense(request: SurfSenseCheckRequest):
+    """Check if SurfSense is running and healthy."""
+    from modules.surfsense import get_surfsense_client
+    
+    client = get_surfsense_client(request.base_url)
+    is_healthy = await client.health_check()
+    
+    if is_healthy:
+        return {"status": "success", "message": "SurfSense is running"}
+    else:
+        return {"status": "error", "message": "SurfSense is not reachable"}
+
+class PodcastRequest(BaseModel):
+    chat_id: str
+    voice: str = "alloy"  # OpenAI voices: alloy, echo, fable, onyx, nova, shimmer
+
+@app.post("/api/surfsense/podcast")
+async def generate_podcast(request: PodcastRequest):
+    """Generate audio podcast from a chat conversation via SurfSense."""
+    from modules.surfsense import get_surfsense_client
+    from runtime.config_loader import load_config
+    
+    config = load_config()
+    surfsense_url = config.get('ai_provider', {}).get('surfsense_url', 'http://localhost:8000')
+    
+    client = get_surfsense_client(surfsense_url)
+    
+    if not await client.health_check():
+        raise HTTPException(status_code=503, detail="SurfSense is not running")
+    
+    result = await client.generate_podcast(request.chat_id, request.voice)
+    
+    if "error" in result:
+        raise HTTPException(status_code=500, detail=result["error"])
+    
+    return result
+
+class SurfSenseSearchRequest(BaseModel):
+    query: str
+    top_k: int = 5
+
+@app.post("/api/surfsense/search")
+async def surfsense_search(request: SurfSenseSearchRequest):
+    """Search SurfSense knowledge base directly."""
+    from modules.surfsense import get_surfsense_client
+    from runtime.config_loader import load_config
+    
+    config = load_config()
+    surfsense_url = config.get('ai_provider', {}).get('surfsense_url', 'http://localhost:8000')
+    
+    client = get_surfsense_client(surfsense_url)
+    
+    if not await client.health_check():
+        return {"results": [], "source": "offline"}
+    
+    results = await client.search(request.query, top_k=request.top_k)
+    return {"results": results, "source": "surfsense"}
+
+
+# -----------------------------------------------------------------------------
 # Agent Chat API
 # -----------------------------------------------------------------------------
 class AgentChatRequest(BaseModel):
@@ -1030,12 +1097,15 @@ class AgentChatRequest(BaseModel):
 @app.post("/api/agent/chat")
 def agent_chat_endpoint(request: AgentChatRequest):
     """
-    Agent Zero Chat Endpoint with RAG Integration.
-    1. Searches internal Knowledge Base for relevant context
-    2. Routes to configured LLM provider with intelligent fallback
+    Agent Zero Chat Endpoint with SurfSense + RAG Integration.
+    1. Tries SurfSense first (if running) for advanced RAG
+    2. Falls back to internal Knowledge Base
+    3. Routes to configured LLM provider
     """
     import requests as req
+    import asyncio
     from modules.rag.vector_store import get_vector_store
+    from modules.surfsense import get_surfsense_client
     
     config = load_config()
     provider_config = config.get('ai_provider', {})
@@ -1043,24 +1113,53 @@ def agent_chat_endpoint(request: AgentChatRequest):
     user_query = request.message
     
     # =========================================================================
-    # STEP 1: Search Internal Knowledge Base for Context (RAG)
+    # STEP 1: Search SurfSense (Priority) then Internal KB (Fallback)
     # =========================================================================
     kb_context = ""
     kb_sources = []
+    context_source = "none"
+    
+    # Try SurfSense first
+    surfsense_url = provider_config.get('surfsense_url', 'http://localhost:8000')
+    surfsense_client = get_surfsense_client(surfsense_url)
+    
     try:
-        vector_store = get_vector_store()
-        results = vector_store.search(user_query, k=3)  # Top 3 relevant chunks
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
         
-        if results:
-            context_parts = []
-            for r in results:
-                source = r.get('metadata', {}).get('source', 'Unknown')
-                text = r.get('text', '')[:500]  # Limit chunk size
-                context_parts.append(f"[Source: {source}]\n{text}")
-                kb_sources.append(source)
-            kb_context = "\n\n---\n\n".join(context_parts)
+        # Check if SurfSense is running
+        if loop.run_until_complete(surfsense_client.health_check()):
+            results = loop.run_until_complete(surfsense_client.search(user_query, top_k=3))
+            if results:
+                context_parts = []
+                for r in results:
+                    source = r.get('source', r.get('metadata', {}).get('source', 'SurfSense'))
+                    text = r.get('text', r.get('content', ''))[:500]
+                    context_parts.append(f"[Source: {source}]\n{text}")
+                    kb_sources.append(source)
+                kb_context = "\n\n---\n\n".join(context_parts)
+                context_source = "surfsense"
+        loop.close()
     except Exception as e:
-        logger.warning(f"RAG search failed: {e}")
+        logger.warning(f"SurfSense search failed, falling back to internal KB: {e}")
+    
+    # Fallback to internal KB
+    if not kb_context:
+        try:
+            vector_store = get_vector_store()
+            results = vector_store.search(user_query, k=3)
+            
+            if results:
+                context_parts = []
+                for r in results:
+                    source = r.get('metadata', {}).get('source', 'Unknown')
+                    text = r.get('text', '')[:500]
+                    context_parts.append(f"[Source: {source}]\n{text}")
+                    kb_sources.append(source)
+                kb_context = "\n\n---\n\n".join(context_parts)
+                context_source = "internal_kb"
+        except Exception as e:
+            logger.warning(f"Internal KB search failed: {e}")
     
     # =========================================================================
     # STEP 2: Build Enhanced Prompt with KB Context
