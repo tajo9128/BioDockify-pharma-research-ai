@@ -35,10 +35,31 @@ const DEEP_RESEARCH_TRIGGERS = [
 ];
 
 export default function AgentChat() {
+    // Import introduction dynamically to support first-time vs returning user logic
     const [messages, setMessages] = useState<Message[]>([
         {
             role: 'assistant',
-            content: 'Hello, I am BioDockify AI. I am your autonomous research assistant. You can ask me to plan experiments, search literature, or explain complex concepts.',
+            content: `**Hello.**
+
+I am **BioDockify AI**, an intelligent research assistant designed for pharmaceutical and life-science research.
+
+I am built to **analyze research**, not merely generate text, and to **automate repetitive academic tasks** while preserving scientific rigor.
+
+**Core Capabilities:**
+• Deep Literature Analysis (comparative analysis, gap detection)
+• Automatic Literature Review Workflow
+• Evidence-Driven Research Analysis
+• Project Memory & Research Continuity
+• Academic Writing Support
+
+**How to Start:**
+• Upload research papers
+• State your research topic
+• Ask me to search literature
+
+*BioDockify AI analyzes research and automates academic workflows — it does not merely generate text.*
+
+How can I assist your research today?`,
             timestamp: new Date()
         }
     ]);
