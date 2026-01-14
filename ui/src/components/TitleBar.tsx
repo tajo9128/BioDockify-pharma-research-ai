@@ -93,8 +93,30 @@ export default function TitleBar() {
     ];
 
     const viewMenuItems: MenuItemConfig[] = [
-        { label: 'Zoom In', icon: ZoomIn, action: () => console.log('Zoom In') },
-        { label: 'Zoom Out', icon: ZoomOut, action: () => console.log('Zoom Out') },
+        {
+            label: 'Zoom In', icon: ZoomIn, action: () => {
+                const root = document.documentElement;
+                const current = parseFloat(getComputedStyle(root).getPropertyValue('--app-zoom') || '1');
+                root.style.setProperty('--app-zoom', String(Math.min(current + 0.1, 1.5)));
+                document.body.style.transform = `scale(var(--app-zoom, 1))`;
+                document.body.style.transformOrigin = 'top left';
+            }
+        },
+        {
+            label: 'Zoom Out', icon: ZoomOut, action: () => {
+                const root = document.documentElement;
+                const current = parseFloat(getComputedStyle(root).getPropertyValue('--app-zoom') || '1');
+                root.style.setProperty('--app-zoom', String(Math.max(current - 0.1, 0.7)));
+                document.body.style.transform = `scale(var(--app-zoom, 1))`;
+                document.body.style.transformOrigin = 'top left';
+            }
+        },
+        {
+            label: 'Reset Zoom', icon: Eye, action: () => {
+                document.documentElement.style.setProperty('--app-zoom', '1');
+                document.body.style.transform = 'scale(1)';
+            }
+        },
         { divider: true, label: 'Toggle Fullscreen', icon: Eye, action: toggleMaximize },
     ];
 

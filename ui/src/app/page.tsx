@@ -9,7 +9,6 @@ import SurfSenseView from '@/components/SurfSenseView';
 import OmniToolsView from '@/components/OmniToolsView';
 import FirstRunWizard from '@/components/FirstRunWizard';
 import AgentChat from '@/components/AgentChat';
-import LibraryView from '@/components/LibraryView';
 import HypothesisView from '@/components/HypothesisView';
 import PublicationView from '@/components/PublicationView';
 import StatisticsView from '@/components/StatisticsView';
@@ -227,12 +226,6 @@ export default function PharmaceuticalResearchApp() {
             <div className="h-full overflow-hidden">
               <OmniToolsView />
             </div>
-          </ErrorBoundary>
-        );
-      case 'library':
-        return (
-          <ErrorBoundary name="Library">
-            <LibraryView />
           </ErrorBoundary>
         );
       case 'publication':
