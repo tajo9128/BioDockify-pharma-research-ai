@@ -1212,6 +1212,13 @@ async def agent_execute(request: AgentExecuteRequest):
             from modules.headless_research import deep_research
             result = await deep_research(url)
             return {"status": "success", "action": "deep_research", "result": result}
+            
+        # DEEP_REVIEW: Full Autonomous Review Pipeline
+        elif action == "deep_review":
+            topic = params.get("topic", "")
+            from modules.literature.orchestrator import orchestrator
+            result = await orchestrator.run_deep_review(topic)
+            return {"status": "success", "action": "deep_review", "result": result}
         
         else:
             return {"status": "error", "error": f"Unknown action: {action}"}
@@ -1298,8 +1305,13 @@ def agent_chat_endpoint(request: AgentChatRequest):
     # =========================================================================
     # STEP 2: Build Enhanced Prompt with KB Context and Constitution
     # =========================================================================
+    # =========================================================================
+    # STEP 2: Build Enhanced Prompt with KB Context and Constitution
+    # =========================================================================
     # Use the full Agent Zero Constitution as system prompt
-    system_prompt = AGENT_ZERO_CONSTITUTION + f"""
+    from modules.agent import AGENT_ZERO_SYSTEM_PROMPT
+    
+    system_prompt = AGENT_ZERO_SYSTEM_PROMPT + f"""
 
 ## CURRENT MODE: {request.mode.upper()}
 ## CONTEXT SOURCE: {context_source}
