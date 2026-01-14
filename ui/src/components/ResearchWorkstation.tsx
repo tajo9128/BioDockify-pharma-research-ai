@@ -12,7 +12,7 @@ import { cn } from '@/lib/utils';
 import DiagnosisDialog from '@/components/DiagnosisDialog';
 
 // Types (Micro-definitions to be self-contained)
-type WorkMode = 'search' | 'synthesize' | 'write' | 'thesis_writer' | 'review_writer';
+type WorkMode = 'search' | 'synthesize' | 'write' | 'thesis_writer' | 'review_writer' | 'research_writer';
 interface LogEntry { id: string; type: 'info' | 'thought' | 'result' | 'action' | 'error'; content: string; timestamp: Date; description?: string; }
 
 // ... (inside component)
@@ -188,7 +188,9 @@ export default function ResearchWorkstation({
                                 <ModeBtn id="synthesize" label="Synthesis" icon={FileText} active={mode === 'synthesize'} onClick={() => setMode('synthesize')} />
                                 <ModeBtn id="write" label="Drafting" icon={PenTool} active={mode === 'write'} onClick={() => setMode('write')} />
                                 <ModeBtn id="thesis_writer" label="PhD Thesis" icon={Globe} active={mode === 'thesis_writer'} onClick={() => setMode('thesis_writer')} />
+                                <ModeBtn id="thesis_writer" label="PhD Thesis" icon={Globe} active={mode === 'thesis_writer'} onClick={() => setMode('thesis_writer')} />
                                 <ModeBtn id="review_writer" label="Intl. Review" icon={Beaker} active={mode === 'review_writer'} onClick={() => setMode('review_writer')} />
+                                <ModeBtn id="research_writer" label="Orig. Research" icon={FileText} active={mode === 'research_writer'} onClick={() => setMode('research_writer')} />
                             </div>
                         </div>
 

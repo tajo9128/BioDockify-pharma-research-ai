@@ -1310,12 +1310,14 @@ def agent_chat_endpoint(request: AgentChatRequest):
     # STEP 2: Build Enhanced Prompt with KB Context and Constitution
     # =========================================================================
     # Use the full Agent Zero Constitution as system prompt
-    from modules.agent import AGENT_ZERO_SYSTEM_PROMPT, PHD_THESIS_WRITER_PROMPT, PHARMA_REVIEW_WRITER_PROMPT
+    from modules.agent import AGENT_ZERO_SYSTEM_PROMPT, PHD_THESIS_WRITER_PROMPT, PHARMA_REVIEW_WRITER_PROMPT, PHARMA_RESEARCH_WRITER_PROMPT
     
     if request.mode == "thesis_writer":
         base_prompt = PHD_THESIS_WRITER_PROMPT
     elif request.mode == "review_writer":
         base_prompt = PHARMA_REVIEW_WRITER_PROMPT
+    elif request.mode == "research_writer":
+        base_prompt = PHARMA_RESEARCH_WRITER_PROMPT
     else:
         # Default to the Pharma Research / General Agent Zero prompt
         base_prompt = AGENT_ZERO_SYSTEM_PROMPT
