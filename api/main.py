@@ -1008,32 +1008,33 @@ class AgentChatRequest(BaseModel):
 @app.post("/api/agent/chat")
 def agent_chat_endpoint(request: AgentChatRequest):
     """
-    Simple chat endpoint for the Agent.
-    Routes to the configured LLM provider (Ollama, Custom, etc).
+    Agent Zero Chat Endpoint.
+    Routes to ANY configured LLM provider with intelligent fallback:
+    Priority: Custom/Paid API -> Google Gemini -> OpenRouter -> GLM -> HuggingFace -> Ollama
     """
+    import requests as req
+    
     config = load_config()
     provider_config = config.get('ai_provider', {})
-    mode = provider_config.get('mode', 'auto')
-    
-    # 1. Determine Provider
-    # For now, default to Ollama if auto/ollama, or Custom if custom keys present
-    # Simplified logic:
-    
-    import requests
     
     prompt = request.message
-    system_prompt = "You are BioDockify Agent Zero, an expert pharmaceutical research assistant. Answer the user's questions based on the provided context (if any) and your knowledge. Be concise and scientific."
+    system_prompt = """You are BioDockify Agent Zero, an intelligent pharmaceutical research assistant.
+You analyze research, automate academic workflows, and provide evidence-driven answers.
+Be concise, scientific, and always cite your reasoning."""
     
-    # Try Custom/Paid API first if configured
+    errors = []  # Track all provider errors for debugging
+    
+    # =========================================================================
+    # PROVIDER 1: Custom/Paid OpenAI-Compatible API (GLM, Groq, OpenAI, etc.)
+    # =========================================================================
     if provider_config.get('custom_key') and provider_config.get('custom_base_url'):
         try:
             base_url = provider_config['custom_base_url'].rstrip('/')
             key = provider_config['custom_key']
             model = provider_config.get('custom_model', 'gpt-3.5-turbo')
             
-            # OpenAI Compatible Completion
             url = f"{base_url}/chat/completions"
-            headers = {"Authorization": f"Bearer {key}"}
+            headers = {"Authorization": f"Bearer {key}", "Content-Type": "application/json"}
             payload = {
                 "model": model,
                 "messages": [
@@ -1041,26 +1042,120 @@ def agent_chat_endpoint(request: AgentChatRequest):
                     {"role": "user", "content": prompt}
                 ]
             }
-            # Use Resilient Request with Caching for identical prompts
-            # We serialize dicts to strings to maintain hashability for lru_cache
-            import json
-            # Note: We don't cache 'safe_request' directly because it retries. 
-            # We use safe_request logic usually, but for caching we might want 
-            # to wrap the underlying request OR just cache critical repeated queries.
-            # For now, let's stick to safe_request for robustness over caching here 
-            # as user queries vary wildly.
-            # BUT user asked for "Cache frequently used results" -> let's implement a simple prompt cache.
             
-            resp = safe_request('POST', url, json=payload, headers=headers, timeout=30)
+            resp = req.post(url, json=payload, headers=headers, timeout=60)
             if resp.status_code == 200:
-                content = resp.json()['choices'][0]['message']['content']
-                return {"reply": content}
-            else:
-                 print(f"Custom API failed: {resp.text}")
+                data = resp.json()
+                content = data.get('choices', [{}])[0].get('message', {}).get('content', '')
+                if content:
+                    return {"reply": content, "provider": "custom"}
+            errors.append(f"Custom API ({model}): {resp.status_code}")
         except Exception as e:
-            print(f"Custom API Exception: {e}")
-
-    # Fallback to Ollama
+            errors.append(f"Custom API: {str(e)}")
+    
+    # =========================================================================
+    # PROVIDER 2: Google Gemini
+    # =========================================================================
+    if provider_config.get('google_key'):
+        try:
+            key = provider_config['google_key']
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={key}"
+            payload = {
+                "contents": [{"parts": [{"text": f"{system_prompt}\n\nUser: {prompt}"}]}]
+            }
+            
+            resp = req.post(url, json=payload, timeout=60)
+            if resp.status_code == 200:
+                data = resp.json()
+                content = data.get('candidates', [{}])[0].get('content', {}).get('parts', [{}])[0].get('text', '')
+                if content:
+                    return {"reply": content, "provider": "google"}
+            errors.append(f"Google Gemini: {resp.status_code}")
+        except Exception as e:
+            errors.append(f"Google Gemini: {str(e)}")
+    
+    # =========================================================================
+    # PROVIDER 3: OpenRouter
+    # =========================================================================
+    if provider_config.get('openrouter_key'):
+        try:
+            key = provider_config['openrouter_key']
+            url = "https://openrouter.ai/api/v1/chat/completions"
+            headers = {
+                "Authorization": f"Bearer {key}",
+                "HTTP-Referer": "http://localhost:3000",
+                "X-Title": "BioDockify",
+                "Content-Type": "application/json"
+            }
+            payload = {
+                "model": "openai/gpt-3.5-turbo",  # Default free-tier model
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": prompt}
+                ]
+            }
+            
+            resp = req.post(url, json=payload, headers=headers, timeout=60)
+            if resp.status_code == 200:
+                content = resp.json().get('choices', [{}])[0].get('message', {}).get('content', '')
+                if content:
+                    return {"reply": content, "provider": "openrouter"}
+            errors.append(f"OpenRouter: {resp.status_code}")
+        except Exception as e:
+            errors.append(f"OpenRouter: {str(e)}")
+    
+    # =========================================================================
+    # PROVIDER 4: GLM (ZhipuAI) - Direct API
+    # =========================================================================
+    if provider_config.get('glm_key'):
+        try:
+            key = provider_config['glm_key']
+            url = "https://open.bigmodel.cn/api/paas/v4/chat/completions"
+            headers = {"Authorization": f"Bearer {key}", "Content-Type": "application/json"}
+            payload = {
+                "model": "glm-4",
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": prompt}
+                ]
+            }
+            
+            resp = req.post(url, json=payload, headers=headers, timeout=60)
+            if resp.status_code == 200:
+                content = resp.json().get('choices', [{}])[0].get('message', {}).get('content', '')
+                if content:
+                    return {"reply": content, "provider": "glm"}
+            errors.append(f"GLM: {resp.status_code}")
+        except Exception as e:
+            errors.append(f"GLM: {str(e)}")
+    
+    # =========================================================================
+    # PROVIDER 5: HuggingFace Inference API
+    # =========================================================================
+    if provider_config.get('huggingface_key'):
+        try:
+            key = provider_config['huggingface_key']
+            url = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.1"
+            headers = {"Authorization": f"Bearer {key}"}
+            payload = {"inputs": f"<s>[INST] {system_prompt}\n\n{prompt} [/INST]"}
+            
+            resp = req.post(url, json=payload, headers=headers, timeout=60)
+            if resp.status_code == 200:
+                data = resp.json()
+                if isinstance(data, list) and len(data) > 0:
+                    content = data[0].get('generated_text', '')
+                    # Extract response after [/INST]
+                    if '[/INST]' in content:
+                        content = content.split('[/INST]')[-1].strip()
+                    if content:
+                        return {"reply": content, "provider": "huggingface"}
+            errors.append(f"HuggingFace: {resp.status_code}")
+        except Exception as e:
+            errors.append(f"HuggingFace: {str(e)}")
+    
+    # =========================================================================
+    # PROVIDER 6: Ollama (Local, Final Fallback)
+    # =========================================================================
     try:
         ollama_url = provider_config.get('ollama_url', 'http://localhost:11434')
         model = provider_config.get('ollama_model', 'llama2')
@@ -1069,21 +1164,30 @@ def agent_chat_endpoint(request: AgentChatRequest):
         payload = {
             "model": model,
             "messages": [
-                 {"role": "system", "content": system_prompt},
-                 {"role": "user", "content": prompt}
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": prompt}
             ],
             "stream": False
         }
-        # Use Resilient Request
-        resp = safe_request('POST', url, json=payload, timeout=30)
+        
+        resp = req.post(url, json=payload, timeout=120)  # Longer timeout for local
         if resp.status_code == 200:
-             content = resp.json()['message']['content']
-             return {"reply": content}
-        else:
-             return {"reply": f"Error from Ollama: {resp.text}"}
-             
+            content = resp.json().get('message', {}).get('content', '')
+            if content:
+                return {"reply": content, "provider": "ollama"}
+        errors.append(f"Ollama ({model}): {resp.status_code}")
     except Exception as e:
-        return {"reply": f"Agent Error: {str(e)}. Please check your connections."}
+        errors.append(f"Ollama: {str(e)}")
+    
+    # =========================================================================
+    # ALL PROVIDERS FAILED
+    # =========================================================================
+    error_summary = "; ".join(errors) if errors else "No providers configured"
+    return {
+        "reply": f"⚠️ Agent Zero could not connect to any AI provider.\n\n**Attempted:** {error_summary}\n\n**Solution:** Please configure at least one provider in Settings (Ollama, Google, OpenRouter, or Custom API).",
+        "provider": "none",
+        "errors": errors
+    }
 
 from fastapi import UploadFile, File
 from modules.rag.ingestor import ingestor
