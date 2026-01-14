@@ -61,12 +61,35 @@ class DeepResearchOrchestrator:
         status.append("Phase 4: Synthesis - Writing report...")
         report = await synthesis_engine.generate_review(topic, selected_papers)
         
+        # Phase 5: Plagiarism & Compliance Gate
+        status.append("Phase 5: Compliance - Running Plagiarism Check...")
+        from modules.compliance import plagiarism_checker
+        
+        # Clean report markdown for checking (remove titles/formatting potentially)
+        # For now, check the raw report
+        compliance_result = await plagiarism_checker.check_content(report)
+        status.append(f"Compliance Result: {compliance_result['status']} (Similarity: {compliance_result['overall_similarity']}%)")
+        
+        if compliance_result['status'] == "BLOCKED":
+            logger.warning(f"Report BLOCKED due to high plagiarism risk: {compliance_result['overall_similarity']}%")
+            return {
+                "status": "blocked",
+                "reason": "Plagiarism Check Failed",
+                "compliance_report": compliance_result,
+                "pipeline_log": status
+            }
+            
+        elif compliance_result['status'] == "FLAGGED":
+             status.append("WARNING: Moderate similarity detected. Review recommended.")
+             # In future: Trigger rewrite loop here.
+             
         return {
             "status": "success",
             "topic": topic,
             "papers_found": len(candidates),
             "papers_reviewed": len(selected_papers),
             "report_content": report,
+            "compliance_report": compliance_result, # Include for audit
             "pipeline_log": status
         }
 

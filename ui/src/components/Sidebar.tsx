@@ -17,6 +17,7 @@ export default function Sidebar({ activeView, onViewChange }: SidebarProps) {
   const mainNav = [
     { id: 'home', icon: Home, label: 'Home' },
     { id: 'research', icon: FlaskConical, label: 'Workstation' },
+    { id: 'autonomous', icon: Globe, label: 'Deep Research' },
     { id: 'hypothesis', icon: Brain, label: 'Scientific Method' },
     { id: 'results', icon: FileText, label: 'Results' },
     { id: 'lab', icon: Beaker, label: 'Virtual Lab' },

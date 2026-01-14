@@ -23,6 +23,11 @@ markdownify>=0.11.6
 beautifulsoup4>=4.12.0
 fake-useragent>=1.5.1
 
+# Discovery Engine
+semanticscholar>=0.6.0
+arxiv>=2.1.0
+habanero>=1.2.3  # CrossRef API
+
 # RAG & Embeddings
 sentence-transformers>=2.2.2
 faiss-cpu>=1.7.4

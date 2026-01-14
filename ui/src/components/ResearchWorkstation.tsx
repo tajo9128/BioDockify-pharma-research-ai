@@ -6,6 +6,7 @@ import { useAutoSave } from '@/hooks/useAutoSave';
 import { Search, PenTool, Layout, Play, Pause, Square, AlertCircle, FileText, Globe, Cpu, ChevronRight, Maximize2, Beaker, Save, RotateCcw, Database, X, Plus, Settings, Terminal, Network, Share2, Activity, Zap, Link as LinkIcon, WifiOff } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import ExternalInsightImporter, { ExternalAIInsight } from './ExternalInsightImporter';
+import { DeepResearchView } from './deep-research/DeepResearchView';
 import { cn } from '@/lib/utils';
 import DiagnosisDialog from '@/components/DiagnosisDialog';
 
@@ -116,6 +117,15 @@ export default function ResearchWorkstation({
                         Connect to BioDockify Cloud Lab
                     </a>
                 </div>
+            </div>
+        );
+    }
+
+    // --- VIEW: AUTONOMOUS DEEP RESEARCH ---
+    if (view === 'autonomous') {
+        return (
+            <div className="h-screen bg-slate-950 text-slate-200 overflow-y-auto">
+                <DeepResearchView />
             </div>
         );
     }
