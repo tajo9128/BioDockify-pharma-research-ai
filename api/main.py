@@ -922,37 +922,55 @@ def test_connection_endpoint(request: TestRequest):
                 if not request.base_url:
                     return {"status": "error", "message": "Base URL required for Custom API"}
                 
-                # Normalize URL: Ensure it doesn't end in / and append /models if likely needed
-                # However, user might give full path. Let's try to list models on the given base.
-                # Standard OpenAI: https://api.openai.com/v1 -> https://api.openai.com/v1/models
                 base = request.base_url.rstrip("/")
-                if not base.endswith("/models"):
-                    check_url = f"{base}/models"
-                else:
-                    check_url = base
-
-                headers = {"Authorization": f"Bearer {request.key}"}
+                headers = {"Authorization": f"Bearer {request.key}", "Content-Type": "application/json"}
                 
-                # Timeout 10s for custom endpoints (might be local)
-                resp = requests.get(check_url, headers=headers, timeout=10)
+                # Method 1: Try /models endpoint (works for OpenAI, Groq, etc.)
+                try:
+                    models_url = f"{base}/models"
+                    resp = requests.get(models_url, headers=headers, timeout=5)
+                    if resp.status_code == 200:
+                        try:
+                            data = resp.json()
+                            if 'data' in data and isinstance(data['data'], list):
+                                count = len(data['data'])
+                                return {"status": "success", "message": f"Connected! Found {count} models."}
+                            return {"status": "success", "message": "Connected! (via /models)"}
+                        except:
+                            return {"status": "success", "message": "Connected!"}
+                except:
+                    pass  # Fall through to Method 2
                 
-                if resp.status_code == 200:
-                    try:
-                        data = resp.json()
-                        # OpenAI format: { data: [...] }
-                        if 'data' in data and isinstance(data['data'], list):
-                             count = len(data['data'])
-                             return {"status": "success", "message": f"Connected! Found {count} models."}
-                        return {"status": "success", "message": "Connected! (Unknown response format)"}
-                    except:
-                        return {"status": "success", "message": "Connected! (Response not JSON)"}
-                else:
-                     try:
-                         # Try to parse error
-                         err = resp.json().get('error', {}).get('message', 'Unknown Error')
-                         return {"status": "error", "message": f"API Error {resp.status_code}: {err}"}
-                     except:
-                         return {"status": "error", "message": f"Connection Failed: Status {resp.status_code}"}
+                # Method 2: Try a minimal chat completion (works for GLM, custom endpoints)
+                try:
+                    chat_url = f"{base}/chat/completions"
+                    payload = {
+                        "model": "gpt-3.5-turbo",  # Placeholder, endpoint may ignore
+                        "messages": [{"role": "user", "content": "test"}],
+                        "max_tokens": 1
+                    }
+                    resp = requests.post(chat_url, headers=headers, json=payload, timeout=10)
+                    
+                    if resp.status_code == 200:
+                        return {"status": "success", "message": "Custom API Connected! (via chat test)"}
+                    elif resp.status_code == 401:
+                        return {"status": "error", "message": "Invalid API Key (401 Unauthorized)"}
+                    elif resp.status_code == 403:
+                        return {"status": "error", "message": "Access Denied (403 Forbidden)"}
+                    elif resp.status_code == 404:
+                        return {"status": "error", "message": f"Endpoint not found. Check Base URL."}
+                    else:
+                        try:
+                            err = resp.json().get('error', {}).get('message', f'Status {resp.status_code}')
+                            return {"status": "error", "message": f"API Error: {err}"}
+                        except:
+                            return {"status": "error", "message": f"Connection Failed: Status {resp.status_code}"}
+                except requests.exceptions.ConnectionError:
+                    return {"status": "error", "message": f"Cannot connect to {base}. Is the server running?"}
+                except requests.exceptions.Timeout:
+                    return {"status": "error", "message": "Connection timed out. Server may be slow."}
+                except Exception as e:
+                    return {"status": "error", "message": f"Test failed: {str(e)}"}
             
             return {"status": "error", "message": f"Unknown provider: {provider}"}
             
