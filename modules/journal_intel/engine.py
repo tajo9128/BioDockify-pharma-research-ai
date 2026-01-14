@@ -23,6 +23,27 @@ class DecisionEngine:
         
         audit_trail.append(f"Started verification for ISSN: {issn}, Title: {title}")
 
+        # --- Pillar 5: Fraud Intelligence (Critical Check - First Pass) ---
+        # Check this FIRST because even if we don't know the journal (Identity Fail),
+        # matching a known hijack is a critical signal.
+        fraud_score = self.fraud_guard.check(issn, url)
+        pillars.append(fraud_score)
+        
+        if fraud_score.status == "FAIL":
+            # Immediate Critical Exit
+            risk_factors.append("CRITICAL: Matched known hijacked domain/ISSN")
+            audit_trail.append("Pillar 5 Critical Failure: Journal is hijacked.")
+            return VerificationResult(
+                input_issn=issn, input_title=title, input_url=url,
+                decision="HIGH_RISK",
+                confidence_level="HIGH",
+                pillars=pillars,
+                risk_factors=risk_factors,
+                audit_trail=audit_trail
+            )
+        elif fraud_score.status == "CAUTION":
+             risk_factors.append("ISSN linked to known hijack (URL verification needed)")
+
         # --- Pillar 1: Canonical Identity (Mandatory) ---
         identity = self.resolver.resolve(issn, title)
         
@@ -33,8 +54,8 @@ class DecisionEngine:
                 input_issn=issn, input_title=title, input_url=url,
                 decision="SUSPICIOUS",
                 confidence_level="MEDIUM",
-                pillars=[PillarScore(name="Canonical Identity", status="FAIL", score=0.0, details="Journal not found in trusted local authority database.")],
-                risk_factors=["Identity Unverifiable"],
+                pillars=pillars + [PillarScore(name="Canonical Identity", status="FAIL", score=0.0, details="Journal not found in trusted local authority database.")],
+                risk_factors=risk_factors + ["Identity Unverifiable"],
                 audit_trail=audit_trail
             )
         
@@ -48,15 +69,7 @@ class DecisionEngine:
             risk_factors.append("Not indexed in trusted list (WoS)")
             audit_trail.append(f"Pillar 2 Failed: {index_score.details}")
 
-        # --- Pillar 5: Fraud Intelligence (Critical Check) ---
-        fraud_score = self.fraud_guard.check(identity.issn, url)
-        pillars.append(fraud_score)
-        if fraud_score.status == "FAIL":
-            # Immediate High Risk
-            risk_factors.append("CRITICAL: Matched known hijacked domain/ISSN")
-            audit_trail.append("Pillar 5 Critical Failure: Journal is hijacked.")
-        elif fraud_score.status == "CAUTION":
-             risk_factors.append("ISSN linked to known hijack (URL verification needed)")
+        # (Fraud Check already done)
 
         # --- Pillar 3 & 4: Website Authenticity (Mandatory if URL provided) ---
         if url:
