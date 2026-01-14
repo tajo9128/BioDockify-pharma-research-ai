@@ -144,7 +144,7 @@ class ResearchExecutor:
         if not pdf_files:
             logger.info("No local PDFs found. Initiating PubMed Search...")
             try:
-                from modules.literature_search.scraper import search_papers
+                from modules.literature.scraper import search_papers
                 
                 # Fetch abstracts
                 logger.info(f"Searching PubMed for: {context.topic}")

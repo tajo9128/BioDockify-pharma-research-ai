@@ -7,7 +7,7 @@ from pprint import pprint
 # Add parent dir to path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from modules.literature_search.scraper import LiteratureAggregator, LiteratureConfig
+from modules.literature.scraper import LiteratureAggregator, LiteratureConfig
 
 # Configure Logging
 logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')

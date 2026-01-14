@@ -14,10 +14,10 @@ try:
 except ImportError:
     Entrez = None
 
-from modules.literature_search.openalex import OpenAlexScraper
-from modules.literature_search.europe_pmc import EuropePMCScraper
-from modules.literature_search.crossref import CrossRefScraper
-from modules.literature_search.biorxiv import BioRxivScraper
+from modules.literature.openalex import OpenAlexScraper
+from modules.literature.europe_pmc import EuropePMCScraper
+from modules.literature.crossref import CrossRefScraper
+from modules.literature.biorxiv import BioRxivScraper
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)

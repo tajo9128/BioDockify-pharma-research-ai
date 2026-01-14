@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { Hammer, FileText, Image as ImageIcon, Download, Upload, ArrowRight, Loader2, CheckCircle, FileJson, Type, List as ListIcon, Hash, Film, ChevronLeft, ArrowUpRight } from 'lucide-react';
+import { Hammer, FileText, Image as ImageIcon, Download, Upload, ArrowRight, Loader2, CheckCircle, FileJson, Type, List as ListIcon, Hash, ShieldCheck, Database, BookOpen, PenTool } from 'lucide-react';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
 
-type ToolCategory = 'pdf' | 'image' | 'json' | 'text' | 'list' | 'number';
-type ToolMode = 'pdf-merge' | 'image-convert' | 'json-prettify' | 'json-csv' | 'placeholder';
+type ToolCategory = 'pdf' | 'image' | 'data' | 'text' | 'ref' | 'audit';
+type ToolMode = 'pdf-merge' | 'image-convert' | 'json-csv' | 'placeholder';
 
 interface ToolCardProps {
     icon: any;
@@ -33,7 +33,7 @@ const ToolCard = ({ icon: Icon, title, description, color, onPrimary, onSecondar
         <div className="p-4 border-t border-slate-100 bg-slate-50/50 flex gap-3">
             <button
                 onClick={onPrimary}
-                className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-colors shadow-sm shadow-blue-900/10"
+                className="flex-1 px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white text-sm font-semibold rounded-lg transition-colors shadow-sm shadow-teal-900/10"
             >
                 {primaryLabel}
             </button>
@@ -50,22 +50,22 @@ const ToolCard = ({ icon: Icon, title, description, color, onPrimary, onSecondar
 export default function OmniToolsView() {
     const [view, setView] = useState<'dashboard' | 'workspace'>('dashboard');
     const [activeMode, setActiveMode] = useState<ToolMode>('pdf-merge');
+    const [activeTitle, setActiveTitle] = useState('Tool');
 
     // Workspace State
     const [files, setFiles] = useState<File[]>([]);
     const [processing, setProcessing] = useState(false);
     const [resultBlob, setResultBlob] = useState<Blob | null>(null);
-    const [params, setParams] = useState<any>({}); // Generic params (format, operation)
+    const [params, setParams] = useState<any>({});
 
-    const launchTool = (mode: ToolMode) => {
+    const launchTool = (mode: ToolMode, title: string) => {
         setActiveMode(mode);
+        setActiveTitle(title);
         setView('workspace');
         setFiles([]);
         setResultBlob(null);
-        // Set defaults
         if (mode === 'image-convert') setParams({ format: 'png' });
         if (mode === 'json-csv') setParams({ operation: 'to_csv' });
-        if (mode === 'json-prettify') setParams({ operation: 'to_json' });
     };
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -93,15 +93,15 @@ export default function OmniToolsView() {
                 formData.append('format', params.format || 'png');
                 const blob = await api.tools.convertImage(formData);
                 setResultBlob(blob);
-                toast.success("Image Converted Successfully!");
-            } else if (activeMode === 'json-csv' || activeMode === 'json-prettify') {
+                toast.success("Figure Processed Successfully!");
+            } else if (activeMode === 'json-csv') {
                 formData.append('file', files[0]);
                 formData.append('operation', params.operation);
                 const blob = await api.tools.processData(formData);
                 setResultBlob(blob);
-                toast.success("Data Processed Successfully!");
+                toast.success("Dataset Converted Successfully!");
             } else {
-                toast.info("This tool is a placeholder in the demo.");
+                toast.info("This academic utility is in development.");
             }
         } catch (e) {
             console.error(e);
@@ -116,13 +116,10 @@ export default function OmniToolsView() {
         const url = window.URL.createObjectURL(resultBlob);
         const a = document.createElement('a');
         a.href = url;
-
         let filename = 'result';
-        if (activeMode === 'pdf-merge') filename = 'merged.pdf';
-        if (activeMode === 'image-convert') filename = `converted.${params.format}`;
-        if (activeMode === 'json-csv') filename = 'converted.csv';
-        if (activeMode === 'json-prettify') filename = 'prettified.json';
-
+        if (activeMode === 'pdf-merge') filename = 'merged_research.pdf';
+        if (activeMode === 'image-convert') filename = `figure.${params.format}`;
+        if (activeMode === 'json-csv') filename = 'data.csv';
         a.download = filename;
         a.click();
         window.URL.revokeObjectURL(url);
@@ -131,86 +128,89 @@ export default function OmniToolsView() {
     // --- DASHBOARD VIEW ---
     if (view === 'dashboard') {
         return (
-            <div className="h-full bg-slate-50 overflow-y-auto">
-                <div className="max-w-7xl mx-auto p-8 space-y-8">
+            <div className="h-full bg-slate-50 overflow-y-auto font-sans">
+                <div className="max-w-7xl mx-auto p-12 space-y-12">
                     {/* Header */}
-                    <div className="space-y-2">
-                        <h1 className="text-3xl font-bold text-slate-900">OmniTools Suite</h1>
-                        <p className="text-slate-500">Secure, client-side utilities for your daily workflow.</p>
+                    <div className="space-y-4 border-b border-slate-200 pb-8">
+                        <h1 className="text-4xl font-bold text-slate-900 tracking-tight">Pharma Research Utilities</h1>
+                        <p className="text-lg text-slate-500 max-w-3xl leading-relaxed">
+                            Offline-first academic toolkit for manuscript preparation, data integrity, and compliance.
+                            <br /><span className="text-sm font-semibold text-teal-600 uppercase tracking-widest mt-2 block">Part of BioDockify Academic Suite</span>
+                        </p>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
 
-                        {/* 1. PDF Tools (Custom Addition for BioDockify) */}
-                        <ToolCard
-                            icon={FileText}
-                            title="PDF Tools"
-                            description="Merge multiple PDFs into one, split documents, or extract text from research papers."
-                            color="bg-red-100 text-red-600"
-                            primaryLabel="See all PDF Tools"
-                            secondaryLabel="Try Merge PDF"
-                            onPrimary={() => launchTool('pdf-merge')}
-                            onSecondary={() => launchTool('pdf-merge')}
-                        />
-
-                        {/* 2. PNG Tools (Image) */}
-                        <ToolCard
-                            icon={ImageIcon}
-                            title="Image Tools"
-                            description="Tools for working with images – convert PNGs to JPGs, resize, and optimize for publications."
-                            color="bg-green-100 text-green-600"
-                            primaryLabel="See all Image Tools"
-                            secondaryLabel="Try Convert Image"
-                            onPrimary={() => launchTool('image-convert')}
-                            onSecondary={() => launchTool('image-convert')}
-                        />
-
-                        {/* 3. JSON Tools */}
-                        <ToolCard
-                            icon={FileJson}
-                            title="Json Tools"
-                            description="Tools for working with JSON data structures – prettify, minify, and convert to CSV for analysis."
-                            color="bg-yellow-100 text-yellow-600"
-                            primaryLabel="See all Json Tools"
-                            secondaryLabel="Try Json to CSV"
-                            onPrimary={() => launchTool('json-prettify')}
-                            onSecondary={() => launchTool('json-csv')}
-                        />
-
-                        {/* 4. Text Tools */}
+                        {/* A. TEXT & WRITING */}
                         <ToolCard
                             icon={Type}
-                            title="Text Tools"
-                            description="Tools for working with text – find and replace, split text, and analyze readability."
-                            color="bg-blue-100 text-blue-600"
-                            primaryLabel="See all Text Tools"
-                            secondaryLabel="Try Text Analysis"
-                            onPrimary={() => launchTool('placeholder')}
-                            onSecondary={() => launchTool('placeholder')}
+                            title="Text & Writing Tools"
+                            description="Clean whitespace, normalize case, format paragraphs, and prepare text for manuscripts."
+                            color="bg-slate-100 text-slate-700"
+                            primaryLabel="Clean Text"
+                            secondaryLabel="Format Case"
+                            onPrimary={() => launchTool('placeholder', 'Text Cleaner')}
+                            onSecondary={() => launchTool('placeholder', 'Case Converter')}
                         />
 
-                        {/* 5. List Tools */}
+                        {/* B. REFERENCE & CITATION */}
                         <ToolCard
-                            icon={ListIcon}
-                            title="List Tools"
-                            description="Tools for working with lists – sort, reverse, randomize, and deduplicate gene lists."
-                            color="bg-purple-100 text-purple-600"
-                            primaryLabel="See all List Tools"
-                            secondaryLabel="Try Sort List"
-                            onPrimary={() => launchTool('placeholder')}
-                            onSecondary={() => launchTool('placeholder')}
+                            icon={BookOpen}
+                            title="Reference & Citation"
+                            description="Deduplicate references, validate BibTeX/RIS, and convert lists to CSV for 200+ citation reviews."
+                            color="bg-blue-100 text-blue-700"
+                            primaryLabel="Deduplicate Refs"
+                            secondaryLabel="Convert List"
+                            onPrimary={() => launchTool('placeholder', 'Ref Deduplicator')}
+                            onSecondary={() => launchTool('placeholder', 'List to CSV')}
                         />
 
-                        {/* 6. Number Tools */}
+                        {/* C. RESEARCH PDF UTILITIES */}
                         <ToolCard
-                            icon={Hash}
-                            title="Number Tools"
-                            description="Tools for working with numbers – statistics, unit conversion, and sequence generation."
-                            color="bg-cyan-100 text-cyan-600"
-                            primaryLabel="See all Number Tools"
-                            secondaryLabel="Try Calculator"
-                            onPrimary={() => launchTool('placeholder')}
-                            onSecondary={() => launchTool('placeholder')}
+                            icon={FileText}
+                            title="Research PDF Utilities"
+                            description="Merge supplementary files, split articles, or extract text for screening."
+                            color="bg-red-100 text-red-700"
+                            primaryLabel="Merge PDFs"
+                            secondaryLabel="Split PDF"
+                            onPrimary={() => launchTool('pdf-merge', 'Merge PDFs')}
+                            onSecondary={() => launchTool('pdf-merge', 'Split PDF')} // Reusing merge for demo flow
+                        />
+
+                        {/* D. SCIENTIFIC FIGURE UTILITIES */}
+                        <ToolCard
+                            icon={ImageIcon}
+                            title="Scientific Figure Utilities"
+                            description="Strict Journal Compliance: Resize, Compress, DPI Adjust, and Format Conversion (No filters)."
+                            color="bg-green-100 text-green-700"
+                            primaryLabel="Convert Format"
+                            secondaryLabel="Adjust DPI"
+                            onPrimary={() => launchTool('image-convert', 'Figure Converter')}
+                            onSecondary={() => launchTool('image-convert', 'DPI Adjuster')}
+                        />
+
+                        {/* E. RESEARCH DATA TOOLS */}
+                        <ToolCard
+                            icon={Database}
+                            title="Research Data Tools"
+                            description="Convert JSON/XML to CSV for analysis. Handle screening tables and results datasets."
+                            color="bg-yellow-100 text-yellow-700"
+                            primaryLabel="JSON to CSV"
+                            secondaryLabel="XML to CSV"
+                            onPrimary={() => launchTool('json-csv', 'JSON Converter')}
+                            onSecondary={() => launchTool('json-csv', 'XML Converter')}
+                        />
+
+                        {/* F. INTEGRITY & AUDIT */}
+                        <ToolCard
+                            icon={ShieldCheck}
+                            title="Integrity & Audit Tools"
+                            description="Verify file checksums (SHA-256) and ensure data reproducibility for examiners."
+                            color="bg-purple-100 text-purple-700"
+                            primaryLabel="Verify Checksum"
+                            secondaryLabel="File Hash"
+                            onPrimary={() => launchTool('placeholder', 'Checksum Verifier')}
+                            onSecondary={() => launchTool('placeholder', 'File Hasher')}
                         />
 
                     </div>
@@ -225,16 +225,13 @@ export default function OmniToolsView() {
             {/* Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-900/50">
                 <div className="flex items-center space-x-4">
-                    <button onClick={() => setView('dashboard')} className="p-2 hover:bg-slate-800 rounded-lg transition-colors">
-                        <ChevronLeft className="w-5 h-5 text-slate-400" />
+                    <button onClick={() => setView('dashboard')} className="p-2 hover:bg-slate-800 rounded-lg transition-colors group">
+                        <ArrowRight className="w-5 h-5 text-slate-400 rotate-180 group-hover:text-white" />
                     </button>
                     <div>
                         <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                            {activeMode === 'pdf-merge' && <FileText className="w-5 h-5 text-red-400" />}
-                            {activeMode === 'image-convert' && <ImageIcon className="w-5 h-5 text-green-400" />}
-                            {(activeMode === 'json-prettify' || activeMode === 'json-csv') && <FileJson className="w-5 h-5 text-yellow-400" />}
-
-                            <span className="capitalize">{activeMode.replace('-', ' ')}</span>
+                            <Hammer className="w-5 h-5 text-teal-500" />
+                            <span className="capitalize">{activeTitle}</span>
                         </h2>
                     </div>
                 </div>
@@ -247,16 +244,16 @@ export default function OmniToolsView() {
                     {/* Placeholder Mode */}
                     {activeMode === 'placeholder' ? (
                         <div className="text-center py-12">
-                            <Hammer className="w-12 h-12 text-slate-700 mx-auto mb-4" />
-                            <h3 className="text-xl font-bold text-slate-400">Coming Soon</h3>
-                            <p className="text-slate-500 mt-2">This native tool is currently under development.</p>
-                            <button onClick={() => setView('dashboard')} className="mt-6 px-4 py-2 bg-slate-800 text-white rounded-lg">Return to Dashboard</button>
+                            <PenTool className="w-12 h-12 text-slate-700 mx-auto mb-4" />
+                            <h3 className="text-xl font-bold text-slate-400">Utility In Development</h3>
+                            <p className="text-slate-500 mt-2">This academic compliance tool will be available in the upcoming update.</p>
+                            <button onClick={() => setView('dashboard')} className="mt-6 px-4 py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-700">Return to Utilities</button>
                         </div>
                     ) : (
                         <div className="space-y-8 relative z-10">
                             <div className="text-center">
-                                <h3 className="text-2xl font-bold text-white mb-2">Upload Files</h3>
-                                <p className="text-slate-400 text-sm">Select files to process securely on your device.</p>
+                                <h3 className="text-2xl font-bold text-white mb-2">Upload Source Files</h3>
+                                <p className="text-slate-400 text-sm">Processed locally. No data leaves your workstation.</p>
                             </div>
 
                             {/* File Dropper */}
@@ -267,15 +264,15 @@ export default function OmniToolsView() {
                                     multiple={activeMode === 'pdf-merge'}
                                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20"
                                 />
-                                <div className="border-2 border-dashed border-slate-700 group-hover:border-blue-500/50 rounded-xl p-10 transition-all bg-slate-950/50 group-hover:bg-slate-900 text-center">
+                                <div className="border-2 border-dashed border-slate-700 group-hover:border-teal-500/50 rounded-xl p-10 transition-all bg-slate-950/50 group-hover:bg-slate-900 text-center">
                                     {files.length > 0 ? (
                                         <div className="space-y-2">
-                                            <CheckCircle className="w-12 h-12 text-green-500 mx-auto" />
-                                            <p className="font-mono text-sm text-green-400">{files.length} file(s) selected</p>
+                                            <CheckCircle className="w-12 h-12 text-teal-500 mx-auto" />
+                                            <p className="font-mono text-sm text-teal-400">{files.length} file(s) ready</p>
                                         </div>
                                     ) : (
                                         <div className="space-y-2">
-                                            <Upload className="w-12 h-12 text-slate-600 mx-auto group-hover:text-blue-400 transition-colors" />
+                                            <Upload className="w-12 h-12 text-slate-600 mx-auto group-hover:text-teal-400 transition-colors" />
                                             <p className="text-slate-400">Drag files or click to browse</p>
                                         </div>
                                     )}
@@ -285,11 +282,12 @@ export default function OmniToolsView() {
                             {/* Options */}
                             {activeMode === 'image-convert' && (
                                 <div className="flex justify-center gap-2">
-                                    {['png', 'jpeg', 'webp'].map(fmt => (
+                                    <span className="text-xs font-bold text-slate-500 uppercase tracking-widest pt-2 mr-2">Target Format:</span>
+                                    {['png', 'jpeg', 'webp', 'tiff'].map(fmt => (
                                         <button
                                             key={fmt}
                                             onClick={() => setParams({ ...params, format: fmt })}
-                                            className={`px-4 py-2 rounded text-xs font-bold uppercase transition-colors ${params.format === fmt ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-400'}`}
+                                            className={`px-3 py-1 rounded text-xs font-bold uppercase transition-colors ${params.format === fmt ? 'bg-teal-600 text-white' : 'bg-slate-800 text-slate-400'}`}
                                         >
                                             {fmt}
                                         </button>
@@ -303,10 +301,10 @@ export default function OmniToolsView() {
                                     <button
                                         onClick={executeTool}
                                         disabled={files.length === 0 || processing}
-                                        className="px-8 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg shadow-blue-900/20 disabled:opacity-50 disabled:grayscale"
+                                        className="px-8 py-3 bg-teal-600 hover:bg-teal-500 text-white rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg shadow-teal-900/20 disabled:opacity-50 disabled:grayscale"
                                     >
                                         {processing ? <Loader2 className="w-5 h-5 animate-spin" /> : <ArrowRight className="w-5 h-5" />}
-                                        {processing ? 'Processing...' : 'Run Tool'}
+                                        {processing ? 'Processing...' : 'Run Utility'}
                                     </button>
                                 ) : (
                                     <div className="flex gap-4 animate-in slide-in-from-bottom-2">
@@ -328,13 +326,8 @@ export default function OmniToolsView() {
                             </div>
                         </div>
                     )}
-
-                    {/* Background decoration */}
-                    <div className="absolute -top-24 -right-24 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
-                    <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
                 </div>
             </div>
         </div>
     );
 }
-

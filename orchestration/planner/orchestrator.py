@@ -11,7 +11,7 @@ import requests
 from pydantic import BaseModel, Field
 
 from modules.bio_ner.pubtator import PubTatorValidator
-from modules.literature_search.semantic_scholar import SemanticScholarSearcher
+from modules.literature.semantic_scholar import SemanticScholarSearcher
 from modules.compliance.academic_compliance import AcademicComplianceEngine
 
 

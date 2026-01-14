@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Home, FlaskConical, FileText, Beaker, Settings, Sparkles, BookOpen, Fingerprint, Globe, Lightbulb, Brain, Hammer, Printer, Calculator, ShieldCheck } from 'lucide-react';
+import { Home, FlaskConical, FileText, Beaker, Settings, Sparkles, BookOpen, Fingerprint, Globe, Lightbulb, Brain, Hammer, Printer, Calculator, ShieldCheck, PenTool } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
 import FeedbackDialog from './FeedbackDialog';
@@ -18,6 +18,7 @@ export default function Sidebar({ activeView, onViewChange }: SidebarProps) {
     { id: 'home', icon: Home, label: 'Home' },
     { id: 'research', icon: FlaskConical, label: 'Workstation' },
     { id: 'autonomous', icon: Globe, label: 'Deep Research' },
+    { id: 'writers', icon: PenTool, label: 'Academic Suite' }, // NEW: Writer Studio
     { id: 'hypothesis', icon: Brain, label: 'Scientific Method' },
     { id: 'results', icon: FileText, label: 'Results' },
     { id: 'lab', icon: Beaker, label: 'Virtual Lab' },
@@ -29,7 +30,7 @@ export default function Sidebar({ activeView, onViewChange }: SidebarProps) {
 
   const bottomNav = [
     { id: 'surfsense', icon: Brain, label: 'Knowledge Base' }, // Built-in Knowledge Base
-    { id: 'omnitools', icon: Hammer, label: 'Tools' },
+    { id: 'omnitools', icon: Hammer, label: 'Research Utilities' },
     { id: 'settings', icon: Settings, label: 'Settings' },
   ];
 

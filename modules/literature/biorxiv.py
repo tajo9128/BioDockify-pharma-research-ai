@@ -36,7 +36,7 @@ class BioRxivScraper:
         proxy_query = f"{query} AND (SRC:PPR OR PUBLISHER:\"Cold Spring Harbor Laboratory\")"
         
         # Import here to avoid circular dependency at top level if not careful, though usually fine.
-        from modules.literature_search.europe_pmc import EuropePMCScraper
+        from modules.literature.europe_pmc import EuropePMCScraper
         
         proxy = EuropePMCScraper()
         results = proxy.search_papers(proxy_query, max_results)
