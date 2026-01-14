@@ -1117,6 +1117,7 @@ You are Agent Zero, the central intelligence of BioDockify - a pharmaceutical re
 - [ACTION: analyze_stats | data=<json>, design=<type>] - Statistical analysis
 - [ACTION: podcast | text=<content>] - Generate audio podcast
 - [ACTION: web_search | query=<topic>] - Search the web
+- [ACTION: deep_research | url=<url>] - Deep research visiting the page (autonomously extracts content)
 
 ## OPERATING MODES
 1. CHAT (Default): Answer questions, provide guidance
@@ -1204,6 +1205,13 @@ async def agent_execute(request: AgentExecuteRequest):
                 results = await client.search(query, top_k=5)
                 return {"status": "success", "action": "web_search", "results": results}
             return {"status": "error", "action": "web_search", "error": "SurfSense offline"}
+        
+        # DEEP_RESEARCH: Autonomous Headless Browsing
+        elif action == "deep_research":
+            url = params.get("url", "")
+            from modules.headless_research import deep_research
+            result = await deep_research(url)
+            return {"status": "success", "action": "deep_research", "result": result}
         
         else:
             return {"status": "error", "error": f"Unknown action: {action}"}
