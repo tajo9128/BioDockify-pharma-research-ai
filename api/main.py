@@ -276,43 +276,47 @@ def verify_journal(req: JournalRequest):
 @app.post("/api/library/upload")
 async def upload_file(file: UploadFile = File(...)):
     """
-    Uploads a file to BOTH SurfSense (Analysis) and Local Library (UI/Backup).
+    Uploads a file to the internal Knowledge Base.
+    Stores file locally AND indexes into vector store for semantic search.
     """
     try:
-        from modules.knowledge.client import surfsense
+        from modules.rag.ingestor import ingestor
+        from modules.rag.vector_store import get_vector_store
         
         # 1. Read File Content
         content = await file.read()
         
-        # 2. Upload to SurfSense (Knowledge Engine)
-        # We do this first to ensure it enters the brain.
-        ss_status = "skipped"
-        ss_details = {}
-        try:
-            ss_result = await surfsense.upload_file(content, file.filename)
-            if ss_result.get("status") == "failed" or "error" in ss_result:
-                logger.warning(f"SurfSense upload warning: {ss_result.get('error')}")
-                ss_status = "failed"
-            else:
-                ss_status = "success"
-                ss_details = ss_result
-        except Exception as e:
-            logger.error(f"SurfSense connection failed: {e}")
-            ss_status = "failed"
-
-        # 3. Store Locally (for UI listing and consistency)
+        # 2. Store Locally (for UI listing and file retrieval)
         record = library_store.add_file(content, file.filename)
+        file_path = library_store.get_file_path(record['id'])
         
-        # 4. Update Metadata with SurfSense status
-        library_store.update_metadata(record['id'], {
-            "surfsense_status": ss_status,
-            "surfsense_id": ss_details.get("id")
-        })
+        # 3. Ingest and Index into Vector Store
+        vector_status = "pending"
+        chunk_count = 0
+        try:
+            chunks = ingestor.ingest_file(str(file_path))
+            if chunks:
+                get_vector_store().add_documents(chunks)
+                chunk_count = len(chunks)
+                vector_status = "indexed"
+                # Mark file as processed
+                library_store.update_metadata(record['id'], {
+                    "processed": True,
+                    "chunk_count": chunk_count
+                })
+        except Exception as e:
+            logger.warning(f"Vector indexing failed for {file.filename}: {e}")
+            vector_status = "failed"
+            library_store.update_metadata(record['id'], {
+                "processed": False,
+                "index_error": str(e)
+            })
 
         return {
             "status": "success", 
             "file": record, 
-            "surfsense": ss_status
+            "vector_index": vector_status,
+            "chunks_indexed": chunk_count
         }
         
     except Exception as e:
