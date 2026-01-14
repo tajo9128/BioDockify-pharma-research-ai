@@ -29,6 +29,9 @@ interface ResearchWorkstationProps {
     isExecuting?: boolean;
     thinkingSteps?: any[];
     error?: string | null;
+    // New Props for Lifted State
+    mode?: WorkMode;
+    onModeChange?: (m: WorkMode) => void;
 }
 
 export default function ResearchWorkstation({
@@ -39,10 +42,21 @@ export default function ResearchWorkstation({
     onStop = () => { },
     isExecuting = false,
     thinkingSteps = [],
-    error = null
+    error = null,
+    mode = 'search', // Default if not provided
+    onModeChange
 }: ResearchWorkstationProps) {
     // State
-    const [mode, setMode] = useState<WorkMode>('search');
+    // Internal state only if onModeChange is NOT provided (fallback for backward compat)
+    const [internalMode, setInternalMode] = useState<WorkMode>('search');
+
+    // Derived state: use prop if available, else internal
+    const activeMode = onModeChange ? mode : internalMode;
+    const setActiveMode = (m: WorkMode) => {
+        if (onModeChange) onModeChange(m);
+        else setInternalMode(m);
+    };
+
     // Remove local query/isRunning state in favor of props
     const [evidence, setEvidence] = useState<Evidence[]>([]);
     const [externalInsights, setExternalInsights] = useState<ExternalAIInsight[]>([]);
@@ -184,13 +198,12 @@ export default function ResearchWorkstation({
                         <div>
                             <label className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3 block">Operation Mode</label>
                             <div className="grid grid-cols-1 gap-2">
-                                <ModeBtn id="search" label="Discovery" icon={Search} active={mode === 'search'} onClick={() => setMode('search')} />
-                                <ModeBtn id="synthesize" label="Synthesis" icon={FileText} active={mode === 'synthesize'} onClick={() => setMode('synthesize')} />
-                                <ModeBtn id="write" label="Drafting" icon={PenTool} active={mode === 'write'} onClick={() => setMode('write')} />
-                                <ModeBtn id="thesis_writer" label="PhD Thesis" icon={Globe} active={mode === 'thesis_writer'} onClick={() => setMode('thesis_writer')} />
-                                <ModeBtn id="thesis_writer" label="PhD Thesis" icon={Globe} active={mode === 'thesis_writer'} onClick={() => setMode('thesis_writer')} />
-                                <ModeBtn id="review_writer" label="Intl. Review" icon={Beaker} active={mode === 'review_writer'} onClick={() => setMode('review_writer')} />
-                                <ModeBtn id="research_writer" label="Orig. Research" icon={FileText} active={mode === 'research_writer'} onClick={() => setMode('research_writer')} />
+                                <ModeBtn id="search" label="Discovery" icon={Search} active={activeMode === 'search'} onClick={() => setActiveMode('search')} />
+                                <ModeBtn id="synthesize" label="Synthesis" icon={FileText} active={activeMode === 'synthesize'} onClick={() => setActiveMode('synthesize')} />
+                                <ModeBtn id="write" label="Drafting" icon={PenTool} active={activeMode === 'write'} onClick={() => setActiveMode('write')} />
+                                <ModeBtn id="thesis_writer" label="PhD Thesis" icon={Globe} active={activeMode === 'thesis_writer'} onClick={() => setActiveMode('thesis_writer')} />
+                                <ModeBtn id="review_writer" label="Intl. Review" icon={Beaker} active={activeMode === 'review_writer'} onClick={() => setActiveMode('review_writer')} />
+                                <ModeBtn id="research_writer" label="Orig. Research" icon={FileText} active={activeMode === 'research_writer'} onClick={() => setActiveMode('research_writer')} />
                             </div>
                         </div>
 

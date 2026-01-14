@@ -13,6 +13,7 @@ import HypothesisView from '@/components/HypothesisView';
 import PublicationView from '@/components/PublicationView';
 import StatisticsView from '@/components/StatisticsView';
 import JournalChecker from '@/components/JournalChecker';
+import { AcademicWriterHub } from '@/components/writers/AcademicWriterHub';
 
 
 import FeedbackDialog from '@/components/FeedbackDialog'; // Ensure imported if used
@@ -50,6 +51,9 @@ const getStepIcon = (type: string) => {
 // --- Main Component ---
 export default function PharmaceuticalResearchApp() {
   const [activeView, setActiveView] = useState<string>('home');
+  // Lifted workstation mode state to allow Hub to control it
+  const [workstationMode, setWorkstationMode] = useState<'search' | 'synthesize' | 'write' | 'thesis_writer' | 'review_writer' | 'research_writer'>('search');
+
   const [hasOnboarded, setHasOnboarded] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -265,6 +269,22 @@ export default function PharmaceuticalResearchApp() {
       case 'research':
       case 'results':
       case 'lab':
+        return (
+          <div className="h-full flex items-center justify-center text-slate-500">
+            Virtual Lab Module Coming Soon
+          </div>
+        );
+      case 'writers':
+        return (
+          <ErrorBoundary name="WriterHub">
+            <AcademicWriterHub
+              onSelectMode={(mode) => {
+                setWorkstationMode(mode);
+                setActiveView('research'); // Navigate to Workstation
+              }}
+            />
+          </ErrorBoundary>
+        );
       default:
         // For now, all research activities happen in the Workstation
         // Passing view prop to handle specific sub-views
@@ -279,6 +299,8 @@ export default function PharmaceuticalResearchApp() {
               isExecuting={isExecuting}
               thinkingSteps={thinkingSteps}
               error={error}
+              mode={workstationMode}
+              onModeChange={setWorkstationMode}
             />
           </ErrorBoundary>
         );
