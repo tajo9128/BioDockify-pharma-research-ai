@@ -1,88 +1,209 @@
-# BioDockify v2.0.0 🧬
+# BioDockify v2.14.3 🧬
 
-**The "Always-On" Autonomous Pharmaceutical Research Agent**
+**Autonomous AI Research Assistant for Pharmaceutical & Life Sciences**
 
-BioDockify is a local-first, privacy-preserving AI workstation designed for pharmaceutical researchers, PhD students, and drug discovery scientists. It transforms standard LLVs (Large Language Models) into "Pharma-Grade" research assistants capable of deep literature review, hypothesis generation, and academic synthesis.
+BioDockify is a local-first, privacy-preserving AI workstation designed for pharmaceutical researchers, PhD students, and drug discovery scientists. It transforms LLMs into "Pharma-Grade" research assistants capable of deep literature analysis, hypothesis generation, and academic synthesis.
 
-![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![Version](https://img.shields.io/badge/version-2.10.0-green.svg)
-![Status](https://img.shields.io/badge/status-Production-teal.svg)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Version](https://img.shields.io/badge/version-2.14.3-green.svg)](https://github.com/tajo9128/BioDockify-pharma-research-ai/releases)
+[![Status](https://img.shields.io/badge/status-Production-teal.svg)]()
+[![Platform](https://img.shields.io/badge/platform-Windows-blue.svg)]()
 
-## 🚀 Key Features (v2.5.0)
+---
 
-### 🧠 The Intelligence Layer ("The Brain")
-*   **Multi-Model Engine**: Seamlessly route queries between **GLM-4.7**, **Google Gemini**, **Hugging Face**, **OpenRouter**, or local **Ollama** models.
-*   **Pharma-Grade Compliance**: Integrated access to **PubMed**, **PubTator** (NER), **Semantic Scholar** (Impact Ranking), and **Unpaywall** (Legal OA).
-*   **Reasoning Modes**:
-    *   `Search`: Pure evidence retrieval.
-    *   `Synthesize`: Connecting dots and finding patterns.
-    *   `Write`: Academic drafting with strict **Citation Locks**.
+## ✨ Key Features
 
-### 🛡️ The Safety Layer
-*   **Citation Lock**: The agent refuses to generate scientific claims without cited evidence (Low/Medium/High strictness).
-*   **Conflict Detection**: Actively scans for and highlights contradictory evidence in literature.
-*   **Context Awareness**: "Perplexity-Like" intent classification steers the research strategy.
+### 🧠 Agent Zero - The Intelligence Core
+| Feature | Description |
+|---------|-------------|
+| **Multi-Provider AI** | Works with Ollama (local), Google Gemini, OpenRouter, GLM-4.7, HuggingFace, or any OpenAI-compatible API |
+| **Intelligent Fallback** | Automatically tries next provider if one fails |
+| **Persona-Aware** | Adapts responses based on your role (PhD Student, PG Student, Senior Researcher, Industry Scientist) |
+| **Evidence-Driven** | Refuses to generate claims without cited sources |
 
-### ⚡ The System Layer ("The Body")
-*   **Always-On**: Minimizes to System Tray for background monitoring.
-*   **Hardware Aware**: Auto-pauses heavy inference when on battery power.
-*   **Local-First**: All research data, plans, and API keys are stored locally in `user_config`.
+### 📚 SurfSense Knowledge Engine
+| Feature | Description |
+|---------|-------------|
+| **Document Ingestion** | Upload PDFs, Word docs, notebooks, and data files |
+| **Semantic Search** | AI-powered search across your knowledge base |
+| **Auto-Indexing** | Automatically processes and indexes uploaded files |
 
-## 🛠️ Installation
+### 🔬 Research Tools
+| Tool | Description |
+|------|-------------|
+| **Workstation** | Plan and execute research tasks |
+| **Scientific Method** | Structured hypothesis builder |
+| **Virtual Lab** | Generate lab protocols |
+| **Publication Assistant** | Academic writing support |
+| **Statistics Engine** | Data analysis tools |
+| **Journal Authenticity Checker** | Verify journal legitimacy |
 
-### Prerequisites
-*   **Python 3.10+** (Backend)
-*   **Node.js 18+** (Frontend)
-*   **Rust** (Desktop Shell)
-*   **Ollama** (Optional, for local inference)
+### 📖 Literature Sources
+- **Free**: PubMed, PMC, OpenAlex, ClinicalTrials.gov, Semantic Scholar
+- **Optional**: Elsevier/Scopus (API key required), Web of Science
 
-### Quick Start
+### 🛡️ Safety & Compliance
+- **Citation Lock**: Forces evidence-based responses
+- **Conflict Detection**: Highlights contradictory evidence
+- **Local-First**: All data stored locally, never sent to third parties
 
-1.  **Clone the Repository**
-    ```bash
-    git clone https://github.com/your-org/biodockify.git
-    cd biodockify
-    ```
+---
 
-2.  **Install Backend Dependencies**
-    ```bash
-    pip install -r requirements.txt
-    ```
+## 🚀 Installation
 
-3.  **Install Frontend Dependencies**
-    ```bash
-    cd ui
-    npm install
-    ```
+### Option 1: Download Release (Recommended)
+1. Go to [Releases](https://github.com/tajo9128/BioDockify-pharma-research-ai/releases)
+2. Download `BioDockify-Setup.exe` for Windows
+3. Run the installer
 
-4.  **Run the Application**
-    ```bash
-    # From root directory
-    npm run tauri dev
-    ```
+### Option 2: Build from Source
+
+#### Prerequisites
+- **Python 3.10+** 
+- **Node.js 18+** 
+- **Rust** (for Tauri)
+- **Docker** (optional, for SurfSense)
+- **Ollama** (optional, for local AI)
+
+#### Steps
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/tajo9128/BioDockify-pharma-research-ai.git
+cd BioDockify-pharma-research-ai
+
+# 2. Install backend dependencies
+pip install -r requirements.txt
+
+# 3. Install frontend dependencies
+cd ui
+npm install
+
+# 4. Build the desktop app
+cd ../desktop/tauri
+npm install
+npm run tauri build
+
+# The installer will be in: desktop/tauri/src-tauri/target/release/bundle/
+```
+
+#### Running in Development
+```bash
+# Start backend (from root)
+python api/main.py
+
+# Start frontend (from ui/)
+npm run dev
+
+# Or run full Tauri app
+npm run tauri dev
+```
+
+---
 
 ## ⚙️ Configuration
 
-BioDockify v2.0.0 introduces a comprehensive **Settings Panel** (Gear Icon):
+Access settings via the **gear icon** in the sidebar or **File → Open Settings**.
 
-*   **Cloud Keys**: Enter your GLM-4.7, Google, or OpenRouter keys (stored locally).
-*   **Persona**: Set your role (`PhD Student`, `Industry Scientist`) to adjust agent strictness.
-*   **Literature**: Toggle specific sources (`PubMed`, `bioRxiv`, `ClinicalTrials.gov`).
-*   **Output**: Configure export formats (`PDF`, `LaTeX`, `Markdown`) and citation styles.
+### 🧠 Brain Tab (Local AI)
+| Setting | Description | Default |
+|---------|-------------|---------|
+| Ollama URL | Local Ollama server | `http://localhost:11434` |
+| Model | Selected Ollama model | Auto-detected |
+| SurfSense URL | Knowledge engine | `http://localhost:3003` |
+
+### ☁️ Cloud Tab (API Keys)
+| Provider | Purpose |
+|----------|---------|
+| Google Gemini | Fast cloud inference |
+| OpenRouter | Access to multiple models |
+| HuggingFace | Free inference API |
+| Custom API | Any OpenAI-compatible endpoint (GLM-4.7, Groq, etc.) |
+
+### 📚 Research Tab
+Configure literature sources:
+- Toggle individual databases (PubMed, PMC, OpenAlex, etc.)
+- Set citation threshold (Low/Medium/High)
+
+### 👤 Persona Tab
+| Setting | Options |
+|---------|---------|
+| Role | PhD Student, PG Student, Senior Researcher, Industry Scientist |
+| Strictness | Exploratory, Balanced, Conservative |
+| Introduction | Your profile for personalized responses |
+| Research Focus | Your area of expertise |
+
+### 📄 Output Tab
+| Setting | Options |
+|---------|---------|
+| Format | Markdown, PDF, DOCX, LaTeX |
+| Citation Style | APA, Nature, IEEE, Chicago |
+| Include Disclosure | Yes/No |
+| Output Directory | Where to save exports |
+
+---
 
 ## 🏗️ Architecture
 
-*   **Frontend**: Next.js 15 + React 19 + Tailwind CSS (Cyberpunk/Lab Aesthetics)
-*   **Orchestrator**: Python FastAPI + LangChain-style Logic
-*   **Shell**: Tauri (Rust) for native OS integration
-*   **Compliance**: Custom standard-library modules for academic rigor
+```
+BioDockify/
+├── ui/                    # Next.js 15 Frontend
+├── api/                   # FastAPI Backend
+├── runtime/               # Python orchestration
+├── modules/               # Feature modules
+│   ├── library/          # Document storage
+│   ├── journal_intel/    # Journal verification
+│   ├── knowledge/        # SurfSense client
+│   ├── rag/              # Vector search
+│   └── statistics/       # Data analysis
+├── desktop/tauri/        # Tauri desktop shell
+└── installer/            # NSIS installer
+```
+
+### Tech Stack
+- **Frontend**: Next.js 15, React 19, Tailwind CSS
+- **Backend**: Python FastAPI
+- **Desktop**: Tauri (Rust)
+- **Knowledge Engine**: SurfSense (Docker)
+- **Local AI**: Ollama
+
+---
+
+## 📋 System Requirements
+
+| Component | Minimum | Recommended |
+|-----------|---------|-------------|
+| OS | Windows 10+ | Windows 11 |
+| RAM | 8 GB | 16 GB |
+| Storage | 2 GB | 10 GB (with models) |
+| GPU | Not required | NVIDIA (for local AI) |
+
+---
 
 ## 🤝 Contributing
 
-We welcome contributions! Please see `CONTRIBUTING.md` for details on our "Pharma-Grade" code standards.
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add AmazingFeature'`)
+4. Push to branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
-1.  Fork the Project
-2.  Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3.  Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
-4.  Push to the Branch (`git push origin feature/AmazingFeature`)
-5.  Open a Pull Request
+---
+
+## 📜 License
+
+MIT License - see [LICENSE](LICENSE) for details.
+
+---
+
+## 🔗 Links
+
+- **Repository**: [GitHub](https://github.com/tajo9128/BioDockify-pharma-research-ai)
+- **Releases**: [Downloads](https://github.com/tajo9128/BioDockify-pharma-research-ai/releases)
+- **Issues**: [Report Bug](https://github.com/tajo9128/BioDockify-pharma-research-ai/issues)
+
+---
+
+<p align="center">
+  <b>BioDockify</b> - Analyze research, automate academic workflows.
+</p>
