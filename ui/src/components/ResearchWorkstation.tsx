@@ -7,11 +7,12 @@ import { Search, PenTool, Layout, Play, Pause, Square, AlertCircle, FileText, Gl
 import ReactMarkdown from 'react-markdown';
 import ExternalInsightImporter, { ExternalAIInsight } from './ExternalInsightImporter';
 import { DeepResearchView } from './deep-research/DeepResearchView';
+import { ThesisWriterView } from './thesis/ThesisWriterView';
 import { cn } from '@/lib/utils';
 import DiagnosisDialog from '@/components/DiagnosisDialog';
 
 // Types (Micro-definitions to be self-contained)
-type WorkMode = 'search' | 'synthesize' | 'write' | 'thesis_writer';
+type WorkMode = 'search' | 'synthesize' | 'write' | 'thesis_writer' | 'review_writer';
 interface LogEntry { id: string; type: 'info' | 'thought' | 'result' | 'action' | 'error'; content: string; timestamp: Date; description?: string; }
 
 // ... (inside component)
@@ -130,6 +131,21 @@ export default function ResearchWorkstation({
         );
     }
 
+    // --- MODE: PHD THESIS WRITER (Full Screen Overlay) ---
+    if (mode === 'thesis_writer') {
+        return (
+            <div className="h-screen bg-slate-950 text-slate-200 overflow-hidden relative">
+                <button
+                    onClick={() => setMode('search')}
+                    className="absolute top-5 right-6 z-50 px-3 py-1 bg-slate-800 text-slate-400 text-xs rounded hover:bg-slate-700 border border-slate-700"
+                >
+                    Exit Thesis Mode
+                </button>
+                <ThesisWriterView />
+            </div>
+        );
+    }
+
     // --- VIEW: STANDARD WORKSTATION (Home/Research) ---
     return (
         <div className="h-screen flex flex-col bg-slate-950 text-slate-200 overflow-hidden font-sans">
@@ -172,6 +188,7 @@ export default function ResearchWorkstation({
                                 <ModeBtn id="synthesize" label="Synthesis" icon={FileText} active={mode === 'synthesize'} onClick={() => setMode('synthesize')} />
                                 <ModeBtn id="write" label="Drafting" icon={PenTool} active={mode === 'write'} onClick={() => setMode('write')} />
                                 <ModeBtn id="thesis_writer" label="PhD Thesis" icon={Globe} active={mode === 'thesis_writer'} onClick={() => setMode('thesis_writer')} />
+                                <ModeBtn id="review_writer" label="Intl. Review" icon={Beaker} active={mode === 'review_writer'} onClick={() => setMode('review_writer')} />
                             </div>
                         </div>
 

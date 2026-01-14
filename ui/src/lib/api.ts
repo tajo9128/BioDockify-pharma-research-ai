@@ -184,7 +184,7 @@ export const api = {
   getResults: (taskId: string) =>
     apiRequest<ResearchResults>(`/research/${taskId}/results`),
 
-  agentChat: (message: string, mode: 'chat' | 'semi-autonomous' | 'autonomous' | 'thesis_writer' = 'chat') =>
+  agentChat: (message: string, mode: 'chat' | 'semi-autonomous' | 'autonomous' | 'thesis_writer' | 'review_writer' = 'chat') =>
     apiRequest<{ reply: string; provider: string }>('/agent/chat', {
       method: 'POST',
       body: JSON.stringify({ message, mode })
@@ -360,6 +360,30 @@ export const api = {
       if (!response.ok) throw new Error('Data processing failed');
       return response.blob();
     }
+  }
+    processData: async (formData: FormData) => {
+    const response = await fetch(`${API_BASE}/tools/data/process`, {
+      method: 'POST',
+      body: formData
+    });
+    if (!response.ok) throw new Error('Data processing failed');
+    return response.blob();
+  }
+},
+
+  // PhD Thesis Core (Phase 7)
+  thesis: {
+    getStructure: () =>
+      apiRequest<Record<string, any>>('/thesis/structure'),
+
+    validateChapter: (chapterId: string) =>
+      apiRequest<{ status: string, message?: string, missing_items?: string[] }>(`/thesis/validate/${chapterId}`),
+
+    generateChapter: (chapterId: string, topic: string) =>
+        apiRequest<{status: string, content?: string, reason?: string, details?: any}>('/thesis/generate', {
+            method: 'POST',
+            body: JSON.stringify({ chapter_id: chapterId, topic })
+        })
   }
 };
 

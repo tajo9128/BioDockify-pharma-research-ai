@@ -1310,10 +1310,12 @@ def agent_chat_endpoint(request: AgentChatRequest):
     # STEP 2: Build Enhanced Prompt with KB Context and Constitution
     # =========================================================================
     # Use the full Agent Zero Constitution as system prompt
-    from modules.agent import AGENT_ZERO_SYSTEM_PROMPT, PHD_THESIS_WRITER_PROMPT
+    from modules.agent import AGENT_ZERO_SYSTEM_PROMPT, PHD_THESIS_WRITER_PROMPT, PHARMA_REVIEW_WRITER_PROMPT
     
     if request.mode == "thesis_writer":
         base_prompt = PHD_THESIS_WRITER_PROMPT
+    elif request.mode == "review_writer":
+        base_prompt = PHARMA_REVIEW_WRITER_PROMPT
     else:
         # Default to the Pharma Research / General Agent Zero prompt
         base_prompt = AGENT_ZERO_SYSTEM_PROMPT
@@ -1771,3 +1773,30 @@ def get_system_info():
 
 
 
+
+# -----------------------------------------------------------------------------
+# PHD THESIS CORE ENDPOINTS (Phase 7)
+# -----------------------------------------------------------------------------
+from modules.thesis.engine import thesis_engine
+from modules.thesis.structure import THESIS_STRUCTURE
+
+class ThesisRequest(BaseModel):
+    chapter_id: str
+    topic: str
+
+@app.get("/api/thesis/structure")
+def get_thesis_structure():
+    """Return the strict 7-chapter structure definition."""
+    # Convert Enum keys to string for JSON serialization
+    return {k.value: v.dict() for k, v in THESIS_STRUCTURE.items()}
+
+@app.get("/api/thesis/validate/{chapter_id}")
+def validate_chapter(chapter_id: str):
+    """Check if proofs exist for a chapter."""
+    from modules.thesis.validator import thesis_validator
+    return thesis_validator.validate_chapter_readiness(chapter_id)
+
+@app.post("/api/thesis/generate")
+async def generate_chapter_endpoint(req: ThesisRequest):
+    """Generate a chapter draft if validation passes."""
+    return await thesis_engine.generate_chapter(req.chapter_id, req.topic)
