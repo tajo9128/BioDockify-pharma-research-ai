@@ -12,6 +12,7 @@ import uuid
 from orchestration.planner.orchestrator import ResearchOrchestrator, OrchestratorConfig
 from orchestration.executor import ResearchExecutor
 from modules.analyst.analytics_engine import ResearchAnalyst
+from modules.backup import DriveClient, BackupManager
 
 app = FastAPI(title="BioDockify Research API", version="1.0.0")
 
@@ -1802,3 +1803,66 @@ def validate_chapter(chapter_id: str):
 async def generate_chapter_endpoint(req: ThesisRequest):
     """Generate a chapter draft if validation passes."""
     return await thesis_engine.generate_chapter(req.chapter_id, req.topic)
+
+# -----------------------------------------------------------------------------
+# Google Drive Backup System
+# -----------------------------------------------------------------------------
+
+# Initialize Backup System
+drive_client = DriveClient(storage_path="./mock_cloud_storage")
+backup_manager = BackupManager(drive_client)
+
+class BackupAuthVerifyRequest(BaseModel):
+    code: str
+
+class RestoreRequest(BaseModel):
+    snapshot_id: str
+
+@app.post("/api/backup/auth/url")
+def get_backup_auth_url():
+    """Returns the URL to start the OAuth flow via BioDockify."""
+    return {"url": drive_client.get_auth_url()}
+
+@app.post("/api/backup/auth/verify")
+def verify_backup_auth(req: BackupAuthVerifyRequest):
+    """Verifies the auth code (simulated exchange)."""
+    success = drive_client.authenticate(req.code)
+    if success:
+        return {"status": "success", "user": drive_client.get_user_info()}
+    else:
+        raise HTTPException(status_code=401, detail="Authentication failed")
+
+@app.get("/api/backup/status")
+def get_backup_status():
+    """Returns connection status and user info."""
+    return drive_client.get_user_info()
+
+@app.post("/api/backup/run")
+def run_backup(background_tasks: BackgroundTasks):
+    """Triggers a backup in the background."""
+    # Defers the actual backup to background task
+    def _do_backup():
+        # Backing up the adjacent 'brain' directory and 'ui/src' as example of critical data
+        # In prod, this would be the user's workspace path
+        target_dirs = ["./brain", "./ui/src/lib"] 
+        result = backup_manager.create_backup(target_dirs)
+        logger.info(f"Backup completed: {result}")
+    
+    background_tasks.add_task(_do_backup)
+    return {"status": "started", "message": "Backup initiated in background"}
+
+@app.get("/api/backup/history")
+def get_backup_history():
+    """Lists available snapshots."""
+    return drive_client.list_backups()
+
+@app.post("/api/backup/restore")
+def restore_backup(req: RestoreRequest):
+    """Restores a specific snapshot."""
+    # Restoration path defaults to a safe 'restored' folder for safety in this demo
+    target_path = "./restored_data"
+    result = backup_manager.restore_backup(req.snapshot_id, target_path)
+    if result["status"] == "error":
+        raise HTTPException(status_code=500, detail=result["message"])
+    return result
+

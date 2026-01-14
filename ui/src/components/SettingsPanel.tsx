@@ -4,7 +4,11 @@ import { AGENT_PERSONAS } from '@/lib/personas';
 import { Save, Server, Cloud, Cpu, RefreshCw, CheckCircle, AlertCircle, Shield, Activity, Power, BookOpen, Layers, FileText, Globe, Database, Key, FlaskConical, Link, FolderOpen, UserCircle } from 'lucide-react';
 
 // Extended Settings interface matching "Fully Loaded" specs + New User Requests
-interface AdvancedSettings extends Settings {
+interface AdvancedSettings extends Omit<Settings, 'persona'> {
+    // We omit persona to redefine it slightly looser if needed, or just extending is fine if we match types.
+    // However, to fix the error "Interface 'AdvancedSettings' incorrectly extends interface 'Settings'",
+    // we should just rely on the base Settings for common fields or fully match strictness.
+    // Because Settings is providing strict types, let's allow AdvancedSettings to use those.
     system: {
         auto_start: boolean;
         minimize_to_tray: boolean;
@@ -39,12 +43,10 @@ interface AdvancedSettings extends Settings {
             science_index: boolean;
         };
     };
-    // ... rest
-    persona: {
-        role: string;
-        strictness: 'exploratory' | 'balanced' | 'conservative';
-        introduction: string;
-        research_focus: string;
+    // Re-declare persona to match Settings but allow string for UI flexibility if needed, 
+    // BUT TS requires compatibility. Best to use the Settings type.
+    persona: Settings['persona'] & {
+        department: string; // NEW: Department Context
     };
     output: {
         format: 'markdown' | 'pdf' | 'docx' | 'latex';
@@ -63,8 +65,9 @@ export default function SettingsPanel() {
         literature: { sources: ['pubmed'], enable_crossref: true, enable_preprints: false, year_range: 5, novelty_strictness: 'medium' },
         system: { auto_start: false, minimize_to_tray: true, pause_on_battery: true, max_cpu_percent: 80, internet_research: true }, // DEFAULT TRUE
         ai_provider: {
-            mode: 'local',
+            mode: 'ollama', // FIXED: 'local' was invalid, used 'ollama' as default equivalent
             ollama_url: 'http://localhost:11434',
+
             ollama_model: '',
             google_key: '',
             huggingface_key: '',
@@ -86,7 +89,7 @@ export default function SettingsPanel() {
                 biorxiv: false, chemrxiv: false, google_scholar: false, semantic_scholar: false, ieee: false, elsevier: false, scopus: false, wos: false, science_index: false
             }
         },
-        persona: { role: 'PhD Student', strictness: 'balanced', introduction: '', research_focus: '' },
+        persona: { role: 'PhD Student', strictness: 'balanced', introduction: '', research_focus: '', department: 'Pharmacology' },
         output: { format: 'markdown', citation_style: 'apa', include_disclosure: true, output_dir: '' }
     };
 
@@ -249,6 +252,7 @@ export default function SettingsPanel() {
                 <TabButton id="pharma" label="Pharma & Sources" icon={Database} />
                 <TabButton id="output" label="Output & Reports" icon={FileText} />
                 <TabButton id="system" label="System" icon={Power} />
+                <TabButton id="backup" label="Cloud Backup" icon={Cloud} />
                 <TabButton id="persona" label="Persona" icon={BookOpen} />
             </div>
 
@@ -676,6 +680,13 @@ export default function SettingsPanel() {
                         </div>
                     )}
 
+                    {activeTab === 'backup' && (
+                        <div className="space-y-6 animate-in fade-in duration-300">
+                            {/* Backup Control Center */}
+                            <CloudBackupControl />
+                        </div>
+                    )}
+
                     {activeTab === 'persona' && (
                         <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 animate-in fade-in duration-300">
                             <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
@@ -805,44 +816,230 @@ const CloudKeyBox = ({ name, value, icon, onChange, onTest, testStatus = 'idle',
     };
 
     return (
-        <div className={`flex items-center space-x-3 p-3 bg-slate-950 border rounded-lg group focus-within:border-teal-500 transition-all ${getStatusBorder()}`}>
-            <div className="w-10 h-10 rounded bg-slate-900 flex items-center justify-center font-bold text-slate-400 border border-slate-800 group-focus-within:text-teal-400 group-focus-within:border-teal-500/50">
-                {icon}
-            </div>
-            <div className="flex-1 space-y-2">
-                <div className="text-xs text-slate-500 mb-1 flex items-center justify-between">
-                    <span>{name}</span>
+        <div className={`p-4 bg-slate-950 rounded-lg border ${getStatusBorder()} transition-colors`}>
+            <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center space-x-2">
+                    <span className="text-lg font-bold text-slate-400 font-mono bg-slate-900 px-2 py-1 rounded">{icon}</span>
+                    <span className="text-sm font-medium text-slate-300">{name}</span>
+                </div>
+                <div className="flex items-center space-x-2">
                     {getStatusIcon()}
                 </div>
-
-                {/* Model Name Input */}
-                {onModelChange && (
+            </div>
+            <div className="flex space-x-2">
+                <input
+                    type="password"
+                    value={value || ''}
+                    onChange={(e) => onChange(e.target.value)}
+                    placeholder="sk-..."
+                    className="flex-1 bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-slate-300 focus:border-teal-500/50 focus:outline-none"
+                />
+                <button
+                    onClick={onTest}
+                    className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-xs font-bold transition-colors"
+                >
+                    Test
+                </button>
+            </div>
+            {/* Model ID Input (Optional) */}
+            {onModelChange && (
+                <div className="mt-3">
+                    <label className="text-xs text-slate-500 block mb-1">Model ID (Optional)</label>
                     <input
                         type="text"
                         value={modelValue || ''}
                         onChange={(e) => onModelChange(e.target.value)}
-                        placeholder="Model name (e.g., gemini-pro, gpt-4)"
-                        className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-slate-300 placeholder-slate-600 outline-none font-mono"
+                        placeholder="Default" // e.g., 'gpt-4' or 'claude-3-opus'
+                        className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-xs text-slate-400 focus:border-teal-500/50 focus:outline-none"
                     />
-                )}
-
-                {/* API Key Input */}
-                <div className="flex space-x-2">
-                    <input
-                        type="password"
-                        value={value || ''}
-                        onChange={(e) => onChange(e.target.value)}
-                        placeholder="sk-..."
-                        className="flex-1 bg-transparent text-sm text-white placeholder-slate-700 outline-none font-mono"
-                    />
-                    <button
-                        onClick={onTest}
-                        disabled={testStatus === 'testing'}
-                        className="text-xs bg-slate-800 hover:bg-slate-700 px-3 py-1 rounded text-slate-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                        {testStatus === 'testing' ? 'Testing...' : 'Test'}
-                    </button>
                 </div>
+            )}
+        </div>
+    );
+};
+
+// --- Cloud Backup Component ---
+const CloudBackupControl = () => {
+    const [status, setStatus] = useState<any>(null);
+    const [history, setHistory] = useState<any[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
+    const [verifying, setVerifying] = useState(false);
+    const [authCode, setAuthCode] = useState(''); // For MVP manual paste if needed, though we simulate window open
+
+    useEffect(() => {
+        fetchStatus();
+    }, []);
+
+    const fetchStatus = async () => {
+        try {
+            const s = await api.backup.getStatus();
+            setStatus(s);
+            if (s.connected) {
+                const h = await api.backup.getHistory();
+                setHistory(h);
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    };
+
+    const handleSignIn = async () => {
+        try {
+            setLoading(true);
+            const { url } = await api.backup.getAuthUrl();
+            // Open in new window
+            window.open(url, '_blank', 'width=500,height=600');
+            // In a real app, we'd listen for a callback or have a deep link. 
+            // For this simulated flow, we ask the user to verify (or paste code if we displayed it).
+            // But our mock backend accepts "simulated_valid_code_123".
+            setError("Close the popup after signing in. (Simulation: Enter 'simulated_valid_code_123' below)");
+        } catch (e: any) {
+            setError("Failed to start auth: " + e.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleVerify = async () => {
+        if (!authCode) return;
+        setVerifying(true);
+        try {
+            await api.backup.verifyAuth(authCode);
+            await fetchStatus();
+            setError('');
+            setAuthCode('');
+            alert("Successfully connected to BioDockify Cloud Drive!");
+        } catch (e: any) {
+            setError("Verification failed: " + e.message);
+        } finally {
+            setVerifying(false);
+        }
+    };
+
+    const handleBackupNow = async () => {
+        if (!confirm("Start backup now? This may take a few moments.")) return;
+        try {
+            setLoading(true);
+            await api.backup.runBackup();
+            alert("Backup Initiated in Background");
+            // Refresh history after delay
+            setTimeout(fetchStatus, 2000);
+        } catch (e: any) {
+            alert("Backup Failed: " + e.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleRestore = async (id: string) => {
+        if (!confirm("⚠️ RESTORE WARNING: This will overwrite local research files. Are you sure?")) return;
+        try {
+            setLoading(true);
+            await api.backup.restore(id);
+            alert("Restore Complete! Please restart the application.");
+        } catch (e: any) {
+            alert("Restore Failed: " + e.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    if (status?.connected) {
+        return (
+            <div className="space-y-6">
+                <div className="bg-emerald-950/30 border border-emerald-900 rounded-xl p-6">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                            <div className="p-3 bg-emerald-900/50 rounded-full">
+                                <CheckCircle className="w-8 h-8 text-emerald-400" />
+                            </div>
+                            <div>
+                                <h3 className="text-xl font-bold text-white">Active Backup</h3>
+                                <p className="text-sm text-emerald-400 font-mono">{status.email}</p>
+                            </div>
+                        </div>
+                        <button
+                            onClick={handleBackupNow}
+                            disabled={loading}
+                            className="px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-bold shadow-lg shadow-emerald-900/20 disabled:opacity-50"
+                        >
+                            {loading ? 'Running...' : 'Backup Now'}
+                        </button>
+                    </div>
+                </div>
+
+                <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
+                    <h4 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-4">Snapshots</h4>
+                    {history.length === 0 ? (
+                        <p className="text-slate-500">No backups found.</p>
+                    ) : (
+                        <div className="space-y-3">
+                            {history.map(item => (
+                                <div key={item.id} className="flex items-center justify-between p-4 bg-slate-950/50 rounded-lg border border-slate-800 hover:border-slate-700 transition-colors">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2 bg-slate-800 rounded">
+                                            <Database className="w-4 h-4 text-slate-400" />
+                                        </div>
+                                        <div>
+                                            <p className="font-mono text-sm text-slate-200">{item.name}</p>
+                                            <p className="text-xs text-slate-500">{new Date(item.created_time).toLocaleString()} • {(item.size / 1024 / 1024).toFixed(2)} MB</p>
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={() => handleRestore(item.id)}
+                                        className="text-xs font-bold text-teal-500 hover:text-teal-400 px-3 py-1.5 bg-teal-950/50 hover:bg-teal-900 rounded border border-teal-900 transition-colors"
+                                    >
+                                        RESTORE
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="bg-slate-900 border border-slate-800 rounded-xl p-8 text-center space-y-6">
+            <div className="mx-auto w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mb-4">
+                <Cloud className="w-8 h-8 text-slate-400" />
+            </div>
+            <div>
+                <h3 className="text-2xl font-bold text-white mb-2">Initialize Cloud Backup</h3>
+                <p className="text-slate-400 max-w-md mx-auto">
+                    Securely backup your research data, personas, and settings to Google Drive.
+                    BioDockify encrypts all data before upload.
+                </p>
+            </div>
+
+            <div className="max-w-xs mx-auto space-y-4">
+                <button
+                    onClick={handleSignIn}
+                    className="w-full py-3 bg-white text-slate-900 rounded-lg font-bold hover:bg-slate-100 transition-colors flex items-center justify-center gap-2"
+                >
+                    <img src="https://www.google.com/favicon.ico" className="w-4 h-4" alt="G" />
+                    Sign in with BioDockify
+                </button>
+                {error && (
+                    <div className="p-3 bg-red-900/20 border border-red-900/50 rounded text-xs text-red-400">
+                        {error}
+                        {/* Simulation Input */}
+                        <div className="mt-2 flex gap-2">
+                            <input
+                                value={authCode}
+                                onChange={e => setAuthCode(e.target.value)}
+                                placeholder="Paste Code (simulated_valid_code_123)"
+                                className="flex-1 bg-black/30 rounded px-2 py-1 text-white border border-red-800/50"
+                            />
+                            <button onClick={handleVerify} className="px-2 bg-red-800 text-white rounded font-bold">OK</button>
+                        </div>
+                    </div>
+                )}
+                <p className="text-xs text-slate-600">
+                    By signing in, you agree to enable access to your specific research app folder (drive.file).
+                </p>
             </div>
         </div>
     );

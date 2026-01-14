@@ -132,7 +132,7 @@ export interface Settings {
 
 export interface ConnectionTest {
   type: 'llm' | 'database' | 'elsevier';
-  status: 'success' | 'error';
+  status: 'success' | 'error' | 'warning';
   message: string;
 }
 
@@ -360,16 +360,7 @@ export const api = {
       if (!response.ok) throw new Error('Data processing failed');
       return response.blob();
     }
-  }
-    processData: async (formData: FormData) => {
-    const response = await fetch(`${API_BASE}/tools/data/process`, {
-      method: 'POST',
-      body: formData
-    });
-    if (!response.ok) throw new Error('Data processing failed');
-    return response.blob();
-  }
-},
+  },
 
   // PhD Thesis Core (Phase 7)
   thesis: {
@@ -380,10 +371,36 @@ export const api = {
       apiRequest<{ status: string, message?: string, missing_items?: string[] }>(`/thesis/validate/${chapterId}`),
 
     generateChapter: (chapterId: string, topic: string) =>
-        apiRequest<{status: string, content?: string, reason?: string, details?: any}>('/thesis/generate', {
-            method: 'POST',
-            body: JSON.stringify({ chapter_id: chapterId, topic })
-        })
+      apiRequest<{ status: string, content?: string, reason?: string, details?: any }>('/thesis/generate', {
+        method: 'POST',
+        body: JSON.stringify({ chapter_id: chapterId, topic })
+      })
+  },
+  // Google Drive Backup (Phase 10)
+  backup: {
+    getAuthUrl: () =>
+      apiRequest<{ url: string }>('/backup/auth/url', { method: 'POST' }),
+
+    verifyAuth: (code: string) =>
+      apiRequest<{ status: string; user: any }>('/backup/auth/verify', {
+        method: 'POST',
+        body: JSON.stringify({ code })
+      }),
+
+    getStatus: () =>
+      apiRequest<{ email?: string; name?: string; connected: boolean }>('/backup/status'),
+
+    runBackup: () =>
+      apiRequest<{ status: string; message: string }>('/backup/run', { method: 'POST' }),
+
+    getHistory: () =>
+      apiRequest<{ id: string; name: string; created_time: string; size: number }[]>('/backup/history'),
+
+    restore: (snapshotId: string) =>
+      apiRequest<{ status: string; message: string }>('/backup/restore', {
+        method: 'POST',
+        body: JSON.stringify({ snapshot_id: snapshotId })
+      })
   }
 };
 
