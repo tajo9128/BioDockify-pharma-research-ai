@@ -18,7 +18,6 @@ export default function Sidebar({ activeView, onViewChange }: SidebarProps) {
     { id: 'home', icon: Home, label: 'Home' },
     { id: 'research', icon: FlaskConical, label: 'Workstation' },
     { id: 'hypothesis', icon: Brain, label: 'Scientific Method' },
-    { id: 'library', icon: BookOpen, label: 'Library' },
     { id: 'results', icon: FileText, label: 'Results' },
     { id: 'lab', icon: Beaker, label: 'Virtual Lab' },
     { id: 'agent-chat', icon: Sparkles, label: 'BioDockify AI' },

@@ -73,9 +73,10 @@ export default function SettingsPanel() {
             custom_base_url: '',
             custom_key: '',
             custom_model: '',
-            neo4j_uri: 'bolt://localhost:7687',
-            neo4j_user: 'neo4j',
-            neo4j_password: ''
+            // SurfSense Knowledge Engine (replaces Neo4j)
+            surfsense_url: 'http://localhost:3003',
+            surfsense_key: '',
+            surfsense_auto_start: false
         },
         ai_advanced: { context_window: 4096, gpu_layers: -1, thread_count: 8 },
         pharma: {
@@ -342,62 +343,63 @@ export default function SettingsPanel() {
                                     </div>
                                 </div>
 
-                                {/* Neo4j Graph Database Config */}
+                                {/* SurfSense Knowledge Engine Config */}
                                 <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 mt-6">
                                     <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
-                                        <Database className="w-5 h-5 mr-2 text-purple-400" /> Graph Database (Neo4j)
+                                        <Database className="w-5 h-5 mr-2 text-indigo-400" /> SurfSense Knowledge Engine
                                     </h3>
+                                    <p className="text-sm text-slate-400 mb-4">
+                                        SurfSense is your local knowledge base. It replaces Neo4j and handles document storage, semantic search, and AI-powered insights.
+                                    </p>
                                     <div className="space-y-4">
                                         <div>
-                                            <label className="block text-sm font-medium text-slate-400 mb-2">Connection URI</label>
+                                            <label className="block text-sm font-medium text-slate-400 mb-2">SurfSense URL</label>
                                             <input
-                                                value={settings.ai_provider?.neo4j_uri || 'bolt://localhost:7687'}
-                                                onChange={(e) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, neo4j_uri: e.target.value } })}
-                                                placeholder="bolt://localhost:7687"
+                                                value={settings.ai_provider?.surfsense_url || 'http://localhost:3003'}
+                                                onChange={(e) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, surfsense_url: e.target.value } })}
+                                                placeholder="http://localhost:3003"
                                                 className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white"
                                             />
                                         </div>
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div>
-                                                <label className="block text-sm font-medium text-slate-400 mb-2">Username</label>
-                                                <input
-                                                    value={settings.ai_provider?.neo4j_user || 'neo4j'}
-                                                    onChange={(e) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, neo4j_user: e.target.value } })}
-                                                    placeholder="neo4j"
-                                                    className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white"
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-medium text-slate-400 mb-2">Password</label>
-                                                <input
-                                                    type="password"
-                                                    value={settings.ai_provider?.neo4j_password || ''}
-                                                    onChange={(e) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, neo4j_password: e.target.value } })}
-                                                    placeholder="••••••••"
-                                                    className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white"
-                                                />
-                                            </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-slate-400 mb-2">SurfSense API Key (Optional)</label>
+                                            <input
+                                                type="password"
+                                                value={settings.ai_provider?.surfsense_key || ''}
+                                                onChange={(e) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, surfsense_key: e.target.value } })}
+                                                placeholder="Leave empty for local-only access"
+                                                className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white"
+                                            />
+                                        </div>
+                                        <div className="flex items-center space-x-2">
+                                            <input
+                                                type="checkbox"
+                                                id="surfsense_auto_start"
+                                                checked={settings.ai_provider?.surfsense_auto_start || false}
+                                                onChange={(e) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, surfsense_auto_start: e.target.checked } })}
+                                                className="rounded border-slate-700 bg-slate-950 text-indigo-500"
+                                            />
+                                            <label htmlFor="surfsense_auto_start" className="text-sm text-slate-300">
+                                                Auto-start SurfSense with BioDockify (requires Docker)
+                                            </label>
                                         </div>
                                         <button
                                             onClick={async () => {
                                                 try {
-                                                    const res = await api.checkNeo4j(
-                                                        settings.ai_provider?.neo4j_uri || 'bolt://localhost:7687',
-                                                        settings.ai_provider?.neo4j_user || 'neo4j',
-                                                        settings.ai_provider?.neo4j_password || ''
-                                                    );
-                                                    if (res.status === 'success') {
-                                                        alert('✅ Neo4j Connected');
+                                                    const url = settings.ai_provider?.surfsense_url || 'http://localhost:3003';
+                                                    const res = await fetch(`${url}/health`, { signal: AbortSignal.timeout(5000) });
+                                                    if (res.ok) {
+                                                        alert('✅ SurfSense Connected');
                                                     } else {
-                                                        alert(`❌ ${res.message}`);
+                                                        alert(`❌ SurfSense returned status ${res.status}`);
                                                     }
                                                 } catch (e: any) {
-                                                    alert(`❌ Connection Failed: ${e.message}`);
+                                                    alert(`❌ SurfSense Offline: ${e.message}\n\nStart it with: docker-compose -f modules/surfsense/docker-compose.yml up -d`);
                                                 }
                                             }}
-                                            className="w-full px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-sm font-medium transition-colors"
+                                            className="w-full px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-medium transition-colors"
                                         >
-                                            Test Neo4j Connection
+                                            Test SurfSense Connection
                                         </button>
                                     </div>
                                 </div>

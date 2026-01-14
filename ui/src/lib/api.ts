@@ -70,6 +70,14 @@ export interface Settings {
     glm_key?: string;
     elsevier_key?: string;
     pubmed_email?: string;
+    // Custom/Paid API (OpenAI-compatible)
+    custom_base_url?: string;
+    custom_key?: string;
+    custom_model?: string;
+    // SurfSense Knowledge Engine
+    surfsense_url?: string;
+    surfsense_key?: string;
+    surfsense_auto_start?: boolean;
   };
   // New V2 Schema Additions
   pharma: {

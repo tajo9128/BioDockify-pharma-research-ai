@@ -1,12 +1,24 @@
-import React, { useState } from 'react';
-import { Database, RefreshCcw, ExternalLink } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Database, RefreshCcw, ExternalLink, AlertTriangle } from 'lucide-react';
+import { api } from '@/lib/api';
 
-const SURFSENSE_URL = "http://localhost:3003";
+const DEFAULT_SURFSENSE_URL = "http://localhost:3003";
 
 export default function SurfSenseView() {
     const [iframeKey, setIframeKey] = useState(0);
     const [isLoading, setIsLoading] = useState(true);
     const [loadError, setLoadError] = useState(false);
+    const [surfsenseUrl, setSurfsenseUrl] = useState(DEFAULT_SURFSENSE_URL);
+
+    // Load SurfSense URL from settings
+    useEffect(() => {
+        api.getSettings().then(settings => {
+            const url = settings?.ai_provider?.surfsense_url || DEFAULT_SURFSENSE_URL;
+            setSurfsenseUrl(url);
+        }).catch(() => {
+            // Use default if settings fail to load
+        });
+    }, []);
 
     const refreshIframe = () => {
         setIframeKey(prev => prev + 1);
@@ -34,7 +46,7 @@ export default function SurfSenseView() {
                 </div>
                 <div className="flex items-center space-x-2">
                     <a
-                        href={SURFSENSE_URL}
+                        href={surfsenseUrl}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="p-2 text-slate-400 hover:text-white transition-colors rounded hover:bg-slate-800"
@@ -74,7 +86,7 @@ export default function SurfSenseView() {
                 ) : (
                     <iframe
                         key={iframeKey}
-                        src={SURFSENSE_URL}
+                        src={surfsenseUrl}
                         className="w-full h-full border-none bg-white" // SurfSense UI is likely light mode by default or needs white bg if loading
                         title="SurfSense Interface"
                         onLoad={handleIframeLoad}
