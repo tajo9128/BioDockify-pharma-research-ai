@@ -184,7 +184,7 @@ export const api = {
   getResults: (taskId: string) =>
     apiRequest<ResearchResults>(`/research/${taskId}/results`),
 
-  agentChat: (message: string, mode: 'chat' | 'semi-autonomous' | 'autonomous' = 'chat') =>
+  agentChat: (message: string, mode: 'chat' | 'semi-autonomous' | 'autonomous' | 'thesis_writer' = 'chat') =>
     apiRequest<{ reply: string; provider: string }>('/agent/chat', {
       method: 'POST',
       body: JSON.stringify({ message, mode })
