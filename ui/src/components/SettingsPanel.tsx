@@ -747,6 +747,18 @@ export default function SettingsPanel() {
                                     />
                                     <p className="text-xs text-slate-500">Specific context that helps the agent prioritize relevant papers.</p>
                                 </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-slate-300">Department / Faculty</label>
+                                    <input
+                                        type="text"
+                                        value={settings.persona?.department || ''}
+                                        onChange={(e) => setSettings({ ...settings, persona: { ...settings.persona, department: e.target.value } })}
+                                        placeholder="e.g., Pharmaceutical Sciences, Clinical Oncology, Molecular Biology"
+                                        className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-emerald-500/50"
+                                    />
+                                    <p className="text-xs text-slate-500">Your academic department or research unit for thesis/manuscript headers.</p>
+                                </div>
                             </div>
                         </div>
                     )}
