@@ -45,6 +45,19 @@ class FraudGuard:
         if not os.path.exists(path): return []
         with open(path, 'r', encoding='utf-8') as f: return json.load(f)
 
+    def _normalize_domain(self, url: str) -> str:
+        """Extract and normalize domain from URL, handling URLs without schemes."""
+        if not url:
+            return ""
+        # Ensure URL has a scheme for proper parsing
+        if not url.startswith(('http://', 'https://')):
+            url = 'http://' + url
+        netloc = urlparse(url).netloc.lower()
+        # Remove www. prefix
+        if netloc.startswith('www.'):
+            netloc = netloc[4:]
+        return netloc
+
     def check(self, issn: str, url: Optional[str]) -> PillarScore:
         # Check if ISSN is in hijacked list
         hijack_entry = next((item for item in self.hijack_db if item.get('issn') == issn), None)
@@ -52,14 +65,10 @@ class FraudGuard:
         if hijack_entry:
             # Found in hijack DB. Now check URL if provided.
             if url:
-                # Basic domain check
-                # If the input URL matches the known FAKE url -> HIGH RISK
-                # If the input URL matches the known AUTHENTIC url -> PASS (Protected)
-                
                 # Normalize domains
-                input_domain = urlparse(url).netloc.replace("www.", "")
-                fake_domain = urlparse(hijack_entry.get('fake_url', '')).netloc.replace("www.", "")
-                auth_domain = urlparse(hijack_entry.get('authentic_url', '')).netloc.replace("www.", "")
+                input_domain = self._normalize_domain(url)
+                fake_domain = self._normalize_domain(hijack_entry.get('fake_url', ''))
+                auth_domain = self._normalize_domain(hijack_entry.get('authentic_url', ''))
                 
                 if input_domain == fake_domain:
                     return PillarScore(name="Fraud Intelligence", status="FAIL", score=0.0, details="CRITICAL: URL matches known hijacked domain.")
