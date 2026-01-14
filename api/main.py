@@ -1030,19 +1030,58 @@ class AgentChatRequest(BaseModel):
 @app.post("/api/agent/chat")
 def agent_chat_endpoint(request: AgentChatRequest):
     """
-    Agent Zero Chat Endpoint.
-    Routes to ANY configured LLM provider with intelligent fallback:
-    Priority: Custom/Paid API -> Google Gemini -> OpenRouter -> GLM -> HuggingFace -> Ollama
+    Agent Zero Chat Endpoint with RAG Integration.
+    1. Searches internal Knowledge Base for relevant context
+    2. Routes to configured LLM provider with intelligent fallback
     """
     import requests as req
+    from modules.rag.vector_store import get_vector_store
     
     config = load_config()
     provider_config = config.get('ai_provider', {})
     
-    prompt = request.message
+    user_query = request.message
+    
+    # =========================================================================
+    # STEP 1: Search Internal Knowledge Base for Context (RAG)
+    # =========================================================================
+    kb_context = ""
+    kb_sources = []
+    try:
+        vector_store = get_vector_store()
+        results = vector_store.search(user_query, k=3)  # Top 3 relevant chunks
+        
+        if results:
+            context_parts = []
+            for r in results:
+                source = r.get('metadata', {}).get('source', 'Unknown')
+                text = r.get('text', '')[:500]  # Limit chunk size
+                context_parts.append(f"[Source: {source}]\n{text}")
+                kb_sources.append(source)
+            kb_context = "\n\n---\n\n".join(context_parts)
+    except Exception as e:
+        logger.warning(f"RAG search failed: {e}")
+    
+    # =========================================================================
+    # STEP 2: Build Enhanced Prompt with KB Context
+    # =========================================================================
     system_prompt = """You are BioDockify Agent Zero, an intelligent pharmaceutical research assistant.
 You analyze research, automate academic workflows, and provide evidence-driven answers.
-Be concise, scientific, and always cite your reasoning."""
+Be concise, scientific, and always cite your sources when using provided context."""
+
+    if kb_context:
+        enhanced_prompt = f"""Use the following context from the Knowledge Base to answer the question:
+
+---
+KNOWLEDGE BASE CONTEXT:
+{kb_context}
+---
+
+USER QUESTION: {user_query}
+
+Provide a well-structured answer based on the context above. If the context doesn't contain relevant information, say so and provide general guidance."""
+    else:
+        enhanced_prompt = user_query
     
     errors = []  # Track all provider errors for debugging
     
@@ -1061,7 +1100,7 @@ Be concise, scientific, and always cite your reasoning."""
                 "model": model,
                 "messages": [
                     {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": prompt}
+                    {"role": "user", "content": enhanced_prompt}
                 ]
             }
             
@@ -1083,7 +1122,7 @@ Be concise, scientific, and always cite your reasoning."""
             key = provider_config['google_key']
             url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={key}"
             payload = {
-                "contents": [{"parts": [{"text": f"{system_prompt}\n\nUser: {prompt}"}]}]
+                "contents": [{"parts": [{"text": f"{system_prompt}\n\nUser: {enhanced_prompt}"}]}]
             }
             
             resp = req.post(url, json=payload, timeout=60)
@@ -1113,7 +1152,7 @@ Be concise, scientific, and always cite your reasoning."""
                 "model": "openai/gpt-3.5-turbo",  # Default free-tier model
                 "messages": [
                     {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": prompt}
+                    {"role": "user", "content": enhanced_prompt}
                 ]
             }
             
@@ -1138,7 +1177,7 @@ Be concise, scientific, and always cite your reasoning."""
                 "model": "glm-4",
                 "messages": [
                     {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": prompt}
+                    {"role": "user", "content": enhanced_prompt}
                 ]
             }
             
@@ -1187,7 +1226,7 @@ Be concise, scientific, and always cite your reasoning."""
             "model": model,
             "messages": [
                 {"role": "system", "content": system_prompt},
-                {"role": "user", "content": prompt}
+                {"role": "user", "content": enhanced_prompt}
             ],
             "stream": False
         }
