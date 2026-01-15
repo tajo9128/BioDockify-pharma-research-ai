@@ -1,5 +1,18 @@
 # Release Notes
 
+## v2.14.7 - Self-Repair System & Doctor
+*Released: January 15, 2026*
+
+### 🏥 The "System Doctor"
+- **New Module**: `modules/system/doctor.py` actively probes system health.
+- **Service Watchdog**: `ServiceManager` now monitors and attempts to repair crashed AI services (Ollama/SurfSense).
+- **Diagnostics API**: New `/api/v2/system/diagnose` endpoint provides a full health report JSON.
+- **Self-Repair Button**: New `/api/v2/system/repair` endpoint allows the frontend to trigger service restarts.
+
+### 🐛 Fixes
+- **First Run Wizard**: Fixed critical syntax error preventing the setup screen from rendering.
+- **Dependencies**: Improved startup checks for critical Python libraries.
+
 ## v2.14.6 - API V2 & Robustness Fixes
 *Released: January 15, 2026*
 
