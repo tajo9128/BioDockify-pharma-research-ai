@@ -14,24 +14,25 @@ interface SidebarProps {
 export default function Sidebar({ activeView, onViewChange }: SidebarProps) {
   const [showFeedback, setShowFeedback] = React.useState(false);
 
+  /* New Sidebar Organization */
   const mainNav = [
     { id: 'home', icon: Home, label: 'Home' },
-    { id: 'research', icon: FlaskConical, label: 'Workstation' },
-    { id: 'autonomous', icon: Globe, label: 'Deep Research' },
-    { id: 'writers', icon: PenTool, label: 'Academic Suite' }, // NEW: Writer Studio
+    { id: 'research', icon: FlaskConical, label: 'Workstation' }, // Core Research
+    { id: 'writers', icon: PenTool, label: 'Academic Suite' },    // Writing
     { id: 'hypothesis', icon: Brain, label: 'Scientific Method' },
     { id: 'results', icon: FileText, label: 'Results' },
     { id: 'lab', icon: Beaker, label: 'Virtual Lab' },
-    { id: 'agent-chat', icon: Sparkles, label: 'BioDockify AI' },
     { id: 'publication', icon: Printer, label: 'Publication' },
     { id: 'statistics', icon: Calculator, label: 'Statistics' },
     { id: 'journal-check', icon: ShieldCheck, label: 'Journal Authenticity' },
   ];
 
+  /* Tools & System moved to bottom or specific sections */
   const bottomNav = [
-    { id: 'surfsense', icon: Brain, label: 'Knowledge Base' }, // Built-in Knowledge Base
-    { id: 'omnitools', icon: Hammer, label: 'Research Utilities' },
-    { id: 'settings', icon: Settings, label: 'Settings' },
+    { id: 'autonomous', icon: Globe, label: 'Deep Research' },    // Tool
+    { id: 'omnitools', icon: Hammer, label: 'Research Utilities' }, // Tool
+    { id: 'surfsense', icon: Brain, label: 'Knowledge Base' },    // Base
+    { id: 'settings', icon: Settings, label: 'Settings' },        // System
   ];
 
   const NavItem = ({ item, isBottom = false }: { item: any, isBottom?: boolean }) => {
@@ -74,7 +75,7 @@ export default function Sidebar({ activeView, onViewChange }: SidebarProps) {
         {/* Spacer */}
         <div className="flex-1" />
 
-        {/* Bottom Navigation (Knowledge, Browser, Settings) */}
+        {/* Bottom Navigation */}
         <nav className="flex flex-col gap-3 w-full items-center mb-4 border-t border-white/5 pt-4">
           {bottomNav.map((item) => <NavItem key={item.id} item={item} isBottom />)}
         </nav>

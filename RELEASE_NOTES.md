@@ -1,5 +1,17 @@
 # Release Notes
 
+## v2.14.6 - API V2 & Robustness Fixes
+*Released: January 15, 2026*
+
+### 🚀 Key Features
+- **Agent V2 API**: Implemented `/api/v2/agent/goal` and `thinking` endpoints to power the new Agent Zero UI.
+- **Robustness**: Added graceful fallback for Ollama service failures and portable configuration encryption.
+- **API Client Refactor**: Modularized Google, OpenRouter, and HuggingFace clients into `modules/llm`.
+
+### 🐛 Fixes
+- **Startup Resilience**: Backend no longer crashes if Local AI is missing; defaults to cloud keys.
+- **Encryption**: Configuration decryption now catches invalid keys (machine change) and resets gracefully.
+
 ## v2.14.0 - Backend Stability & Fixes
 *Released: January 13, 2026*
 

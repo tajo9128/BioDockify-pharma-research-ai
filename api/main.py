@@ -14,7 +14,7 @@ from orchestration.executor import ResearchExecutor
 from modules.analyst.analytics_engine import ResearchAnalyst
 from modules.backup import DriveClient, BackupManager
 
-app = FastAPI(title="BioDockify Research API", version="1.0.0")
+app = FastAPI(title="BioDockify Research API", version="2.14.6")
 
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -118,7 +118,12 @@ async def startup_event():
         
         # Check if we should start Ollama (from ai_provider config or system default)
         if config.get("ai_provider", {}).get("mode") in ["auto", "ollama"]:
-             svc_mgr.start_ollama()
+             try:
+                 svc_mgr.start_ollama()
+             except Exception as e:
+                 logger.warning(f"Failed to start Local AI (Ollama): {e}")
+                 logger.info("System will attempt to fallback to Cloud APIs if keys are available.")
+                 # We do NOT raise exception here to keep backend alive
              
         # Check SurfSense (Replaces Neo4j)
         svc_mgr.start_surfsense()
@@ -143,6 +148,73 @@ async def shutdown_event():
         service_manager.stop_all()
         
     logger.info("Services stopped.")
+
+# -----------------------------------------------------------------------------
+# V2 AGENT ENDPOINTS (Phase 16)
+# -----------------------------------------------------------------------------
+
+class AgentGoal(BaseModel):
+    goal: str
+    mode: str = "auto" # auto, semi-autonomous, autonomous
+
+# Simple in-memory state for Agent V2 (Simulated for UI interaction)
+agent_state = {
+    "status": "idle",
+    "current_thought": "Waiting for user input...",
+    "logs": []
+}
+
+@app.post("/api/v2/agent/goal")
+async def set_agent_goal(request: AgentGoal, background_tasks: BackgroundTasks):
+    """
+    V2: Set a high-level goal for Agent Zero.
+    Triggers the Orchestrator in the background.
+    """
+    logger.info(f"Received Agent Goal: {request.goal} [Mode: {request.mode}]")
+    
+    # Reset State
+    agent_state["status"] = "thinking"
+    agent_state["current_thought"] = "Analyzing research goal..."
+    agent_state["logs"] = [f"Goal received: {request.goal}"]
+    
+    # Define Background Task wrapper
+    def run_agent_task(goal: str, mode: str):
+        try:
+            from runtime.config_loader import load_config
+            cfg = load_config()
+            
+            # Initialize Orchestrator
+            orch = ResearchOrchestrator()
+            agent_state["current_thought"] = "Planning research steps..."
+            agent_state["logs"].append("Orchestrator initialized.")
+            
+            # Plan
+            plan = orch.plan_research(goal, mode="synthesize")
+            agent_state["logs"].append(f"Plan generated: {len(plan.steps)} steps.")
+            agent_state["current_thought"] = f"Plan created with {len(plan.steps)} steps. Ready to execute."
+            agent_state["status"] = "ready"
+            
+        except Exception as e:
+            logger.error(f"Agent Task Failed: {e}")
+            agent_state["status"] = "error"
+            agent_state["current_thought"] = f"Error: {str(e)}"
+            agent_state["logs"].append(f"Error: {str(e)}")
+
+    # Launch Background Task
+    background_tasks.add_task(run_agent_task, request.goal, request.mode)
+    
+    return {"status": "accepted", "message": "Agent started"}
+
+@app.get("/api/v2/agent/thinking")
+def get_agent_thinking():
+    """
+    V2: Get current agent thought process (Streaming-like UI).
+    """
+    return {
+        "status": agent_state["status"],
+        "thought": agent_state["current_thought"],
+        "logs": agent_state["logs"][-5:] # Return last 5 logs
+    }
 
 # -----------------------------------------------------------------------------
 # DIGITAL LIBRARY ENDPOINTS (Phase 5)

@@ -6,7 +6,6 @@
 import {
     detectAllServices,
     checkOllama,
-    checkNeo4j,
     checkBackend,
     DetectedServices,
     ServiceConfig
@@ -14,12 +13,11 @@ import {
 
 // Re-export types and functions
 export type { DetectedServices, ServiceConfig };
-export { detectAllServices, checkOllama, checkNeo4j, checkBackend };
+export { detectAllServices, checkOllama, checkBackend };
 
 // Legacy interface for backward compatibility
 export interface HealthStatus {
     grobid: boolean;
-    neo4j: boolean;
     ollama: boolean;
     backend: boolean;
 }
@@ -34,7 +32,6 @@ export async function checkServices(): Promise<HealthStatus> {
     return {
         backend: detected.backend,
         ollama: detected.ollama,
-        neo4j: detected.neo4j,
         grobid: detected.grobid
     };
 }

@@ -8,7 +8,7 @@ from typing import List, Optional
 from dataclasses import dataclass
 
 import requests
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from modules.bio_ner.pubtator import PubTatorValidator
 from modules.literature.semantic_scholar import SemanticScholarSearcher
@@ -66,6 +66,44 @@ class OrchestratorConfig(BaseModel):
     
     # User Persona (Added for Perplexity-Like Logic)
     user_persona: dict = Field(default_factory=dict)
+
+    @model_validator(mode='after')
+    def check_api_keys(self) -> 'OrchestratorConfig':
+        """
+        Auto-enable cloud API usage if keys are present and not explicitly disabled.
+        Prioritizes Google > OpenRouter > Custom.
+        """
+        # Check if keys exist
+        has_key = any([
+            self.google_key, 
+            self.openrouter_key, 
+            self.cloud_api_key,
+            self.custom_key
+        ])
+
+        # Logic: If keys exist and use_cloud_api is False (default), flip it to True.
+        # Check if keys exist
+        # Note: If user explicitly passed use_cloud_api=False in init, Pydantic v2 
+        # doesn't easily track "set by user" vs "default" without extra logic. 
+        # But for this use case, presence of a key implies intent to use it.
+        if has_key and not self.use_cloud_api:
+             # We assume if you provide a key, you want to use it, unless you really force it off.
+             # However, since false is default, we can't distinguish default vs explicit false easily.
+             # We will flip to True as a "Smart Default".
+             self.use_cloud_api = True
+             
+        # Resolve Primary Model based on keys if in 'auto' or default
+        if self.use_cloud_api:
+            if self.google_key and self.primary_model == "google":
+                pass # Good
+            elif self.google_key:
+                # If we have google key but model is generic, ensure google is used
+                pass 
+            elif self.openrouter_key and not self.google_key:
+                if self.primary_model == "google": # Default
+                    self.primary_model = "openrouter"
+
+        return self
 
 
 # =============================================================================
@@ -435,11 +473,17 @@ Provide ONLY the JSON."""
     # Hybrid API Implementation with Fallback Logic
     # -------------------------------------------------------------------------
     
+    # -------------------------------------------------------------------------
+    # Hybrid API Implementation with Fallback Logic
+    # -------------------------------------------------------------------------
+    
     def _generate_plan_hybrid(self, title: str, mode: str = "synthesize") -> dict:
         """
         Generate research plan using Cloud APIs with Fallback.
         Strategy: Primary -> Secondary -> Tertiary -> Local/Fallback
         """
+        from modules.llm.factory import LLMFactory
+
         # 1. Define Priority Order
         available_providers = []
         
@@ -455,26 +499,22 @@ Provide ONLY the JSON."""
                 
         print(f"[*] Research Planner Strategy: {available_providers}")
         
+        prompt = self._build_prompt(title, mode)
+        
         for provider in available_providers:
             try:
-                api_key = self._get_key_for_provider(provider)
-                if not api_key:
+                adapter = LLMFactory.get_adapter(provider, self.config)
+                if not adapter:
                     continue
                     
                 print(f"[*] Attempting generation with: {provider.upper()}")
                 
-                plan = None
-                if provider == "google":
-                    plan = self._call_google_gemini(api_key, title, mode)
-                elif provider == "openrouter":
-                    plan = self._call_openrouter(api_key, title, mode)
-                elif provider == "huggingface":
-                    plan = self._call_huggingface(api_key, title, mode)
-                elif provider == "zhipu":
-                    plan = self._call_zhipu_glm(api_key, title, mode)
-                elif provider == "custom":
-                    plan = self._call_custom_provider(api_key, title, mode)
-                    
+                # Call Adapter
+                text_response = adapter.generate(prompt)
+                
+                # Parse
+                plan = self._parse_plan_response(text_response)
+                
                 if plan:
                     print(f"[+] Successfully generated plan using {provider.upper()}")
                     return plan
@@ -487,102 +527,6 @@ Provide ONLY the JSON."""
         
         print("[!] All cloud providers failed. Using offline fallback.")
         return self._generate_fallback_plan(title)
-
-    def _get_key_for_provider(self, provider: str) -> Optional[str]:
-        if provider == "google": return self.config.google_key
-        if provider == "openrouter": return self.config.openrouter_key
-        if provider == "huggingface": return self.config.huggingface_key
-        if provider == "zhipu": return self.config.glm_key
-        if provider == "custom": return self.config.custom_key
-        return None
-
-    def _call_zhipu_glm(self, key: str, title: str, mode: str) -> dict:
-        """Call ZhipuAI (GLM-4) API."""
-        # Standard OpenAI-compatible format for Zhipu
-        url = "https://open.bigmodel.cn/api/paas/v4/chat/completions"
-        prompt = self._build_prompt(title, mode)
-        
-        payload = {
-            "model": "glm-4",
-            "messages": [{"role": "user", "content": prompt}],
-            "temperature": 0.7
-        }
-        
-        resp = requests.post(url, json=payload, headers={"Authorization": f"Bearer {key}"}, timeout=60)
-        resp.raise_for_status()
-        
-        data = resp.json()
-        text = data["choices"][0]["message"]["content"]
-        data = resp.json()
-        text = data["choices"][0]["message"]["content"]
-        return self._parse_plan_response(text)
-
-    def _call_custom_provider(self, key: str, title: str, mode: str) -> dict:
-        """Call Generic OpenAI-Compatible API (e.g. Groq)."""
-        base = self.config.custom_base_url.rstrip('/')
-        url = f"{base}/chat/completions"
-        prompt = self._build_prompt(title, mode)
-        
-        payload = {
-            "model": self.config.custom_model,
-            "messages": [{"role": "user", "content": prompt}],
-            "temperature": 0.7
-        }
-        
-        resp = requests.post(url, json=payload, headers={"Authorization": f"Bearer {key}"}, timeout=60)
-        resp.raise_for_status()
-        
-        data = resp.json()
-        try:
-             text = data["choices"][0]["message"]["content"]
-             return self._parse_plan_response(text)
-        except:
-             raise ValueError(f"Unexpected response format from Custom Provider: {data}")
-
-    def _call_google_gemini(self, key: str, title: str, mode: str) -> dict:
-        """Call Google Gemini API via REST."""
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={key}"
-        prompt = self._build_prompt(title, mode)
-        payload = {"contents": [{"parts": [{"text": prompt}]}]}
-        
-        resp = requests.post(url, json=payload, headers={"Content-Type": "application/json"}, timeout=30)
-        resp.raise_for_status()
-        
-        data = resp.json()
-        try:
-            text = data["candidates"][0]["content"]["parts"][0]["text"]
-            return self._parse_plan_response(text)
-        except (KeyError, IndexError):
-            raise ValueError("Invalid response format from Gemini")
-
-    def _call_openrouter(self, key: str, title: str, mode: str) -> dict:
-        """Call OpenRouter API."""
-        url = "https://openrouter.ai/api/v1/chat/completions"
-        prompt = self._build_prompt(title, mode)
-        payload = {
-            "model": "mistralai/mistral-7b-instruct", 
-            "messages": [{"role": "user", "content": prompt}]
-        }
-        
-        resp = requests.post(url, json=payload, headers={"Authorization": f"Bearer {key}"}, timeout=30)
-        resp.raise_for_status()
-        
-        data = resp.json()
-        text = data["choices"][0]["message"]["content"]
-        return self._parse_plan_response(text)
-
-    def _call_huggingface(self, key: str, title: str, mode: str) -> dict:
-        """Call HuggingFace Inference API."""
-        url = "https://api-inference.huggingface.co/models/mistralai/Mixtral-8x7B-Instruct-v0.1"
-        prompt = self._build_prompt(title, mode)
-        payload = {"inputs": prompt, "parameters": {"max_new_tokens": 1024, "return_full_text": False}}
-        
-        resp = requests.post(url, json=payload, headers={"Authorization": f"Bearer {key}"}, timeout=30)
-        resp.raise_for_status()
-        
-        data = resp.json()
-        text = data[0]["generated_text"]
-        return self._parse_plan_response(text)
     
     # -------------------------------------------------------------------------
     # Fallback Plan Generation

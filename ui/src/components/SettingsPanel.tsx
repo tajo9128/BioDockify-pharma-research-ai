@@ -347,66 +347,7 @@ export default function SettingsPanel() {
                                     </div>
                                 </div>
 
-                                {/* SurfSense Knowledge Engine Config */}
-                                <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 mt-6">
-                                    <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
-                                        <Database className="w-5 h-5 mr-2 text-indigo-400" /> SurfSense Knowledge Engine
-                                    </h3>
-                                    <p className="text-sm text-slate-400 mb-4">
-                                        SurfSense is your local knowledge base. It replaces Neo4j and handles document storage, semantic search, and AI-powered insights.
-                                    </p>
-                                    <div className="space-y-4">
-                                        <div>
-                                            <label className="block text-sm font-medium text-slate-400 mb-2">SurfSense URL</label>
-                                            <input
-                                                value={settings.ai_provider?.surfsense_url || 'http://localhost:3003'}
-                                                onChange={(e) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, surfsense_url: e.target.value } })}
-                                                placeholder="http://localhost:3003"
-                                                className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-medium text-slate-400 mb-2">SurfSense API Key (Optional)</label>
-                                            <input
-                                                type="password"
-                                                value={settings.ai_provider?.surfsense_key || ''}
-                                                onChange={(e) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, surfsense_key: e.target.value } })}
-                                                placeholder="Leave empty for local-only access"
-                                                className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white"
-                                            />
-                                        </div>
-                                        <div className="flex items-center space-x-2">
-                                            <input
-                                                type="checkbox"
-                                                id="surfsense_auto_start"
-                                                checked={settings.ai_provider?.surfsense_auto_start || false}
-                                                onChange={(e) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, surfsense_auto_start: e.target.checked } })}
-                                                className="rounded border-slate-700 bg-slate-950 text-indigo-500"
-                                            />
-                                            <label htmlFor="surfsense_auto_start" className="text-sm text-slate-300">
-                                                Auto-start SurfSense with BioDockify (requires Docker)
-                                            </label>
-                                        </div>
-                                        <button
-                                            onClick={async () => {
-                                                try {
-                                                    const url = settings.ai_provider?.surfsense_url || 'http://localhost:3003';
-                                                    const res = await fetch(`${url}/health`, { signal: AbortSignal.timeout(5000) });
-                                                    if (res.ok) {
-                                                        alert('✅ SurfSense Connected');
-                                                    } else {
-                                                        alert(`❌ SurfSense returned status ${res.status}`);
-                                                    }
-                                                } catch (e: any) {
-                                                    alert(`❌ SurfSense Offline: ${e.message}\n\nStart it with: docker-compose -f modules/surfsense/docker-compose.yml up -d`);
-                                                }
-                                            }}
-                                            className="w-full px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-medium transition-colors"
-                                        >
-                                            Test SurfSense Connection
-                                        </button>
-                                    </div>
-                                </div>
+
                             </div>
                         </div>
                     )}

@@ -31,10 +31,9 @@ export default function FirstRunWizard({ onComplete }: WizardProps) {
 
     const [researchStatus, setResearchStatus] = useState<{
         ollama: 'pending' | 'success' | 'warning';
-        neo4j: 'pending' | 'success' | 'warning';
         pdf: 'success'; // Assumed
         export: 'success'; // Assumed
-    }>({ ollama: 'pending', neo4j: 'pending', pdf: 'success', export: 'success' });
+    }>({ ollama: 'pending', pdf: 'success', export: 'success' });
 
     // Step 1: System Checks (Auto-run when entering step 1)
     useEffect(() => {
@@ -79,8 +78,7 @@ export default function FirstRunWizard({ onComplete }: WizardProps) {
 
             setResearchStatus(prev => ({
                 ...prev,
-                ollama: detected.ollama ? 'success' : 'warning',
-                neo4j: detected.neo4j ? 'success' : 'warning'
+                ollama: detected.ollama ? 'success' : 'warning'
             }));
 
             console.log('[FirstRunWizard] Detection complete:', detected);
@@ -88,8 +86,7 @@ export default function FirstRunWizard({ onComplete }: WizardProps) {
             console.error('[FirstRunWizard] Service detection failed:', e);
             setResearchStatus(prev => ({
                 ...prev,
-                ollama: 'warning',
-                neo4j: 'warning'
+                ollama: 'warning'
             }));
         }
 
@@ -188,61 +185,59 @@ export default function FirstRunWizard({ onComplete }: WizardProps) {
 
                     {/* STEP 2: RESEARCH ENGINE CHECKS */}
                     {step === 2 && (
-                        <div className="space-y-6 w-full max-w-md mx-auto animate-in fade-in duration-300">
                             <h2 className="text-xl font-bold text-white text-center mb-6">Verifying Research Engine...</h2>
                             <div className="space-y-3">
                                 <CheckItem label="Research Editor" status="success" />
                                 <CheckItem label="PDF Processing Engine" status="success" />
                                 <CheckItem label="Ollama (Local AI)" status={researchStatus.ollama === 'pending' ? 'checking' : researchStatus.ollama} />
-                                <CheckItem label="Neo4j (Knowledge Graph)" status={researchStatus.neo4j === 'pending' ? 'checking' : researchStatus.neo4j} />
                             </div>
                         </div>
                     )}
 
-                    {/* STEP 3: SUMMARY */}
-                    {step === 3 && (
-                        <div className="space-y-8 text-center animate-in slide-in-from-bottom-4 duration-500">
-                            <div>
-                                <h1 className="text-2xl font-bold text-white">System Ready</h1>
-                                <p className="text-slate-400 mt-2">Your research environment has been configured.</p>
-                            </div>
-
-                            <div className="bg-slate-900/50 p-6 rounded-xl border border-slate-800 text-left space-y-3 max-w-sm mx-auto">
-                                <div className="flex items-center space-x-3 text-emerald-400">
-                                    <Check className="w-5 h-5" />
-                                    <span className="font-medium">Core Workspace Active</span>
-                                </div>
-                                <div className="flex items-center space-x-3 text-emerald-400">
-                                    <Check className="w-5 h-5" />
-                                    <span className="font-medium">Document Engine Ready</span>
-                                </div>
-                                {researchStatus.ollama === 'warning' && (
-                                    <div className="flex items-center space-x-3 text-amber-500">
-                                        <Brain className="w-5 h-5" />
-                                        <span className="font-medium">AI Assistant (Optional setup required)</span>
-                                    </div>
-                                )}
-                            </div>
-
-                            <div className="flex flex-col items-center space-y-3">
-                                <button
-                                    onClick={finish}
-                                    className="bg-teal-500 hover:bg-teal-400 text-slate-950 px-10 py-3 rounded-xl font-bold text-lg transition-all w-64 shadow-lg shadow-teal-500/20"
-                                >
-                                    Enter Workspace
-                                </button>
-                                <button
-                                    onClick={() => onComplete('settings')}
-                                    className="text-slate-500 text-sm hover:text-white transition-colors"
-                                >
-                                    Open Advanced Settings
-                                </button>
-                            </div>
+                {/* STEP 3: SUMMARY */}
+                {step === 3 && (
+                    <div className="space-y-8 text-center animate-in slide-in-from-bottom-4 duration-500">
+                        <div>
+                            <h1 className="text-2xl font-bold text-white">System Ready</h1>
+                            <p className="text-slate-400 mt-2">Your research environment has been configured.</p>
                         </div>
-                    )}
 
-                </div>
+                        <div className="bg-slate-900/50 p-6 rounded-xl border border-slate-800 text-left space-y-3 max-w-sm mx-auto">
+                            <div className="flex items-center space-x-3 text-emerald-400">
+                                <Check className="w-5 h-5" />
+                                <span className="font-medium">Core Workspace Active</span>
+                            </div>
+                            <div className="flex items-center space-x-3 text-emerald-400">
+                                <Check className="w-5 h-5" />
+                                <span className="font-medium">Document Engine Ready</span>
+                            </div>
+                            {researchStatus.ollama === 'warning' && (
+                                <div className="flex items-center space-x-3 text-amber-500">
+                                    <Brain className="w-5 h-5" />
+                                    <span className="font-medium">AI Assistant (Optional setup required)</span>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="flex flex-col items-center space-y-3">
+                            <button
+                                onClick={finish}
+                                className="bg-teal-500 hover:bg-teal-400 text-slate-950 px-10 py-3 rounded-xl font-bold text-lg transition-all w-64 shadow-lg shadow-teal-500/20"
+                            >
+                                Enter Workspace
+                            </button>
+                            <button
+                                onClick={() => onComplete('settings')}
+                                className="text-slate-500 text-sm hover:text-white transition-colors"
+                            >
+                                Open Advanced Settings
+                            </button>
+                        </div>
+                    </div>
+                )}
+
             </div>
         </div>
+        </div >
     );
 }

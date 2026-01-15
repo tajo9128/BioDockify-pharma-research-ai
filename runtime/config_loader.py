@@ -57,8 +57,11 @@ class SecurityManager:
              xored = base64.b64decode(payload).decode("utf-8")
              # 2. XOR (Symmetric)
              return self._xor_cipher(xored)
-        except Exception as e:
-            print(f"Decryption failed: {e}")
+        except (UnicodeDecodeError, Exception) as e:
+            # If decryption fails (e.g. machine change invalidates key), 
+            # we return the original value (so user can see it's broken or just reset it)
+            # rather than crashing the checking logic.
+            print(f"[!] Config Decryption Warning: {e}. Resetting to raw value.")
             return value
 
     def process_config(self, config: Dict, mode: str) -> Dict:
@@ -97,6 +100,11 @@ def get_config_path():
             
     # Development: Use local source directory
     # Support BIO_ENV for specific configs (dev/prod/staging)
+    # Support explicit path override
+    explicit_path = os.getenv("BIO_CONFIG_PATH")
+    if explicit_path:
+        return Path(explicit_path)
+
     env = os.getenv("BIO_ENV", "").lower()
     filename = f"config.{env}.yaml" if env else "config.yaml"
     
@@ -117,27 +125,27 @@ DEFAULT_CONFIG = {
     # SECTION A: PROJECT & RESEARCH CONTEXT
     "project": {
         "name": "My PhD Research",
-        "type": "PhD Thesis",  # Options: Literature Review, Drug Discovery, Thesis, Methodology
+        "type": "PhD Thesis",
         "disease_context": "Alzheimer's Disease",
-        "stage": "Literature Review"  # Options: Exploration, Review, Hypothesis, Experiment, Writing
+        "stage": "Literature Review"
     },
 
     # SECTION B: AGENT ZERO BEHAVIOR
     "agent": {
-        "mode": "semi-autonomous",  # Options: assisted, semi-autonomous, autonomous
-        "reasoning_depth": "standard",  # Options: shallow, standard, deep
+        "mode": "semi-autonomous",
+        "reasoning_depth": "standard",
         "self_correction": True,
         "max_retries": 3,
-        "failure_policy": "ask_user"  # Options: ask_user, auto_retry, abort
+        "failure_policy": "ask_user"
     },
 
-    # SECTION C: LITERATURE & EVIDENCE (Legacy + V2 Pharma)
+    # SECTION C: LITERATURE & EVIDENCE
     "literature": {
         "sources": ["pubmed"], 
         "enable_crossref": True,
         "year_range": 10,  
         "novelty_strictness": "medium",
-        "grobid_url": "http://localhost:8070"  # Default GROBID URL
+        "grobid_url": "http://localhost:8070"
     },
     
     # NEW: Pharma Pipeline Controls
@@ -146,37 +154,35 @@ DEFAULT_CONFIG = {
         "enable_semantic_scholar": True,
         "enable_unpaywall": True,
         "citation_threshold": "high",
-
         "sources": {
             "pubmed": True,
             "pmc": True,
             "biorxiv": False,
             "chemrxiv": False,
             "clinicaltrials": True,
-            "google_scholar": False, # New
-            "openalex": True,        # New (High reliability)
-            "semantic_scholar": True, # New
-            "ieee": False,           # New
-            "elsevier": False,       # Paid/Key
-            "scopus": False,         # Paid/Key
-            "wos": False,            # Web of Science
-            "science_index": False   # Science Index
+            "google_scholar": False,
+            "openalex": True,
+            "semantic_scholar": True,
+            "ieee": False,
+            "elsevier": False,
+            "scopus": False,
+            "wos": False,
+            "science_index": False
         }
     },
 
     # SECTION E: API & AI SETTINGS
     "ai_provider": {
-        "mode": "auto",  # Options: auto, ollama, z-ai
+        "mode": "auto",  # Options: auto, ollama, z-ai, google, openrouter
         "primary_model": "google", 
         "ollama_url": "http://localhost:11434",
         "ollama_model": "llama2",
         "google_key": "",
         "openrouter_key": "",
         "huggingface_key": "",
-        "glm_key": "", # GLM-4.7 Support
-        "elsevier_key": "", # For Scopus/ScienceDirect
+        "glm_key": "",
+        "elsevier_key": "",
         "pubmed_email": "",
-        # Custom / Groq / OpenAI Compatible
         "custom_key": "",
         "custom_base_url": "", 
         "custom_model": "gpt-3.5-turbo",
@@ -193,8 +199,8 @@ DEFAULT_CONFIG = {
     "persona": {
         "role": "PhD Student",
         "strictness": "conservative",
-        "introduction": "", # Box 1: "Introduce yourself"
-        "research_focus": "" # Box 2: "His work"
+        "introduction": "",
+        "research_focus": ""
     },
     
     # NEW: Output Config
@@ -207,7 +213,7 @@ DEFAULT_CONFIG = {
 
     # SECTION I: EXECUTION & SAFETY
     "execution": {
-        "mode": "research",  # Options: safe (no code), research (tools allowed)
+        "mode": "research", 
         "max_runtime_minutes": 45,
         "use_knowledge_graph": True,
         "human_approval_gates": True
@@ -219,7 +225,7 @@ DEFAULT_CONFIG = {
         "pause_on_battery": True,
         "max_cpu_percent": 80,
         "log_level": "INFO",
-        "version": "2.14.4"
+        "version": "2.14.6"
     }
 }
 
@@ -234,26 +240,68 @@ class ConfigLoader:
             print(f"[+] Created default config at {CONFIG_PATH}")
 
     def load_config(self) -> Dict[str, Any]:
-        """Load configuration from disk with fail-safe defaults."""
+        """Load configuration from disk with fail-safe defaults and env var overrides."""
         try:
+            print(f"[*] Loading config from: {CONFIG_PATH}")
             with open(CONFIG_PATH, "r") as f:
                 user_config = yaml.safe_load(f)
                 
             if not user_config:
-                return DEFAULT_CONFIG
+                user_config = DEFAULT_CONFIG
             
             # Merit: Deep merge with defaults to ensure new keys exist
             merged = self._merge_defaults(DEFAULT_CONFIG, user_config)
             
+            # Environment Variable Overrides (Runtime Overlay)
+            merged = self._apply_env_overrides(merged)
+
             # Migration Check
             final_config = self._migrate_config(merged)
             
             # Decrypt sensitive values for Runtime usage
-            return security_manager.process_config(final_config, 'decrypt')
+            decrypted = security_manager.process_config(final_config, 'decrypt')
+
+            # Resolve Auto Mode
+            self._resolve_auto_mode(decrypted)
+
+            return decrypted
             
         except Exception as e:
             print(f"[!] Error loading config: {e}")
             return DEFAULT_CONFIG
+
+    def _apply_env_overrides(self, config: Dict[str, Any]) -> Dict[str, Any]:
+        """Overlays environment variables onto the config."""
+        # AI Provider Keys
+        if os.getenv("BIO_GOOGLE_KEY"):
+            config["ai_provider"]["google_key"] = os.getenv("BIO_GOOGLE_KEY")
+        if os.getenv("BIO_OPENROUTER_KEY"):
+            config["ai_provider"]["openrouter_key"] = os.getenv("BIO_OPENROUTER_KEY")
+        if os.getenv("BIO_OLLAMA_URL"):
+            config["ai_provider"]["ollama_url"] = os.getenv("BIO_OLLAMA_URL")
+        
+        # System Overrides
+        if os.getenv("BIO_MODE"):
+             config["execution"]["mode"] = os.getenv("BIO_MODE")
+
+        return config
+
+    def _resolve_auto_mode(self, config: Dict[str, Any]):
+        """
+        Resolves 'auto' mode to a specific provider based on available keys.
+        Logic: Google -> OpenRouter -> Ollama
+        """
+        ai = config.get("ai_provider", {})
+        if ai.get("mode") == "auto":
+            if ai.get("google_key"):
+                config["ai_provider"]["mode"] = "google"
+                print("[*] Auto-Mode: Selected 'google' (Key detected)")
+            elif ai.get("openrouter_key"):
+                config["ai_provider"]["mode"] = "openrouter"
+                print("[*] Auto-Mode: Selected 'openrouter' (Key detected)")
+            else:
+                config["ai_provider"]["mode"] = "ollama"
+                print("[*] Auto-Mode: Selected 'ollama' (Default)")
 
     def save_config(self, new_config: Dict[str, Any]) -> bool:
         """Save new configuration to disk."""
@@ -282,7 +330,9 @@ class ConfigLoader:
 
     def _save_to_disk(self, config_data: Dict[str, Any]):
         """Helper to write YAML to disk atomically."""
-        CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
+        if not CONFIG_PATH.parent.exists():
+             CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
+             
         # Write to temp file first
         tmp_path = CONFIG_PATH.with_suffix('.tmp')
         try:
@@ -387,5 +437,6 @@ def reset_config() -> Dict[str, Any]:
 
 if __name__ == "__main__":
     # Test run
+    print(f"Config Path: {CONFIG_PATH}")
     cfg = load_config()
-    print("Loaded Config successfully.")
+    print(f"Loaded Config Mode: {cfg['ai_provider']['mode']}")

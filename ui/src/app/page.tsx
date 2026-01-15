@@ -14,6 +14,7 @@ import PublicationView from '@/components/PublicationView';
 import StatisticsView from '@/components/StatisticsView';
 import JournalChecker from '@/components/JournalChecker';
 import { AcademicWriterHub } from '@/components/writers/AcademicWriterHub';
+import HomeDashboard from '@/components/HomeDashboard';
 
 
 import FeedbackDialog from '@/components/FeedbackDialog'; // Ensure imported if used
@@ -266,28 +267,9 @@ export default function PharmaceuticalResearchApp() {
           </ErrorBoundary>
         );
       case 'home':
+        return <HomeDashboard onNavigate={setActiveView} />;
       case 'research':
-      case 'results':
-      case 'lab':
-        return (
-          <div className="h-full flex items-center justify-center text-slate-500">
-            Virtual Lab Module Coming Soon
-          </div>
-        );
-      case 'writers':
-        return (
-          <ErrorBoundary name="WriterHub">
-            <AcademicWriterHub
-              onSelectMode={(mode) => {
-                setWorkstationMode(mode);
-                setActiveView('research'); // Navigate to Workstation
-              }}
-            />
-          </ErrorBoundary>
-        );
-      default:
-        // For now, all research activities happen in the Workstation
-        // Passing view prop to handle specific sub-views
+        // Core Workstation
         return (
           <ErrorBoundary name="Workstation">
             <ResearchWorkstation
@@ -303,6 +285,33 @@ export default function PharmaceuticalResearchApp() {
               onModeChange={setWorkstationMode}
             />
           </ErrorBoundary>
+        );
+      case 'results':
+      case 'lab':
+      case 'autonomous':
+        return (
+          <div className="h-full flex items-center justify-center text-slate-500 flex-col">
+            <h2 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-teal-400 to-indigo-500 mb-2">Module Under Development</h2>
+            <p>We are still calibrating the {activeView} module.</p>
+          </div>
+        );
+      case 'writers':
+        return (
+          <ErrorBoundary name="WriterHub">
+            <AcademicWriterHub
+              onSelectMode={(mode) => {
+                setWorkstationMode(mode);
+                setActiveView('research'); // Navigate to Workstation
+              }}
+            />
+          </ErrorBoundary>
+        );
+      default:
+        // Fallback or Unknown
+        return (
+          <div className="h-full flex items-center justify-center text-slate-500">
+            Select a module from the sidebar.
+          </div>
         );
     }
   };

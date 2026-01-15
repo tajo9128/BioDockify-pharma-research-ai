@@ -12,6 +12,10 @@
 // RULE 1: System State Detection
 // ============================================================================
 
+// ============================================================================
+// RULE 1: System State Detection
+// ============================================================================
+
 export interface SystemState {
     first_run: boolean;
     config_missing: boolean;
@@ -20,14 +24,11 @@ export interface SystemState {
         ollama_installed: boolean;
         ollama_running: boolean;
         ollama_models: string[];
-        neo4j_installed: boolean;
-        neo4j_running: boolean;
         disk_space_ok: boolean;
         internet_available: boolean;
     };
     consent: {
         auto_start_ollama: boolean;
-        auto_start_neo4j: boolean;
         remember_choice: boolean;
     };
     mode: 'LIMITED' | 'FULL';
@@ -41,14 +42,11 @@ export const DEFAULT_SYSTEM_STATE: SystemState = {
         ollama_installed: false,
         ollama_running: false,
         ollama_models: [],
-        neo4j_installed: false,
-        neo4j_running: false,
         disk_space_ok: true,
         internet_available: false
     },
     consent: {
         auto_start_ollama: false,
-        auto_start_neo4j: false,
         remember_choice: false
     },
     mode: 'LIMITED'
@@ -94,18 +92,6 @@ export function formatScanResults(state: SystemState): ScanResult[] {
             required: false
         },
         {
-            name: 'Neo4j Installed',
-            status: state.services.neo4j_installed ? 'ok' : 'warning',
-            message: state.services.neo4j_installed ? 'Found' : 'Not installed',
-            required: false
-        },
-        {
-            name: 'Neo4j Running',
-            status: state.services.neo4j_running ? 'ok' : 'warning',
-            message: state.services.neo4j_running ? 'Running' : 'Not running',
-            required: false
-        },
-        {
             name: 'Disk Space',
             status: state.services.disk_space_ok ? 'ok' : 'error',
             message: state.services.disk_space_ok ? 'Sufficient' : 'Low disk space',
@@ -132,12 +118,6 @@ export function getConsentRequests(state: SystemState): ConsentRequest[] {
             label: 'Allow BioDockify to start Ollama automatically',
             description: 'When launching, BioDockify can start the Ollama service for you.',
             granted: state.consent.auto_start_ollama
-        },
-        {
-            id: 'auto_start_neo4j',
-            label: 'Allow BioDockify to start Neo4j automatically',
-            description: 'When launching, BioDockify can start the Neo4j database for you.',
-            granted: state.consent.auto_start_neo4j
         },
         {
             id: 'remember_choice',
@@ -174,17 +154,6 @@ export function getSetupGuidance(): SetupGuidance[] {
                 'Research assistant features unavailable',
                 'Document summarization disabled'
             ]
-        },
-        {
-            component: 'Neo4j',
-            needed: false,
-            reason: 'Optional: Enables knowledge graph for advanced research connections.',
-            downloadUrl: 'https://neo4j.com/download/',
-            canSkip: true,
-            skipConsequences: [
-                'Knowledge graph features disabled',
-                'Research relationship mapping unavailable'
-            ]
         }
     ];
 }
@@ -210,7 +179,6 @@ export function getSystemModeDeclaration(state: SystemState): SystemModeDeclarat
         title: isLimited ? 'Limited Mode Active' : 'Full Mode Active',
         capabilities: [
             { feature: 'AI reasoning', enabled: state.services.ollama_running },
-            { feature: 'Memory persistence', enabled: state.services.neo4j_running },
             { feature: 'File reading', enabled: true },
             { feature: 'PDF processing', enabled: true },
             { feature: 'Literature search', enabled: true },
@@ -238,9 +206,7 @@ export async function commitConfiguration(
         consent: state.consent,
         services: {
             ollama_url: state.services.ollama_running ? 'http://localhost:11434' : '',
-            ollama_enabled: state.consent.auto_start_ollama,
-            neo4j_uri: state.services.neo4j_running ? 'bolt://localhost:7687' : '',
-            neo4j_enabled: state.consent.auto_start_neo4j
+            ollama_enabled: state.consent.auto_start_ollama
         },
         mode: state.mode
     };
@@ -274,8 +240,7 @@ export interface VerificationResult {
 
 export async function verifyPostWizard(
     state: SystemState,
-    checkOllama: () => Promise<boolean>,
-    checkNeo4j: () => Promise<boolean>
+    checkOllama: () => Promise<boolean>
 ): Promise<VerificationResult> {
     const checks: { name: string; passed: boolean; message: string }[] = [];
 
@@ -286,15 +251,6 @@ export async function verifyPostWizard(
             name: 'Ollama Connection',
             passed: ollamaOk,
             message: ollamaOk ? 'Reachable' : 'Not reachable'
-        });
-    }
-
-    if (state.consent.auto_start_neo4j || state.services.neo4j_running) {
-        const neo4jOk = await checkNeo4j();
-        checks.push({
-            name: 'Neo4j Connection',
-            passed: neo4jOk,
-            message: neo4jOk ? 'Reachable' : 'Not reachable'
         });
     }
 

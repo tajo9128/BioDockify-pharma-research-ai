@@ -1,6 +1,6 @@
 /**
  * Auto-Configuration Service
- * Automatically detects and configures available services (Ollama, Neo4j, GROBID)
+ * Automatically detects and configures available services (Ollama, GROBID)
  * Works even when the backend API is not running by using Tauri shell commands
  */
 
@@ -9,13 +9,11 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8234';
 
 // Default service URLs
 const DEFAULT_OLLAMA_URL = 'http://localhost:11434';
-const DEFAULT_NEO4J_URI = 'bolt://localhost:7687';
 const DEFAULT_GROBID_URL = 'http://localhost:8070';
 
 export interface DetectedServices {
     ollama: boolean;
     ollamaModels: string[];
-    neo4j: boolean;
     grobid: boolean;
     backend: boolean;
 }
@@ -23,9 +21,6 @@ export interface DetectedServices {
 export interface ServiceConfig {
     ollamaUrl: string;
     ollamaModel: string;
-    neo4jUri: string;
-    neo4jUser: string;
-    neo4jPassword: string;
     grobidUrl: string;
 }
 
@@ -114,75 +109,6 @@ export async function checkOllama(url: string = DEFAULT_OLLAMA_URL): Promise<{ a
 }
 
 /**
- * Check Neo4j via backend API
- */
-async function checkNeo4jViaBackend(uri: string, user: string, password: string): Promise<boolean> {
-    try {
-        const res = await fetch(`${API_BASE}/api/settings/neo4j/check`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ uri, user, password }),
-            signal: AbortSignal.timeout(3000)
-        });
-
-        if (res.ok) {
-            const data = await res.json();
-            return data.status === 'success';
-        }
-    } catch (e) {
-        console.log('[AutoConfig] Backend Neo4j check failed:', e);
-    }
-    return false;
-}
-
-/**
- * Check Neo4j via Tauri shell (check if port 7687 is open)
- */
-async function checkNeo4jViaTauri(): Promise<boolean> {
-    if (!isTauri()) {
-        return false;
-    }
-
-    try {
-        const { Command } = await import('@tauri-apps/api/shell');
-
-        // Check if Neo4j HTTP port is responding
-        const cmd = new Command('curl', ['-s', '-m', '2', '-o', 'nul', '-w', '%{http_code}', 'http://localhost:7474']);
-        const result = await cmd.execute();
-
-        // Neo4j HTTP returns various codes, any response means it's running
-        return result.code === 0 && result.stdout.trim() !== '000';
-    } catch (e) {
-        console.log('[AutoConfig] Tauri Neo4j check failed:', e);
-    }
-    return false;
-}
-
-/**
- * Check Neo4j availability with fallback
- */
-export async function checkNeo4j(
-    uri: string = DEFAULT_NEO4J_URI,
-    user: string = 'neo4j',
-    password: string = ''
-): Promise<boolean> {
-    // Try backend first
-    if (await checkNeo4jViaBackend(uri, user, password)) {
-        console.log('[AutoConfig] Neo4j detected via backend');
-        return true;
-    }
-
-    // Fallback to Tauri shell
-    if (await checkNeo4jViaTauri()) {
-        console.log('[AutoConfig] Neo4j detected via Tauri shell');
-        return true;
-    }
-
-    console.log('[AutoConfig] Neo4j not detected');
-    return false;
-}
-
-/**
  * Check if backend API is running
  */
 export async function checkBackend(): Promise<boolean> {
@@ -203,17 +129,15 @@ export async function checkBackend(): Promise<boolean> {
 export async function detectAllServices(): Promise<DetectedServices> {
     console.log('[AutoConfig] Starting service detection...');
 
-    const [backend, ollamaResult, neo4j] = await Promise.all([
+    const [backend, ollamaResult] = await Promise.all([
         checkBackend(),
-        checkOllama(),
-        checkNeo4j()
+        checkOllama()
     ]);
 
     const result: DetectedServices = {
         backend,
         ollama: ollamaResult.available,
         ollamaModels: ollamaResult.models,
-        neo4j,
         grobid: backend // GROBID check requires backend for now
     };
 
@@ -235,9 +159,6 @@ export async function autoConfigureServices(): Promise<{
     const config: ServiceConfig = {
         ollamaUrl: detected.ollama ? DEFAULT_OLLAMA_URL : '',
         ollamaModel: detected.ollamaModels.length > 0 ? detected.ollamaModels[0] : '',
-        neo4jUri: detected.neo4j ? DEFAULT_NEO4J_URI : '',
-        neo4jUser: 'neo4j',
-        neo4jPassword: '',
         grobidUrl: detected.grobid ? DEFAULT_GROBID_URL : ''
     };
 
@@ -260,10 +181,11 @@ export async function saveAutoConfig(config: ServiceConfig): Promise<boolean> {
                     ollama_url: config.ollamaUrl,
                     ollama_model: config.ollamaModel
                 },
+                // Send empty/disabled Neo4j config to keep backend happy/clean
                 neo4j: {
-                    uri: config.neo4jUri,
-                    user: config.neo4jUser,
-                    password: config.neo4jPassword
+                    uri: '',
+                    user: 'neo4j',
+                    password: ''
                 }
             })
         });
