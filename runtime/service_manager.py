@@ -97,6 +97,79 @@ class ServiceManager:
                 logger.error(f"Error stopping process {proc.pid}: {e}")
         self.processes.clear()
 
+    # === SERVICE WATCHDOG (Phase 19) ===
+    
+    def check_health(self, service_name: str) -> str:
+        """Check the health status of a service."""
+        import socket
+        
+        ports = {
+            "ollama": 11434,
+            "surfsense": 3003,
+            "api": 8000
+        }
+        
+        port = ports.get(service_name)
+        if not port:
+            return "unknown"
+        
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.settimeout(1)
+                result = s.connect_ex(("127.0.0.1", port))
+                return "running" if result == 0 else "stopped"
+        except Exception as e:
+            logger.error(f"Health check failed for {service_name}: {e}")
+            return "error"
+
+    def ensure_ollama(self) -> bool:
+        """Ensure Ollama is running; start it if not."""
+        status = self.check_health("ollama")
+        if status == "running":
+            logger.info("Ollama is already running.")
+            return True
+        
+        logger.warning("Ollama not running. Attempting to start...")
+        self.start_ollama()
+        
+        # Wait and re-check
+        import time
+        time.sleep(2)
+        
+        new_status = self.check_health("ollama")
+        if new_status == "running":
+            logger.info("Ollama started successfully.")
+            return True
+        else:
+            logger.error("Failed to start Ollama.")
+            return False
+
+    def attempt_repair(self, service_name: str) -> dict:
+        """Attempt to repair a stopped service."""
+        if service_name == "ollama":
+            success = self.ensure_ollama()
+            return {
+                "service": service_name,
+                "action": "restart_attempted",
+                "success": success
+            }
+        elif service_name == "surfsense":
+            self.start_surfsense()
+            import time
+            time.sleep(3)
+            status = self.check_health("surfsense")
+            return {
+                "service": service_name,
+                "action": "restart_attempted",
+                "success": status == "running"
+            }
+        else:
+            return {
+                "service": service_name,
+                "action": "unknown_service",
+                "success": False
+            }
+
 # Global Instance
 service_manager = None
 

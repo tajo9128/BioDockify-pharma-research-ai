@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { api } from '@/lib/api';
 import { detectAllServices, DetectedServices } from '@/lib/services/auto-config';
@@ -183,8 +182,8 @@ export default function FirstRunWizard({ onComplete }: WizardProps) {
                         </div>
                     )}
 
-                    {/* STEP 2: RESEARCH ENGINE CHECKS */}
                     {step === 2 && (
+                        <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
                             <h2 className="text-xl font-bold text-white text-center mb-6">Verifying Research Engine...</h2>
                             <div className="space-y-3">
                                 <CheckItem label="Research Editor" status="success" />
@@ -194,50 +193,50 @@ export default function FirstRunWizard({ onComplete }: WizardProps) {
                         </div>
                     )}
 
-                {/* STEP 3: SUMMARY */}
-                {step === 3 && (
-                    <div className="space-y-8 text-center animate-in slide-in-from-bottom-4 duration-500">
-                        <div>
-                            <h1 className="text-2xl font-bold text-white">System Ready</h1>
-                            <p className="text-slate-400 mt-2">Your research environment has been configured.</p>
-                        </div>
+                    {/* STEP 3: SUMMARY */}
+                    {step === 3 && (
+                        <div className="space-y-8 text-center animate-in slide-in-from-bottom-4 duration-500">
+                            <div>
+                                <h1 className="text-2xl font-bold text-white">System Ready</h1>
+                                <p className="text-slate-400 mt-2">Your research environment has been configured.</p>
+                            </div>
 
-                        <div className="bg-slate-900/50 p-6 rounded-xl border border-slate-800 text-left space-y-3 max-w-sm mx-auto">
-                            <div className="flex items-center space-x-3 text-emerald-400">
-                                <Check className="w-5 h-5" />
-                                <span className="font-medium">Core Workspace Active</span>
-                            </div>
-                            <div className="flex items-center space-x-3 text-emerald-400">
-                                <Check className="w-5 h-5" />
-                                <span className="font-medium">Document Engine Ready</span>
-                            </div>
-                            {researchStatus.ollama === 'warning' && (
-                                <div className="flex items-center space-x-3 text-amber-500">
-                                    <Brain className="w-5 h-5" />
-                                    <span className="font-medium">AI Assistant (Optional setup required)</span>
+                            <div className="bg-slate-900/50 p-6 rounded-xl border border-slate-800 text-left space-y-3 max-w-sm mx-auto">
+                                <div className="flex items-center space-x-3 text-emerald-400">
+                                    <Check className="w-5 h-5" />
+                                    <span className="font-medium">Core Workspace Active</span>
                                 </div>
-                            )}
-                        </div>
+                                <div className="flex items-center space-x-3 text-emerald-400">
+                                    <Check className="w-5 h-5" />
+                                    <span className="font-medium">Document Engine Ready</span>
+                                </div>
+                                {researchStatus.ollama === 'warning' && (
+                                    <div className="flex items-center space-x-3 text-amber-500">
+                                        <Brain className="w-5 h-5" />
+                                        <span className="font-medium">AI Assistant (Optional setup required)</span>
+                                    </div>
+                                )}
+                            </div>
 
-                        <div className="flex flex-col items-center space-y-3">
-                            <button
-                                onClick={finish}
-                                className="bg-teal-500 hover:bg-teal-400 text-slate-950 px-10 py-3 rounded-xl font-bold text-lg transition-all w-64 shadow-lg shadow-teal-500/20"
-                            >
-                                Enter Workspace
-                            </button>
-                            <button
-                                onClick={() => onComplete('settings')}
-                                className="text-slate-500 text-sm hover:text-white transition-colors"
-                            >
-                                Open Advanced Settings
-                            </button>
+                            <div className="flex flex-col items-center space-y-3">
+                                <button
+                                    onClick={finish}
+                                    className="bg-teal-500 hover:bg-teal-400 text-slate-950 px-10 py-3 rounded-xl font-bold text-lg transition-all w-64 shadow-lg shadow-teal-500/20"
+                                >
+                                    Enter Workspace
+                                </button>
+                                <button
+                                    onClick={() => onComplete('settings')}
+                                    className="text-slate-500 text-sm hover:text-white transition-colors"
+                                >
+                                    Open Advanced Settings
+                                </button>
+                            </div>
                         </div>
-                    </div>
-                )}
+                    )}
 
+                </div>
             </div>
         </div>
-        </div >
     );
 }

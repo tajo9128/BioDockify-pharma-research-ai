@@ -217,6 +217,31 @@ def get_agent_thinking():
     }
 
 # -----------------------------------------------------------------------------
+# V2 SYSTEM HEALTH ENDPOINTS (Phase 19)
+# -----------------------------------------------------------------------------
+from modules.system.doctor import SystemDoctor
+
+@app.get("/api/v2/system/diagnose")
+def diagnose_system():
+    """
+    V2: Run a full system diagnostic and return a health report.
+    """
+    from runtime.config_loader import load_config
+    cfg = load_config()
+    
+    doctor = SystemDoctor(cfg)
+    report = doctor.run_diagnosis()
+    return report
+
+@app.post("/api/v2/system/repair")
+def repair_system(service: str = "ollama"):
+    """
+    V2: Attempt to repair a specific system service.
+    """
+    result = svc_mgr.attempt_repair(service)
+    return result
+
+# -----------------------------------------------------------------------------
 # DIGITAL LIBRARY ENDPOINTS (Phase 5)
 # -----------------------------------------------------------------------------
 from fastapi import UploadFile, File, Form
