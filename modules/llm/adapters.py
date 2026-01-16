@@ -161,3 +161,73 @@ class ZhipuAdapter(BaseLLMAdapter):
             return data["choices"][0]["message"]["content"]
         except Exception as e:
             raise ValueError(f"Zhipu/GLM API Error: {e}")
+
+
+class OllamaAdapter(BaseLLMAdapter):
+    """Adapter for local Ollama LLM."""
+    
+    def __init__(self, base_url: str = "http://localhost:11434", model: str = "llama2"):
+        self.base_url = base_url.rstrip('/')
+        self.model = model
+
+    def generate(self, prompt: str, **kwargs) -> str:
+        url = f"{self.base_url}/api/generate"
+        payload = {
+            "model": self.model,
+            "prompt": prompt,
+            "stream": False,
+            "options": {
+                "temperature": kwargs.get("temperature", 0.7),
+                "num_predict": kwargs.get("max_tokens", 1024)
+            }
+        }
+        
+        try:
+            resp = requests.post(url, json=payload, timeout=120)
+            resp.raise_for_status()
+            data = resp.json()
+            return data.get("response", "")
+        except requests.exceptions.ConnectionError:
+            raise ValueError(f"Ollama not reachable at {self.base_url}. Is Ollama running?")
+        except Exception as e:
+            raise ValueError(f"Ollama API Error: {e}")
+    
+    def chat(self, messages: list, **kwargs) -> str:
+        """Chat completion endpoint for multi-turn conversations."""
+        url = f"{self.base_url}/api/chat"
+        payload = {
+            "model": self.model,
+            "messages": messages,
+            "stream": False,
+            "options": {
+                "temperature": kwargs.get("temperature", 0.7),
+                "num_predict": kwargs.get("max_tokens", 1024)
+            }
+        }
+        
+        try:
+            resp = requests.post(url, json=payload, timeout=120)
+            resp.raise_for_status()
+            data = resp.json()
+            return data.get("message", {}).get("content", "")
+        except Exception as e:
+            raise ValueError(f"Ollama Chat API Error: {e}")
+    
+    def is_available(self) -> bool:
+        """Check if Ollama server is running."""
+        try:
+            resp = requests.get(f"{self.base_url}/api/tags", timeout=5)
+            return resp.status_code == 200
+        except:
+            return False
+    
+    def list_models(self) -> list:
+        """List available models in Ollama."""
+        try:
+            resp = requests.get(f"{self.base_url}/api/tags", timeout=10)
+            resp.raise_for_status()
+            data = resp.json()
+            return [m.get("name", "") for m in data.get("models", [])]
+        except:
+            return []
+

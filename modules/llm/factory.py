@@ -5,7 +5,8 @@ from modules.llm.adapters import (
     OpenRouterAdapter, 
     HuggingFaceAdapter, 
     CustomAdapter,
-    ZhipuAdapter
+    ZhipuAdapter,
+    OllamaAdapter
 )
 
 class LLMFactory:
@@ -17,7 +18,7 @@ class LLMFactory:
         Returns the appropriate adapter instance.
         
         Args:
-            provider: 'google', 'openrouter', 'huggingface', 'custom', 'zhipu'
+            provider: 'google', 'openrouter', 'huggingface', 'custom', 'zhipu', 'ollama'
             config: OrchestratorConfig object with keys
             
         Returns:
@@ -44,5 +45,12 @@ class LLMFactory:
         elif provider == "zhipu":
              if not config.glm_key: return None
              return ZhipuAdapter(config.glm_key)
+        
+        elif provider == "ollama":
+            # Ollama doesn't require an API key - just URL and model
+            ollama_url = getattr(config, 'ollama_url', 'http://localhost:11434')
+            ollama_model = getattr(config, 'ollama_model', 'llama2')
+            return OllamaAdapter(base_url=ollama_url, model=ollama_model)
             
         return None
+
