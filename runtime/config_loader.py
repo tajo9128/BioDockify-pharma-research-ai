@@ -289,7 +289,7 @@ class ConfigLoader:
     def _resolve_auto_mode(self, config: Dict[str, Any]):
         """
         Resolves 'auto' mode to a specific provider based on available keys.
-        Logic: Google -> OpenRouter -> Ollama
+        Logic: Google -> OpenRouter -> HuggingFace -> Custom -> Ollama (verified)
         """
         ai = config.get("ai_provider", {})
         if ai.get("mode") == "auto":
@@ -299,9 +299,46 @@ class ConfigLoader:
             elif ai.get("openrouter_key"):
                 config["ai_provider"]["mode"] = "openrouter"
                 print("[*] Auto-Mode: Selected 'openrouter' (Key detected)")
+            elif ai.get("huggingface_key"):
+                config["ai_provider"]["mode"] = "huggingface"
+                print("[*] Auto-Mode: Selected 'huggingface' (Key detected)")
+            elif ai.get("custom_key") and ai.get("custom_base_url"):
+                config["ai_provider"]["mode"] = "custom"
+                print("[*] Auto-Mode: Selected 'custom' (Key + URL detected)")
             else:
-                config["ai_provider"]["mode"] = "ollama"
-                print("[*] Auto-Mode: Selected 'ollama' (Default)")
+                # Fallback to Ollama - but verify it's available first
+                if self._verify_ollama_ready():
+                    config["ai_provider"]["mode"] = "ollama"
+                    print("[*] Auto-Mode: Selected 'ollama' (Local, verified running)")
+                else:
+                    # Ollama not available - keep auto mode but warn user
+                    config["ai_provider"]["mode"] = "ollama"  # Still set it
+                    print("[!] Auto-Mode WARNING: No API keys configured and Ollama is not running!")
+                    print("[!] Please either:")
+                    print("[!]   1. Start Ollama: 'ollama serve'")
+                    print("[!]   2. Add an API key in Settings -> Cloud APIs")
+    
+    def _verify_ollama_ready(self, timeout: int = 3) -> bool:
+        """Verify Ollama is responding to requests."""
+        import socket
+        import time
+        
+        ollama_url = "localhost"
+        ollama_port = 11434
+        
+        for attempt in range(timeout):
+            try:
+                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                    s.settimeout(1)
+                    result = s.connect_ex((ollama_url, ollama_port))
+                    if result == 0:
+                        return True
+            except:
+                pass
+            if attempt < timeout - 1:
+                time.sleep(1)
+        
+        return False
 
     def save_config(self, new_config: Dict[str, Any]) -> bool:
         """Save new configuration to disk."""
