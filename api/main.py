@@ -172,6 +172,35 @@ async def set_agent_goal(request: AgentGoal, background_tasks: BackgroundTasks):
     """
     logger.info(f"Received Agent Goal: {request.goal} [Mode: {request.mode}]")
     
+    # Pre-flight check: Verify LLM provider is available
+    try:
+        from runtime.config_loader import load_config
+        from runtime.service_manager import get_service_manager
+        
+        cfg = load_config()
+        ai_mode = cfg.get("ai_provider", {}).get("mode", "auto")
+        
+        # If using Ollama, verify it's running before starting task
+        if ai_mode == "ollama":
+            svc_mgr = get_service_manager(cfg)
+            if svc_mgr.check_health("ollama") != "running":
+                # Try to start Ollama automatically
+                logger.warning("Ollama not running. Attempting to start...")
+                if not svc_mgr.start_ollama():
+                    raise HTTPException(
+                        status_code=503,
+                        detail="Ollama service is not running and could not be started. Please start Ollama with 'ollama serve' or configure a cloud API in Settings."
+                    )
+                logger.info("Ollama started successfully.")
+    except HTTPException:
+        raise  # Re-raise HTTP exceptions
+    except Exception as e:
+        logger.error(f"Pre-flight check failed: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to verify AI provider: {str(e)}"
+        )
+    
     # Reset State
     agent_state["status"] = "thinking"
     agent_state["current_thought"] = "Analyzing research goal..."
@@ -190,10 +219,19 @@ async def set_agent_goal(request: AgentGoal, background_tasks: BackgroundTasks):
             
             # Plan
             plan = orch.plan_research(goal, mode="synthesize")
+            if plan is None:
+                raise ValueError("LLM failed to generate a plan. Check AI provider configuration.")
+            
             agent_state["logs"].append(f"Plan generated: {len(plan.steps)} steps.")
             agent_state["current_thought"] = f"Plan created with {len(plan.steps)} steps. Ready to execute."
             agent_state["status"] = "ready"
             
+        except ValueError as e:
+            # LLM-specific errors
+            logger.error(f"LLM Error: {e}")
+            agent_state["status"] = "error"
+            agent_state["current_thought"] = f"LLM Error: {str(e)}"
+            agent_state["logs"].append(f"LLM Error: {str(e)}")
         except Exception as e:
             logger.error(f"Agent Task Failed: {e}")
             agent_state["status"] = "error"
@@ -203,7 +241,8 @@ async def set_agent_goal(request: AgentGoal, background_tasks: BackgroundTasks):
     # Launch Background Task
     background_tasks.add_task(run_agent_task, request.goal, request.mode)
     
-    return {"status": "accepted", "message": "Agent started"}
+    return {"status": "accepted", "message": "Agent started", "ai_mode": ai_mode}
+
 
 @app.get("/api/v2/agent/thinking")
 def get_agent_thinking():
