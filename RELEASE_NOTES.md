@@ -1,5 +1,11 @@
 # Release Notes
 
+## v2.15.5 - Knowledge Hub & Podcast Generation
+- **Podcast Generation**: Generate audio podcasts from search results using OpenAI TTS.
+- **Knowledge Query API**: New `/api/knowledge/query` endpoint for direct RAG semantic search.
+- **Audio Player**: Built-in audio player in Knowledge Base UI with Play/Pause controls.
+- **UI Improvements**: Removed Deep Research icon, fixed modelPlaceholder error.
+
 ## v2.15.4 - Settings Panel & Agent Zero Fixes
 - **UI Fix**: Resolved `modelPlaceholder is not defined` error in Settings Panel when collapsing Cloud APIs section.
 - **Backend**: Stabilized Agent Zero API endpoint with all self-healing actions verified.
