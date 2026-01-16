@@ -18,12 +18,21 @@ app = FastAPI(title="BioDockify Research API", version="2.15.6")
 
 from fastapi.middleware.cors import CORSMiddleware
 
+# CORS Configuration - Whitelist specific origins for security
+allowed_origins = [
+    "http://localhost:3000",
+    "http://localhost:8234",
+    "http://127.0.0.1:3000",
+    "http://127.0.0.1:8234",
+    "tauri://localhost",  # Tauri desktop app
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allows all origins
+    allow_origins=allowed_origins,
     allow_credentials=True,
-    allow_methods=["*"],  # Allows all methods
-    allow_headers=["*"],  # Allows all headers
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
 )
 
 # -----------------------------------------------------------------------------
@@ -38,9 +47,7 @@ import functools
 import psutil
 import asyncio
 
-import logging
-import json
-import time
+import json  # logging and time already imported above
 
 class JsonFormatter(logging.Formatter):
     """
@@ -157,12 +164,46 @@ class AgentGoal(BaseModel):
     goal: str
     mode: str = "auto" # auto, semi-autonomous, autonomous
 
-# Simple in-memory state for Agent V2 (Simulated for UI interaction)
-agent_state = {
-    "status": "idle",
-    "current_thought": "Waiting for user input...",
-    "logs": []
-}
+# Thread-safe state manager for Agent V2
+from threading import Lock
+
+class AgentStateManager:
+    """Thread-safe state manager for agent operations."""
+    def __init__(self):
+        self._state = {
+            "status": "idle",
+            "current_thought": "Waiting for user input...",
+            "logs": [],
+            "current_task_id": None
+        }
+        self._lock = Lock()
+    
+    def update(self, **kwargs):
+        with self._lock:
+            self._state.update(kwargs)
+    
+    def get(self, key: str, default=None):
+        with self._lock:
+            return self._state.get(key, default)
+    
+    def get_all(self) -> dict:
+        with self._lock:
+            return self._state.copy()
+    
+    def reset(self, task_id: str = None):
+        with self._lock:
+            self._state = {
+                "status": "idle",
+                "current_thought": "Waiting for user input...",
+                "logs": [],
+                "current_task_id": task_id
+            }
+    
+    def append_log(self, log: str):
+        with self._lock:
+            self._state["logs"].append(log)
+
+agent_state = AgentStateManager()
 
 @app.post("/api/v2/agent/goal")
 async def set_agent_goal(request: AgentGoal, background_tasks: BackgroundTasks):
@@ -201,10 +242,13 @@ async def set_agent_goal(request: AgentGoal, background_tasks: BackgroundTasks):
             detail=f"Failed to verify AI provider: {str(e)}"
         )
     
-    # Reset State
-    agent_state["status"] = "thinking"
-    agent_state["current_thought"] = "Analyzing research goal..."
-    agent_state["logs"] = [f"Goal received: {request.goal}"]
+    # Generate unique task ID
+    task_id = str(uuid.uuid4())
+    
+    # Reset State with task ID
+    agent_state.reset(task_id)
+    agent_state.update(status="thinking", current_thought="Analyzing research goal...")
+    agent_state.append_log(f"Goal received: {request.goal}")
     
     # Define Background Task wrapper
     def run_agent_task(goal: str, mode: str):
@@ -214,34 +258,35 @@ async def set_agent_goal(request: AgentGoal, background_tasks: BackgroundTasks):
             
             # Initialize Orchestrator
             orch = ResearchOrchestrator()
-            agent_state["current_thought"] = "Planning research steps..."
-            agent_state["logs"].append("Orchestrator initialized.")
+            agent_state.update(current_thought="Planning research steps...")
+            agent_state.append_log("Orchestrator initialized.")
             
             # Plan
             plan = orch.plan_research(goal, mode="synthesize")
             if plan is None:
                 raise ValueError("LLM failed to generate a plan. Check AI provider configuration.")
             
-            agent_state["logs"].append(f"Plan generated: {len(plan.steps)} steps.")
-            agent_state["current_thought"] = f"Plan created with {len(plan.steps)} steps. Ready to execute."
-            agent_state["status"] = "ready"
+            agent_state.append_log(f"Plan generated: {len(plan.steps)} steps.")
+            agent_state.update(
+                current_thought=f"Plan created with {len(plan.steps)} steps. Ready to execute.",
+                status="ready"
+            )
             
         except ValueError as e:
             # LLM-specific errors
             logger.error(f"LLM Error: {e}")
-            agent_state["status"] = "error"
-            agent_state["current_thought"] = f"LLM Error: {str(e)}"
-            agent_state["logs"].append(f"LLM Error: {str(e)}")
+            agent_state.update(status="error", current_thought=f"LLM Error: {str(e)}")
+            agent_state.append_log(f"LLM Error: {str(e)}")
         except Exception as e:
             logger.error(f"Agent Task Failed: {e}")
-            agent_state["status"] = "error"
-            agent_state["current_thought"] = f"Error: {str(e)}"
-            agent_state["logs"].append(f"Error: {str(e)}")
+            agent_state.update(status="error", current_thought=f"Error: {str(e)}")
+            agent_state.append_log(f"Error: {str(e)}")
 
     # Launch Background Task
     background_tasks.add_task(run_agent_task, request.goal, request.mode)
     
-    return {"status": "accepted", "message": "Agent started", "ai_mode": ai_mode}
+    return {"status": "accepted", "message": "Agent started", "task_id": task_id, "ai_mode": ai_mode}
+
 
 
 @app.get("/api/v2/agent/thinking")
@@ -249,10 +294,13 @@ def get_agent_thinking():
     """
     V2: Get current agent thought process (Streaming-like UI).
     """
+    state = agent_state.get_all()
+    logs = state.get("logs", [])
     return {
-        "status": agent_state["status"],
-        "thought": agent_state["current_thought"],
-        "logs": agent_state["logs"][-5:] # Return last 5 logs
+        "status": state.get("status", "idle"),
+        "thought": state.get("current_thought", ""),
+        "task_id": state.get("current_task_id"),
+        "logs": logs[-5:] if logs else []  # Return last 5 logs
     }
 
 # -----------------------------------------------------------------------------
