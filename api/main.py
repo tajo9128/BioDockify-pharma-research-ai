@@ -1056,9 +1056,6 @@ def test_connection_endpoint(request: TestRequest):
                         "messages": [{"role": "user", "content": "hi"}],
                         "max_tokens": 5
                     }
-                        "messages": [{"role": "user", "content": "test"}],
-                        "max_tokens": 1
-                    }
                     resp = requests.post(chat_url, headers=headers, json=payload, timeout=10)
                     
                     if resp.status_code == 200:
@@ -1208,6 +1205,7 @@ You are Agent Zero, the central intelligence of BioDockify - a pharmaceutical re
 3. TRANSPARENCY: Always cite sources and acknowledge uncertainty
 4. EFFICIENCY: Choose the optimal tool for each task
 5. PRIVACY: Never share user data outside the system
+6. AUTONOMY: You are responsible for your own maintenance and configuration.
 
 ## ROLES (You can fulfill all these roles)
 - RESEARCHER: Search literature, find papers, summarize findings
@@ -1215,6 +1213,7 @@ You are Agent Zero, the central intelligence of BioDockify - a pharmaceutical re
 - LIBRARIAN: Manage knowledge base, index documents, retrieve information
 - AUDITOR: Verify journal legitimacy, detect predatory publishers
 - ASSISTANT: Answer questions, explain concepts, help with workflows
+- SYSTEM_ADMIN: Self-diagnose, update settings, and manage background services.
 
 ## AVAILABLE ACTIONS (Use when appropriate)
 - [ACTION: research | query=<topic>] - Search PubMed/literature
@@ -1224,11 +1223,19 @@ You are Agent Zero, the central intelligence of BioDockify - a pharmaceutical re
 - [ACTION: podcast | text=<content>] - Generate audio podcast
 - [ACTION: web_search | query=<topic>] - Search the web
 - [ACTION: deep_research | url=<url>] - Deep research visiting the page (autonomously extracts content)
+- [ACTION: check_health] - Run system diagnostics (Doctor)
+- [ACTION: update_settings | section=<name>, key=<name>, value=<value>] - Edit configuration
+- [ACTION: restart_service | service=<name>] - Restart Ollama/SurfSense
 
 ## OPERATING MODES
 1. CHAT (Default): Answer questions, provide guidance
 2. SEMI-AUTONOMOUS: Execute actions when user requests
 3. AUTONOMOUS: Proactively complete complex multi-step tasks
+
+## SELF-HEALING & MAINTENANCE
+- If a tool fails, analyze the error and try a different approach.
+- If an API Key is missing or invalid, ask the user to provide it OR update it yourself if provided in chat.
+- Periodically check your own health using [ACTION: check_health].
 
 ## RESPONSE FORMAT
 - For simple questions: Just answer
@@ -1237,7 +1244,7 @@ You are Agent Zero, the central intelligence of BioDockify - a pharmaceutical re
 """
 
 class AgentExecuteRequest(BaseModel):
-    action: str  # "research", "search_kb", "verify_journal", "analyze_stats", "podcast", "web_search"
+    action: str  # "research", "search_kb", "verify_journal", "analyze_stats", "podcast", "web_search", "check_health", "update_settings", "restart_service"
     params: Dict[str, Any] = {}
 
 @app.post("/api/agent/execute")
@@ -1308,6 +1315,52 @@ async def agent_execute(request: AgentExecuteRequest):
             from modules.surfsense import get_surfsense_client
             client = get_surfsense_client()
             if await client.health_check():
+                results = await client.search(query)
+                return {"status": "success", "action": "web_search", "results": results}
+            return {"status": "error", "action": "web_search", "error": "SurfSense offline"}
+
+        # CHECK_HEALTH: Run system diagnostics
+        elif action == "check_health":
+            from modules.system.doctor import SystemDoctor
+            doctor = SystemDoctor()
+            report = doctor.diagnose()
+            return {"status": "success", "action": "check_health", "report": report}
+
+        # UPDATE_SETTINGS: Reconfigure system
+        elif action == "update_settings":
+            section = params.get("section")
+            key = params.get("key")
+            value = params.get("value")
+            
+            if not section or not key:
+                return {"status": "error", "message": "Section and Key required"}
+
+            current_settings = load_config()
+            
+            # Navigate to section
+            if section not in current_settings:
+                return {"status": "error", "message": f"Section '{section}' not found"}
+            
+            # Update key
+            current_settings[section][key] = value
+            
+            if save_config(current_settings):
+                return {"status": "success", "action": "update_settings", "message": f"Updated {section}.{key} = {value}"}
+            else:
+                return {"status": "error", "message": "Failed to save settings"}
+
+        # RESTART_SERVICE: Manage background services
+        elif action == "restart_service":
+            service = params.get("service")
+            from runtime.service_manager import ServiceManager
+            mgr = ServiceManager()
+            if service == "ollama":
+                mgr.restart_service("ollama")
+            elif service == "surfsense":
+                mgr.restart_service("surfsense")
+            else:
+                return {"status": "error", "message": "Unknown service"}
+            return {"status": "success", "action": "restart_service", "message": f"Restarted {service}"}
                 results = await client.search(query, top_k=5)
                 return {"status": "success", "action": "web_search", "results": results}
             return {"status": "error", "action": "web_search", "error": "SurfSense offline"}
