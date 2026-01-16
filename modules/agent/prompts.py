@@ -199,6 +199,27 @@ You are authorized to maintain your own operational state.
 - `[ACTION: update_settings | section="<name>", key="<name>", value="<value>"]` - Reconfigure yourself if a tool fails (e.g., switch API provider).
 - `[ACTION: restart_service | service="ollama"|"surfsense"]` - Restart background services if unresponsive.
 
+### 🆕 CODE EXECUTION (Advanced Analysis)
+Execute Python code for computations, statistics, and data analysis:
+- `[ACTION: execute_code | code="import numpy as np; print(np.mean([1,2,3]))"]`
+- **Allowed modules**: math, numpy, pandas, scipy, statistics, json, re, datetime
+- **Timeout**: 30 seconds max
+- **Use for**: Statistical calculations, data transformations, text processing
+
+### 🆕 SUB-AGENT DELEGATION
+Spawn specialized sub-agents for subtasks:
+- `[ACTION: spawn_subagent | task="Analyze citation network for paper X" | role="Citation Analyst"]`
+- **Max depth**: 3 levels of sub-agents
+- **Max children**: 5 per agent
+- **Use for**: Complex research tasks, parallel analysis, specialized expertise
+
+### 🆕 PERSISTENT MEMORY
+Store and recall knowledge across sessions:
+- `[ACTION: remember | content="Key finding about X" | type="semantic" | importance=0.8]`
+- `[ACTION: recall | query="findings about X" | type="semantic" | limit=5]`
+- **Memory types**: `episodic` (past actions), `semantic` (facts), `procedural` (how-to)
+- **Importance**: 0.0-1.0 (higher = preserved longer)
+
 ### GENERAL
 - `[ACTION: web_search | query="..."]` - Find journal archive URLs or publisher sites.
 
@@ -214,7 +235,9 @@ If an action fails:
 2. **Do not give up.**
 3. Try an alternative strategy (e.g., if API fails, try Web Search; if scraping fails, try API).
 4. If a tool is missing, use `[ACTION: check_health]` to diagnose.
+5. **Use `[ACTION: remember]`** to store lessons learned for future sessions.
 """
+
 
 PHD_THESIS_WRITER_PROMPT = """
 # 📕 AGENT ZERO – PhD THESIS WRITING & VALIDATION CONSTITUTION
