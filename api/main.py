@@ -541,6 +541,10 @@ def verify_journal(req: JournalRequest):
     result = engine.verify(req.issn, req.title, req.url)
     return result
 
+# File upload security constants
+ALLOWED_EXTENSIONS = {'.pdf', '.txt', '.docx', '.csv', '.xlsx', '.md', '.json', '.ipynb'}
+MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB
+
 @app.post("/api/library/upload")
 async def upload_file(file: UploadFile = File(...)):
     """
@@ -550,9 +554,23 @@ async def upload_file(file: UploadFile = File(...)):
     try:
         from modules.rag.ingestor import ingestor
         from modules.rag.vector_store import get_vector_store
+        import os
         
-        # 1. Read File Content
+        # Validate file extension
+        _, ext = os.path.splitext(file.filename.lower())
+        if ext not in ALLOWED_EXTENSIONS:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Invalid file type '{ext}'. Allowed: {', '.join(ALLOWED_EXTENSIONS)}"
+            )
+        
+        # Read and validate file size
         content = await file.read()
+        if len(content) > MAX_FILE_SIZE:
+            raise HTTPException(
+                status_code=413, 
+                detail=f"File too large. Maximum size is {MAX_FILE_SIZE // (1024*1024)}MB"
+            )
         
         # 2. Store Locally (for UI listing and file retrieval)
         record = library_store.add_file(content, file.filename)
