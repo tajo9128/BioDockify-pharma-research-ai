@@ -1,5 +1,10 @@
 # Release Notes
 
+## v2.15.4 - Settings Panel & Agent Zero Fixes
+- **UI Fix**: Resolved `modelPlaceholder is not defined` error in Settings Panel when collapsing Cloud APIs section.
+- **Backend**: Stabilized Agent Zero API endpoint with all self-healing actions verified.
+- **Includes v2.15.3 Fixes**: (API Indentation errors, NSIS installer path).
+
 ## v2.15.3 - Final Build Release
 - **Backend**: Fixed redundant code blocks in `api/main.py` causing indentation errors.
 - **Installer**: Production-ready NSIS installer (`BioDockify_Setup_v2.15.3.exe`) with auto-path detection.

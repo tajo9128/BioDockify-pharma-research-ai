@@ -1,6 +1,6 @@
 # BioDockify Agent Zero - Software Specification
 
-**Version:** 2.15.3
+**Version:** 2.15.4
 **Date:** January 16, 2026
 
 ---
