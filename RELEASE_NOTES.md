@@ -1,5 +1,10 @@
 # Release Notes
 
+## v2.15.3 - Final Build Release
+- **Backend**: Fixed redundant code blocks in `api/main.py` causing indentation errors.
+- **Installer**: Production-ready NSIS installer (`BioDockify_Setup_v2.15.3.exe`) with auto-path detection.
+- **Agent Zero**: Fully verified Self-Maintenance and Self-Healing capabilities.
+
 ## v2.15.2 - Critical Build Fix
 - **Build Fix**: Resolved `NSIS Build Failed: Installer not found` error by correctly finding the generated installer artifact in the CI/CD pipeline.
 - **Includes v2.15.1 Fixes**: (API Indentation Hotfix + Documentation).
