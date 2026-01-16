@@ -1,5 +1,10 @@
 # Release Notes
 
+## v2.15.1 - Critical Hotfix
+- **Hotfix**: Resolved `IndentationError` in `api/main.py` causing backend failing start.
+- **Documentation**: Added comprehensive `SOFTWARE_SPECIFICATION.md` detailing system architecture and roles.
+- **Stability**: Verified Agent Zero's self-healing capabilities in production mode.
+
 ## v2.15.0
 - **New Feature**: Added support for Paid APIs (OpenAI / Compatible) in the Settings Panel.
 - **Improvement**: Users can now specify a custom Model ID (e.g., `gpt-4o`) for API connections.

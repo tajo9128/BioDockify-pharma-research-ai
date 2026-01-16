@@ -14,7 +14,7 @@ from orchestration.executor import ResearchExecutor
 from modules.analyst.analytics_engine import ResearchAnalyst
 from modules.backup import DriveClient, BackupManager
 
-app = FastAPI(title="BioDockify Research API", version="2.15.0")
+app = FastAPI(title="BioDockify Research API", version="2.15.1")
 
 from fastapi.middleware.cors import CORSMiddleware
 

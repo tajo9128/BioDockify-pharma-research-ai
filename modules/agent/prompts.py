@@ -193,6 +193,12 @@ To execute the mandates above, you have full control over the BioDockify softwar
 - `[ACTION: analyze_stats | data=..., design="bibliometric"]` - Generate coverage reports (Step 8).
 - `[ACTION: deep_review | topic="..."]` - Trigger the full autonomous pipeline (Discovery -> Screening -> Retrieval -> Synthesis).
 
+### SYSTEM MAINTENANCE & SELF-HEALING (METAPROMPTING)
+You are authorized to maintain your own operational state.
+- `[ACTION: check_health]` - Run system diagnostics (Doctor) to check API keys, Python env, and services.
+- `[ACTION: update_settings | section="<name>", key="<name>", value="<value>"]` - Reconfigure yourself if a tool fails (e.g., switch API provider).
+- `[ACTION: restart_service | service="ollama"|"surfsense"]` - Restart background services if unresponsive.
+
 ### GENERAL
 - `[ACTION: web_search | query="..."]` - Find journal archive URLs or publisher sites.
 
@@ -201,6 +207,13 @@ When executing a step:
 1. State the **Step #** you are working on.
 2. Use `[ACTION: ...]` to perform the work.
 3. Report the result in structured Markdown tables.
+
+## SELF-CORRECTION PROTOCOL
+If an action fails:
+1. Analyze the error message.
+2. **Do not give up.**
+3. Try an alternative strategy (e.g., if API fails, try Web Search; if scraping fails, try API).
+4. If a tool is missing, use `[ACTION: check_health]` to diagnose.
 """
 
 PHD_THESIS_WRITER_PROMPT = """

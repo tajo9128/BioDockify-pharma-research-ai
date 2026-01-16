@@ -1,6 +1,6 @@
 {
   "name": "biodockify-agent-zero",
-  "version": "2.15.0",
+  "version": "2.15.1",
   "description": "BioDockify AI: Advanced Pharmaceutical Research Platform",
   "private": true,
   "scripts": {
