@@ -416,7 +416,57 @@ export const api = {
         method: 'POST',
         body: JSON.stringify({ text, voice })
       })
+  },
+
+  // Slides Generation (Phase 35)
+  slides: {
+    generate: (params: {
+      source: 'knowledge_base' | 'search' | 'prompt' | 'documents';
+      topic?: string;
+      searchQuery?: string;
+      customPrompt?: string;
+      documentIds?: string[];
+      style?: string;
+      numSlides?: number;
+      includeCitations?: boolean;
+    }) =>
+      apiRequest<{
+        status: string;
+        slides: Array<{
+          index: number;
+          type: string;
+          title: string;
+          content: string;
+          style: any;
+        }>;
+        num_slides: number;
+        generated_at: string;
+      }>('/slides/generate', {
+        method: 'POST',
+        body: JSON.stringify({
+          source: params.source,
+          topic: params.topic || '',
+          search_query: params.searchQuery || '',
+          custom_prompt: params.customPrompt || '',
+          document_ids: params.documentIds || [],
+          style: params.style || 'academic',
+          num_slides: params.numSlides || 10,
+          include_citations: params.includeCitations ?? true
+        })
+      }),
+
+    getStyles: () =>
+      apiRequest<{
+        styles: Array<{ id: string; name: string; description: string }>;
+      }>('/slides/styles'),
+
+    render: (slides: any[], style: string, title: string) =>
+      apiRequest<{ status: string; html: string }>('/slides/render', {
+        method: 'POST',
+        body: JSON.stringify({ slides, style, title })
+      })
   }
 };
 
 export default api;
+

@@ -2143,3 +2143,119 @@ def restore_backup(req: RestoreRequest):
         raise HTTPException(status_code=500, detail=result["message"])
     return result
 
+
+# =============================================================================
+# SLIDES GENERATION ENDPOINTS
+# =============================================================================
+
+class SlideRequest(BaseModel):
+    """Request model for slide generation."""
+    source: str  # "knowledge_base", "search", "prompt", "documents"
+    topic: str = ""
+    search_query: str = ""
+    custom_prompt: str = ""
+    document_ids: List[str] = []
+    style: str = "academic"
+    num_slides: int = 10
+    include_citations: bool = True
+
+
+@app.post("/api/slides/generate")
+async def generate_slides(request: SlideRequest, background_tasks: BackgroundTasks):
+    """
+    Generate presentation slides from various Knowledge Base sources.
+    
+    Supports:
+    - knowledge_base: Query KB by topic
+    - search: Generate from search results
+    - prompt: Custom user description
+    - documents: Specific document IDs
+    """
+    try:
+        from modules.slides.slide_generator import get_slide_generator
+        from modules.rag.vector_store import get_vector_store
+        from modules.llm.factory import LLMFactory
+        from runtime.config_loader import load_config
+        
+        # Initialize dependencies
+        cfg = load_config()
+        rag = get_vector_store()
+        
+        # Get LLM adapter
+        try:
+            from orchestration.planner.orchestrator import OrchestratorConfig
+            orch_config = OrchestratorConfig()
+            provider = cfg.get("ai_provider", {}).get("mode", "auto")
+            llm = LLMFactory.get_adapter(provider, orch_config)
+        except:
+            llm = None
+        
+        generator = get_slide_generator(llm, rag)
+        
+        # Generate based on source type
+        if request.source == "knowledge_base":
+            result = generator.generate_from_knowledge_base(
+                topic=request.topic,
+                style=request.style,
+                num_slides=request.num_slides,
+                include_citations=request.include_citations
+            )
+        elif request.source == "search":
+            # First perform search
+            search_results = rag.search(request.search_query, top_k=request.num_slides * 2)
+            result = generator.generate_from_search(
+                search_results=search_results,
+                style=request.style,
+                title=request.topic or "Research Findings"
+            )
+        elif request.source == "prompt":
+            result = generator.generate_from_prompt(
+                prompt=request.custom_prompt,
+                style=request.style,
+                num_slides=request.num_slides
+            )
+        elif request.source == "documents":
+            result = generator.generate_from_documents(
+                document_ids=request.document_ids,
+                style=request.style,
+                title=request.topic or "Document Summary"
+            )
+        else:
+            raise HTTPException(status_code=400, detail=f"Invalid source: {request.source}")
+        
+        return result
+        
+    except Exception as e:
+        logger.error(f"Slides generation failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/slides/styles")
+def get_slide_styles():
+    """Get available slide styles."""
+    from modules.slides.slide_styles import SLIDE_STYLES
+    return {
+        "styles": [
+            {"id": k, "name": v["name"], "description": v["description"]}
+            for k, v in SLIDE_STYLES.items()
+        ]
+    }
+
+
+@app.post("/api/slides/render")
+async def render_slides_html(request: dict):
+    """Render slides as HTML for preview or download."""
+    try:
+        from modules.slides.slide_styles import generate_presentation_html
+        
+        slides = request.get("slides", [])
+        style = request.get("style", "academic")
+        title = request.get("title", "Presentation")
+        
+        html = generate_presentation_html(slides, style, title)
+        
+        return {"status": "success", "html": html}
+        
+    except Exception as e:
+        logger.error(f"Slides rendering failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
