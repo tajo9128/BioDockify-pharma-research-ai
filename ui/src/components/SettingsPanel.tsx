@@ -741,7 +741,7 @@ export default function SettingsPanel() {
 
 // --- Helper Components ---
 
-const CloudKeyBox = ({ name, value, icon, onChange, onTest, testStatus = 'idle', modelValue, onModelChange, ...props }: any) => {
+const CloudKeyBox = ({ name, value, icon, onChange, onTest, testStatus = 'idle', modelValue, onModelChange, modelPlaceholder, ...props }: any) => {
     const getStatusIcon = () => {
         switch (testStatus) {
             case 'testing':
