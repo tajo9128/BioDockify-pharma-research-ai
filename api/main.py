@@ -1361,9 +1361,6 @@ async def agent_execute(request: AgentExecuteRequest):
             else:
                 return {"status": "error", "message": "Unknown service"}
             return {"status": "success", "action": "restart_service", "message": f"Restarted {service}"}
-                results = await client.search(query, top_k=5)
-                return {"status": "success", "action": "web_search", "results": results}
-            return {"status": "error", "action": "web_search", "error": "SurfSense offline"}
         
         # DEEP_RESEARCH: Autonomous Headless Browsing
         elif action == "deep_research":
