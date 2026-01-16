@@ -1,5 +1,13 @@
 # Release Notes
 
+## v2.15.6 - Critical Fixes & Stability
+- **CRITICAL FIX #1**: Added missing `OllamaAdapter` to LLM factory.
+- **CRITICAL FIX #2**: Implemented full Ollama API support with `generate()`, `chat()`, `is_available()`.
+- **CRITICAL FIX #3**: Improved service manager startup with installation check and error logging.
+- **CRITICAL FIX #4**: Added Ollama health verification before auto-mode fallback.
+- **CRITICAL FIX #5**: Added LLM pre-flight checks and proper error handling in Agent API.
+- **Agent Zero Upgrades**: Code execution, sub-agents, persistent memory, dynamic prompts.
+
 ## v2.15.5 - Knowledge Hub & Podcast Generation
 - **Podcast Generation**: Generate audio podcasts from search results using OpenAI TTS.
 - **Knowledge Query API**: New `/api/knowledge/query` endpoint for direct RAG semantic search.
