@@ -225,7 +225,7 @@ DEFAULT_CONFIG = {
         "pause_on_battery": True,
         "max_cpu_percent": 80,
         "log_level": "INFO",
-        "version": "2.14.8"
+        "version": "2.14.9"
     }
 }
 

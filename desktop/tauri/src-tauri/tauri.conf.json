@@ -6,7 +6,8 @@
         "distDir": "../dist"
     },
     "package": {
-        "version": "2.14.8"
+        "productName": "BioDockify",
+        "version": "2.14.9"
     },
     "tauri": {
         "allowlist": {

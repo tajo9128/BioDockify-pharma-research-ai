@@ -1,5 +1,12 @@
 # Release Notes
 
+## v2.14.9 - Critical Build Fix
+*Released: January 16, 2026*
+
+### 🛠️ Configuration Fixes
+- **Binary Naming**: Restored `productName` in `tauri.conf.json`. This ensures the output binary is named `BioDockify.exe` (matching build scripts) rather than `biodockify-ai.exe`.
+- **System Sync**: All components updated to v2.14.9.
+
 ## v2.14.8 - Build Logic Fixes
 *Released: January 15, 2026*
 
