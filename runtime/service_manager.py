@@ -25,32 +25,86 @@ class ServiceManager:
             return startupinfo, creationflags
         return None, 0
 
-    def start_ollama(self):
-        """Starts Ollama in 'serve' mode silently."""
+    def _is_ollama_installed(self) -> bool:
+        """Check if Ollama executable is available in PATH."""
         try:
-            # Check if likely already running
-            # simple check: curl localhost:11434 (skipped for speed, assuming start is safe)
+            if self.is_windows:
+                result = subprocess.run(
+                    ["where", "ollama"], 
+                    capture_output=True, 
+                    timeout=5
+                )
+            else:
+                result = subprocess.run(
+                    ["which", "ollama"], 
+                    capture_output=True, 
+                    timeout=5
+                )
+            return result.returncode == 0
+        except Exception:
+            return False
+
+    def start_ollama(self) -> bool:
+        """Starts Ollama in 'serve' mode with proper validation and error handling."""
+        try:
+            # Check if already running
+            if self.check_health("ollama") == "running":
+                logger.info("✓ Ollama is already running.")
+                return True
             
-            cmd = "ollama serve"
-            logger.info(f"Starting Service: {cmd}")
+            # Check if Ollama is installed
+            if not self._is_ollama_installed():
+                logger.error("✗ Ollama not found in PATH. Please install Ollama from https://ollama.ai")
+                return False
+            
+            logger.info("Starting Ollama service...")
             
             startupinfo, flags = self._get_startup_flags()
             
-            proc = subprocess.Popen(
-                cmd, 
-                shell=False if self.is_windows else True, # shell=False is safer/better for process tracking if executable is in path
-                startupinfo=startupinfo,
-                creationflags=flags,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL
-            )
-            self.processes.append(proc)
-            logger.info("Ollama Service started in background.")
+            # Use shlex for proper command splitting on non-Windows
+            if self.is_windows:
+                cmd = ["ollama", "serve"]
+            else:
+                cmd = "ollama serve"
             
+            # Capture stderr for debugging, but still run in background
+            log_file = Path.home() / ".biodockify" / "logs" / "ollama.log"
+            log_file.parent.mkdir(parents=True, exist_ok=True)
+            
+            with open(log_file, 'a') as log_handle:
+                proc = subprocess.Popen(
+                    cmd,
+                    shell=not self.is_windows,  # shell=True on Linux/Mac, shell=False on Windows
+                    startupinfo=startupinfo,
+                    creationflags=flags,
+                    stdout=log_handle,
+                    stderr=subprocess.STDOUT
+                )
+                self.processes.append(proc)
+            
+            # Wait and verify it started
+            time.sleep(3)
+            
+            if self.check_health("ollama") == "running":
+                logger.info("✓ Ollama started successfully")
+                return True
+            else:
+                # Try to read error from log
+                try:
+                    with open(log_file, 'r') as f:
+                        recent_logs = f.read()[-500:]  # Last 500 chars
+                        logger.error(f"✗ Ollama failed to start. Recent logs:\n{recent_logs}")
+                except:
+                    logger.error("✗ Ollama failed to start. Check ~/.biodockify/logs/ollama.log")
+                return False
+                
         except FileNotFoundError:
-            logger.warning("Ollama executable not found in PATH.")
+            logger.error("✗ Ollama executable not found in PATH. Install from https://ollama.ai")
+            return False
         except Exception as e:
-            logger.error(f"Failed to start Ollama: {e}")
+            logger.error(f"✗ Failed to start Ollama: {e}")
+            return False
+
 
     def start_surfsense(self):
         """Starts SurfSense via Docker Compose."""
