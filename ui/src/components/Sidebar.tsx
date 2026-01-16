@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Home, FlaskConical, FileText, Beaker, Settings, Sparkles, BookOpen, Fingerprint, Globe, Lightbulb, Brain, Hammer, Printer, Calculator, ShieldCheck, PenTool } from 'lucide-react';
+import { Home, FlaskConical, FileText, Beaker, Settings, Sparkles, BookOpen, Fingerprint, Globe, Lightbulb, Brain, Hammer, Printer, Calculator, ShieldCheck, PenTool, Bot } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
 import FeedbackDialog from './FeedbackDialog';
@@ -18,11 +18,9 @@ export default function Sidebar({ activeView, onViewChange }: SidebarProps) {
   const mainNav = [
     { id: 'home', icon: Home, label: 'Home' },
     { id: 'research', icon: FlaskConical, label: 'Workstation' }, // Core Research
-    { id: 'writers', icon: PenTool, label: 'Academic Suite' },    // Writing
-    { id: 'hypothesis', icon: Brain, label: 'Scientific Method' },
+    { id: 'writers', icon: PenTool, label: 'Academic Suite' },    // Writing & Publication
     { id: 'results', icon: FileText, label: 'Results' },
-    { id: 'lab', icon: Beaker, label: 'Virtual Lab' },
-    { id: 'publication', icon: Printer, label: 'Publication' },
+    { id: 'agent-chat', icon: Bot, label: 'Agent Zero Chat' },
     { id: 'statistics', icon: Calculator, label: 'Statistics' },
     { id: 'journal-check', icon: ShieldCheck, label: 'Journal Authenticity' },
   ];

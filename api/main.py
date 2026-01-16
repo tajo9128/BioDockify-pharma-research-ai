@@ -14,7 +14,7 @@ from orchestration.executor import ResearchExecutor
 from modules.analyst.analytics_engine import ResearchAnalyst
 from modules.backup import DriveClient, BackupManager
 
-app = FastAPI(title="BioDockify Research API", version="2.14.9")
+app = FastAPI(title="BioDockify Research API", version="2.15.0")
 
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -949,6 +949,7 @@ class TestRequest(BaseModel):
     provider: Optional[str] = None # google, openrouter, huggingface, custom
     key: Optional[str] = None
     base_url: Optional[str] = None # For custom provider
+    model: Optional[str] = None # For custom provider strict validation
 
 @app.post("/api/settings/test")
 def test_connection_endpoint(request: TestRequest):
@@ -1046,8 +1047,15 @@ def test_connection_endpoint(request: TestRequest):
                 # Method 2: Try a minimal chat completion (works for GLM, custom endpoints)
                 try:
                     chat_url = f"{base}/chat/completions"
+                    # Use provided model or fallback to strict GPT-3.5-turbo (which might fail on others)
+                    # Ideally, for "Test", we should use a model user specified.
+                    test_model = request.model if request.model else "gpt-3.5-turbo"
+                    
                     payload = {
-                        "model": "gpt-3.5-turbo",  # Placeholder, endpoint may ignore
+                        "model": test_model, 
+                        "messages": [{"role": "user", "content": "hi"}],
+                        "max_tokens": 5
+                    }
                         "messages": [{"role": "user", "content": "test"}],
                         "max_tokens": 1
                     }

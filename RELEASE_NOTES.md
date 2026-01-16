@@ -1,5 +1,12 @@
 # Release Notes
 
+## v2.15.0
+- **New Feature**: Added support for Paid APIs (OpenAI / Compatible) in the Settings Panel.
+- **Improvement**: Users can now specify a custom Model ID (e.g., `gpt-4o`) for API connections.
+- **UI Update**: Sidebar reorganization - "Scientific Method" merged into Workstation, "Publication" merged into Academic Suite.
+- **Fix**: Adjusted API Test connection logic to support custom models (fixing "DeepSeek" connection issues).
+- **Environment**: Improved Python environment detection for the "Doctor" diagnostic tool.
+
 ## v2.14.9 - Critical Build Fix
 *Released: January 16, 2026*
 

@@ -168,7 +168,7 @@ export default function SettingsPanel() {
         }
     };
 
-    const handleTestKey = async (provider: string, key?: string, serviceType: 'llm' | 'elsevier' = 'llm', baseUrl?: string) => {
+    const handleTestKey = async (provider: string, key?: string, serviceType: 'llm' | 'elsevier' = 'llm', baseUrl?: string, model?: string) => {
         if (!key) {
             alert('Please enter an API key first.');
             return;
@@ -177,7 +177,7 @@ export default function SettingsPanel() {
         setTestStatus(prev => ({ ...prev, [provider]: 'testing' }));
 
         try {
-            const res = await api.testConnection(serviceType, provider, key, baseUrl);
+            const res = await api.testConnection(serviceType, provider, key, baseUrl, model);
             if (res.status === 'success') {
                 setTestStatus(prev => ({ ...prev, [provider]: 'success' }));
                 alert(`✅ ${res.message}`);
@@ -396,8 +396,8 @@ export default function SettingsPanel() {
                                     {/* Generic Paid / Custom API */}
                                     <div className="border-t border-slate-800 my-2 pt-4">
                                         <div className="flex items-center space-x-2 mb-3">
-                                            <span className="text-xs font-bold text-yellow-500 px-2 py-0.5 rounded bg-yellow-500/10 border border-yellow-500/20">CUSTOM</span>
-                                            <h4 className="text-sm font-semibold text-white">Custom / Paid API (OpenAI Compatible)</h4>
+                                            <span className="text-xs font-bold text-yellow-500 px-2 py-0.5 rounded bg-yellow-500/10 border border-yellow-500/20">PAID</span>
+                                            <h4 className="text-sm font-semibold text-white">Paid API (OpenAI / Compatible)</h4>
                                         </div>
                                         <div className="space-y-3 p-3 bg-slate-800/50 rounded-lg border border-slate-700/50">
                                             {/* Base URL Input */}
@@ -416,11 +416,11 @@ export default function SettingsPanel() {
                                                 name="API Key"
                                                 icon="Key"
                                                 modelValue={settings.ai_provider?.custom_model}
-                                                modelPlaceholder="Model ID (e.g. gpt-4, deepseek-chat)"
+                                                modelPlaceholder="Model ID (e.g. gpt-4o, o1-preview)"
                                                 onModelChange={(v: string) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, custom_model: v } })}
                                                 value={settings.ai_provider.custom_key}
                                                 onChange={(v: string) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, custom_key: v } })}
-                                                onTest={() => handleTestKey('custom', settings.ai_provider.custom_key, 'llm', settings.ai_provider.custom_base_url)}
+                                                onTest={() => handleTestKey('custom', settings.ai_provider.custom_key, 'llm', settings.ai_provider.custom_base_url, settings.ai_provider.custom_model)}
                                                 testStatus={testStatus.custom}
                                             />
                                         </div>
@@ -741,7 +741,7 @@ export default function SettingsPanel() {
 
 // --- Helper Components ---
 
-const CloudKeyBox = ({ name, value, icon, onChange, onTest, testStatus = 'idle', modelValue, onModelChange }: any) => {
+const CloudKeyBox = ({ name, value, icon, onChange, onTest, testStatus = 'idle', modelValue, onModelChange, ...props }: any) => {
     const getStatusIcon = () => {
         switch (testStatus) {
             case 'testing':
@@ -797,13 +797,13 @@ const CloudKeyBox = ({ name, value, icon, onChange, onTest, testStatus = 'idle',
             {/* Model ID Input (Optional) */}
             {onModelChange && (
                 <div className="mt-3">
-                    <label className="text-xs text-slate-500 block mb-1">Model ID (Optional)</label>
+                    <label className="text-xs text-slate-500 block mb-1">Model ID (Optional - Overrides Default)</label>
                     <input
                         type="text"
                         value={modelValue || ''}
                         onChange={(e) => onModelChange(e.target.value)}
-                        placeholder="Default" // e.g., 'gpt-4' or 'claude-3-opus'
-                        className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-xs text-slate-400 focus:border-teal-500/50 focus:outline-none"
+                        placeholder={modelPlaceholder || "Default Model"}
+                        className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-slate-300 focus:border-teal-500/50 focus:outline-none"
                     />
                 </div>
             )}

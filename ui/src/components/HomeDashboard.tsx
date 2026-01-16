@@ -15,7 +15,7 @@ export default function HomeDashboard({ onNavigate }: HomeProps) {
             </div>
 
             <div className="max-w-5xl mx-auto">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
                     {/* Main Action 1 */}
                     <button
                         onClick={() => onNavigate('research')}
@@ -59,6 +59,21 @@ export default function HomeDashboard({ onNavigate }: HomeProps) {
                         </div>
                         <h3 className="text-xl font-bold text-white mb-2">Deep Research</h3>
                         <p className="text-sm text-slate-400">Initiate autonomous deep-dive investigations into complex topics.</p>
+                    </button>
+
+                    {/* Main Action 4 (External) */}
+                    <button
+                        onClick={() => window.open('https://www.biodockify.com', '_blank')}
+                        className="group relative p-6 bg-gradient-to-br from-cyan-900/30 to-slate-900 border border-cyan-500/20 rounded-2xl hover:border-cyan-500/50 transition-all text-left overflow-hidden"
+                    >
+                        <div className="absolute top-0 right-0 p-4 opacity-50 group-hover:opacity-100 transition-opacity">
+                            <ArrowRight className="w-5 h-5 text-cyan-400" />
+                        </div>
+                        <div className="w-12 h-12 bg-cyan-500/10 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                            <FlaskConical className="w-6 h-6 text-cyan-400" />
+                        </div>
+                        <h3 className="text-xl font-bold text-white mb-2">Virtual Lab</h3>
+                        <p className="text-sm text-slate-400">Access the full cloud-based Virtual Lab environment.</p>
                     </button>
                 </div>
 
