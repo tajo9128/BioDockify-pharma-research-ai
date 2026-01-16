@@ -1,5 +1,10 @@
 # Release Notes
 
+## v2.15.2 - Critical Build Fix
+- **Build Fix**: Resolved `NSIS Build Failed: Installer not found` error by correctly finding the generated installer artifact in the CI/CD pipeline.
+- **Includes v2.15.1 Fixes**: (API Indentation Hotfix + Documentation).
+- **Includes v2.15.0 Features**: (Paid API Support, DeepSeek Fixes, UI Cleanup).
+
 ## v2.15.1 - Critical Hotfix
 - **Hotfix**: Resolved `IndentationError` in `api/main.py` causing backend failing start.
 - **Documentation**: Added comprehensive `SOFTWARE_SPECIFICATION.md` detailing system architecture and roles.
