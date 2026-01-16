@@ -1,5 +1,12 @@
 # Release Notes
 
+## v2.14.8 - Build Logic Fixes
+*Released: January 15, 2026*
+
+### 🛠️ Build Artifact Correction
+- **Installer Versioning**: Fixed stale version numbers in `tauri.conf.json` and `setup.nsi`. Installers will now correctly be named `BioDockify_2.14.8_...exe` instead of using old version identifiers.
+- **Sync**: All 7 configuration files are now strictly aligned to v2.14.8.
+
 ## v2.14.7 - Self-Repair System & Doctor
 *Released: January 15, 2026*
 
