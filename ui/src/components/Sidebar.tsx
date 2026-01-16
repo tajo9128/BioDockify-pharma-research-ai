@@ -27,7 +27,6 @@ export default function Sidebar({ activeView, onViewChange }: SidebarProps) {
 
   /* Tools & System moved to bottom or specific sections */
   const bottomNav = [
-    { id: 'autonomous', icon: Globe, label: 'Deep Research' },    // Tool
     { id: 'omnitools', icon: Hammer, label: 'Research Utilities' }, // Tool
     { id: 'surfsense', icon: Brain, label: 'Knowledge Base' },    // Base
     { id: 'settings', icon: Settings, label: 'Settings' },        // System
