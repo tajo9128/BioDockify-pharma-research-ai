@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
     Database, Upload, Search, FileText, Trash2, RefreshCcw,
-    File, FileWarning, CheckCircle, Loader2, X, Brain
+    File, FileWarning, CheckCircle, Loader2, X, Brain, Mic, Play, Pause
 } from 'lucide-react';
 import { api } from '@/lib/api';
 
@@ -31,6 +31,12 @@ export default function KnowledgeBaseView() {
     const [isLoading, setIsLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<'files' | 'search'>('files');
     const [dragOver, setDragOver] = useState(false);
+
+    // Podcast state
+    const [isGeneratingPodcast, setIsGeneratingPodcast] = useState(false);
+    const [podcastAudio, setPodcastAudio] = useState<string | null>(null);
+    const [isPlaying, setIsPlaying] = useState(false);
+    const audioRef = React.useRef<HTMLAudioElement>(null);
 
     // Load files on mount
     useEffect(() => {
@@ -89,6 +95,47 @@ export default function KnowledgeBaseView() {
             setSearchResults([]);
         } finally {
             setIsSearching(false);
+        }
+    };
+
+    // Podcast Generation
+    const handleGeneratePodcast = async () => {
+        if (searchResults.length === 0) {
+            alert('Please search for content first to generate a podcast.');
+            return;
+        }
+
+        setIsGeneratingPodcast(true);
+        try {
+            // Combine search results into podcast text
+            const podcastText = searchResults
+                .slice(0, 5)
+                .map((r, i) => `Section ${i + 1}: ${r.text}`)
+                .join('\n\n');
+
+            const response = await api.knowledge.generatePodcast(podcastText);
+
+            if (response.status === 'success' && response.audio_base64) {
+                const audioUrl = `data:audio/mp3;base64,${response.audio_base64}`;
+                setPodcastAudio(audioUrl);
+            } else {
+                alert(response.error || 'Failed to generate podcast');
+            }
+        } catch (e: any) {
+            alert(`Podcast generation failed: ${e.message}`);
+        } finally {
+            setIsGeneratingPodcast(false);
+        }
+    };
+
+    const togglePlayPause = () => {
+        if (audioRef.current) {
+            if (isPlaying) {
+                audioRef.current.pause();
+            } else {
+                audioRef.current.play();
+            }
+            setIsPlaying(!isPlaying);
         }
     };
 
@@ -179,8 +226,45 @@ export default function KnowledgeBaseView() {
                         {isSearching ? <Loader2 className="w-4 h-4 animate-spin" /> : <Brain className="w-4 h-4" />}
                         <span>Search</span>
                     </button>
+                    <button
+                        onClick={handleGeneratePodcast}
+                        disabled={isGeneratingPodcast || searchResults.length === 0}
+                        className="px-4 py-2.5 bg-purple-600 hover:bg-purple-500 disabled:bg-slate-700 disabled:text-slate-500 text-white rounded-lg font-medium transition-colors flex items-center space-x-2"
+                        title="Generate audio podcast from search results"
+                    >
+                        {isGeneratingPodcast ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mic className="w-4 h-4" />}
+                        <span>Podcast</span>
+                    </button>
                 </div>
             </div>
+
+            {/* Audio Player (visible when podcast is generated) */}
+            {podcastAudio && (
+                <div className="px-6 py-3 bg-purple-900/30 border-b border-purple-800/50 flex items-center space-x-4">
+                    <button
+                        onClick={togglePlayPause}
+                        className="p-2 bg-purple-600 hover:bg-purple-500 text-white rounded-full transition-colors"
+                    >
+                        {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
+                    </button>
+                    <div className="flex-1">
+                        <audio
+                            ref={audioRef}
+                            src={podcastAudio}
+                            onEnded={() => setIsPlaying(false)}
+                            className="w-full"
+                            controls
+                        />
+                    </div>
+                    <button
+                        onClick={() => { setPodcastAudio(null); setIsPlaying(false); }}
+                        className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+                        title="Close player"
+                    >
+                        <X className="w-4 h-4" />
+                    </button>
+                </div>
+            )}
 
             {/* Tabs */}
             <div className="px-6 border-b border-slate-800/50">
@@ -188,8 +272,8 @@ export default function KnowledgeBaseView() {
                     <button
                         onClick={() => setActiveTab('files')}
                         className={`py-3 px-1 text-sm font-medium border-b-2 transition-colors ${activeTab === 'files'
-                                ? 'border-indigo-500 text-indigo-400'
-                                : 'border-transparent text-slate-400 hover:text-slate-200'
+                            ? 'border-indigo-500 text-indigo-400'
+                            : 'border-transparent text-slate-400 hover:text-slate-200'
                             }`}
                     >
                         Documents
@@ -197,8 +281,8 @@ export default function KnowledgeBaseView() {
                     <button
                         onClick={() => setActiveTab('search')}
                         className={`py-3 px-1 text-sm font-medium border-b-2 transition-colors ${activeTab === 'search'
-                                ? 'border-indigo-500 text-indigo-400'
-                                : 'border-transparent text-slate-400 hover:text-slate-200'
+                            ? 'border-indigo-500 text-indigo-400'
+                            : 'border-transparent text-slate-400 hover:text-slate-200'
                             }`}
                     >
                         Search Results {searchResults.length > 0 && `(${searchResults.length})`}
@@ -216,8 +300,8 @@ export default function KnowledgeBaseView() {
                             onDragLeave={handleDragLeave}
                             onDrop={handleDrop}
                             className={`mb-6 border-2 border-dashed rounded-xl p-8 text-center transition-all ${dragOver
-                                    ? 'border-indigo-500 bg-indigo-500/10'
-                                    : 'border-slate-700 hover:border-slate-600'
+                                ? 'border-indigo-500 bg-indigo-500/10'
+                                : 'border-slate-700 hover:border-slate-600'
                                 }`}
                         >
                             {isUploading ? (

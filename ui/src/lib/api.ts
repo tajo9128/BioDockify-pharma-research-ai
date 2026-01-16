@@ -401,6 +401,21 @@ export const api = {
         method: 'POST',
         body: JSON.stringify({ snapshot_id: snapshotId })
       })
+  },
+
+  // Knowledge Base & Podcast (Phase 33)
+  knowledge: {
+    query: (query: string, topK: number = 5) =>
+      apiRequest<{ status: string; query: string; results: any[] }>('/knowledge/query', {
+        method: 'POST',
+        body: JSON.stringify({ query, top_k: topK })
+      }),
+
+    generatePodcast: (text: string, voice: string = 'alloy') =>
+      apiRequest<{ status: string; audio_format?: string; audio_base64?: string; error?: string }>('/knowledge/podcast', {
+        method: 'POST',
+        body: JSON.stringify({ text, voice })
+      })
   }
 };
 

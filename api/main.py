@@ -249,6 +249,89 @@ from modules.library.store import library_store
 from modules.library.ingestor import library_ingestor
 
 # -----------------------------------------------------------------------------
+# KNOWLEDGE BASE & PODCAST ENDPOINTS (Phase 33)
+# -----------------------------------------------------------------------------
+
+class PodcastRequest(BaseModel):
+    text: str
+    voice: str = "alloy"  # OpenAI TTS voice
+
+class KnowledgeQueryRequest(BaseModel):
+    query: str
+    top_k: int = 5
+
+@app.post("/api/knowledge/query")
+async def query_knowledge_base(request: KnowledgeQueryRequest):
+    """
+    Query the internal knowledge base (RAG) and return cited results.
+    Used by Agent Zero and the Knowledge Hub UI.
+    """
+    try:
+        from modules.rag.vector_store import get_vector_store
+        store = get_vector_store()
+        results = store.search(request.query, k=request.top_k)
+        return {
+            "status": "success",
+            "query": request.query,
+            "results": [
+                {
+                    "text": r.get("text", ""),
+                    "score": r.get("score", 0),
+                    "metadata": r.get("metadata", {})
+                }
+                for r in results
+            ]
+        }
+    except Exception as e:
+        logger.error(f"Knowledge query failed: {e}")
+        return {"status": "error", "error": str(e), "results": []}
+
+@app.post("/api/knowledge/podcast")
+async def generate_podcast(request: PodcastRequest):
+    """
+    Generate a podcast audio from text using TTS.
+    Supports OpenAI TTS or local Kokoro TTS.
+    """
+    try:
+        from runtime.config_loader import load_config
+        cfg = load_config()
+        
+        # Try OpenAI TTS first if key is available
+        custom_key = cfg.get("ai_provider", {}).get("custom_key")
+        custom_base_url = cfg.get("ai_provider", {}).get("custom_base_url", "https://api.openai.com/v1")
+        
+        if custom_key:
+            import httpx
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    f"{custom_base_url}/audio/speech",
+                    headers={"Authorization": f"Bearer {custom_key}"},
+                    json={
+                        "model": "tts-1",
+                        "input": request.text[:4096],  # Limit to 4096 chars
+                        "voice": request.voice
+                    },
+                    timeout=60.0
+                )
+                if response.status_code == 200:
+                    # Return audio as base64
+                    import base64
+                    audio_b64 = base64.b64encode(response.content).decode('utf-8')
+                    return {
+                        "status": "success",
+                        "audio_format": "mp3",
+                        "audio_base64": audio_b64
+                    }
+                else:
+                    return {"status": "error", "error": f"TTS API returned {response.status_code}"}
+        else:
+            return {"status": "error", "error": "No TTS API key configured. Please add an OpenAI-compatible API key in Settings."}
+            
+    except Exception as e:
+        logger.error(f"Podcast generation failed: {e}")
+        return {"status": "error", "error": str(e)}
+
+# -----------------------------------------------------------------------------
 # HYPOTHESIS & SCIENTIFIC METHOD ENDPOINTS (Phase 11.2)
 # -----------------------------------------------------------------------------
 from modules.scientific_method.models import Hypothesis, HypothesisStatus, EvidenceType
