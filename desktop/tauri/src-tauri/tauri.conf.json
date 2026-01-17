@@ -7,7 +7,7 @@
     },
     "package": {
         "productName": "BioDockify - Pharma Research AI",
-        "version": "2.16.3"
+        "version": "2.16.4"
     },
     "tauri": {
         "allowlist": {
