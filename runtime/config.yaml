@@ -38,11 +38,11 @@ pharma:
     science_index: false
 ai_provider:
   mode: auto
-  primary_model: google
+  primary_model: ollama
   ollama_fallback: true
   cloud_fallback: true
   ollama_url: http://localhost:11434
-  ollama_model: ''
+  ollama_model: 'llama2'
   google_key: ''
   openrouter_key: ''
   huggingface_key: ''

@@ -190,7 +190,8 @@ export default function BioDockifyDashboard() {
 
       const data = await response.json()
 
-      if (!data.success) {
+      // Check for successful response (backend returns status: "accepted")
+      if (data.status !== 'accepted') {
         throw new Error(data.error || 'Failed to execute goal')
       }
 
