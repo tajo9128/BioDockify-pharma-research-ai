@@ -195,7 +195,7 @@ jobs:
           echo ""
           echo "Debug: Checking Binary Sizes..."
           Get-ChildItem -Path "desktop/tauri/src-tauri/biodockify-engine-x86_64-pc-windows-msvc.exe" | Select-Object Name, Length
-          Get-ChildItem -Path "desktop/tauri/src-tauri/target/release/BioDockify.exe" | Select-Object Name, Length
+          Get-ChildItem -Path "desktop/tauri/src-tauri/target/release" -Filter "*.exe" | Select-Object Name, Length
           
       - name: Install NSIS
         run: |
