@@ -261,8 +261,17 @@ async def set_agent_goal(request: AgentGoal, background_tasks: BackgroundTasks):
             agent_state.update(current_thought="Planning research steps...")
             agent_state.append_log("Orchestrator initialized.")
             
+            # Map agent mode to research planning mode
+            # Frontend sends: auto, semi-autonomous, autonomous
+            # Orchestrator expects: search, synthesize, write
+            planning_mode = "synthesize"  # Default
+            if mode in ["auto", "semi-autonomous", "autonomous"]:
+                # For now, all autonomous modes use synthesize
+                # Could be enhanced later to map to different modes based on complexity
+                planning_mode = "synthesize"
+            
             # Plan
-            plan = orch.plan_research(goal, mode="synthesize")
+            plan = orch.plan_research(goal, mode=planning_mode)
             if plan is None:
                 raise ValueError("LLM failed to generate a plan. Check AI provider configuration.")
             

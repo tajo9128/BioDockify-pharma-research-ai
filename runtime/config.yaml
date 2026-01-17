@@ -1,24 +1,22 @@
-﻿project:
+project:
   name: My PhD Research
   type: PhD Thesis
   disease_context: Alzheimer's Disease
   stage: Literature Review
-
 agent:
   mode: semi-autonomous
   reasoning_depth: standard
   self_correction: true
   max_retries: 3
   failure_policy: ask_user
-
 literature:
   sources:
-    - pubmed
+  - pubmed
   enable_crossref: true
-  enable_preprints: false
   year_range: 10
   novelty_strictness: medium
-
+  grobid_url: http://localhost:8070
+  enable_preprints: false
 pharma:
   enable_pubtator: true
   enable_semantic_scholar: true
@@ -38,37 +36,53 @@ pharma:
     scopus: false
     wos: false
     science_index: false
-
 ai_provider:
   mode: auto
-  ollama_url: "http://localhost:11434"
-  ollama_model: ""
-  google_key: ""
-  huggingface_key: ""
-  openrouter_key: ""
-  custom_key: ""
-  custom_base_url: ""
-
+  primary_model: google
+  ollama_fallback: true
+  cloud_fallback: true
+  ollama_url: http://localhost:11434
+  ollama_model: ''
+  google_key: ''
+  openrouter_key: ''
+  huggingface_key: ''
+  glm_key: ''
+  elsevier_key: ''
+  pubmed_email: ''
+  custom_key: ''
+  custom_base_url: ''
+  custom_model: gpt-3.5-turbo
+  serper_key: ''
+  jina_key: ''
 ai_advanced:
   context_window: 8192
   gpu_layers: -1
   thread_count: 8
-
 persona:
   role: PhD Student
   strictness: balanced
-  introduction: "I am a researcher specializing in neurodegenerative diseases..."
-  research_focus: "Investigating the role of Tau proteins in early-stage Alzheimer's..."
-
+  introduction: I am a researcher specializing in neurodegenerative diseases...
+  research_focus: Investigating the role of Tau proteins in early-stage Alzheimer's...
 output:
   format: markdown
   citation_style: apa
   include_disclosure: true
-  output_dir: ""
-
+  output_dir: ''
+execution:
+  mode: research
+  max_runtime_minutes: 45
+  use_knowledge_graph: true
+  human_approval_gates: true
 system:
-  auto_start: true
-  minimize_to_tray: true
+  auto_update: true
   pause_on_battery: true
   max_cpu_percent: 80
-  version: "2.13.38"
+  log_level: INFO
+  version: 2.16.0
+  auto_start: true
+  minimize_to_tray: true
+"\xEF\xBB\xBFproject":
+  name: My PhD Research
+  type: PhD Thesis
+  disease_context: Alzheimer's Disease
+  stage: Literature Review
