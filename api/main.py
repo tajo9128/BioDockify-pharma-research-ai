@@ -1334,6 +1334,61 @@ def check_ollama_endpoint(request: OllamaCheckRequest):
         return {"status": "error", "message": str(e), "models": []}
 
 
+@app.post("/api/settings/ollama/status")
+def check_ollama_status():
+    """
+    Check if Ollama server is running without fetching models.
+    Returns availability status without model list.
+    """
+    import requests
+    
+    try:
+        # Get current settings to get Ollama URL
+        from modules.config_loader import load_config
+        config = load_config()
+        ollama_url = config.get("ai_provider", {}).get("ollama_url", "http://localhost:11434")
+        
+        # Ping Ollama (quick check with short timeout)
+        url = f"{ollama_url.rstrip('/')}/api/tags"
+        try:
+            resp = requests.get(url, timeout=2)
+            if resp.status_code == 200:
+                return {"status": "success", "available": True}
+            else:
+                return {"status": "error", "available": False}
+        except requests.exceptions.ConnectionError:
+            return {"status": "error", "available": False}
+        except Exception as e:
+        return {"status": "error", "available": False}
+
+
+@app.post("/api/settings/ollama/list")
+def list_ollama_models():
+    """
+    List available Ollama models from the server.
+    """
+    import requests
+    
+    # Get current settings
+    from modules.config_loader import load_config
+    config = load_config()
+    ollama_url = config.get("ai_provider", {}).get("ollama_url", "http://localhost:11434")
+    
+    try:
+        url = f"{ollama_url.rstrip('/')}/api/tags"
+        resp = requests.get(url, timeout=5)
+        resp.raise_for_status()
+        
+        if resp.status_code == 200:
+            data = resp.json()
+            models = [m['name'] for m in data.get('models', [])]
+            return {"status": "success", "models": models}
+        except requests.exceptions.ConnectionError:
+            return {"status": "error", "message": "Could not connect to Ollama", "models": []}
+        except Exception as e:
+        return {"status": "error", "message": str(e), "models": []}
+
+
 
 
 
@@ -1873,11 +1928,29 @@ Provide a well-structured answer based on the context above. If the context does
     # ALL PROVIDERS FAILED
     # =========================================================================
     error_summary = "; ".join(errors) if errors else "No providers configured"
-    return {
-        "reply": f"⚠️ Agent Zero could not connect to any AI provider.\n\n**Attempted:** {error_summary}\n\n**Solution:** Please configure at least one provider in Settings (Ollama, Google, OpenRouter, or Custom API).",
-        "provider": "none",
-        "errors": errors
-    }
+    
+    # Check if Ollama was the only configured provider and failed
+    has_cloud_provider = any([
+        provider_config.get('custom_key'),
+        provider_config.get('google_key'),
+        provider_config.get('openrouter_key'),
+        provider_config.get('glm_key'),
+        provider_config.get('huggingface_key')
+    ])
+    
+    if not has_cloud_provider and 'Ollama' in error_summary:
+        # User only has Ollama configured and it failed
+        return {
+            "reply": f"⚠️ Agent Zero could not connect to Ollama.\n\n**Error:** {error_summary}\n\n**Why this happens:** Ollama requires a good CPU or GPU to run. If you don't have one, Ollama may not work well or at all.\n\n**Solution:** Configure a free cloud API in Settings:\n• **Google Gemini** (Free tier available)\n• **OpenRouter** (Free tier available)\n• **HuggingFace** (Free tier available)\n\nGo to **Settings → AI & Brain** to add your API key.",
+            "provider": "none",
+            "errors": errors
+        }
+    else:
+        return {
+            "reply": f"⚠️ Agent Zero could not connect to any AI provider.\n\n**Attempted:** {error_summary}\n\n**Solution:** Please configure at least one provider in Settings (Google, OpenRouter, HuggingFace, Custom API, or Ollama).",
+            "provider": "none",
+            "errors": errors
+        }
 
 from fastapi import UploadFile, File
 from modules.rag.ingestor import ingestor

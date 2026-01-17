@@ -243,6 +243,16 @@ export const api = {
       body: JSON.stringify({ base_url: baseUrl })
     }),
 
+  checkOllamaStatus: () =>
+    apiRequest<{ status: string; available: boolean }>('/settings/ollama/status', {
+      method: 'POST'
+    }),
+
+  listOllamaModels: () =>
+    apiRequest<{ status: string; models: string[]; message?: string }>('/settings/ollama/list', {
+      method: 'POST'
+    }),
+
   checkNeo4j: (uri: string, user: string, password: string) =>
     apiRequest<{ status: string; message: string }>('/settings/neo4j/check', {
       method: 'POST',

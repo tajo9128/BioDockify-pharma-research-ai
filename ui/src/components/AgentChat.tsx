@@ -79,6 +79,59 @@ How can I assist your research today?`,
     const handleSend = async () => {
         if (!input.trim()) return;
 
+        // Check if any AI provider is configured
+        try {
+            const settings = await api.getSettings();
+            const providerConfig = settings?.ai_provider || {};
+            const hasCloudProvider = !!(
+                providerConfig.google_key ||
+                providerConfig.openrouter_key ||
+                providerConfig.huggingface_key ||
+                providerConfig.custom_key ||
+                providerConfig.glm_key
+            );
+            
+            // If no cloud provider and Ollama is not available, show helpful message
+            if (!hasCloudProvider) {
+                try {
+                    const ollamaStatus = await api.checkOllamaStatus();
+                    if (!ollamaStatus.available) {
+                        const userMsg: Message = { role: 'user', content: input, timestamp: new Date() };
+                        setMessages(prev => [...prev, userMsg]);
+                        setInput('');
+                        
+                        setMessages(prev => [...prev, {
+                            role: 'system',
+                            content: `⚠️ **No AI Provider Configured**
+
+Ollama is not available or not running. Ollama requires a good CPU or GPU to work properly.
+
+**To use Agent Zero, please configure one of these free cloud APIs:**
+
+• **Google Gemini** - Get a free API key at https://ai.google.dev/
+• **OpenRouter** - Get a free API key at https://openrouter.ai/
+• **HuggingFace** - Get a free API key at https://huggingface.co/settings/tokens
+
+**How to configure:**
+1. Go to **Settings → AI & Brain**
+2. Enter your API key in the provider field
+3. Click **Test Connection** to verify
+4. Save your settings
+
+After configuring a provider, try sending your message again.`,
+                            timestamp: new Date()
+                        }]);
+                        return;
+                    }
+                } catch (e) {
+                    // If Ollama status check fails, continue with the request
+                    console.warn("Ollama status check failed:", e);
+                }
+            }
+        } catch (e) {
+            console.warn("Failed to check provider configuration:", e);
+        }
+
         const userMsg: Message = { role: 'user', content: input, timestamp: new Date() };
         setMessages(prev => [...prev, userMsg]);
         setInput('');
