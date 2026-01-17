@@ -1,6 +1,6 @@
 [package]
 name = "biodockify-ai"
-version = "2.15.7"
+version = "2.15.8"
 description = "BioDockify AI: Pharmaceutical Research Assistant"
 authors = ["tajo9128"]
 edition = "2021"

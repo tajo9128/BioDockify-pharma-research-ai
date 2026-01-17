@@ -1,5 +1,28 @@
 # Release Notes
 
+## v2.15.8 - API Robustness & Fix Release
+*Released: January 17, 2026*
+
+### 🛡️ Robustness Improvements
+- **Circuit Breaker**: Added circuit breaker pattern to prevent cascading failures.
+- **Retry Logic**: Ollama adapter now has 3 retries with exponential backoff (2s, 4s, 6s).
+- **Graceful Fallbacks**: Connection failures return helpful messages instead of crashing.
+- **Startup Fix**: Ollama startup now uses 5 retries with exponential backoff (up to 26s total).
+
+### 🔧 API Fixes
+- **FIX**: `/api/v2/system/repair` undefined `svc_mgr` variable.
+- **FIX**: Model pre-check before generation with install guidance.
+- **FIX**: Auto-detect any available Ollama model (no hardcoded default).
+- **FIX**: Config mode changed from ambiguous "auto" to explicit "hybrid".
+- **FIX**: Added `ollama_fallback` and `cloud_fallback` config options.
+
+### 💾 Persistence
+- **Persistent TaskStore**: SQLite-backed task storage survives server restarts.
+- **EventSource Cleanup**: Proper cleanup on component unmount to prevent memory leaks.
+
+### 🧪 Testing
+- **New**: Comprehensive API verification script (`tests/verify_api_fixes.py`).
+
 ## v2.15.7 - Security & Stability Improvements
 - **SECURITY**: Fixed CORS vulnerability - whitelisted specific origins.
 - **SECURITY**: Added file upload validation (type + 50MB size limit).
