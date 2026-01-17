@@ -178,9 +178,50 @@ class OllamaAdapter(BaseLLMAdapter):
         self._last_success = 0
         self._is_available_cache = None
         self._cache_time = 0
+        self._available_models_cache = None
+        self._models_cache_time = 0
+
+    def model_exists(self, model_name: str = None) -> bool:
+        """Check if a model exists in Ollama."""
+        model_to_check = model_name or self.model
+        available = self.list_models()
+        
+        # Check exact match or base model name match
+        for m in available:
+            if m == model_to_check or m.startswith(model_to_check.split(':')[0]):
+                return True
+        return False
+
+    def _verify_model_or_fallback(self) -> str:
+        """Verify model exists, try to find alternative, or return error message."""
+        if self.model_exists():
+            return ""  # Model exists, no error
+        
+        available = self.list_models()
+        
+        if not available:
+            return (
+                f"[Model Not Found] No models available in Ollama. "
+                f"Please install a model:\n"
+                f"  ollama pull llama3\n"
+                f"  ollama pull mistral\n"
+                f"  ollama pull gemma2"
+            )
+        
+        return (
+            f"[Model Not Found] Model '{self.model}' is not installed in Ollama.\n"
+            f"Available models: {', '.join(available[:5])}\n"
+            f"To install the model run: ollama pull {self.model}"
+        )
 
     def generate(self, prompt: str, **kwargs) -> str:
-        """Generate text with automatic retries."""
+        """Generate text with automatic retries and model verification."""
+        
+        # Pre-check: Verify model exists
+        model_error = self._verify_model_or_fallback()
+        if model_error:
+            return model_error
+        
         url = f"{self.base_url}/api/generate"
         payload = {
             "model": self.model,
@@ -196,10 +237,24 @@ class OllamaAdapter(BaseLLMAdapter):
         for attempt in range(self.MAX_RETRIES):
             try:
                 resp = requests.post(url, json=payload, timeout=120)
+                
+                # Handle specific HTTP errors
+                if resp.status_code == 404:
+                    return self._model_not_found_error()
+                
                 resp.raise_for_status()
                 data = resp.json()
+                
+                # Check for Ollama-specific error in response
+                if "error" in data:
+                    error_msg = data.get("error", "")
+                    if "not found" in error_msg.lower() or "doesn't exist" in error_msg.lower():
+                        return self._model_not_found_error()
+                    return f"[Ollama Error] {error_msg}"
+                
                 self._failure_count = 0
-                self._last_success = time.time() if 'time' in dir() else 0
+                import time as t
+                self._last_success = t.time()
                 return data.get("response", "")
                 
             except requests.exceptions.ConnectionError as e:
@@ -218,12 +273,34 @@ class OllamaAdapter(BaseLLMAdapter):
                     t.sleep(self.RETRY_DELAY)
                     continue
                     
+            except requests.exceptions.HTTPError as e:
+                # Parse HTTP error for better message
+                if e.response is not None and e.response.status_code == 404:
+                    return self._model_not_found_error()
+                last_error = e
+                break
+                    
             except Exception as e:
                 last_error = e
                 break
         
         # Return graceful fallback instead of crashing
         return self._graceful_fallback(str(last_error))
+    
+    def _model_not_found_error(self) -> str:
+        """Return a helpful error message when model is not found."""
+        available = self.list_models()
+        if available:
+            return (
+                f"[Model Not Found] Model '{self.model}' is not installed.\n"
+                f"Available models: {', '.join(available[:5])}\n"
+                f"Install with: ollama pull {self.model}"
+            )
+        return (
+            f"[Model Not Found] Model '{self.model}' is not installed.\n"
+            f"Install with: ollama pull {self.model}\n"
+            f"Or try: ollama pull llama3"
+        )
     
     def chat(self, messages: list, **kwargs) -> str:
         """Chat completion with automatic retries."""
