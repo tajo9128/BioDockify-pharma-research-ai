@@ -252,13 +252,43 @@ class WebResearchEngine:
             logger.error(f"HeadlessX failed: {e}")
             return f"Failed to read content (All methods exhausted): {e}"
 
+    async def find_pdf_strong(self, title: str) -> Optional[str]:
+        """
+        Stealth Hunter: Aggressively hunts for a legal PDF copy of a paper.
+        Uses HeadlessX to search for "filetype:pdf" and extracts text.
+        """
+        try:
+            # 1. Search for PDF using Headless Search
+            query = f'"{title}" filetype:pdf'
+            logger.info(f"🕵️ Stealth Hunting for PDF: {title}")
+            
+            # Use our strong search to find a PDF link
+            results = await self._search_headless_strong(query, limit=1)
+            
+            if not results or not results[0].get('link'):
+                return None
+                
+            pdf_url = results[0]['link']
+            logger.info(f"📄 Found potential PDF: {pdf_url}")
+            
+            # 2. Convert PDF to Text (using Jina which handles PDFs well, or direct)
+            # Jina Reader is excellent at PDF-to-Markdown
+            content = await self.deep_read(pdf_url)
+            
+            if "Error reading content" in content or len(content) < 200:
+                return None
+                
+            return f"[Source: Stealth PDF Hunter - {pdf_url}]\n\n{content}"
+            
+        except Exception as e:
+            logger.warning(f"PDF Hunt failed: {e}")
+            return None
+
     async def research_topic(self, topic: str, depth: int = 3) -> str:
         """
         Performs a deep research workflow (Async).
+        Efficiency Boost: Includes PDF Hunting for paywalled/short content.
         """
-        # Logic: If Paid (Serper Key), allow requested depth.
-        # If Free (No Key), cap depth at 3.
-        
         effective_depth = depth
         if not self.serper_key:
             logger.info("Free Tier: Limiting research depth to 3.")
@@ -280,7 +310,18 @@ class WebResearchEngine:
             combined_report.append(f"**URL:** {res['link']}")
             combined_report.append(f"**Source:** {res.get('source', 'Web')}\n")
             
+            # Attempt 1: Standard Deep Read
             content = await self.deep_read(res['link'])
+            
+            # Efficiency Check: If content is too short (likely paywall/abstract), Hunt for PDF
+            if len(content) < 1000:
+                logger.info(f"Content short ({len(content)} chars). Triggering PDF Hunt...")
+                pdf_content = await self.find_pdf_strong(res['title'])
+                if pdf_content:
+                    content = f"{content}\n\n--- PDF VERSION FOUND ---\n{pdf_content}"
+                    logger.info("PDF Hunt Successful!")
+                else:
+                    logger.info("PDF Hunt yielded no results.")
             
             # Truncate if too massive
             max_len = 15000 
