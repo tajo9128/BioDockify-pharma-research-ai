@@ -71,6 +71,26 @@ export default function PharmaceuticalResearchApp() {
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
   const [diagError, setDiagError] = useState<string | null>(null);
 
+  // Refs for cleanup (EventSource/polling)
+  const eventSourceRef = React.useRef<EventSource | null>(null);
+  const pollingIntervalRef = React.useRef<NodeJS.Timeout | null>(null);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      // Clean up EventSource if exists
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+        eventSourceRef.current = null;
+      }
+      // Clean up polling interval if exists
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
+    };
+  }, []);
+
   useEffect(() => {
     // Listen for global events
     const handleFeedback = () => setIsFeedbackOpen(true);

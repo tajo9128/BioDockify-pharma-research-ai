@@ -325,8 +325,25 @@ def repair_system(service: str = "ollama"):
     """
     V2: Attempt to repair a specific system service.
     """
-    result = svc_mgr.attempt_repair(service)
-    return result
+    from runtime.config_loader import load_config
+    from runtime.service_manager import get_service_manager
+    
+    cfg = load_config()
+    svc_mgr = get_service_manager(cfg)
+    
+    try:
+        result = svc_mgr.attempt_repair(service)
+        return result
+    except AttributeError:
+        # Fallback if attempt_repair doesn't exist
+        if service == "ollama":
+            success = svc_mgr.start_ollama()
+            return {
+                "status": "success" if success else "failed",
+                "service": service,
+                "message": "Ollama started" if success else "Failed to start Ollama"
+            }
+        return {"status": "error", "message": f"Unknown service: {service}"}
 
 # -----------------------------------------------------------------------------
 # DIGITAL LIBRARY ENDPOINTS (Phase 5)

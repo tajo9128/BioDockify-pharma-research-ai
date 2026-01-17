@@ -74,8 +74,85 @@ class ConnectionManager:
 
 manager = ConnectionManager()
 
-# In-memory task store (Replace with DB/Redis in production)
-tasks: Dict[str, TaskStatus] = {}
+# Persistent task store (SQLite-backed for production reliability)
+from runtime.task_store import get_task_store, TaskStore
+
+def get_tasks() -> TaskStore:
+    """Get the persistent task store."""
+    return get_task_store()
+
+# Compatibility wrapper for existing code
+class TasksWrapper:
+    """Wrapper providing dict-like access to persistent TaskStore."""
+    
+    def __getitem__(self, task_id: str):
+        task = get_task_store().get_task(task_id)
+        if task is None:
+            raise KeyError(task_id)
+        return TaskStatusProxy(task_id, task)
+    
+    def __setitem__(self, task_id: str, value):
+        store = get_task_store()
+        if store.get_task(task_id) is None:
+            store.create_task(task_id, value.title if hasattr(value, 'title') else "")
+    
+    def __contains__(self, task_id: str) -> bool:
+        return get_task_store().get_task(task_id) is not None
+    
+    def values(self):
+        return [TaskStatus(**t) for t in get_task_store().list_tasks()]
+
+class TaskStatusProxy:
+    """Proxy object for updating task status in store."""
+    def __init__(self, task_id: str, task_data: dict):
+        self._task_id = task_id
+        self._data = task_data
+    
+    @property
+    def status(self):
+        return self._data.get("status", "pending")
+    
+    @status.setter
+    def status(self, value):
+        get_task_store().update_task(self._task_id, status=value)
+        self._data["status"] = value
+    
+    @property
+    def progress(self):
+        return self._data.get("progress", 0)
+    
+    @progress.setter
+    def progress(self, value):
+        get_task_store().update_task(self._task_id, progress=value)
+        self._data["progress"] = value
+    
+    @property
+    def logs(self):
+        return TaskLogsProxy(self._task_id, self._data.get("logs", []))
+    
+    @property
+    def result(self):
+        return self._data.get("result")
+    
+    @result.setter
+    def result(self, value):
+        get_task_store().update_task(self._task_id, result=value)
+        self._data["result"] = value
+    
+    def dict(self):
+        return self._data
+
+class TaskLogsProxy(list):
+    """Proxy for task logs that persists changes."""
+    def __init__(self, task_id: str, logs: list):
+        super().__init__(logs)
+        self._task_id = task_id
+    
+    def append(self, log: str):
+        super().append(log)
+        get_task_store().append_log(self._task_id, log)
+
+tasks = TasksWrapper()
 
 # -----------------------------------------------------------------------------
 # Background Task Logic
