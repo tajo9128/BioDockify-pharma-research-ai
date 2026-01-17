@@ -66,8 +66,38 @@ export default function BioDockifyDashboard() {
     }
     startBackend()
   }, [])
+
+  // Check system status periodically
+  useEffect(() => {
+    const checkSystemStatus = async () => {
+      try {
+        const response = await fetch('/api/v2/system/diagnose')
+        const data = await response.json()
+        setSystemStatus({
+          grobid: data.services?.grobid?.status || 'unknown',
+          neo4j: data.services?.neo4j?.status || 'unknown',
+          ollama: data.services?.ollama?.status || 'unknown',
+          agent: data.services?.agent?.status || 'unknown'
+        })
+      } catch (err) {
+        console.error('Failed to check system status:', err)
+      }
+    }
+
+    // Check status immediately and then every 30 seconds
+    checkSystemStatus()
+    const interval = setInterval(checkSystemStatus, 30000)
+
+    return () => clearInterval(interval)
+  }, [])
   const [error, setError] = useState<string | null>(null)
   const eventSourceRef = useRef<EventSource | null>(null)
+  const [systemStatus, setSystemStatus] = useState({
+    grobid: 'unknown',
+    neo4j: 'unknown',
+    ollama: 'unknown',
+    agent: 'unknown'
+  })
 
   // Tool categories
   const toolCategories = [
@@ -178,6 +208,67 @@ export default function BioDockifyDashboard() {
     }
   }
 
+  const handleExportLaTeX = async () => {
+    try {
+      const response = await fetch('/api/publication/export/latex', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: 'Research Report',
+          author: 'Researcher',
+          affiliation: 'University',
+          abstract: 'Research abstract',
+          content_markdown: 'Research content'
+        })
+      })
+      const data = await response.json()
+      if (data.latex_source) {
+        // Create and download LaTeX file
+        const blob = new Blob([data.latex_source], { type: 'text/plain' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = 'research_report.tex'
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(url)
+      }
+    } catch (err: any) {
+      setError(`LaTeX export failed: ${err.message}`)
+    }
+  }
+
+  const handleExportDOCX = async () => {
+    try {
+      // Note: DOCX export endpoint doesn't exist yet, showing alert
+      alert('DOCX export feature is coming soon. Please use LaTeX export for now.')
+    } catch (err: any) {
+      setError(`DOCX export failed: ${err.message}`)
+    }
+  }
+
+  const handleViewKnowledgeGraph = async () => {
+    try {
+      // Query knowledge base using SurfSense
+      const response = await fetch('/api/knowledge/query', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: 'knowledge graph visualization',
+          top_k: 10
+        })
+      })
+      const data = await response.json()
+      if (data.status === 'success') {
+        // Display knowledge graph results
+        alert(`Knowledge Graph: Found ${data.results.length} entries in the knowledge base.`)
+      }
+    } catch (err: any) {
+      setError(`Knowledge graph query failed: ${err.message}`)
+    }
+  }
+
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-slate-50 via-white to-slate-100">
       {/* Header */}
@@ -198,7 +289,7 @@ export default function BioDockifyDashboard() {
             <div className="flex items-center gap-4">
               <Badge variant="outline" className="flex items-center gap-2">
                 <Activity className="w-3 h-3" />
-                {isExecuting ? 'Processing' : 'Ready'}
+                {isExecuting ? 'Processing' : systemStatus.agent === 'running' ? 'Ready' : systemStatus.agent}
               </Badge>
             </div>
           </div>
@@ -395,15 +486,15 @@ export default function BioDockifyDashboard() {
                 <CardTitle className="text-base">Quick Actions</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
-                <Button variant="outline" className="w-full justify-start" size="sm">
+                <Button variant="outline" className="w-full justify-start" size="sm" onClick={handleExportLaTeX}>
                   <FileText className="w-4 h-4 mr-2" />
                   Export to LaTeX
                 </Button>
-                <Button variant="outline" className="w-full justify-start" size="sm">
+                <Button variant="outline" className="w-full justify-start" size="sm" onClick={handleExportDOCX}>
                   <FileText className="w-4 h-4 mr-2" />
                   Export to DOCX
                 </Button>
-                <Button variant="outline" className="w-full justify-start" size="sm">
+                <Button variant="outline" className="w-full justify-start" size="sm" onClick={handleViewKnowledgeGraph}>
                   <Network className="w-4 h-4 mr-2" />
                   View Knowledge Graph
                 </Button>
@@ -419,29 +510,29 @@ export default function BioDockifyDashboard() {
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-slate-600">GROBID Service</span>
                   <div className="flex items-center gap-1.5">
-                    <div className="w-2 h-2 rounded-full bg-green-500" />
-                    <span className="text-xs">Connected</span>
+                    <div className={`w-2 h-2 rounded-full ${systemStatus.grobid === 'running' ? 'bg-green-500' : systemStatus.grobid === 'error' ? 'bg-red-500' : 'bg-yellow-500'}`} />
+                    <span className="text-xs capitalize">{systemStatus.grobid}</span>
                   </div>
                 </div>
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-slate-600">Neo4j Database</span>
+                  <span className="text-slate-600">SurfSense Database</span>
                   <div className="flex items-center gap-1.5">
-                    <div className="w-2 h-2 rounded-full bg-green-500" />
-                    <span className="text-xs">Connected</span>
+                    <div className={`w-2 h-2 rounded-full ${systemStatus.neo4j === 'running' ? 'bg-green-500' : systemStatus.neo4j === 'error' ? 'bg-red-500' : 'bg-yellow-500'}`} />
+                    <span className="text-xs capitalize">{systemStatus.neo4j}</span>
                   </div>
                 </div>
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-slate-600">Ollama LLM</span>
                   <div className="flex items-center gap-1.5">
-                    <div className="w-2 h-2 rounded-full bg-green-500" />
-                    <span className="text-xs">Ready</span>
+                    <div className={`w-2 h-2 rounded-full ${systemStatus.ollama === 'running' ? 'bg-green-500' : systemStatus.ollama === 'error' ? 'bg-red-500' : 'bg-yellow-500'}`} />
+                    <span className="text-xs capitalize">{systemStatus.ollama}</span>
                   </div>
                 </div>
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-slate-600">Agent Zero</span>
                   <div className="flex items-center gap-1.5">
-                    <div className={`w-2 h-2 rounded-full ${isExecuting ? 'bg-blue-500 animate-pulse' : 'bg-green-500'}`} />
-                    <span className="text-xs">{isExecuting ? 'Active' : 'Ready'}</span>
+                    <div className={`w-2 h-2 rounded-full ${isExecuting ? 'bg-blue-500 animate-pulse' : systemStatus.agent === 'running' ? 'bg-green-500' : systemStatus.agent === 'error' ? 'bg-red-500' : 'bg-yellow-500'}`} />
+                    <span className="text-xs">{isExecuting ? 'Active' : systemStatus.agent === 'running' ? 'Ready' : systemStatus.agent}</span>
                   </div>
                 </div>
               </CardContent>

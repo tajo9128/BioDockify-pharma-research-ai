@@ -246,18 +246,35 @@ def main():
     print(f"✅ Ollama (Free): {'PASS' if results['ollama'] else 'FAIL'}")
     
     print("\n💰 Cloud APIs (Paid):")
+    cloud_api_count = 0
+    cloud_api_ok_count = 0
     for provider, status in results.get("cloud_apis", {}).items():
         icon = "✅" if status == "ok" else "⚠️" if status == "no_key" else "❌"
         print(f"   {icon} {provider.upper()}: {status}")
+        cloud_api_count += 1
+        if status == "ok":
+            cloud_api_ok_count += 1
+    
+    # Print cloud API summary
+    print(f"\n💰 Cloud APIs (Paid): {'PASS' if cloud_api_ok_count > 0 else 'FAIL'} ({cloud_api_ok_count}/{cloud_api_count} configured)")
     
     # Overall
-    overall = results["config_mode"] and results["error_handling"]
+    # Test should fail if no cloud APIs are configured (all show "no_key")
+    cloud_api_status = cloud_api_ok_count > 0
+    overall = results["config_mode"] and results["error_handling"] and cloud_api_status
     print(f"\n{'='*60}")
     if overall:
         print("🎉 API VERIFICATION: PASS")
         return 0
     else:
         print("❌ API VERIFICATION: FAIL")
+        if not cloud_api_status:
+            print("\n⚠️  No cloud APIs are configured!")
+            print("   Please configure at least one cloud API key in the config file:")
+            print("   - google_key: For Google Gemini API")
+            print("   - openrouter_key: For OpenRouter API")
+            print("   - huggingface_key: For HuggingFace API")
+            print("   - custom_key: For custom OpenAI-compatible API")
         return 1
 
 
