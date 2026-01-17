@@ -344,6 +344,23 @@ export default function SettingsPanel() {
                                                 </select>
                                             </div>
                                         )}
+                                        <div className="mt-3">
+                                            <label className="text-xs text-slate-500 block mb-1">Custom Model</label>
+                                            <div className="flex space-x-2">
+                                                <input
+                                                    value={settings.ai_provider.ollama_model}
+                                                    onChange={(e) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, ollama_model: e.target.value } })}
+                                                    placeholder="Enter model name (e.g., llama2, mistral, codellama)"
+                                                    className="flex-1 bg-slate-900 border border-slate-700 rounded-md px-3 py-2 text-sm text-white placeholder:text-slate-600"
+                                                />
+                                                <button
+                                                    onClick={checkOllamaConnection}
+                                                    className="px-4 bg-slate-800 text-white rounded-md text-xs font-medium hover:bg-slate-700"
+                                                >
+                                                    Refresh
+                                                </button>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
 
