@@ -1,6 +1,7 @@
 {
     "name": "biodockify-desktop",
-    "version": "2.15.8",
+    "version": "2.16.2",
+    "description": "BioDockify - Pharma Research AI: Desktop Application",
     "private": true,
     "scripts": {
         "tauri": "tauri",

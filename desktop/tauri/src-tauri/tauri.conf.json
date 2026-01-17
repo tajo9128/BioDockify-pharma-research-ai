@@ -6,8 +6,8 @@
         "distDir": "../dist"
     },
     "package": {
-        "productName": "BioDockify",
-        "version": "2.15.8"
+        "productName": "BioDockify - Pharma Research AI",
+        "version": "2.16.2"
     },
     "tauri": {
         "allowlist": {
@@ -94,7 +94,7 @@
         "systemTray": {
             "iconPath": "icons/icon.ico",
             "iconAsTemplate": true,
-            "title": "BioDockify"
+            "title": "BioDockify - Pharma Research AI"
         },
         "security": {
             "csp": null
@@ -103,7 +103,7 @@
             {
                 "fullscreen": false,
                 "resizable": true,
-                "title": "BioDockify AI",
+                "title": "BioDockify - Pharma Research AI",
                 "width": 1200,
                 "height": 800,
                 "decorations": false

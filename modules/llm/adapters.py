@@ -344,7 +344,7 @@ class OllamaAdapter(BaseLLMAdapter):
             return self._is_available_cache
         
         try:
-            resp = requests.get(f"{self.base_url}/api/tags", timeout=5)
+            resp = requests.get(f"{self.base_url}/api/tags", timeout=10)
             self._is_available_cache = resp.status_code == 200
         except:
             self._is_available_cache = False

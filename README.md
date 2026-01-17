@@ -1,11 +1,11 @@
-# BioDockify v2.14.3 🧬
+# BioDockify v2.16.2 🧬
 
 **Autonomous AI Research Assistant for Pharmaceutical & Life Sciences**
 
 BioDockify is a local-first, privacy-preserving AI workstation designed for pharmaceutical researchers, PhD students, and drug discovery scientists. It transforms LLMs into "Pharma-Grade" research assistants capable of deep literature analysis, hypothesis generation, and academic synthesis.
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-2.14.3-green.svg)](https://github.com/tajo9128/BioDockify-pharma-research-ai/releases)
+[![Version](https://img.shields.io/badge/version-2.16.2-green.svg)](https://github.com/tajo9128/BioDockify-pharma-research-ai/releases)
 [![Status](https://img.shields.io/badge/status-Production-teal.svg)]()
 [![Platform](https://img.shields.io/badge/platform-Windows-blue.svg)]()
 

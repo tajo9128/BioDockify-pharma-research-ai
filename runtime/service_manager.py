@@ -178,7 +178,7 @@ class ServiceManager:
         
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                s.settimeout(1)
+                s.settimeout(5)
                 result = s.connect_ex(("127.0.0.1", port))
                 return "running" if result == 0 else "stopped"
         except Exception as e:
