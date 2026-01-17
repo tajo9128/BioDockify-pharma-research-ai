@@ -197,7 +197,13 @@ class ResearchOrchestrator:
             
             # Section E: API & AI
             ai = runtime_cfg.get("ai_provider", {})
-            use_hybrid = (ai.get("mode") == "hybrid")
+            
+            # Map "auto" to "hybrid" for backwards compatibility
+            ai_mode = ai.get("mode", "hybrid")
+            if ai_mode == "auto":
+                ai_mode = "hybrid"  # Auto now means hybrid
+            
+            use_hybrid = (ai_mode == "hybrid")
             self.config = OrchestratorConfig(
                 # AI Settings
                 use_cloud_api=use_hybrid,

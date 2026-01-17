@@ -173,8 +173,10 @@ DEFAULT_CONFIG = {
 
     # SECTION E: API & AI SETTINGS
     "ai_provider": {
-        "mode": "auto",  # Options: auto, ollama, z-ai, google, openrouter
-        "primary_model": "google", 
+        "mode": "hybrid",  # Options: hybrid (recommended), ollama, google, openrouter, custom
+        "primary_model": "google",
+        "ollama_fallback": True,  # Use Ollama if cloud APIs fail
+        "cloud_fallback": True,   # Use cloud APIs if Ollama fails
         "ollama_url": "http://localhost:11434",
         "ollama_model": "",  # Empty = auto-detect first available model
         "google_key": "",
