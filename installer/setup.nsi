@@ -9,10 +9,10 @@
 
   !define APPNAME "BioDockify"
   !define PRODUCT_NAME "BioDockify"
-  !define PRODUCT_VERSION "2.15.6"
+  !define PRODUCT_VERSION "2.15.7"
   !define PRODUCT_PUBLISHER "BioDockify AI"
   Name "${APPNAME} AI"
-  OutFile "BioDockify_Setup_v2.15.6.exe"
+  OutFile "BioDockify_Setup_v2.15.7.exe"
   
   ; safe install directory
   InstallDir "$PROGRAMFILES64\${APPNAME}"

@@ -1,5 +1,15 @@
 # Release Notes
 
+## v2.15.7 - Security & Stability Improvements
+- **SECURITY**: Fixed CORS vulnerability - whitelisted specific origins.
+- **SECURITY**: Added file upload validation (type + 50MB size limit).
+- **FIX**: Thread-safe AgentStateManager for concurrent requests.
+- **FIX**: WebSocket ConnectionManager thread safety with asyncio.Lock.
+- **FIX**: Added task_id to Agent API response for proper tracking.
+- **FIX**: Removed duplicate imports in main.py.
+- **NEW**: Slides Generation from Knowledge Base (KB, Search, Prompt, Documents).
+- **NEW**: 4 slide themes: Academic, Modern, Minimal, Pharmaceutical.
+
 ## v2.15.6 - Critical Fixes & Stability
 - **CRITICAL FIX #1**: Added missing `OllamaAdapter` to LLM factory.
 - **CRITICAL FIX #2**: Implemented full Ollama API support with `generate()`, `chat()`, `is_available()`.
