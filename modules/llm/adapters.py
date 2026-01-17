@@ -164,13 +164,23 @@ class ZhipuAdapter(BaseLLMAdapter):
 
 
 class OllamaAdapter(BaseLLMAdapter):
-    """Adapter for local Ollama LLM."""
+    """
+    Robust adapter for local Ollama LLM with retry logic and graceful fallbacks.
+    """
+    
+    MAX_RETRIES = 3
+    RETRY_DELAY = 2.0
     
     def __init__(self, base_url: str = "http://localhost:11434", model: str = "llama2"):
         self.base_url = base_url.rstrip('/')
         self.model = model
+        self._failure_count = 0
+        self._last_success = 0
+        self._is_available_cache = None
+        self._cache_time = 0
 
     def generate(self, prompt: str, **kwargs) -> str:
+        """Generate text with automatic retries."""
         url = f"{self.base_url}/api/generate"
         payload = {
             "model": self.model,
@@ -182,18 +192,41 @@ class OllamaAdapter(BaseLLMAdapter):
             }
         }
         
-        try:
-            resp = requests.post(url, json=payload, timeout=120)
-            resp.raise_for_status()
-            data = resp.json()
-            return data.get("response", "")
-        except requests.exceptions.ConnectionError:
-            raise ValueError(f"Ollama not reachable at {self.base_url}. Is Ollama running?")
-        except Exception as e:
-            raise ValueError(f"Ollama API Error: {e}")
+        last_error = None
+        for attempt in range(self.MAX_RETRIES):
+            try:
+                resp = requests.post(url, json=payload, timeout=120)
+                resp.raise_for_status()
+                data = resp.json()
+                self._failure_count = 0
+                self._last_success = time.time() if 'time' in dir() else 0
+                return data.get("response", "")
+                
+            except requests.exceptions.ConnectionError as e:
+                last_error = e
+                self._failure_count += 1
+                if attempt < self.MAX_RETRIES - 1:
+                    import time as t
+                    t.sleep(self.RETRY_DELAY * (attempt + 1))
+                    continue
+                    
+            except requests.exceptions.Timeout as e:
+                last_error = e
+                self._failure_count += 1
+                if attempt < self.MAX_RETRIES - 1:
+                    import time as t
+                    t.sleep(self.RETRY_DELAY)
+                    continue
+                    
+            except Exception as e:
+                last_error = e
+                break
+        
+        # Return graceful fallback instead of crashing
+        return self._graceful_fallback(str(last_error))
     
     def chat(self, messages: list, **kwargs) -> str:
-        """Chat completion endpoint for multi-turn conversations."""
+        """Chat completion with automatic retries."""
         url = f"{self.base_url}/api/chat"
         payload = {
             "model": self.model,
@@ -205,21 +238,42 @@ class OllamaAdapter(BaseLLMAdapter):
             }
         }
         
-        try:
-            resp = requests.post(url, json=payload, timeout=120)
-            resp.raise_for_status()
-            data = resp.json()
-            return data.get("message", {}).get("content", "")
-        except Exception as e:
-            raise ValueError(f"Ollama Chat API Error: {e}")
+        for attempt in range(self.MAX_RETRIES):
+            try:
+                resp = requests.post(url, json=payload, timeout=120)
+                resp.raise_for_status()
+                data = resp.json()
+                self._failure_count = 0
+                return data.get("message", {}).get("content", "")
+                
+            except (requests.exceptions.ConnectionError, requests.exceptions.Timeout):
+                if attempt < self.MAX_RETRIES - 1:
+                    import time as t
+                    t.sleep(self.RETRY_DELAY * (attempt + 1))
+                    continue
+                    
+            except Exception as e:
+                return self._graceful_fallback(str(e))
+        
+        return self._graceful_fallback("Connection failed after retries")
     
     def is_available(self) -> bool:
-        """Check if Ollama server is running."""
+        """Check if Ollama server is running with caching."""
+        import time as t
+        now = t.time()
+        
+        # Cache availability check for 30 seconds
+        if self._is_available_cache is not None and now - self._cache_time < 30:
+            return self._is_available_cache
+        
         try:
             resp = requests.get(f"{self.base_url}/api/tags", timeout=5)
-            return resp.status_code == 200
+            self._is_available_cache = resp.status_code == 200
         except:
-            return False
+            self._is_available_cache = False
+        
+        self._cache_time = now
+        return self._is_available_cache
     
     def list_models(self) -> list:
         """List available models in Ollama."""
@@ -230,4 +284,20 @@ class OllamaAdapter(BaseLLMAdapter):
             return [m.get("name", "") for m in data.get("models", [])]
         except:
             return []
+    
+    def _graceful_fallback(self, error: str) -> str:
+        """Return a helpful message instead of crashing."""
+        if "Connection" in error or "refused" in error.lower():
+            return (
+                "[Ollama Unavailable] Cannot connect to Ollama service. "
+                "Please ensure Ollama is running with 'ollama serve' or "
+                "configure a cloud API (Google/OpenRouter) in Settings."
+            )
+        elif "timeout" in error.lower():
+            return (
+                "[Ollama Timeout] Request timed out. Ollama may be overloaded "
+                "or the model is too large. Try a smaller model or use a cloud API."
+            )
+        else:
+            return f"[Ollama Error] {error}. Please check Ollama logs or use a cloud API."
 
