@@ -176,7 +176,7 @@ DEFAULT_CONFIG = {
         "mode": "auto",  # Options: auto, ollama, z-ai, google, openrouter
         "primary_model": "google", 
         "ollama_url": "http://localhost:11434",
-        "ollama_model": "llama2",
+        "ollama_model": "",  # Empty = auto-detect first available model
         "google_key": "",
         "openrouter_key": "",
         "huggingface_key": "",

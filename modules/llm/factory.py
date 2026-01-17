@@ -49,8 +49,36 @@ class LLMFactory:
         elif provider == "ollama":
             # Ollama doesn't require an API key - just URL and model
             ollama_url = getattr(config, 'ollama_url', 'http://localhost:11434')
-            ollama_model = getattr(config, 'ollama_model', 'llama2')
+            ollama_model = getattr(config, 'ollama_model', '') or ''
+            
+            # Auto-detect model if not configured
+            if not ollama_model:
+                ollama_model = LLMFactory._detect_first_ollama_model(ollama_url)
+            
+            if not ollama_model:
+                return None  # No models available
+            
             return OllamaAdapter(base_url=ollama_url, model=ollama_model)
             
         return None
+    
+    @staticmethod
+    def _detect_first_ollama_model(base_url: str) -> str:
+        """Auto-detect the first available Ollama model."""
+        import requests
+        try:
+            resp = requests.get(f"{base_url}/api/tags", timeout=5)
+            if resp.status_code == 200:
+                data = resp.json()
+                models = data.get("models", [])
+                if models:
+                    model_name = models[0].get("name", "")
+                    import logging
+                    logging.getLogger("llm_factory").info(f"Auto-detected Ollama model: {model_name}")
+                    return model_name
+        except Exception as e:
+            import logging
+            logging.getLogger("llm_factory").warning(f"Failed to auto-detect Ollama model: {e}")
+        return ""
+
 
