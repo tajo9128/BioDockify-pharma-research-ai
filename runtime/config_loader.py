@@ -188,6 +188,10 @@ DEFAULT_CONFIG = {
         "custom_key": "",
         "custom_base_url": "", 
         "custom_model": "gpt-3.5-turbo",
+        
+        # Web Research Keys (MiroThinker Integration)
+        "serper_key": "",  # For Google Search (search.serper.dev)
+        "jina_key": "",    # For Content Scraping (r.jina.ai)
     },
     
     # NEW: Advanced Hardware Controls

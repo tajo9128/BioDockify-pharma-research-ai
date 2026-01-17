@@ -171,37 +171,86 @@ async def run_research_task(task_id: str, title: str, mode: str):
     })
 
     try:
-        # 2. Simulate or Run Orchestrator
-        # Note: In a real async setup, we might need to run the blocking orchestrator in a threadpool
-        # For now, we simulate the steps to demonstrate the UI flow
+        from runtime.config_loader import load_config
+        config = load_config()
         
-        steps = ["Literature Search", "Entity Extraction", "Molecular Analysis", "Knowledge Graph", "Synthesis"]
-        
-        # Real Orchestrator Call (if available)
-        plan = None
-        if ResearchOrchestrator:
-             # This is a synchronous call, might block the event loop slightly if not threaded
-             # In production: await run_in_threadpool(orchestrator.plan_research, title)
-             pass
-        
-        for i, step in enumerate(steps):
-            await asyncio.sleep(2) # Simulate work
+        # WEB DEEP RESEARCH MODE (MiroThinker Integration)
+        if mode == "web_deep":
+            tasks[task_id].logs.append("Initializing MiroThinker Web Engine...")
+            from modules.web_research.engine import WebResearchEngine
+            engine = WebResearchEngine(config)
             
-            progress = int((i + 1) / len(steps) * 100)
-            tasks[task_id].progress = progress
-            tasks[task_id].logs.append(f"Completed step: {step}")
+            # Step 1: Search
+            tasks[task_id].progress = 10
+            tasks[task_id].logs.append(f"Searching web for: {title}...")
+            await manager.broadcast({"type": "task_update", "data": tasks[task_id].dict()})
             
-            # Broadcast update
-            await manager.broadcast({
-                "type": "task_update",
-                "data": tasks[task_id].dict()
-            })
+            # Run blocking IO in threadpool
+            results = await asyncio.to_thread(engine.search_google, title, 5)
+            tasks[task_id].logs.append(f"Found {len(results)} relevant sources.")
+            
+            # Step 2: Deep Read
+            tasks[task_id].progress = 30
+            tasks[task_id].logs.append("Deep reading and scraping content...")
+            await manager.broadcast({"type": "task_update", "data": tasks[task_id].dict()})
+            
+            full_context = ""
+            for i, res in enumerate(results):
+                msg = f"Reading: {res.get('title', 'Unknown')}"
+                tasks[task_id].logs.append(msg)
+                content = await asyncio.to_thread(engine.deep_read, res['link'])
+                full_context += f"# Source: {res['title']}\nURL: {res['link']}\n\n{content}\n\n"
+                
+                # Update progress
+                current_prog = 30 + int((i+1)/len(results) * 40) # 30 to 70
+                tasks[task_id].progress = current_prog
+                await manager.broadcast({"type": "task_update", "data": tasks[task_id].dict()})
+            
+            # Step 3: Synthesis (Optional LLM call could go here)
+            tasks[task_id].progress = 80
+            tasks[task_id].logs.append("Synthesizing research report...")
+            
+            # For now, we save the raw context as the result
+            tasks[task_id].result = {
+                "summary": "Deep Web Research Complete",
+                "sources": results,
+                "full_report": full_context
+            }
+            
+        else:
+            # 2. Standard Simulation (Legacy/Orchestrator)
+            # Note: In a real async setup, we might need to run the blocking orchestrator in a threadpool
+            # For now, we simulate the steps to demonstrate the UI flow
+            
+            steps = ["Literature Search", "Entity Extraction", "Molecular Analysis", "Knowledge Graph", "Synthesis"]
+            
+            # Real Orchestrator Call (if available)
+            plan = None
+            if ResearchOrchestrator:
+                 # This is a synchronous call, might block the event loop slightly if not threaded
+                 # In production: await run_in_threadpool(orchestrator.plan_research, title)
+                 pass
+            
+            for i, step in enumerate(steps):
+                await asyncio.sleep(2) # Simulate work
+                
+                progress = int((i + 1) / len(steps) * 100)
+                tasks[task_id].progress = progress
+                tasks[task_id].logs.append(f"Completed step: {step}")
+                
+                # Broadcast update
+                await manager.broadcast({
+                    "type": "task_update",
+                    "data": tasks[task_id].dict()
+                })
         
         # 3. Complete
         tasks[task_id].status = "completed"
         tasks[task_id].progress = 100
         tasks[task_id].logs.append("Research completed successfully.")
-        tasks[task_id].result = {"summary": f"Research on {title} complete.", "plan_id": "plan_123"}
+        
+        if not tasks[task_id].result:
+             tasks[task_id].result = {"summary": f"Research on {title} complete.", "plan_id": "plan_123"}
         
         await manager.broadcast({
             "type": "task_update",
