@@ -82,21 +82,30 @@ class ServiceManager:
                 )
                 self.processes.append(proc)
             
-            # Wait and verify it started
-            time.sleep(3)
+            # Wait and verify it started with exponential backoff
+            max_retries = 5
+            base_delay = 2  # Start with 2 seconds
             
-            if self.check_health("ollama") == "running":
-                logger.info("✓ Ollama started successfully")
-                return True
-            else:
-                # Try to read error from log
-                try:
-                    with open(log_file, 'r') as f:
-                        recent_logs = f.read()[-500:]  # Last 500 chars
-                        logger.error(f"✗ Ollama failed to start. Recent logs:\n{recent_logs}")
-                except:
-                    logger.error("✗ Ollama failed to start. Check ~/.biodockify/logs/ollama.log")
-                return False
+            for attempt in range(max_retries):
+                delay = base_delay * (1.5 ** attempt)  # 2, 3, 4.5, 6.75, 10.1 seconds
+                logger.info(f"Waiting {delay:.1f}s for Ollama startup (attempt {attempt + 1}/{max_retries})...")
+                time.sleep(delay)
+                
+                if self.check_health("ollama") == "running":
+                    logger.info("✓ Ollama started successfully")
+                    return True
+                
+                if attempt < max_retries - 1:
+                    logger.warning(f"Ollama not ready yet, retrying...")
+            
+            # All retries failed - try to read error from log
+            try:
+                with open(log_file, 'r') as f:
+                    recent_logs = f.read()[-500:]  # Last 500 chars
+                    logger.error(f"✗ Ollama failed to start after {max_retries} attempts. Recent logs:\n{recent_logs}")
+            except:
+                logger.error(f"✗ Ollama failed to start after {max_retries} attempts. Check ~/.biodockify/logs/ollama.log")
+            return False
                 
         except FileNotFoundError:
             logger.error("✗ Ollama executable not found in PATH. Install from https://ollama.ai")
