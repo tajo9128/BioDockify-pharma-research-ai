@@ -23,12 +23,12 @@ VSVersionInfo(
           [
             StringStruct(u'CompanyName', u'BioDockify Team'),
             StringStruct(u'FileDescription', u'BioDockify - Pharma Research AI'),
-            StringStruct(u'FileVersion', u'2.16.2.0'),
+            StringStruct(u'FileVersion', u'2.16.3.0'),
             StringStruct(u'InternalName', u'biodockify-engine'),
             StringStruct(u'LegalCopyright', u'Copyright (c) 2024-2026 BioDockify Team. MIT License.'),
             StringStruct(u'OriginalFilename', u'biodockify-engine.exe'),
             StringStruct(u'ProductName', u'BioDockify - Pharma Research AI'),
-            StringStruct(u'ProductVersion', u'2.16.2.0'),
+            StringStruct(u'ProductVersion', u'2.16.3.0'),
           ]
         )
       ]
