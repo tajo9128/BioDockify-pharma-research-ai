@@ -21,16 +21,7 @@ import FeedbackDialog from '@/components/FeedbackDialog'; // Ensure imported if 
 import { Target, Network, Activity, CheckCircle2, Brain, Clock } from 'lucide-react';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 
-// Mock DiagnosisDialog if missing or import real one
-const DiagnosisDialog = ({ isOpen, onClose, error }: any) => isOpen ? (
-  <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50">
-    <div className="bg-slate-900 p-6 rounded-lg border border-red-500">
-      <h3 className="text-red-500 font-bold">System Diag</h3>
-      <p>{error}</p>
-      <button onClick={onClose} className="mt-4 px-4 py-2 bg-slate-800 rounded">Close</button>
-    </div>
-  </div>
-) : null;
+// Mock DiagnosisDialog removed for No-Self-Config mode
 
 const getStepIcon = (type: string) => {
   switch (type) {
@@ -94,15 +85,11 @@ export default function PharmaceuticalResearchApp() {
   useEffect(() => {
     // Listen for global events
     const handleFeedback = () => setIsFeedbackOpen(true);
-    const handleDiag = (e: CustomEvent) => setDiagError(e.detail?.error || "System Check Requested");
-    const handleTitleBarDiag = () => setDiagError("Running System Diagnostics... OK"); // Simple mock for now
 
     window.addEventListener('open-feedback', handleFeedback);
-    window.addEventListener('trigger-diagnostics', handleTitleBarDiag); // From TitleBar
 
     return () => {
       window.removeEventListener('open-feedback', handleFeedback);
-      window.removeEventListener('trigger-diagnostics', handleTitleBarDiag);
     };
   }, []);
 
@@ -360,12 +347,6 @@ export default function PharmaceuticalResearchApp() {
       <FeedbackDialog
         isOpen={isFeedbackOpen}
         onClose={() => setIsFeedbackOpen(false)}
-      />
-      <DiagnosisDialog
-        isOpen={!!diagError}
-        onClose={() => setDiagError(null)}
-        error={diagError}
-        component="System"
       />
     </div>
   );

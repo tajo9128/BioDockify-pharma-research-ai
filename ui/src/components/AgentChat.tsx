@@ -85,22 +85,6 @@ How can I assist your research today?`,
 
         const lowerInput = userMsg.content.toLowerCase();
 
-        // 0. Check for Self-Repair Trigger
-        if (REPAIR_TRIGGERS.some(trigger => lowerInput.includes(trigger))) {
-            setIsLoading(true);
-            setStatus('Initializing Self-Repair...');
-            await new Promise(r => setTimeout(r, 600));
-            setIsDiagnosisOpen(true);
-            setIsLoading(false);
-            setStatus('');
-            setMessages(prev => [...prev, {
-                role: 'assistant',
-                content: 'I have initiated the system diagnosis and repair protocol. Please follow the instructions in the dialog.',
-                timestamp: new Date()
-            }]);
-            return;
-        }
-
         // 0.5 Check for Deep Research Trigger
         if (DEEP_RESEARCH_TRIGGERS.some(trigger => lowerInput.includes(trigger))) {
             setDeepResearchQuery(userMsg.content);
@@ -204,13 +188,6 @@ How can I assist your research today?`,
                         title="Start Deep Research"
                     >
                         <Brain className="w-3 h-3" /> Deep Research
-                    </button>
-                    <button
-                        onClick={() => setIsDiagnosisOpen(true)}
-                        className="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium rounded-full border border-slate-700 transition-colors flex items-center gap-2"
-                        title="Launch Self-Repair"
-                    >
-                        <ShieldAlert className="w-3 h-3 text-amber-500" /> Diagnose
                     </button>
                 </div>
             </div>
