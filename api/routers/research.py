@@ -185,8 +185,8 @@ async def run_research_task(task_id: str, title: str, mode: str):
             tasks[task_id].logs.append(f"Searching web for: {title}...")
             await manager.broadcast({"type": "task_update", "data": tasks[task_id].dict()})
             
-            # Run blocking IO in threadpool
-            results = await asyncio.to_thread(engine.search_google, title, 5)
+            # Run async search directly
+            results = await engine.search_google(title, 5)
             tasks[task_id].logs.append(f"Found {len(results)} relevant sources.")
             
             # Step 2: Deep Read
@@ -198,7 +198,7 @@ async def run_research_task(task_id: str, title: str, mode: str):
             for i, res in enumerate(results):
                 msg = f"Reading: {res.get('title', 'Unknown')}"
                 tasks[task_id].logs.append(msg)
-                content = await asyncio.to_thread(engine.deep_read, res['link'])
+                content = await engine.deep_read(res['link'])
                 full_context += f"# Source: {res['title']}\nURL: {res['link']}\n\n{content}\n\n"
                 
                 # Update progress
@@ -206,15 +206,69 @@ async def run_research_task(task_id: str, title: str, mode: str):
                 tasks[task_id].progress = current_prog
                 await manager.broadcast({"type": "task_update", "data": tasks[task_id].dict()})
             
-            # Step 3: Synthesis (Optional LLM call could go here)
+            # Step 3: Synthesis with LLM
             tasks[task_id].progress = 80
-            tasks[task_id].logs.append("Synthesizing research report...")
+            tasks[task_id].logs.append("Synthesizing research report with AI...")
+            await manager.broadcast({"type": "task_update", "data": tasks[task_id].dict()})
             
-            # For now, we save the raw context as the result
+            try:
+                # Get Primary LLM
+                from modules.llm.factory import LLMFactory
+                # Ensure we have an object-like config for the factory if it's a dict
+                class ConfigWrapper:
+                    def __init__(self, d): self.__dict__ = d
+                
+                ai_cfg = config.get("ai_provider", {})
+                # Create a config object compatible with key access for factory
+                # We need to map dict keys to object attributes effectively or just use the dict if factory supports it
+                # The factory expects an object with attributes.
+                
+                # Simple object mock
+                class MockConfig:
+                    def __init__(self, cfg):
+                        self.google_key = cfg.get("google_key")
+                        self.openrouter_key = cfg.get("openrouter_key")
+                        self.huggingface_key = cfg.get("huggingface_key")
+                        self.glm_key = cfg.get("glm_key")
+                        self.custom_key = cfg.get("custom_key")
+                        self.custom_base_url = cfg.get("custom_base_url")
+                        self.custom_model = cfg.get("custom_model")
+                        self.ollama_url = cfg.get("ollama_url")
+                        self.ollama_model = cfg.get("ollama_model")
+                        self.primary_model = cfg.get("primary_model", "google")
+
+                adapter = LLMFactory.get_adapter(ai_cfg.get("primary_model", "google"), MockConfig(ai_cfg))
+                
+                if adapter:
+                    prompt = f"""
+                    You are an expert research analyst. Synthesize the following raw web search data into a comprehensive research report about "{title}".
+                    
+                    Structure:
+                    1. Executive Summary
+                    2. Key Findings
+                    3. Detailed Analysis
+                    4. Sources Analysis
+                    
+                    RAW DATA:
+                    {full_context[:50000]}  # Limit context to avoid overflow
+                    """
+                    
+                    report = await asyncio.to_thread(adapter.generate, prompt)
+                    tasks[task_id].logs.append("Report generation complete.")
+                else:
+                    report = f"## Research Analysis\n\nAI Synthesis Failed: No valid AI provider configured.\n\n### Raw Data\n{full_context}"
+                    tasks[task_id].logs.append("AI generation skipped (no provider).")
+
+            except Exception as e:
+                tasks[task_id].logs.append(f"AI Synthesis Error: {e}")
+                report = f"## Research Analysis\n\nError during synthesis: {e}\n\n### Raw Data\n{full_context}"
+
+            # For now, we save raw context + report
             tasks[task_id].result = {
                 "summary": "Deep Web Research Complete",
                 "sources": results,
-                "full_report": full_context
+                "full_report": report,
+                "raw_context": full_context
             }
             
         else:

@@ -37,19 +37,19 @@ class WebResearchEngine:
         if not self.serper_key:
             logger.warning("Serper API key not found. Web search will be limited.")
 
-    def search_google(self, query: str, limit: int = 5) -> List[Dict]:
+    async def search_google(self, query: str, limit: int = 5) -> List[Dict]:
         """
         Search Google using Serper API (MiroThinker standard) or Fallback.
         """
         if self.serper_key:
-            return self._search_serper(query, limit)
+            return await self._search_serper(query, limit)
         else:
             logger.info("No Serper key found. Using Free Tier (DuckDuckGo Lite).")
             # Enforce "Limited API Use" for free tier
             free_limit = min(limit, 3) 
-            return self._search_ddg_lite(query, free_limit)
+            return await self._search_ddg_lite(query, free_limit)
 
-    def _search_serper(self, query: str, limit: int) -> List[Dict]:
+    async def _search_serper(self, query: str, limit: int) -> List[Dict]:
         """Paid API: Serper (Google Results)"""
         url = "https://google.serper.dev/search"
         payload = json.dumps({
@@ -62,10 +62,12 @@ class WebResearchEngine:
             'Content-Type': 'application/json'
         }
 
+        import httpx
         try:
-            response = requests.post(url, headers=headers, data=payload, timeout=10)
-            response.raise_for_status()
-            data = response.json()
+            async with httpx.AsyncClient(timeout=10) as client:
+                response = await client.post(url, headers=headers, content=payload)
+                response.raise_for_status()
+                data = response.json()
             
             organic = data.get("organic", [])
             results = []
@@ -83,33 +85,34 @@ class WebResearchEngine:
             logger.error(f"Serper search failed: {e}")
             return []
 
-    def _search_ddg_lite(self, query: str, limit: int) -> List[Dict]:
+    async def _search_ddg_lite(self, query: str, limit: int) -> List[Dict]:
         """Free Tier: DuckDuckGo HTML Scrape (Limited Capability)"""
+        import httpx
         try:
             # Quick HTML scrape of DDG Lite (no JS required)
             url = "https://html.duckduckgo.com/html/"
-            payload = {'q': query}
+            data = {'q': query}
             headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                'Content-Type': 'application/x-www-form-urlencoded'
             }
             
-            resp = requests.post(url, data=payload, headers=headers, timeout=10)
-            resp.raise_for_status()
+            async with httpx.AsyncClient(timeout=10) as client:
+                resp = await client.post(url, data=data, headers=headers)
+                resp.raise_for_status()
+                text = resp.text
             
             # Simple regex parsing to avoid heavy BS4 dependency if missing
             import re
             
             results = []
             # Find result blocks
-            links = re.findall(r'<a class="result__a" href="([^"]+)">([^<]+)</a>', resp.text)
-            snippets = re.findall(r'<a class="result__snippet" href="[^"]+">([^<]+)</a>', resp.text)
+            links = re.findall(r'<a class="result__a" href="([^"]+)">([^<]+)</a>', text)
+            snippets = re.findall(r'<a class="result__snippet" href="[^"]+">([^<]+)</a>', text)
             
             for i, (href, title) in enumerate(links):
                 if i >= limit: break
                 snippet = snippets[i] if i < len(snippets) else "No snippet available."
-                
-                # Clean URL (DDG wraps specific URLs sometimes, but usually direct in HTML mode)
-                # Decode URL if needed
                 
                 results.append({
                     "title": title,
@@ -125,42 +128,64 @@ class WebResearchEngine:
             return [{
                 "title": "Search Unavailable",
                 "link": "",
-                "snippet": "Both Serper and Free Fallback failed. Please check internet connection or configure Serper Key.",
+                "snippet": "Both Serper and Free Fallback failed. Please check internet connection.",
                 "source": "System"
             }]
 
-    def deep_read(self, url: str) -> str:
+    async def deep_read(self, url: str) -> str:
         """
-        Convert any URL to Clean Markdown using Jina Reader.
+        Smart Deep Read:
+        1. Try Fast Mode (Jina/MiroThinker)
+        2. If blocked/failed -> Try Strong Mode (HeadlessX Stealth)
         """
-        # Jina works without key (lower limits) or with key (higher limits)
-        jina_url = f"https://r.jina.ai/{url}"
-        
-        headers = {
-            'X-Return-Format': 'markdown'
-        }
-        if self.jina_key:
-            headers['Authorization'] = f"Bearer {self.jina_key}"
-        
+        # 1. FAST MODE: JINA
         try:
-            response = requests.get(jina_url, headers=headers, timeout=20)
+            import httpx
+            jina_url = f"https://r.jina.ai/{url}"
+            headers = {'X-Return-Format': 'markdown'}
+            if self.jina_key:
+                headers['Authorization'] = f"Bearer {self.jina_key}"
+            
+            async with httpx.AsyncClient(timeout=20) as client:
+                response = await client.get(jina_url, headers=headers)
             
             if response.status_code == 200:
-                return response.text
+                content = response.text
+                if len(content) > 500: # Valid content check
+                    return content
+                else:
+                    logger.warning(f"Jina content too short ({len(content)} chars). Trying Headless fallback.")
             else:
-                return f"Error reading content ({response.status_code}): {response.text[:200]}"
+                logger.warning(f"Jina failed ({response.status_code}). Trying Headless fallback.")
                 
         except Exception as e:
-            logger.error(f"Jina read failed: {e}")
-            return f"Failed to read content: {e}"
+            logger.warning(f"Fast read failed: {e}. Switching to Strong Mode.")
 
-    def research_topic(self, topic: str, depth: int = 3) -> str:
+        # 2. STRONG MODE: HEADLESSX (Stealth Browser)
+        try:
+            logger.info(f"🚀 Deploying HeadlessX Stealth for: {url}")
+            from modules.headless_research import HeadlessResearcher
+            
+            async with HeadlessResearcher() as researcher:
+                result = await researcher.research(url)
+                
+            if result.get("status") == "success":
+                return f"[Source: HeadlessX Stealth]\n\n{result.get('content', '')}"
+            else:
+                return f"Error reading content: {result.get('error', 'Unknown error')}"
+                
+        except ImportError:
+            return "HeadlessX module not found. Install playwright to enable Strong Mode."
+        except Exception as e:
+            logger.error(f"HeadlessX failed: {e}")
+            return f"Failed to read content (All methods exhausted): {e}"
+
+    async def research_topic(self, topic: str, depth: int = 3) -> str:
         """
-        Performs a deep research workflow.
-        Automatically scales based on Pay/Free tier availability.
+        Performs a deep research workflow (Async).
         """
         # Logic: If Paid (Serper Key), allow requested depth.
-        # If Free (No Key), cap depth at 3 (Limited API Use).
+        # If Free (No Key), cap depth at 3.
         
         effective_depth = depth
         if not self.serper_key:
@@ -169,7 +194,7 @@ class WebResearchEngine:
         else:
             logger.info(f"Paid Tier: Full research depth {depth}.")
         
-        results = self.search_google(topic, limit=effective_depth)
+        results = await self.search_google(topic, limit=effective_depth)
         
         combined_report = [f"# Research Report: {topic}\n"]
         combined_report.append(f"**Mode:** {'Unlimited (Paid)' if self.serper_key else 'Limited (Free)'}")
@@ -183,10 +208,10 @@ class WebResearchEngine:
             combined_report.append(f"**URL:** {res['link']}")
             combined_report.append(f"**Source:** {res.get('source', 'Web')}\n")
             
-            content = self.deep_read(res['link'])
+            content = await self.deep_read(res['link'])
             
             # Truncate if too massive
-            max_len = 10000 
+            max_len = 15000 
             if len(content) > max_len:
                 content = content[:max_len] + "\n...[Truncated]..."
                 
