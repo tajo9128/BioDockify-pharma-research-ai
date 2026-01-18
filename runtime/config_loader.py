@@ -173,12 +173,17 @@ DEFAULT_CONFIG = {
 
     # SECTION E: API & AI SETTINGS
     "ai_provider": {
-        "mode": "hybrid",  # Options: hybrid (recommended), ollama, google, openrouter, custom
+        "mode": "lm_studio",  # CHANGED: Default to LM Studio (Stable)
         "primary_model": "google",
-        "ollama_fallback": True,  # Use Ollama if cloud APIs fail
-        "cloud_fallback": True,   # Use cloud APIs if Ollama fails
+        "ollama_fallback": False,  # Disabled
+        "cloud_fallback": True,   # Use cloud APIs if Local fails
         "ollama_url": "http://localhost:11434",
         "ollama_model": "",  # Empty = auto-detect first available model
+        
+        # LM Studio
+        "lm_studio_url": "http://localhost:1234/v1",
+        "lm_studio_model": "",
+
         "google_key": "",
         "openrouter_key": "",
         "huggingface_key": "",

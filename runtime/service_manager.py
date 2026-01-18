@@ -162,12 +162,14 @@ class ServiceManager:
 
     # === SERVICE WATCHDOG (Phase 19) ===
     
+    # === SERVICE WATCHDOG (Phase 19) ===
+    
     def check_health(self, service_name: str) -> str:
         """Check the health status of a service."""
         import socket
         
         ports = {
-            "ollama": 11434,
+            "lm_studio": 1234,  # Changed default check to LM Studio
             "surfsense": 3003,
             "api": 8000
         }
@@ -179,6 +181,7 @@ class ServiceManager:
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                 s.settimeout(5)
+                # Ensure we check localhost
                 result = s.connect_ex(("127.0.0.1", port))
                 return "running" if result == 0 else "stopped"
         except Exception as e:
@@ -186,26 +189,10 @@ class ServiceManager:
             return "error"
 
     def ensure_ollama(self) -> bool:
-        """Ensure Ollama is running; start it if not."""
-        status = self.check_health("ollama")
-        if status == "running":
-            logger.info("Ollama is already running.")
-            return True
-        
-        logger.warning("Ollama not running. Attempting to start...")
-        self.start_ollama()
-        
-        # Wait and re-check
-        import time
-        time.sleep(2)
-        
-        new_status = self.check_health("ollama")
-        if new_status == "running":
-            logger.info("Ollama started successfully.")
-            return True
-        else:
-            logger.error("Failed to start Ollama.")
-            return False
+        """Deprecated: Ollama is no longer the primary local engine."""
+        # We now rely on LM Studio (Manual Start)
+        logger.info("Skipping Ollama start (Using LM Studio).")
+        return True
 
     def attempt_repair(self, service_name: str) -> dict:
         """Attempt to repair a stopped service."""

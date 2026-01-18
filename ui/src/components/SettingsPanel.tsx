@@ -65,10 +65,14 @@ export default function SettingsPanel() {
         literature: { sources: ['pubmed'], enable_crossref: true, enable_preprints: false, year_range: 5, novelty_strictness: 'medium' },
         system: { auto_start: false, minimize_to_tray: true, pause_on_battery: true, max_cpu_percent: 80, internet_research: true }, // DEFAULT TRUE
         ai_provider: {
-            mode: 'ollama', // FIXED: 'local' was invalid, used 'ollama' as default equivalent
+            mode: 'ollama',
             ollama_url: 'http://localhost:11434',
-
             ollama_model: '',
+
+            // LM Studio
+            lm_studio_url: 'http://localhost:1234/v1',
+            lm_studio_model: '',
+
             google_key: '',
             huggingface_key: '',
             openrouter_key: '',
@@ -79,7 +83,9 @@ export default function SettingsPanel() {
             // SurfSense Knowledge Engine (replaces Neo4j)
             surfsense_url: 'http://localhost:3003',
             surfsense_key: '',
-            surfsense_auto_start: false
+            surfsense_auto_start: false,
+
+            elsevier_key: '' // Added missing key
         },
         ai_advanced: { context_window: 4096, gpu_layers: -1, thread_count: 8 },
         pharma: {
@@ -309,62 +315,110 @@ export default function SettingsPanel() {
                                             className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white outline-none focus:border-teal-500"
                                         >
                                             <option value="auto">Auto (Local First, Cloud Fallback)</option>
-                                            <option value="ollama">Local Only (Privacy Focused)</option>
+                                            <option value="lm_studio">Local - LM Studio (Primary)</option>
+                                            <option value="ollama">Local - Ollama (Legacy)</option>
                                             <option value="z-ai">Cloud Only (GLM/Google/OpenRouter)</option>
                                         </select>
                                     </div>
 
-                                    {/* Ollama Config */}
-                                    <div className="p-4 bg-slate-950 rounded-lg border border-slate-800">
-                                        <div className="flex items-center justify-between mb-2">
-                                            <span className="text-sm font-medium text-slate-300">Local Inference Engine</span>
-                                            <div className="flex items-center space-x-2">
-                                                <span className={`w-2 h-2 rounded-full ${ollamaStatus === 'success' ? 'bg-green-500' : ollamaStatus === 'error' ? 'bg-red-500' : 'bg-slate-500'}`} />
-                                                <span className="text-xs text-slate-500">{connectionMsg || 'Unknown'}</span>
+                                    {/* Ollama Config (Legacy) */}
+                                    {settings.ai_provider.mode === 'ollama' && (
+                                        <div className="p-4 bg-slate-950 rounded-lg border border-slate-800 opacity-75">
+                                            <div className="flex items-center justify-between mb-2">
+                                                <span className="text-sm font-medium text-slate-300">Ollama (Legacy)</span>
+                                                <div className="flex items-center space-x-2">
+                                                    <span className={`w-2 h-2 rounded-full ${ollamaStatus === 'success' ? 'bg-green-500' : ollamaStatus === 'error' ? 'bg-red-500' : 'bg-slate-500'}`} />
+                                                    <span className="text-xs text-slate-500">{connectionMsg || 'Unknown'}</span>
+                                                </div>
                                             </div>
-                                        </div>
-                                        <div className="flex space-x-2">
-                                            <input
-                                                value={settings.ai_provider.ollama_url}
-                                                onChange={(e) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, ollama_url: e.target.value } })}
-                                                className="flex-1 bg-slate-900 border border-slate-700 rounded-md px-3 py-2 text-sm text-white"
-                                            />
-                                            <button onClick={checkOllamaConnection} className="px-4 bg-slate-800 text-white rounded-md text-xs font-medium hover:bg-slate-700">Check</button>
-                                        </div>
-
-                                        {ollamaModels.length > 0 && (
-                                            <div className="mt-3">
-                                                <label className="text-xs text-slate-500 block mb-1">Active Model</label>
-                                                <select
-                                                    value={settings.ai_provider.ollama_model}
-                                                    onChange={(e) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, ollama_model: e.target.value } })}
-                                                    className="w-full bg-slate-900 border border-slate-700 rounded-md px-3 py-2 text-sm text-white"
-                                                >
-                                                    {ollamaModels.map(m => <option key={m} value={m}>{m}</option>)}
-                                                </select>
-                                            </div>
-                                        )}
-                                        <div className="mt-3">
-                                            <label className="text-xs text-slate-500 block mb-1">Custom Model</label>
                                             <div className="flex space-x-2">
                                                 <input
-                                                    value={settings.ai_provider.ollama_model}
-                                                    onChange={(e) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, ollama_model: e.target.value } })}
-                                                    placeholder="Enter model name (e.g., llama2, mistral, codellama)"
-                                                    className="flex-1 bg-slate-900 border border-slate-700 rounded-md px-3 py-2 text-sm text-white placeholder:text-slate-600"
+                                                    value={settings.ai_provider.ollama_url}
+                                                    onChange={(e) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, ollama_url: e.target.value } })}
+                                                    className="flex-1 bg-slate-900 border border-slate-700 rounded-md px-3 py-2 text-sm text-white"
                                                 />
-                                                <button
-                                                    onClick={checkOllamaConnection}
-                                                    className="px-4 bg-slate-800 text-white rounded-md text-xs font-medium hover:bg-slate-700"
-                                                >
-                                                    Refresh
-                                                </button>
+                                                <button onClick={checkOllamaConnection} className="px-4 bg-slate-800 text-white rounded-md text-xs font-medium hover:bg-slate-700">Check</button>
+                                            </div>
+
+                                            {ollamaModels.length > 0 && (
+                                                <div className="mt-3">
+                                                    <label className="text-xs text-slate-500 block mb-1">Active Model</label>
+                                                    <select
+                                                        value={settings.ai_provider.ollama_model}
+                                                        onChange={(e) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, ollama_model: e.target.value } })}
+                                                        className="w-full bg-slate-900 border border-slate-700 rounded-md px-3 py-2 text-sm text-white"
+                                                    >
+                                                        {ollamaModels.map(m => <option key={m} value={m}>{m}</option>)}
+                                                    </select>
+                                                </div>
+                                            )}
+                                            <div className="mt-3">
+                                                <label className="text-xs text-slate-500 block mb-1">Custom Model</label>
+                                                <div className="flex space-x-2">
+                                                    <input
+                                                        value={settings.ai_provider.ollama_model}
+                                                        onChange={(e) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, ollama_model: e.target.value } })}
+                                                        placeholder="Enter model name (e.g., llama2, mistral, codellama)"
+                                                        className="flex-1 bg-slate-900 border border-slate-700 rounded-md px-3 py-2 text-sm text-white placeholder:text-slate-600"
+                                                    />
+                                                    <button
+                                                        onClick={checkOllamaConnection}
+                                                        className="px-4 bg-slate-800 text-white rounded-md text-xs font-medium hover:bg-slate-700"
+                                                    >
+                                                        Refresh
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
+                                    )}
                                 </div>
 
 
+                            </div>
+                        </div>
+                    )}
+
+                    {/* LM Studio Config (Visible only if selected) */}
+                    {settings.ai_provider.mode === 'lm_studio' && (
+                        <div className="mt-4 p-4 bg-indigo-950/20 rounded-lg border border-indigo-500/30">
+                            <div className="flex items-center justify-between mb-3">
+                                <div className="flex items-center space-x-2">
+                                    <span className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse"></span>
+                                    <span className="text-sm font-bold text-indigo-300">LM Studio Configuration</span>
+                                </div>
+                                <a href="https://lmstudio.ai" target="_blank" rel="noreferrer" className="text-xs text-indigo-400 hover:text-white underline">
+                                    Download LM Studio
+                                </a>
+                            </div>
+
+                            <div className="space-y-3">
+                                <div>
+                                    <label className="text-xs text-slate-400 block mb-1">Local Server URL</label>
+                                    <input
+                                        value={settings.ai_provider.lm_studio_url || 'http://localhost:1234/v1'}
+                                        onChange={(e) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, lm_studio_url: e.target.value } })}
+                                        placeholder="http://localhost:1234/v1"
+                                        className="w-full bg-slate-900 border border-slate-700 rounded-md px-3 py-2 text-sm text-white font-mono"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-xs text-slate-400 block mb-1">Model ID (Optional)</label>
+                                    <input
+                                        value={settings.ai_provider.lm_studio_model || ''}
+                                        onChange={(e) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, lm_studio_model: e.target.value } })}
+                                        placeholder="Enter Model ID (Leave empty to use loaded model)"
+                                        className="w-full bg-slate-900 border border-slate-700 rounded-md px-3 py-2 text-sm text-white"
+                                    />
+                                    <p className="text-[10px] text-slate-500 mt-1">
+                                        Recommended for 8GB RAM: <b>BioMedLM-2.7B</b> or <b>LFM-2 2.6B</b>.
+                                    </p>
+                                </div>
+                                <button
+                                    onClick={() => handleTestKey('custom', 'lm-studio', 'llm', settings.ai_provider.lm_studio_url, settings.ai_provider.lm_studio_model)}
+                                    className="w-full bg-indigo-600 hover:bg-indigo-500 text-white rounded-md py-2 text-xs font-bold transition-colors"
+                                >
+                                    Test Connection
+                                </button>
                             </div>
                         </div>
                     )}

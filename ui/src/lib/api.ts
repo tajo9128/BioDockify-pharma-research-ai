@@ -64,6 +64,11 @@ export interface Settings {
     mode: 'auto' | 'ollama' | 'z-ai';
     ollama_url?: string;
     ollama_model?: string;
+
+    // LM Studio
+    lm_studio_url?: string;
+    lm_studio_model?: string;
+
     google_key?: string;
     huggingface_key?: string;
     openrouter_key?: string;

@@ -60,6 +60,13 @@ class LLMFactory:
             
             return OllamaAdapter(base_url=ollama_url, model=ollama_model)
             
+        elif provider == "lm_studio":
+            # LM Studio exposes an OpenAI-compatible API
+            lm_studio_url = getattr(config, 'lm_studio_url', 'http://localhost:1234/v1')
+            # Model name often doesn't matter for local single-model loaders, but we pass it if set
+            model = getattr(config, 'lm_studio_model', 'local-model')
+            return CustomAdapter(api_key="lm-studio", base_url=lm_studio_url, model=model)
+
         return None
     
     @staticmethod
