@@ -1,5 +1,6 @@
-; BioDockify Professional Installer Script
+; BioDockify Minimal Installer Script
 ; Uses NSIS Modern User Interface (MUI2)
+; This version can be built without requiring actual binaries
 
 !include "MUI2.nsh"
 !include "LogicLib.nsh"
@@ -12,7 +13,7 @@
   !define PRODUCT_VERSION "2.16.5"
   !define PRODUCT_PUBLISHER "BioDockify AI"
   Name "${PRODUCT_NAME}"
-  OutFile "BioDockify_Setup_v2.16.5.exe"
+  OutFile "BioDockify_Setup_v${PRODUCT_VERSION}.exe"
   
   ; safe install directory
   InstallDir "$PROGRAMFILES64\${APPNAME}"
@@ -44,8 +45,6 @@
   !insertmacro MUI_UNPAGE_INSTFILES
   
   !insertmacro MUI_LANGUAGE "English"
-
-  ; ... (header omitted)
 
 Section "Prerequisites" SecPrereq
   DetailPrint "Checking for Docker Desktop..."
@@ -98,13 +97,13 @@ Section "Install Files" SecInstall
 
   SetOutPath "$INSTDIR"
   
-  ; Install the Main Application Binary
+  ; Install the Main Application Binary (nonfatal - allows build without binary)
   File /nonfatal "..\desktop\tauri\src-tauri\target\release\BioDockify.exe"
   
-  ; Install the Sidecar (AI Engine) - Path matches release.yml "Prepare Tauri Binaries" step
+  ; Install the Sidecar (AI Engine) - Path matches release.yml "Prepare Tauri Binaries" step (nonfatal)
   File /nonfatal "..\desktop\tauri\src-tauri\biodockify-engine-x86_64-pc-windows-msvc.exe"
   
-  ; Install README
+  ; Install README (nonfatal)
   File /nonfatal "..\README.txt"
   
   ; Create Structure Directories
@@ -118,18 +117,21 @@ Section "Install Files" SecInstall
   ; Create uninstaller
   WriteUninstaller "$INSTDIR\Uninstall.exe"
 
-  ; Create Shortcuts
-  CreateDirectory "$SMPROGRAMS\BioDockify"
-  CreateShortcut "$SMPROGRAMS\BioDockify\BioDockify AI.lnk" "$INSTDIR\BioDockify.exe"
-  CreateShortcut "$SMPROGRAMS\BioDockify\Uninstall.lnk" "$INSTDIR\Uninstall.exe"
-  
-  ; Auto-Start on System Boot
-  CreateShortcut "$SMSTARTUP\BioDockify AI.lnk" "$INSTDIR\BioDockify.exe"
+  ; Create Shortcuts (only if BioDockify.exe was installed)
+  IfFileExists "$INSTDIR\BioDockify.exe" 0 +2
+    CreateDirectory "$SMPROGRAMS\BioDockify"
+    CreateShortcut "$SMPROGRAMS\BioDockify\BioDockify AI.lnk" "$INSTDIR\BioDockify.exe"
+    CreateShortcut "$SMPROGRAMS\BioDockify\Uninstall.lnk" "$INSTDIR\Uninstall.exe"
+    
+    ; Auto-Start on System Boot
+    CreateShortcut "$SMSTARTUP\BioDockify AI.lnk" "$INSTDIR\BioDockify.exe"
   
 SectionEnd
 
 Section "Desktop Shortcut" SecDesktop
-  CreateShortcut "$DESKTOP\BioDockify AI.lnk" "$INSTDIR\BioDockify.exe"
+  ; Only create desktop shortcut if BioDockify.exe exists
+  IfFileExists "$INSTDIR\BioDockify.exe" 0 +1
+    CreateShortcut "$DESKTOP\BioDockify AI.lnk" "$INSTDIR\BioDockify.exe"
 SectionEnd
 
 
