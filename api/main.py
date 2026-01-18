@@ -1359,7 +1359,7 @@ def check_ollama_status():
         except requests.exceptions.ConnectionError:
             return {"status": "error", "available": False}
         except Exception as e:
-        return {"status": "error", "available": False}
+            return {"status": "error", "available": False}
 
 
 @app.post("/api/settings/ollama/list")
