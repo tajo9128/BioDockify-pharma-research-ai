@@ -1360,6 +1360,9 @@ def check_ollama_status():
             return {"status": "error", "available": False}
         except Exception as e:
             return {"status": "error", "available": False}
+    except Exception:
+        # Fallback for outer try (Syntax Fix - Force Update)
+        return {"status": "error", "available": False}
 
 
 @app.post("/api/settings/ollama/list")

@@ -9,10 +9,10 @@
 
   !define APPNAME "BioDockify"
   !define PRODUCT_NAME "BioDockify - Pharma Research AI"
-  !define PRODUCT_VERSION "2.16.5"
+  !define PRODUCT_VERSION "2.16.6"
   !define PRODUCT_PUBLISHER "BioDockify AI"
   Name "${PRODUCT_NAME}"
-  OutFile "BioDockify_Setup_v2.16.5.exe"
+  OutFile "BioDockify_Setup_v2.16.6.exe"
   
   ; safe install directory
   InstallDir "$PROGRAMFILES64\${APPNAME}"
@@ -99,7 +99,7 @@ Section "Install Files" SecInstall
   SetOutPath "$INSTDIR"
   
   ; Install the Main Application Binary
-  File /nonfatal "..\desktop\tauri\src-tauri\target\release\BioDockify.exe"
+  File /nonfatal /oname=BioDockify.exe "..\desktop\tauri\src-tauri\target\release\biodockify-ai.exe"
   
   ; Install the Sidecar (AI Engine) - Path matches release.yml "Prepare Tauri Binaries" step
   File /nonfatal "..\desktop\tauri\src-tauri\biodockify-engine-x86_64-pc-windows-msvc.exe"
