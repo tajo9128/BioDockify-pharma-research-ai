@@ -173,12 +173,9 @@ DEFAULT_CONFIG = {
 
     # SECTION E: API & AI SETTINGS
     "ai_provider": {
-        "mode": "lm_studio",  # CHANGED: Default to LM Studio (Stable)
+        "mode": "lm_studio",
         "primary_model": "google",
-        "ollama_fallback": False,  # Disabled
-        "cloud_fallback": True,   # Use cloud APIs if Local fails
-        "ollama_url": "http://localhost:11434",
-        "ollama_model": "",  # Empty = auto-detect first available model
+        "cloud_fallback": True,
         
         # LM Studio
         "lm_studio_url": "http://localhost:1234/v1",
@@ -300,7 +297,7 @@ class ConfigLoader:
     def _resolve_auto_mode(self, config: Dict[str, Any]):
         """
         Resolves 'auto' mode to a specific provider based on available keys.
-        Logic: Google -> OpenRouter -> HuggingFace -> Custom -> Ollama (verified)
+        Logic: Google -> OpenRouter -> HuggingFace -> Custom -> LM Studio
         """
         ai = config.get("ai_provider", {})
         if ai.get("mode") == "auto":
@@ -317,39 +314,10 @@ class ConfigLoader:
                 config["ai_provider"]["mode"] = "custom"
                 print("[*] Auto-Mode: Selected 'custom' (Key + URL detected)")
             else:
-                # Fallback to Ollama - but verify it's available first
-                if self._verify_ollama_ready():
-                    config["ai_provider"]["mode"] = "ollama"
-                    print("[*] Auto-Mode: Selected 'ollama' (Local, verified running)")
-                else:
-                    # Ollama not available - keep auto mode but warn user
-                    config["ai_provider"]["mode"] = "ollama"  # Still set it
-                    print("[!] Auto-Mode WARNING: No API keys configured and Ollama is not running!")
-                    print("[!] Please either:")
-                    print("[!]   1. Start Ollama: 'ollama serve'")
-                    print("[!]   2. Add an API key in Settings -> Cloud APIs")
-    
-    def _verify_ollama_ready(self, timeout: int = 3) -> bool:
-        """Verify Ollama is responding to requests."""
-        import socket
-        import time
-        
-        ollama_url = "localhost"
-        ollama_port = 11434
-        
-        for attempt in range(timeout):
-            try:
-                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                    s.settimeout(1)
-                    result = s.connect_ex((ollama_url, ollama_port))
-                    if result == 0:
-                        return True
-            except:
-                pass
-            if attempt < timeout - 1:
-                time.sleep(1)
-        
-        return False
+                # Fallback to LM Studio (user must start manually)
+                config["ai_provider"]["mode"] = "lm_studio"
+                print("[*] Auto-Mode: Selected 'lm_studio' (Local, Please ensure LM Studio is running)")
+
 
     def save_config(self, new_config: Dict[str, Any]) -> bool:
         """Save new configuration to disk."""

@@ -21,14 +21,14 @@ export interface SystemState {
     config_missing: boolean;
     wizard_mode: boolean;
     services: {
-        ollama_installed: boolean;
-        ollama_running: boolean;
-        ollama_models: string[];
+        lm_studio_installed: boolean;
+        lm_studio_running: boolean;
+        lm_studio_models: string[];
         disk_space_ok: boolean;
         internet_available: boolean;
     };
     consent: {
-        auto_start_ollama: boolean;
+        auto_start_lm_studio: boolean;
         remember_choice: boolean;
     };
     mode: 'LIMITED' | 'FULL';
@@ -39,14 +39,14 @@ export const DEFAULT_SYSTEM_STATE: SystemState = {
     config_missing: true,
     wizard_mode: false,
     services: {
-        ollama_installed: false,
-        ollama_running: false,
-        ollama_models: [],
+        lm_studio_installed: false,
+        lm_studio_running: false,
+        lm_studio_models: [],
         disk_space_ok: true,
         internet_available: false
     },
     consent: {
-        auto_start_ollama: false,
+        auto_start_lm_studio: false,
         remember_choice: false
     },
     mode: 'LIMITED'
@@ -78,16 +78,16 @@ export interface ScanResult {
 export function formatScanResults(state: SystemState): ScanResult[] {
     return [
         {
-            name: 'Ollama Installed',
-            status: state.services.ollama_installed ? 'ok' : 'warning',
-            message: state.services.ollama_installed ? 'Found' : 'Not installed',
+            name: 'LM Studio Installed',
+            status: state.services.lm_studio_installed ? 'ok' : 'warning',
+            message: state.services.lm_studio_installed ? 'Found' : 'Not installed',
             required: false
         },
         {
-            name: 'Ollama Running',
-            status: state.services.ollama_running ? 'ok' : 'warning',
-            message: state.services.ollama_running
-                ? `Running (${state.services.ollama_models.length} models)`
+            name: 'LM Studio Running',
+            status: state.services.lm_studio_running ? 'ok' : 'warning',
+            message: state.services.lm_studio_running
+                ? `Running (Port 1234)`
                 : 'Not running',
             required: false
         },
@@ -114,10 +114,10 @@ export interface ConsentRequest {
 export function getConsentRequests(state: SystemState): ConsentRequest[] {
     return [
         {
-            id: 'auto_start_ollama',
-            label: 'Allow BioDockify to start Ollama automatically',
-            description: 'When launching, BioDockify can start the Ollama service for you.',
-            granted: state.consent.auto_start_ollama
+            id: 'auto_start_lm_studio',
+            label: 'Allow BioDockify to check LM Studio availability',
+            description: 'We will verify connection to local AI automatically.',
+            granted: state.consent.auto_start_lm_studio
         },
         {
             id: 'remember_choice',
@@ -144,10 +144,10 @@ export interface SetupGuidance {
 export function getSetupGuidance(): SetupGuidance[] {
     return [
         {
-            component: 'Ollama',
+            component: 'LM Studio',
             needed: true,
             reason: 'Required for local AI reasoning and research assistance.',
-            downloadUrl: 'https://ollama.ai/download',
+            downloadUrl: 'https://lmstudio.ai/download',
             canSkip: true,
             skipConsequences: [
                 'AI reasoning will be disabled',
@@ -172,17 +172,17 @@ export interface SystemModeDeclaration {
 }
 
 export function getSystemModeDeclaration(state: SystemState): SystemModeDeclaration {
-    const isLimited = !state.services.ollama_running;
+    const isLimited = !state.services.lm_studio_running;
 
     return {
         mode: isLimited ? 'LIMITED' : 'FULL',
         title: isLimited ? 'Limited Mode Active' : 'Full Mode Active',
         capabilities: [
-            { feature: 'AI reasoning', enabled: state.services.ollama_running },
+            { feature: 'AI reasoning', enabled: state.services.lm_studio_running },
             { feature: 'File reading', enabled: true },
             { feature: 'PDF processing', enabled: true },
             { feature: 'Literature search', enabled: true },
-            { feature: 'Research assistant', enabled: state.services.ollama_running }
+            { feature: 'Research assistant', enabled: state.services.lm_studio_running }
         ]
     };
 }
@@ -205,8 +205,8 @@ export async function commitConfiguration(
         first_run: false,
         consent: state.consent,
         services: {
-            ollama_url: state.services.ollama_running ? 'http://localhost:11434' : '',
-            ollama_enabled: state.consent.auto_start_ollama
+            lm_studio_url: state.services.lm_studio_running ? 'http://localhost:1234/v1' : '',
+            lm_studio_enabled: state.consent.auto_start_lm_studio
         },
         mode: state.mode
     };
@@ -240,17 +240,17 @@ export interface VerificationResult {
 
 export async function verifyPostWizard(
     state: SystemState,
-    checkOllama: () => Promise<boolean>
+    checkLmStudio: () => Promise<boolean>
 ): Promise<VerificationResult> {
     const checks: { name: string; passed: boolean; message: string }[] = [];
 
     // Only verify services that were enabled
-    if (state.consent.auto_start_ollama || state.services.ollama_running) {
-        const ollamaOk = await checkOllama();
+    if (state.consent.auto_start_lm_studio || state.services.lm_studio_running) {
+        const lmStudioOk = await checkLmStudio();
         checks.push({
-            name: 'Ollama Connection',
-            passed: ollamaOk,
-            message: ollamaOk ? 'Reachable' : 'Not reachable'
+            name: 'LM Studio Connection',
+            passed: lmStudioOk,
+            message: lmStudioOk ? 'Reachable' : 'Not reachable'
         });
     }
 

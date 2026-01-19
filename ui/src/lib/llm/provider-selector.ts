@@ -4,7 +4,7 @@
  */
 
 import { LLMProvider, Message, CompleteOptions, ChatOptions, ProviderConfig, LLMError, ProviderUnavailableError } from './base-provider';
-import { getOllamaProvider, OllamaProvider } from './ollama-provider';
+
 import { getZAIProvider, ZAIProvider } from './z-ai-provider';
 
 export interface ProviderSelectorConfig {
@@ -23,16 +23,7 @@ export class ProviderSelector {
     this.preferredProvider = config.preferredProvider || null;
 
     // Register default providers
-    this.registerProvider(
-      new OllamaProvider(),
-      {
-        name: 'ollama',
-        type: 'local',
-        enabled: true,
-        priority: 1, // Local first (highest priority)
-        defaultModel: 'llama2'
-      }
-    );
+
 
     this.registerProvider(
       new ZAIProvider(),

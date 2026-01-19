@@ -98,12 +98,10 @@ export class SystemController {
 
             this.setState({
                 services: {
-                    ollama_installed: detected.ollama,
-                    ollama_running: detected.ollama,
-                    ollama_models: detected.ollamaModels || [],
-                    neo4j_installed: detected.neo4j,
-                    neo4j_running: detected.neo4j,
-                    disk_space_ok: true, // TODO: Implement disk space check
+                    lm_studio_installed: detected.lm_studio,
+                    lm_studio_running: detected.lm_studio,
+                    lm_studio_models: [], // LM Studio models are dynamic
+                    disk_space_ok: true,
                     internet_available: detected.backend
                 }
             });
@@ -147,12 +145,10 @@ export class SystemController {
 
         // Filter by what's actually needed
         return guidance.filter(g => {
-            if (g.component === 'Ollama') {
-                return !this.state.services.ollama_running;
+            if (g.component === 'LM Studio') {
+                return !this.state.services.lm_studio_running;
             }
-            if (g.component === 'Neo4j') {
-                return !this.state.services.neo4j_running;
-            }
+
             return true;
         });
     }
@@ -204,7 +200,7 @@ export class SystemController {
             this.setState({
                 first_run: false,
                 config_missing: false,
-                mode: this.state.services.ollama_running ? 'FULL' : 'LIMITED'
+                mode: this.state.services.lm_studio_running ? 'FULL' : 'LIMITED'
             });
         }
 
@@ -219,15 +215,11 @@ export class SystemController {
         return verifyPostWizard(
             this.state,
             async () => {
-                // Check Ollama
+                // Check LM Studio
                 const detected = await detectAllServices();
-                return detected.ollama;
-            },
-            async () => {
-                // Check Neo4j
-                const detected = await detectAllServices();
-                return detected.neo4j;
+                return detected.lm_studio;
             }
+
         );
     }
 

@@ -29,10 +29,10 @@ export default function FirstRunWizard({ onComplete }: WizardProps) {
     const [detectedServices, setDetectedServices] = useState<DetectedServices | null>(null);
 
     const [researchStatus, setResearchStatus] = useState<{
-        ollama: 'pending' | 'success' | 'warning';
+        lm_studio: 'pending' | 'success' | 'warning';
         pdf: 'success'; // Assumed
         export: 'success'; // Assumed
-    }>({ ollama: 'pending', pdf: 'success', export: 'success' });
+    }>({ lm_studio: 'pending', pdf: 'success', export: 'success' });
 
     // Step 1: System Checks (Auto-run when entering step 1)
     useEffect(() => {
@@ -43,7 +43,7 @@ export default function FirstRunWizard({ onComplete }: WizardProps) {
 
     // Step 2: Research Checks (Auto-run when entering step 2)
     useEffect(() => {
-        if (step === 2 && researchStatus.ollama === 'pending') {
+        if (step === 2 && researchStatus.lm_studio === 'pending') {
             runResearchChecks();
         }
     }, [step]);
@@ -77,7 +77,7 @@ export default function FirstRunWizard({ onComplete }: WizardProps) {
 
             setResearchStatus(prev => ({
                 ...prev,
-                ollama: detected.ollama ? 'success' : 'warning'
+                lm_studio: detected.lm_studio ? 'success' : 'warning'
             }));
 
             console.log('[FirstRunWizard] Detection complete:', detected);
@@ -85,7 +85,7 @@ export default function FirstRunWizard({ onComplete }: WizardProps) {
             console.error('[FirstRunWizard] Service detection failed:', e);
             setResearchStatus(prev => ({
                 ...prev,
-                ollama: 'warning'
+                lm_studio: 'warning'
             }));
         }
 
@@ -188,7 +188,7 @@ export default function FirstRunWizard({ onComplete }: WizardProps) {
                             <div className="space-y-3">
                                 <CheckItem label="Research Editor" status="success" />
                                 <CheckItem label="PDF Processing Engine" status="success" />
-                                <CheckItem label="Ollama (Local AI)" status={researchStatus.ollama === 'pending' ? 'checking' : researchStatus.ollama} />
+                                <CheckItem label="LM Studio (Local AI)" status={researchStatus.lm_studio === 'pending' ? 'checking' : researchStatus.lm_studio} />
                             </div>
                         </div>
                     )}
@@ -210,10 +210,10 @@ export default function FirstRunWizard({ onComplete }: WizardProps) {
                                     <Check className="w-5 h-5" />
                                     <span className="font-medium">Document Engine Ready</span>
                                 </div>
-                                {researchStatus.ollama === 'warning' && (
+                                {researchStatus.lm_studio === 'warning' && (
                                     <div className="flex items-center space-x-3 text-amber-500">
                                         <Brain className="w-5 h-5" />
-                                        <span className="font-medium">AI Assistant (Optional setup required)</span>
+                                        <span className="font-medium">AI Assistant (LM Studio not detected)</span>
                                     </div>
                                 )}
                             </div>

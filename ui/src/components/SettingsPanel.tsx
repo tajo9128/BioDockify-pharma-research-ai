@@ -65,9 +65,8 @@ export default function SettingsPanel() {
         literature: { sources: ['pubmed'], enable_crossref: true, enable_preprints: false, year_range: 5, novelty_strictness: 'medium' },
         system: { auto_start: false, minimize_to_tray: true, pause_on_battery: true, max_cpu_percent: 80, internet_research: true }, // DEFAULT TRUE
         ai_provider: {
-            mode: 'ollama',
-            ollama_url: 'http://localhost:11434',
-            ollama_model: '',
+            mode: 'lm_studio',
+
 
             // LM Studio
             lm_studio_url: 'http://localhost:1234/v1',
@@ -106,6 +105,7 @@ export default function SettingsPanel() {
 
     const [ollamaStatus, setOllamaStatus] = useState<'unknown' | 'success' | 'error'>('unknown');
     const [ollamaModels, setOllamaModels] = useState<string[]>([]);
+
     const [connectionMsg, setConnectionMsg] = useState('');
 
     // API Test Status Tracking
@@ -155,25 +155,7 @@ export default function SettingsPanel() {
         }
     };
 
-    const checkOllamaConnection = async () => {
-        if (!settings.ai_provider.ollama_url) return;
-        setConnectionMsg('Pinging...');
-        setOllamaStatus('unknown');
-        try {
-            const res = await api.checkOllama(settings.ai_provider.ollama_url);
-            if (res.status === 'success') {
-                setOllamaStatus('success');
-                setOllamaModels(res.models || []);
-                setConnectionMsg('Online');
-            } else {
-                setOllamaStatus('error');
-                setConnectionMsg(res.message || 'Error');
-            }
-        } catch (e: any) {
-            setOllamaStatus('error');
-            setConnectionMsg(e.message || 'Failed to connect');
-        }
-    };
+
 
     const handleTestKey = async (provider: string, key?: string, serviceType: 'llm' | 'elsevier' = 'llm', baseUrl?: string, model?: string) => {
         console.log('[DEBUG] handleTestKey called with:', { provider, key: key ? '***' : 'missing', serviceType, baseUrl, model });
@@ -326,61 +308,12 @@ export default function SettingsPanel() {
                                         >
                                             <option value="auto">Auto (Local First, Cloud Fallback)</option>
                                             <option value="lm_studio">Local - LM Studio (Primary)</option>
-                                            <option value="ollama">Local - Ollama (Legacy)</option>
                                             <option value="z-ai">Cloud Only (GLM/Google/OpenRouter)</option>
+
                                         </select>
                                     </div>
 
-                                    {/* Ollama Config (Legacy) */}
-                                    {settings.ai_provider.mode === 'ollama' && (
-                                        <div className="p-4 bg-slate-950 rounded-lg border border-slate-800 opacity-75">
-                                            <div className="flex items-center justify-between mb-2">
-                                                <span className="text-sm font-medium text-slate-300">Ollama (Legacy)</span>
-                                                <div className="flex items-center space-x-2">
-                                                    <span className={`w-2 h-2 rounded-full ${ollamaStatus === 'success' ? 'bg-green-500' : ollamaStatus === 'error' ? 'bg-red-500' : 'bg-slate-500'}`} />
-                                                    <span className="text-xs text-slate-500">{connectionMsg || 'Unknown'}</span>
-                                                </div>
-                                            </div>
-                                            <div className="flex space-x-2">
-                                                <input
-                                                    value={settings.ai_provider.ollama_url}
-                                                    onChange={(e) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, ollama_url: e.target.value } })}
-                                                    className="flex-1 bg-slate-900 border border-slate-700 rounded-md px-3 py-2 text-sm text-white"
-                                                />
-                                                <button onClick={checkOllamaConnection} className="px-4 bg-slate-800 text-white rounded-md text-xs font-medium hover:bg-slate-700">Check</button>
-                                            </div>
-
-                                            {ollamaModels.length > 0 && (
-                                                <div className="mt-3">
-                                                    <label className="text-xs text-slate-500 block mb-1">Active Model</label>
-                                                    <select
-                                                        value={settings.ai_provider.ollama_model}
-                                                        onChange={(e) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, ollama_model: e.target.value } })}
-                                                        className="w-full bg-slate-900 border border-slate-700 rounded-md px-3 py-2 text-sm text-white"
-                                                    >
-                                                        {ollamaModels.map(m => <option key={m} value={m}>{m}</option>)}
-                                                    </select>
-                                                </div>
-                                            )}
-                                            <div className="mt-3">
-                                                <label className="text-xs text-slate-500 block mb-1">Custom Model</label>
-                                                <div className="flex space-x-2">
-                                                    <input
-                                                        value={settings.ai_provider.ollama_model}
-                                                        onChange={(e) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, ollama_model: e.target.value } })}
-                                                        placeholder="Enter model name (e.g., llama2, mistral, codellama)"
-                                                        className="flex-1 bg-slate-900 border border-slate-700 rounded-md px-3 py-2 text-sm text-white placeholder:text-slate-600"
-                                                    />
-                                                    <button
-                                                        onClick={checkOllamaConnection}
-                                                        className="px-4 bg-slate-800 text-white rounded-md text-xs font-medium hover:bg-slate-700"
-                                                    >
-                                                        Refresh
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    )}
+                                    {/* Ollama Config (Legacy) - Removed */}
                                 </div>
 
 

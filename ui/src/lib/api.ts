@@ -61,9 +61,7 @@ export interface Settings {
     novelty_strictness: 'low' | 'medium' | 'high';
   };
   ai_provider: {
-    mode: 'auto' | 'ollama' | 'z-ai';
-    ollama_url?: string;
-    ollama_model?: string;
+    mode: 'auto' | 'lm_studio' | 'z-ai';
 
     // LM Studio
     lm_studio_url?: string;
@@ -242,21 +240,7 @@ export const api = {
       body: JSON.stringify({ service_type: serviceType, provider, key, base_url: baseUrl, model })
     }),
 
-  checkOllama: (baseUrl: string) =>
-    apiRequest<{ status: string; models: string[]; message?: string }>('/settings/ollama/check', {
-      method: 'POST',
-      body: JSON.stringify({ base_url: baseUrl })
-    }),
 
-  checkOllamaStatus: () =>
-    apiRequest<{ status: string; available: boolean }>('/settings/ollama/status', {
-      method: 'POST'
-    }),
-
-  listOllamaModels: () =>
-    apiRequest<{ status: string; models: string[]; message?: string }>('/settings/ollama/list', {
-      method: 'POST'
-    }),
 
   checkNeo4j: (uri: string, user: string, password: string) =>
     apiRequest<{ status: string; message: string }>('/settings/neo4j/check', {

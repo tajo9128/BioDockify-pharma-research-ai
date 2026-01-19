@@ -1,6 +1,6 @@
 /**
  * LLM Provider Interface
- * Base interface for all LLM providers (Ollama, z-ai, etc.)
+ * Base interface for all LLM providers (LM Studio, z-ai, etc.)
  */
 
 export interface Message {

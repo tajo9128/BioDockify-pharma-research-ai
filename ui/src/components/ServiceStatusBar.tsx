@@ -59,8 +59,9 @@ export default function ServiceStatusBar({ compact = false, showLabels = true }:
 
     const getServiceIcon = (name: string) => {
         switch (name.toLowerCase()) {
-            case 'ollama':
-                return <Brain className="w-4 h-4" />;
+            case 'lm studio':
+            case 'lm_studio':
+                return <Brain className="w-4 h-4 text-purple-400" />;
             case 'surfsense':
                 return <Database className="w-4 h-4 text-indigo-400" />;
             case 'backend api':

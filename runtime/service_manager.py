@@ -10,6 +10,8 @@ from typing import List, Optional
 logger = logging.getLogger("biodockify_services")
 
 class ServiceManager:
+    """Manages background services for BioDockify."""
+    
     def __init__(self, config: dict):
         self.config = config
         self.processes: List[subprocess.Popen] = []
@@ -20,105 +22,13 @@ class ServiceManager:
         if self.is_windows:
             startupinfo = subprocess.STARTUPINFO()
             startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-            # CREATE_NO_WINDOW = 0x08000000
-            creationflags = 0x08000000 
+            creationflags = 0x08000000  # CREATE_NO_WINDOW
             return startupinfo, creationflags
         return None, 0
-
-    def _is_ollama_installed(self) -> bool:
-        """Check if Ollama executable is available in PATH."""
-        try:
-            if self.is_windows:
-                result = subprocess.run(
-                    ["where", "ollama"], 
-                    capture_output=True, 
-                    timeout=5
-                )
-            else:
-                result = subprocess.run(
-                    ["which", "ollama"], 
-                    capture_output=True, 
-                    timeout=5
-                )
-            return result.returncode == 0
-        except Exception:
-            return False
-
-    def start_ollama(self) -> bool:
-        """Starts Ollama in 'serve' mode with proper validation and error handling."""
-        try:
-            # Check if already running
-            if self.check_health("ollama") == "running":
-                logger.info("✓ Ollama is already running.")
-                return True
-            
-            # Check if Ollama is installed
-            if not self._is_ollama_installed():
-                logger.error("✗ Ollama not found in PATH. Please install Ollama from https://ollama.ai")
-                return False
-            
-            logger.info("Starting Ollama service...")
-            
-            startupinfo, flags = self._get_startup_flags()
-            
-            # Use shlex for proper command splitting on non-Windows
-            if self.is_windows:
-                cmd = ["ollama", "serve"]
-            else:
-                cmd = "ollama serve"
-            
-            # Capture stderr for debugging, but still run in background
-            log_file = Path.home() / ".biodockify" / "logs" / "ollama.log"
-            log_file.parent.mkdir(parents=True, exist_ok=True)
-            
-            with open(log_file, 'a') as log_handle:
-                proc = subprocess.Popen(
-                    cmd,
-                    shell=not self.is_windows,  # shell=True on Linux/Mac, shell=False on Windows
-                    startupinfo=startupinfo,
-                    creationflags=flags,
-                    stdout=log_handle,
-                    stderr=subprocess.STDOUT
-                )
-                self.processes.append(proc)
-            
-            # Wait and verify it started with exponential backoff
-            max_retries = 5
-            base_delay = 2  # Start with 2 seconds
-            
-            for attempt in range(max_retries):
-                delay = base_delay * (1.5 ** attempt)  # 2, 3, 4.5, 6.75, 10.1 seconds
-                logger.info(f"Waiting {delay:.1f}s for Ollama startup (attempt {attempt + 1}/{max_retries})...")
-                time.sleep(delay)
-                
-                if self.check_health("ollama") == "running":
-                    logger.info("✓ Ollama started successfully")
-                    return True
-                
-                if attempt < max_retries - 1:
-                    logger.warning(f"Ollama not ready yet, retrying...")
-            
-            # All retries failed - try to read error from log
-            try:
-                with open(log_file, 'r') as f:
-                    recent_logs = f.read()[-500:]  # Last 500 chars
-                    logger.error(f"✗ Ollama failed to start after {max_retries} attempts. Recent logs:\n{recent_logs}")
-            except:
-                logger.error(f"✗ Ollama failed to start after {max_retries} attempts. Check ~/.biodockify/logs/ollama.log")
-            return False
-                
-        except FileNotFoundError:
-            logger.error("✗ Ollama executable not found in PATH. Install from https://ollama.ai")
-            return False
-        except Exception as e:
-            logger.error(f"✗ Failed to start Ollama: {e}")
-            return False
-
 
     def start_surfsense(self):
         """Starts SurfSense via Docker Compose."""
         try:
-            # Assume we are in root, need to point to module
             compose_file = Path("modules/surfsense/docker-compose.yml")
             if not compose_file.exists():
                 logger.warning("SurfSense docker-compose.yml not found.")
@@ -137,9 +47,7 @@ class ServiceManager:
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL
             )
-            # Docker compose up returns, no need to keep proc in list unless tracking logs
-            # Actually better to just run it and forget, or check status later.
-            proc.wait() 
+            proc.wait()
             logger.info("SurfSense initiated (Docker).")
             
         except Exception as e:
@@ -150,26 +58,21 @@ class ServiceManager:
         logger.info(f"Stopping {len(self.processes)} background services...")
         for proc in self.processes:
             try:
-                # Graceful termination first
                 proc.terminate()
                 try:
                     proc.wait(timeout=3)
                 except subprocess.TimeoutExpired:
-                    proc.kill() # Force kill
+                    proc.kill()
             except Exception as e:
                 logger.error(f"Error stopping process {proc.pid}: {e}")
         self.processes.clear()
 
-    # === SERVICE WATCHDOG (Phase 19) ===
-    
-    # === SERVICE WATCHDOG (Phase 19) ===
-    
     def check_health(self, service_name: str) -> str:
         """Check the health status of a service."""
         import socket
         
         ports = {
-            "lm_studio": 1234,  # Changed default check to LM Studio
+            "lm_studio": 1234,
             "surfsense": 3003,
             "api": 8000
         }
@@ -181,37 +84,30 @@ class ServiceManager:
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                 s.settimeout(5)
-                # Ensure we check localhost
                 result = s.connect_ex(("127.0.0.1", port))
                 return "running" if result == 0 else "stopped"
         except Exception as e:
             logger.error(f"Health check failed for {service_name}: {e}")
             return "error"
 
-    def ensure_ollama(self) -> bool:
-        """Deprecated: Ollama is no longer the primary local engine."""
-        # We now rely on LM Studio (Manual Start)
-        logger.info("Skipping Ollama start (Using LM Studio).")
-        return True
-
     def attempt_repair(self, service_name: str) -> dict:
         """Attempt to repair a stopped service."""
-        if service_name == "ollama":
-            success = self.ensure_ollama()
-            return {
-                "service": service_name,
-                "action": "restart_attempted",
-                "success": success
-            }
-        elif service_name == "surfsense":
+        if service_name == "surfsense":
             self.start_surfsense()
-            import time
             time.sleep(3)
             status = self.check_health("surfsense")
             return {
                 "service": service_name,
                 "action": "restart_attempted",
                 "success": status == "running"
+            }
+        elif service_name == "lm_studio":
+            # LM Studio is user-managed, we just report status
+            return {
+                "service": service_name,
+                "action": "manual_start_required",
+                "success": False,
+                "message": "Please start LM Studio manually from https://lmstudio.ai"
             }
         else:
             return {

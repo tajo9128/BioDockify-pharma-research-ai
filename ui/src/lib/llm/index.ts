@@ -6,7 +6,7 @@
 export * from './base-provider';
 
 // Provider implementations
-export { OllamaProvider, getOllamaProvider } from './ollama-provider';
+
 export { ZAIProvider, getZAIProvider } from './z-ai-provider';
 
 // Provider selector

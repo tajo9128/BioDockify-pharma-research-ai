@@ -18,11 +18,11 @@ from typing import Dict, Any, Callable
 logger = logging.getLogger(__name__)
 
 class HealthMonitor:
-    def __init__(self, ollama_url: str = "http://localhost:11434"):
-        self.ollama_url = ollama_url
+    def __init__(self, check_url: str = "http://localhost:1234/v1/models"):
+        self.check_url = check_url
         self.running = False
         self.status = {
-            "ollama_connected": False,
+            "local_ai_connected": False,
             "on_battery": False,
             "battery_percent": 100,
             "paused_by_system": False
@@ -55,24 +55,24 @@ class HealthMonitor:
 
     def _monitor_loop(self):
         while self.running:
-            self._check_ollama()
+            self._check_local_ai()
             self._check_battery()
             time.sleep(60) # Check every minute
 
-    def _check_ollama(self):
+    def _check_local_ai(self):
         try:
-            prev_status = self.status["ollama_connected"]
-            # Just a fast ping
-            requests.get(self.ollama_url, timeout=2)
-            self.status["ollama_connected"] = True
+            prev_status = self.status["local_ai_connected"]
+            # Just a fast ping to LM Studio
+            requests.get(self.check_url, timeout=2)
+            self.status["local_ai_connected"] = True
             
             if not prev_status:
-                logger.info("Ollama connection restored.")
+                logger.info("Local AI (LM Studio) connection restored.")
                 
         except requests.ConnectionError:
-            if self.status["ollama_connected"]:
-                logger.warning("Ollama connection lost!")
-            self.status["ollama_connected"] = False
+            if self.status["local_ai_connected"]:
+                logger.warning("Local AI (LM Studio) connection lost!")
+            self.status["local_ai_connected"] = False
 
     def _check_battery(self):
         try:

@@ -134,6 +134,30 @@ class CustomAdapter(BaseLLMAdapter):
         except Exception as e:
             raise ValueError(f"Custom API Error: {e}")
 
+class LMStudioAdapter(CustomAdapter):
+    """
+    Dedicated Adapter for LM Studio Local Inference.
+    Assumes an OpenAI-compatible endpoint running locally.
+    Default Port: 1234
+    """
+    
+    def __init__(self, base_url: str = "http://localhost:1234/v1", model: str = "local-model"):
+        # LM Studio doesn't strictly require an API Key, but we pass "lm-studio" for compatibility
+        super().__init__(api_key="lm-studio", base_url=base_url, model=model)
+
+    def generate(self, prompt: str, **kwargs) -> str:
+        try:
+            return super().generate(prompt, **kwargs)
+        except ValueError as e:
+            # Enhance error message with LM Studio specific guidance
+            msg = str(e)
+            if "Connection" in msg or "refused" in msg:
+                raise ValueError(
+                    f"LM Studio Connection Failed: Could not connect to {self.base_url}. "
+                    "Please ensure LM Studio is running and the 'Local Server' is started."
+                )
+            raise e
+
 class ZhipuAdapter(BaseLLMAdapter):
     """Adapter for Zhipu AI (GLM-4)."""
     
