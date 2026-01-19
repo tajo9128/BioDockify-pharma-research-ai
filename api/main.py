@@ -1170,18 +1170,25 @@ def test_connection_endpoint(request: TestRequest):
     """
     Test connection to external services with provided credentials.
     """
+    logger.info(f"[DEBUG] test_connection_endpoint called with: service_type={request.service_type}, provider={request.provider}, has_key={bool(request.key)}, base_url={request.base_url}, model={request.model}")
+
     if request.service_type == "llm":
         if not request.key:
+             logger.warning("[DEBUG] API Key is missing")
              return {"status": "error", "message": "API Key is missing"}
 
         import requests
         provider = request.provider
-        
+        logger.info(f"[DEBUG] Testing LLM provider: {provider}")
+
         try:
             if provider == "google":
                 # Verify with Google Generative Language API
+                logger.info("[DEBUG] Testing Google Gemini API")
                 url = f"https://generativelanguage.googleapis.com/v1beta/models?key={request.key}"
+                logger.debug(f"[DEBUG] Google API URL: {url}")
                 resp = requests.get(url, timeout=10)
+                logger.info(f"[DEBUG] Google API response status: {resp.status_code}")
                 if resp.status_code == 200:
                      return {"status": "success", "message": "Google Gemini Key Verified"}
                 else:
@@ -1189,8 +1196,10 @@ def test_connection_endpoint(request: TestRequest):
                         err = resp.json().get('error', {})
                         msg = err.get('message', 'Unknown Google API Error')
                         status = err.get('status', resp.status_code)
+                        logger.error(f"[DEBUG] Google API Error: {status} - {msg}")
                         return {"status": "error", "message": f"Google Error ({status}): {msg}"}
-                    except:
+                    except Exception as e:
+                        logger.error(f"[DEBUG] Google API error parsing failed: {e}")
                         return {"status": "error", "message": f"Google API Error: {resp.status_code}"}
             
             elif provider == "openrouter":

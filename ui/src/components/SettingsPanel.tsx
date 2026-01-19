@@ -114,7 +114,8 @@ export default function SettingsPanel() {
         huggingface: 'idle',
         openrouter: 'idle',
         glm: 'idle',
-        elsevier: 'idle'
+        elsevier: 'idle',
+        custom: 'idle'  // Added for Custom API and LM Studio tests
     });
 
     useEffect(() => { loadSettings(); }, []);
@@ -175,15 +176,22 @@ export default function SettingsPanel() {
     };
 
     const handleTestKey = async (provider: string, key?: string, serviceType: 'llm' | 'elsevier' = 'llm', baseUrl?: string, model?: string) => {
+        console.log('[DEBUG] handleTestKey called with:', { provider, key: key ? '***' : 'missing', serviceType, baseUrl, model });
+        console.log('[DEBUG] Current testStatus state:', testStatus);
+
         if (!key) {
             alert('Please enter an API key first.');
             return;
         }
 
+        console.log('[DEBUG] Setting testStatus for provider:', provider, 'to testing');
         setTestStatus(prev => ({ ...prev, [provider]: 'testing' }));
 
         try {
+            console.log('[DEBUG] Calling api.testConnection with:', { serviceType, provider, baseUrl, model });
             const res = await api.testConnection(serviceType, provider, key, baseUrl, model);
+            console.log('[DEBUG] API response:', res);
+
             if (res.status === 'success') {
                 setTestStatus(prev => ({ ...prev, [provider]: 'success' }));
                 alert(`✅ ${res.message}`);
@@ -195,6 +203,8 @@ export default function SettingsPanel() {
                 alert(`❌ ${res.message}`);
             }
         } catch (e: any) {
+            console.error('[DEBUG] API Test Failed with exception:', e);
+            console.error('[DEBUG] Error details:', { message: e.message, stack: e.stack });
             setTestStatus(prev => ({ ...prev, [provider]: 'error' }));
             alert(`❌ API Test Failed: ${e.message}`);
         }
@@ -481,6 +491,9 @@ export default function SettingsPanel() {
                                                     value={settings.ai_provider.custom_base_url || ''}
                                                     onChange={(e) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, custom_base_url: e.target.value } })}
                                                 />
+                                                <p className="text-[10px] text-slate-500 mt-1">
+                                                    Examples: https://api.openai.com/v1, https://api.groq.com/openai/v1
+                                                </p>
                                             </div>
 
                                             <CloudKeyBox
