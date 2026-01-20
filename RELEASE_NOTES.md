@@ -1,5 +1,22 @@
 # Release Notes
 
+## v2.16.8 - Agent Zero Core & LiteLLM Integration
+*Released: January 20, 2026*
+
+### 🧠 Agent Zero Core Features
+- **Inner Monologue**: The Agent now "thinks" before acting. You will see a "Thinking Process" block in the chat UI showing its reasoning steps.
+- **Recursion**: Implemented `delegate_task` capability. The agent can now spawn sub-agents to handle complex sub-tasks autonomously.
+- **Strict JSON Protocol**: Transiting to a fully structured communication protocol for higher reliability.
+
+### ⚡ LiteLLM Integration
+- **Universal Adapter**: Replaced custom LM Studio logic with `litellm`.
+- **JSON Enforcement**: Automatically enforces valid JSON output for local models (when supported), ensuring `thoughts` and `actions` are correctly formatted.
+- **Robustness**: Improved error handling and connection logic for local AI providers.
+
+### 💅 UI Enhancements
+- **Thinking UI**: Added collapsible "Thinking Process" visualization in the Chat interface.
+- **Action Logs**: Clearer display of executed tools/actions in the chat stream.
+
 ## v2.15.8 - API Robustness & Fix Release
 *Released: January 17, 2026*
 

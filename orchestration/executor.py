@@ -1,6 +1,8 @@
 """
 Research Executor - BioDockify Pharma Research AI
 Executes the Research Plan by coordinating core modules.
+
+NOTE: Graph functionality (Neo4j) has been replaced by SurfSense Knowledge Engine.
 """
 
 import os
@@ -13,8 +15,19 @@ from orchestration.planner.orchestrator import ResearchPlan, ResearchStep
 # Import Core Modules
 from modules.pdf_processor.parser import parse_pdf_text
 from modules.bio_ner.ner_engine import BioNER
-from modules.graph_builder.loader import add_paper, connect_compound, create_constraints
+
+# Graph Builder is optional - SurfSense is the primary knowledge engine
+try:
+    from modules.graph_builder.loader import add_paper, connect_compound, create_constraints, NEO4J_AVAILABLE
+    HAS_GRAPH_BUILDER = NEO4J_AVAILABLE
+except ImportError:
+    HAS_GRAPH_BUILDER = False
+    def add_paper(*args, **kwargs): pass
+    def connect_compound(*args, **kwargs): pass
+    def create_constraints(*args, **kwargs): pass
+
 from modules.analyst.analytics_engine import ResearchAnalyst
+
 try:
     from modules.molecular_vision.im2smiles import extract_smiles_from_image, is_decimer_available
     has_molecular_vision = True

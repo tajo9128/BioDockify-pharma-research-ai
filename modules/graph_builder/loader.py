@@ -1,18 +1,34 @@
 """
 Neo4j Graph Builder Module - BioDockify Pharma Research AI
 Handles loading research data into a Neo4j Knowledge Graph.
-Designed to fail gracefully if the database is offline.
+Designed to fail gracefully if the database is offline or package not installed.
+
+NOTE: Neo4j functionality is being replaced by SurfSense Knowledge Engine.
+This module is kept for backward compatibility but will be deprecated.
 """
 
 import os
 import logging
 from typing import Dict, List, Optional, Any
-from neo4j import GraphDatabase, basic_auth
-from neo4j.exceptions import ServiceUnavailable, AuthError
+
+# Make neo4j import optional - SurfSense is the primary knowledge engine now
+try:
+    from neo4j import GraphDatabase, basic_auth
+    from neo4j.exceptions import ServiceUnavailable, AuthError
+    NEO4J_AVAILABLE = True
+except ImportError:
+    NEO4J_AVAILABLE = False
+    GraphDatabase = None
+    basic_auth = None
+    ServiceUnavailable = Exception
+    AuthError = Exception
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("BioDockify.GraphBuilder")
+
+if not NEO4J_AVAILABLE:
+    logger.info("Neo4j package not installed. Graph features disabled. Using SurfSense instead.")
 
 class Neo4jLoader:
     """
@@ -34,6 +50,10 @@ class Neo4jLoader:
 
     def connect(self):
         """Establish connection to the database."""
+        if not NEO4J_AVAILABLE:
+            logger.debug("Neo4j package not installed. Skipping connection.")
+            return
+            
         if self._connected:
             return
 

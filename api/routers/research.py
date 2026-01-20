@@ -74,6 +74,65 @@ class ConnectionManager:
 
 manager = ConnectionManager()
 
+# Agent Thinking State (for real-time status UI)
+class AgentThinkingState:
+    """Tracks agent reasoning and execution state for UI display."""
+    
+    def __init__(self):
+        self.current_task: Optional[str] = None
+        self.current_step: int = 0
+        self.total_steps: int = 0
+        self.thinking_traces: List[Dict] = []
+        self.execution_log: List[Dict] = []
+        self.is_running: bool = False
+        self.progress_percent: int = 0
+        
+    def start_task(self, task_name: str, total_steps: int = 1):
+        self.current_task = task_name
+        self.total_steps = total_steps
+        self.current_step = 0
+        self.is_running = True
+        self.thinking_traces = []
+        self.execution_log = []
+        self.progress_percent = 0
+        
+    def add_thinking(self, step: str, reasoning: str):
+        self.thinking_traces.append({
+            "step": step,
+            "reasoning": reasoning,
+            "timestamp": datetime.now().isoformat()
+        })
+        
+    def log_execution(self, action: str, status: str, details: Optional[dict] = None):
+        self.execution_log.append({
+            "action": action,
+            "status": status,
+            "details": details or {},
+            "timestamp": datetime.now().isoformat()
+        })
+        
+    def advance_step(self):
+        self.current_step += 1
+        if self.total_steps > 0:
+            self.progress_percent = min(100, int(self.current_step / self.total_steps * 100))
+            
+    def complete(self):
+        self.is_running = False
+        self.progress_percent = 100
+        
+    def get_status(self) -> dict:
+        return {
+            "current_task": self.current_task,
+            "current_step": self.current_step,
+            "total_steps": self.total_steps,
+            "progress_percent": self.progress_percent,
+            "is_running": self.is_running,
+            "latest_thinking": self.thinking_traces[-1] if self.thinking_traces else None,
+            "recent_log": self.execution_log[-5:] if self.execution_log else []
+        }
+
+agent_state = AgentThinkingState()
+
 # Persistent task store (SQLite-backed for production reliability)
 from runtime.task_store import get_task_store, TaskStore
 
@@ -165,6 +224,12 @@ async def run_research_task(task_id: str, title: str, mode: str):
     # 1. Init
     tasks[task_id].status = "running"
     tasks[task_id].logs.append(f"Starting research on: {title} (Mode: {mode})")
+    
+    # Initialize agent thinking state for real-time UI updates
+    agent_state.start_task(f"Research: {title}", total_steps=5)
+    agent_state.add_thinking("Initialization", f"Starting {mode} research on topic: {title}")
+    agent_state.log_execution("task_init", "success", {"task_id": task_id, "mode": mode})
+    
     await manager.broadcast({
         "type": "task_update",
         "data": tasks[task_id].dict()
@@ -198,17 +263,25 @@ async def run_research_task(task_id: str, title: str, mode: str):
             for i, res in enumerate(results):
                 msg = f"Reading: {res.get('title', 'Unknown')}"
                 tasks[task_id].logs.append(msg)
+                
+                # Update agent thinking state
+                agent_state.add_thinking("Deep Reading", f"Extracting content from: {res.get('title', 'Unknown')[:50]}...")
+                agent_state.advance_step()
+                
                 content = await engine.deep_read(res['link'])
                 full_context += f"# Source: {res['title']}\nURL: {res['link']}\n\n{content}\n\n"
                 
                 # Update progress
                 current_prog = 30 + int((i+1)/len(results) * 40) # 30 to 70
                 tasks[task_id].progress = current_prog
+                agent_state.log_execution("deep_read", "success", {"source": res.get('title', '')[:30]})
                 await manager.broadcast({"type": "task_update", "data": tasks[task_id].dict()})
             
             # Step 3: Synthesis with LLM
             tasks[task_id].progress = 80
             tasks[task_id].logs.append("Synthesizing research report with AI...")
+            agent_state.add_thinking("Synthesis", "Generating comprehensive research report using AI analysis...")
+            agent_state.advance_step()
             await manager.broadcast({"type": "task_update", "data": tasks[task_id].dict()})
             
             try:
@@ -369,3 +442,27 @@ async def websocket_endpoint(websocket: WebSocket):
     except WebSocketDisconnect:
         await manager.disconnect(websocket)
 
+
+@router.websocket("/ws/agent-thinking")
+async def agent_thinking_stream(websocket: WebSocket):
+    """
+    WebSocket for real-time agent thinking traces.
+    Clients receive status updates every second while the agent is running.
+    """
+    await websocket.accept()
+    try:
+        while True:
+            status = agent_state.get_status()
+            await websocket.send_json({
+                "type": "agent_status",
+                "data": status
+            })
+            await asyncio.sleep(1)  # Send updates every second
+    except WebSocketDisconnect:
+        pass  # Client disconnected
+
+
+@router.get("/agent-status")
+async def get_agent_status():
+    """Get current agent execution status (polling alternative to WebSocket)."""
+    return agent_state.get_status()

@@ -13,6 +13,8 @@ interface Message {
     content: string;
     timestamp: Date;
     source?: string;
+    thoughts?: string[];
+    action?: any;
 }
 
 const REPAIR_TRIGGERS = [
@@ -90,7 +92,7 @@ How can I assist your research today?`,
                 providerConfig.custom_key ||
                 providerConfig.glm_key
             );
-            
+
             // If no cloud provider and Ollama is not available, show helpful message
             if (!hasCloudProvider) {
                 try {
@@ -99,7 +101,7 @@ How can I assist your research today?`,
                         const userMsg: Message = { role: 'user', content: input, timestamp: new Date() };
                         setMessages(prev => [...prev, userMsg]);
                         setInput('');
-                        
+
                         setMessages(prev => [...prev, {
                             role: 'system',
                             content: `⚠️ **No AI Provider Configured**
@@ -193,9 +195,35 @@ After configuring a provider, try sending your message again.`,
             setStatus('Generating Answer...');
             const data = await api.agentChat(finalPrompt);
 
+            // Agent Zero JSON Parsing Logic
+            let replyContent = data.reply;
+            let thoughts: string[] | undefined;
+            let action: any | undefined;
+
+            try {
+                // Try to parse the response as Agent Zero JSON Structure
+                // The prompt enforces: { "thoughts": [], "headline": "", "action": {} }
+                if (data.reply.trim().startsWith('{')) {
+                    const parsed = JSON.parse(data.reply);
+                    if (parsed.thoughts || parsed.headline) {
+                        thoughts = parsed.thoughts;
+                        replyContent = parsed.headline || parsed.action?.name || "Action executed.";
+                        action = parsed.action;
+
+                        // If there is text in the action arguments, maybe use that as content?
+                        // For now, headline is the summary.
+                    }
+                }
+            } catch (e) {
+                // Fallback to raw text if not JSON
+                console.log("Response was not JSON, using raw text", e);
+            }
+
             setMessages(prev => [...prev, {
                 role: 'assistant',
-                content: data.reply,
+                content: replyContent,
+                thoughts: thoughts,
+                action: action,
                 timestamp: new Date(),
                 source: sourceUrl ? `Source: ${sourceUrl}` : undefined
             }]);
@@ -262,7 +290,29 @@ After configuring a provider, try sending your message again.`,
                                     ? 'bg-red-900/20 border border-red-900/50 text-red-200'
                                     : 'bg-slate-900 border border-slate-800 text-slate-300 rounded-tl-sm'
                                 }`}>
+                                {/* Agent Zero: Thoughts Section */}
+                                {msg.thoughts && msg.thoughts.length > 0 && (
+                                    <div className="mb-3 p-3 bg-black/20 rounded-lg border border-white/5">
+                                        <div className="flex items-center gap-2 mb-2 text-xs font-bold text-indigo-400 uppercase tracking-wider">
+                                            <Brain className="w-3 h-3" /> Thinking Process
+                                        </div>
+                                        <ul className="list-disc list-outside ml-4 space-y-1 text-xs font-mono text-slate-400">
+                                            {msg.thoughts.map((t, i) => (
+                                                <li key={i}>{t}</li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                )}
+
                                 <p className="leading-relaxed whitespace-pre-wrap text-sm">{msg.content}</p>
+
+                                {/* Agent Zero: Action Section */}
+                                {msg.action && (
+                                    <div className="mt-3 text-xs bg-indigo-500/10 text-indigo-200 p-2 rounded border border-indigo-500/20 flex items-center gap-2">
+                                        <Terminal className="w-3 h-3" />
+                                        <span className="font-mono">Executed: {msg.action.name}</span>
+                                    </div>
+                                )}
                             </div>
                             <span className="text-[10px] text-slate-600 px-1 opacity-100">
                                 {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}

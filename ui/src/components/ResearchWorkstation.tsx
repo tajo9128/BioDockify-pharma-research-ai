@@ -10,6 +10,7 @@ import { DeepResearchView } from './deep-research/DeepResearchView';
 import { ThesisWriterView } from './thesis/ThesisWriterView';
 import { cn } from '@/lib/utils';
 import DiagnosisDialog from '@/components/DiagnosisDialog';
+import AgentStatusPanel from '@/components/AgentStatusPanel';
 
 // Types (Micro-definitions to be self-contained)
 type WorkMode = 'search' | 'synthesize' | 'write' | 'thesis_writer' | 'review_writer' | 'research_writer';
@@ -150,7 +151,7 @@ export default function ResearchWorkstation({
         return (
             <div className="h-screen bg-slate-950 text-slate-200 overflow-hidden relative">
                 <button
-                    onClick={() => setMode('search')}
+                    onClick={() => setActiveMode('search')}
                     className="absolute top-5 right-6 z-50 px-3 py-1 bg-slate-800 text-slate-400 text-xs rounded hover:bg-slate-700 border border-slate-700"
                 >
                     Exit Thesis Mode
@@ -286,6 +287,16 @@ export default function ResearchWorkstation({
 
                 {/* COL 2: STREAM (Reasoning Engine) - Always Visible, Flex-1 */}
                 <div className="flex-1 border-r border-slate-800 bg-slate-950 flex flex-col relative min-w-0">
+                    {/* Agent Status Panel - Real-time Thinking Visualization */}
+                    {isExecuting && (
+                        <div className="p-4 border-b border-slate-800">
+                            <AgentStatusPanel
+                                useWebSocket={true}
+                                apiBaseUrl="http://localhost:8000"
+                            />
+                        </div>
+                    )}
+
                     <div className="p-4 border-b border-slate-800 bg-slate-950/80 backdrop-blur sticky top-0 z-10 flex justify-between items-center">
                         <h2 className="text-sm font-bold text-slate-300">Reasoning Stream</h2>
                         <button className="text-xs text-teal-400 hover:underline">Export Logs</button>

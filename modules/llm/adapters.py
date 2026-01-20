@@ -134,29 +134,125 @@ class CustomAdapter(BaseLLMAdapter):
         except Exception as e:
             raise ValueError(f"Custom API Error: {e}")
 
-class LMStudioAdapter(CustomAdapter):
+import litellm
+
+class LMStudioAdapter(BaseLLMAdapter):
     """
-    Dedicated Adapter for LM Studio Local Inference.
-    Assumes an OpenAI-compatible endpoint running locally.
-    Default Port: 1234
+    Dedicated Adapter for LM Studio Local Inference using LiteLLM.
+    Enforces OpenAI compatibility and attempts to mandate JSON structure.
+    Includes Automatic Model Detection.
     """
     
-    def __init__(self, base_url: str = "http://localhost:1234/v1", model: str = "local-model"):
-        # LM Studio doesn't strictly require an API Key, but we pass "lm-studio" for compatibility
-        super().__init__(api_key="lm-studio", base_url=base_url, model=model)
+    PREFERRED_MODELS = [
+        "openbiollm",
+        "biomed",
+        "mistral",
+        "llama",
+        "lfm",
+        "phi",
+        "gemma"
+    ]
+
+    def __init__(self, base_url: str = "http://localhost:1234/v1", model: str = "auto"):
+        self.base_url = base_url.rstrip('/')
+        self.config_model = model
+        self.api_base = self.base_url
+        self._detected_model = None
+        
+        # Try to detect immediately if possible, but don't crash if server down on init
+        # (Lazy detection in generate is safer for startup)
+        pass
+
+    def _auto_select_model(self) -> str:
+        """
+        Automatically selects the best available model from LM Studio.
+        """
+        if self._detected_model:
+            return self._detected_model
+            
+        try:
+            url = f"{self.base_url}/models"
+            # Fast timeout for detection
+            r = requests.get(url, timeout=2)
+            r.raise_for_status()
+            
+            data = r.json().get("data", [])
+            available_ids = [m["id"] for m in data]
+            
+            if not available_ids:
+                raise ValueError("LM Studio is running but No models are loaded.")
+                
+            # Selection Logic
+            selected = None
+            
+            # 1. Try to find preferred models
+            for pref in self.PREFERRED_MODELS:
+                for m_id in available_ids:
+                    if pref.lower() in m_id.lower():
+                        selected = m_id
+                        break
+                if selected: break
+            
+            # 2. Fallback to first available
+            if not selected:
+                selected = available_ids[0]
+                
+            self._detected_model = selected
+            print(f"[OK] LM Studio Model Auto-Selected: {selected}")
+            return selected
+            
+        except requests.exceptions.RequestException:
+             # If we can't connect, we can't auto-detect. 
+             # Return configured defaults or raise error depending on context.
+             # For now, return config model to let caller fail normally if down.
+             return self.config_model if self.config_model != "auto" else "local-model"
+             
+        except Exception as e:
+            print(f"[WARN] Model Auto-Detection Warning: {e}")
+            return self.config_model if self.config_model != "auto" else "local-model"
 
     def generate(self, prompt: str, **kwargs) -> str:
         try:
-            return super().generate(prompt, **kwargs)
-        except ValueError as e:
-            # Enhance error message with LM Studio specific guidance
+            # Determine effective model
+            if self.config_model == "auto" or self.config_model == "local-model":
+                effective_model = self._auto_select_model()
+            else:
+                effective_model = self.config_model
+            
+            messages = [{"role": "user", "content": prompt}]
+            
+            # Check if we should enforce JSON mode
+            response_format = None
+            if "json" in prompt.lower():
+                response_format = {"type": "json_object"}
+
+            # LiteLLM call
+            response = litellm.completion(
+                model=f"openai/{effective_model}", 
+                api_base=self.api_base,
+                api_key="lm-studio", 
+                messages=messages,
+                temperature=kwargs.get("temperature", 0.7),
+                max_tokens=kwargs.get("max_tokens", 2048),
+                response_format=response_format
+            )
+            
+            return response.choices[0].message.content
+            
+        except Exception as e:
             msg = str(e)
             if "Connection" in msg or "refused" in msg:
-                raise ValueError(
+                 raise ValueError(
                     f"LM Studio Connection Failed: Could not connect to {self.base_url}. "
                     "Please ensure LM Studio is running and the 'Local Server' is started."
                 )
-            raise e
+            if "formatted" in msg or "404" in msg:
+                 # Likely model not found issue if auto-detect failed or wasn't used
+                 raise ValueError(
+                    f"LM Studio Error: Model '{self.config_model}' not found or server error. "
+                    f"Ensure a model is loaded in LM Studio. Details: {e}"
+                 )
+            raise ValueError(f"LM Studio/LiteLLM Error: {e}")
 
 class ZhipuAdapter(BaseLLMAdapter):
     """Adapter for Zhipu AI (GLM-4)."""

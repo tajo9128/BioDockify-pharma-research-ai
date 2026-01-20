@@ -188,10 +188,26 @@ export default function FirstRunWizard({ onComplete }: WizardProps) {
                             <div className="space-y-3">
                                 <CheckItem label="Research Editor" status="success" />
                                 <CheckItem label="PDF Processing Engine" status="success" />
-                                <CheckItem label="LM Studio (Local AI)" status={researchStatus.lm_studio === 'pending' ? 'checking' : researchStatus.lm_studio} />
+                                <CheckItem
+                                    label="LM Studio (Local AI)"
+                                    status={researchStatus.lm_studio === 'pending' ? 'checking' : researchStatus.lm_studio}
+                                    value={detectedServices?.lm_studio_model ? `Model: ${detectedServices.lm_studio_model.split('/').pop()}` : undefined}
+                                />
                             </div>
+                            {researchStatus.lm_studio === 'warning' && (
+                                <div className="text-center mt-4">
+                                    <p className="text-sm text-amber-400 mb-2">LM Studio not detected. Please start it and load a model.</p>
+                                    <button
+                                        onClick={runResearchChecks}
+                                        className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-sm transition-colors"
+                                    >
+                                        Retry Detection
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     )}
+
 
                     {/* STEP 3: SUMMARY */}
                     {step === 3 && (

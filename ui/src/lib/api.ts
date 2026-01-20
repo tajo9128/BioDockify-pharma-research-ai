@@ -72,6 +72,7 @@ export interface Settings {
     openrouter_key?: string;
     glm_key?: string;
     elsevier_key?: string;
+    semantic_scholar_key?: string; // S2 API key for higher rate limits
     pubmed_email?: string;
     // Custom/Paid API (OpenAI-compatible)
     custom_base_url?: string;

@@ -494,11 +494,11 @@ Provide ONLY the JSON."""
         available_providers = []
         
         # Add Primary First
-        if self.config.primary_model in ["google", "openrouter", "huggingface", "zhipu", "custom"]:
+        if self.config.primary_model in ["google", "openrouter", "huggingface", "zhipu", "custom", "lm_studio"]:
             available_providers.append(self.config.primary_model)
         
         # Add others as backup
-        candidates = ["google", "openrouter", "huggingface", "zhipu", "custom"]
+        candidates = ["google", "openrouter", "huggingface", "zhipu", "custom", "lm_studio"]
         for c in candidates:
             if c != self.config.primary_model:
                 available_providers.append(c)
@@ -609,6 +609,205 @@ Provide ONLY the JSON."""
             ],
             "total_estimated_time": 480
         }
+
+    # -------------------------------------------------------------------------
+    # Self-Correction & Retry Logic (Agent Zero Pattern)
+    # -------------------------------------------------------------------------
+    
+    def _validate_result(self, result: dict, task: dict, context: str = "") -> bool:
+        """
+        Validate task execution result using LLM reasoning.
+        
+        Args:
+            result: The result from task execution
+            task: The original task that was executed
+            context: Additional context (e.g., phd_stage, research goal)
+            
+        Returns:
+            True if result is valid and useful, False otherwise
+        """
+        # Quick checks first
+        if not result:
+            return False
+            
+        if isinstance(result, dict):
+            if result.get("error") or result.get("success") == False:
+                return False
+            if not result.get("data") and not result.get("results"):
+                return False
+                
+        # For literature search results, check if we got papers
+        task_category = task.get("category", "")
+        if "literature" in task_category or "search" in task_category:
+            data = result.get("data", result.get("results", []))
+            if isinstance(data, list) and len(data) == 0:
+                print("[!] Validation: No results found in literature search")
+                return False
+                
+        # For entity extraction, check if entities were found
+        if "entity" in task_category or "extraction" in task_category:
+            entities = result.get("entities", result.get("data", []))
+            if not entities:
+                print("[!] Validation: No entities extracted")
+                return False
+                
+        return True
+    
+    def _adjust_task_params(self, task: dict, failed_result: dict, context: str = "") -> dict:
+        """
+        Use LLM to adjust task parameters after a validation failure.
+        Implements the "rethinking" pattern from Agent Zero.
+        
+        Args:
+            task: The task that failed validation
+            failed_result: The result that failed validation
+            context: Additional context for adjustment
+            
+        Returns:
+            Adjusted task with modified parameters
+        """
+        from modules.llm.factory import LLMFactory
+        
+        adjusted_task = task.copy()
+        params = adjusted_task.get("params", {})
+        
+        # Build adjustment prompt
+        prompt = f"""A research task failed validation and needs adjustment.
+
+ORIGINAL TASK:
+- Category: {task.get('category', 'unknown')}
+- Title: {task.get('title', 'unknown')}
+- Parameters: {json.dumps(params, indent=2)}
+
+FAILED RESULT:
+{json.dumps(failed_result, indent=2)[:500]}
+
+CONTEXT: {context}
+
+Suggest ONE specific adjustment to the parameters to get better results.
+Return ONLY a JSON object with the adjusted parameters, like:
+{{"query": "adjusted query", "limit": 20, "year_range": 5}}
+
+Focus on:
+1. Broadening search terms if too specific
+2. Narrowing if too broad (many irrelevant results)
+3. Adjusting date ranges
+4. Adding/removing filters
+"""
+        
+        try:
+            adapter = LLMFactory.get_adapter(self.config.primary_model, self.config)
+            if adapter:
+                response = adapter.generate(prompt)
+                adjusted_params = self._parse_plan_response(response)
+                if adjusted_params and isinstance(adjusted_params, dict):
+                    adjusted_task["params"] = adjusted_params
+                    print(f"[*] Self-correction: Adjusted params -> {adjusted_params}")
+        except Exception as e:
+            print(f"[!] Self-correction failed: {e}")
+            # Fallback: broaden search if it looks like a search task
+            if "query" in params:
+                # Remove quotes and special chars to broaden
+                original_query = params.get("query", "")
+                adjusted_task["params"]["query"] = original_query.replace('"', '').split(" AND ")[0]
+                print(f"[*] Fallback broadening: {adjusted_task['params']['query']}")
+                
+        return adjusted_task
+    
+    def execute_step_with_retry(
+        self, 
+        step: 'ResearchStep', 
+        max_retries: int = 3,
+        context: str = ""
+    ) -> dict:
+        """
+        Execute a research step with automatic retry and self-correction.
+        
+        Args:
+            step: ResearchStep to execute
+            max_retries: Maximum retry attempts
+            context: Execution context (e.g., PhD stage)
+            
+        Returns:
+            Dict with success status, data, and attempt history
+        """
+        task = {
+            "category": step.category,
+            "title": step.title,
+            "description": step.description,
+            "params": {}  # Would be populated from step details
+        }
+        
+        attempts = []
+        
+        for attempt in range(max_retries):
+            attempt_info = {
+                "attempt": attempt + 1,
+                "task": task.copy()
+            }
+            
+            try:
+                # Placeholder for actual tool execution
+                # In real implementation, this would call the appropriate tool
+                result = self._execute_step_tool(step, task.get("params", {}))
+                
+                # Validate result
+                is_valid = self._validate_result(result, task, context)
+                attempt_info["validated"] = is_valid
+                
+                if is_valid:
+                    attempt_info["status"] = "success"
+                    attempts.append(attempt_info)
+                    return {
+                        "success": True,
+                        "data": result,
+                        "attempts": attempts,
+                        "step_title": step.title
+                    }
+                else:
+                    # Self-correction
+                    print(f"[!] Attempt {attempt + 1} failed validation. Rethinking...")
+                    task = self._adjust_task_params(task, result, context)
+                    attempt_info["status"] = "validation_failed"
+                    attempt_info["adjusted_task"] = task
+                    
+            except Exception as e:
+                print(f"[!] Attempt {attempt + 1} error: {e}")
+                attempt_info["status"] = "error"
+                attempt_info["error"] = str(e)
+                
+                if attempt < max_retries - 1:
+                    task = self._adjust_task_params(task, {"error": str(e)}, context)
+                    
+            attempts.append(attempt_info)
+            
+        return {
+            "success": False,
+            "error": "Max retries exceeded",
+            "attempts": attempts,
+            "step_title": step.title
+        }
+    
+    def _execute_step_tool(self, step: 'ResearchStep', params: dict) -> dict:
+        """
+        Execute the appropriate tool for a research step.
+        Placeholder for tool registry integration.
+        """
+        # This would be replaced with actual tool calls
+        if "literature" in step.category:
+            # Call literature search
+            return self.scholar.search_impact_evidence(
+                params.get("query", step.description),
+                limit=params.get("limit", 10)
+            )
+        elif "entity" in step.category:
+            # Call entity extraction
+            return self.pubtator.validate_entities(
+                params.get("text", step.description)
+            )
+        else:
+            # Generic execution
+            return {"status": "executed", "step": step.title}
 
 
 # =============================================================================

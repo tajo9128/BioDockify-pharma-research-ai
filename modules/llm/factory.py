@@ -48,7 +48,10 @@ class LLMFactory:
         elif provider == "lm_studio":
             # Use dedicated LM Studio adapter
             lm_studio_url = getattr(config, 'lm_studio_url', 'http://localhost:1234/v1')
-            model = getattr(config, 'lm_studio_model', 'local-model')
+            model = getattr(config, 'lm_studio_model', 'auto')
+            # If config has old default 'local-model', switch to 'auto' for upgrade
+            if model == 'local-model':
+                model = 'auto'
             return LMStudioAdapter(base_url=lm_studio_url, model=model)
 
         return None
