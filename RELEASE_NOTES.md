@@ -1,5 +1,26 @@
 # Release Notes
 
+## v2.17.1 - Paid APIs & Global Rotation
+*Released: January 21, 2026*
+
+### 🌍 Global API Rotation
+- **New Service**: `api-rotation` service automatically switches providers when rate limits (429) are hit.
+- **Provider Chain**: 10-provider fallback strategy:
+  1. **LM Studio** (Local)
+  2. **Free Tier**: Groq (30/min) → HuggingFace → Google Gemini
+  3. **Paid Tier**: OpenRouter → Deepseek → GLM → KIMI → OpenAI → Custom
+- **Unified Integration**: All features (Deep Research, Academic Writing, Podcast, Video) now use this rotation logic.
+
+### 💰 Paid API Integration
+- **New Providers**: Added native support for **Deepseek**, **GLM (ZhipuAI)**, **KIMI (Moonshot)**, and **OpenAI**.
+- **Custom API**: Support for any OpenAI-compatible endpoint with a custom base URL.
+- **Groq API**: Added as a high-speed **FREE** option (marked with a green badge).
+
+### ⚙️ UX Enhancements
+- **Settings Persistence**: User settings now persist significantly better across restarts via `localStorage`.
+- **API Test Progress**: Detailed progress bars for all API connection tests (Validating → Connecting → Processing).
+- **Self-Repair**: Enhanced LM Studio detection and self-repair capabilities.
+
 ## v2.16.8 - Agent Zero Core & LiteLLM Integration
 *Released: January 20, 2026*
 
