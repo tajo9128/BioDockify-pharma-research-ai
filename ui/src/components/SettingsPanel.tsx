@@ -119,22 +119,56 @@ export default function SettingsPanel() {
         custom: 'idle'  // Added for Custom API and LM Studio tests
     });
 
+    // LM Studio Test State with Progress
+    const [lmStudioTest, setLmStudioTest] = useState<{
+        status: 'idle' | 'testing' | 'success' | 'error';
+        progress: number;
+        message: string;
+        details: string;
+    }>({
+        status: 'idle',
+        progress: 0,
+        message: '',
+        details: ''
+    });
+
     useEffect(() => { loadSettings(); }, []);
 
     const loadSettings = async () => {
         try {
+            // First try localStorage for instant load
+            if (typeof window !== 'undefined') {
+                const cached = localStorage.getItem('biodockify_settings');
+                if (cached) {
+                    try {
+                        const parsedSettings = JSON.parse(cached);
+                        setSettings(prev => ({
+                            ...prev,
+                            ...parsedSettings,
+                            ai_provider: { ...prev.ai_provider, ...parsedSettings.ai_provider },
+                            pharma: { ...prev.pharma, ...parsedSettings.pharma, sources: { ...prev.pharma.sources, ...parsedSettings.pharma?.sources } },
+                            persona: { ...prev.persona, ...parsedSettings.persona }
+                        }));
+                        console.log('[Settings] Loaded from localStorage');
+                    } catch (e) {
+                        console.warn('[Settings] Failed to parse localStorage cache');
+                    }
+                }
+            }
+
+            // Then try API for fresh data
             const remote = await api.getSettings();
             if (remote) {
                 setSettings(prev => ({
                     ...prev,
                     ...remote,
-                    ai_provider: { ...prev.ai_provider, ...remote.ai_provider }, // Ensure flat merge
+                    ai_provider: { ...prev.ai_provider, ...remote.ai_provider },
                     pharma: { ...prev.pharma, ...remote.pharma, sources: { ...prev.pharma.sources, ...remote.pharma?.sources } },
                     persona: { ...prev.persona, ...remote.persona }
                 }));
             }
         } catch (e) {
-            console.warn('Using default settings');
+            console.warn('Using default/cached settings - API unavailable');
         } finally {
             setLoading(false);
         }
@@ -144,7 +178,23 @@ export default function SettingsPanel() {
         setSaving(true);
         try {
             console.log('Saving settings payload:', settings);
+
+            // Save to API
             await api.saveSettings(settings);
+
+            // ALSO save to localStorage for persistence across sessions
+            if (typeof window !== 'undefined') {
+                localStorage.setItem('biodockify_settings', JSON.stringify(settings));
+                localStorage.setItem('biodockify_first_run_complete', 'true');
+                localStorage.setItem('biodockify_ai_config', JSON.stringify({
+                    mode: settings.ai_provider.mode,
+                    lm_studio_url: settings.ai_provider.lm_studio_url,
+                    lm_studio_model: settings.ai_provider.lm_studio_model,
+                    auto_configured: true
+                }));
+                console.log('[Settings] Persisted to localStorage');
+            }
+
             // Force reload to verify persistence
             await loadSettings();
             alert('Settings saved successfully!');
@@ -157,6 +207,106 @@ export default function SettingsPanel() {
     };
 
 
+    // LM Studio Test with Progress Bar and Detailed Reporting
+    const handleTestLmStudio = async () => {
+        const url = settings.ai_provider.lm_studio_url || 'http://localhost:1234/v1';
+
+        setLmStudioTest({
+            status: 'testing',
+            progress: 10,
+            message: 'Connecting to LM Studio...',
+            details: `Testing ${url}`
+        });
+
+        try {
+            // Step 1: Check if server is reachable
+            setLmStudioTest(prev => ({ ...prev, progress: 25, message: 'Checking server availability...' }));
+
+            const modelsRes = await fetch(`${url}/models`, {
+                method: 'GET',
+                signal: AbortSignal.timeout(5000)
+            });
+
+            if (!modelsRes.ok) {
+                throw new Error(`Server returned ${modelsRes.status}`);
+            }
+
+            // Step 2: Check for loaded models
+            setLmStudioTest(prev => ({ ...prev, progress: 50, message: 'Checking loaded models...' }));
+            const modelsData = await modelsRes.json();
+            const models = modelsData?.data || [];
+
+            if (models.length === 0) {
+                setLmStudioTest({
+                    status: 'error',
+                    progress: 100,
+                    message: 'FAILED: No model loaded',
+                    details: 'LM Studio is running but no model is loaded. Please load a model in LM Studio and try again.'
+                });
+                return;
+            }
+
+            const modelId = models[0]?.id || 'unknown';
+
+            // Step 3: Test model response
+            setLmStudioTest(prev => ({
+                ...prev,
+                progress: 75,
+                message: `Testing model: ${modelId.split('/').pop()}...`
+            }));
+
+            const testRes = await fetch(`${url}/chat/completions`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    model: modelId,
+                    messages: [{ role: 'user', content: 'Hello' }],
+                    max_tokens: 5
+                }),
+                signal: AbortSignal.timeout(15000)
+            });
+
+            if (!testRes.ok) {
+                const errData = await testRes.json().catch(() => ({}));
+                throw new Error(errData?.error?.message || `Model test failed: HTTP ${testRes.status}`);
+            }
+
+            // SUCCESS!
+            setLmStudioTest({
+                status: 'success',
+                progress: 100,
+                message: 'PASSED: LM Studio Connected',
+                details: `Model: ${modelId.split('/').pop()} is ready for use.`
+            });
+
+            // Auto-save the detected model
+            if (typeof window !== 'undefined') {
+                localStorage.setItem('biodockify_lm_studio_url', url);
+                localStorage.setItem('biodockify_lm_studio_model', modelId);
+            }
+
+        } catch (e: any) {
+            let errorMessage = e?.message || 'Unknown error';
+            let failReason = '';
+
+            if (errorMessage.includes('timeout') || errorMessage.includes('AbortError')) {
+                failReason = 'Connection timed out. Is LM Studio running and the server enabled?';
+            } else if (errorMessage.includes('NetworkError') || errorMessage.includes('Failed to fetch')) {
+                failReason = 'Cannot connect. Please ensure LM Studio is running with the local server enabled on port 1234.';
+            } else if (errorMessage.includes('ECONNREFUSED')) {
+                failReason = 'Connection refused. LM Studio server is not running.';
+            } else {
+                failReason = errorMessage;
+            }
+
+            setLmStudioTest({
+                status: 'error',
+                progress: 100,
+                message: 'FAILED: Connection Error',
+                details: failReason
+            });
+        }
+    };
 
     const handleTestKey = async (provider: string, key?: string, serviceType: 'llm' | 'elsevier' = 'llm', baseUrl?: string, model?: string) => {
         console.log('[DEBUG] handleTestKey called with:', { provider, key: key ? '***' : 'missing', serviceType, baseUrl, model });
@@ -357,12 +507,64 @@ export default function SettingsPanel() {
                                         Recommended for 8GB RAM: <b>BioMedLM-2.7B</b> or <b>LFM-2 2.6B</b>.
                                     </p>
                                 </div>
-                                <button
-                                    onClick={() => handleTestKey('custom', 'lm-studio', 'llm', settings.ai_provider.lm_studio_url, settings.ai_provider.lm_studio_model)}
-                                    className="w-full bg-indigo-600 hover:bg-indigo-500 text-white rounded-md py-2 text-xs font-bold transition-colors"
-                                >
-                                    Test Connection
-                                </button>
+
+                                {/* LM Studio Test with Progress Bar */}
+                                <div className="space-y-2">
+                                    <button
+                                        onClick={handleTestLmStudio}
+                                        disabled={lmStudioTest.status === 'testing'}
+                                        className={`w-full rounded-md py-2 text-xs font-bold transition-colors ${lmStudioTest.status === 'testing'
+                                                ? 'bg-indigo-800 text-indigo-300 cursor-wait'
+                                                : lmStudioTest.status === 'success'
+                                                    ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                                                    : lmStudioTest.status === 'error'
+                                                        ? 'bg-red-600 hover:bg-red-500 text-white'
+                                                        : 'bg-indigo-600 hover:bg-indigo-500 text-white'
+                                            }`}
+                                    >
+                                        {lmStudioTest.status === 'testing'
+                                            ? '⏳ Testing...'
+                                            : lmStudioTest.status === 'success'
+                                                ? '✅ Retest Connection'
+                                                : lmStudioTest.status === 'error'
+                                                    ? '❌ Retry Test'
+                                                    : 'Test Connection'}
+                                    </button>
+
+                                    {/* Progress Bar */}
+                                    {lmStudioTest.status === 'testing' && (
+                                        <div className="space-y-1">
+                                            <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
+                                                <div
+                                                    className="h-full bg-indigo-500 transition-all duration-300 ease-out"
+                                                    style={{ width: `${lmStudioTest.progress}%` }}
+                                                />
+                                            </div>
+                                            <p className="text-xs text-indigo-300 text-center">{lmStudioTest.message}</p>
+                                        </div>
+                                    )}
+
+                                    {/* Status Display */}
+                                    {lmStudioTest.status === 'success' && (
+                                        <div className="p-3 bg-emerald-950/30 border border-emerald-500/30 rounded-lg">
+                                            <div className="flex items-center space-x-2 mb-1">
+                                                <CheckCircle className="w-4 h-4 text-emerald-400" />
+                                                <span className="text-sm font-bold text-emerald-400">{lmStudioTest.message}</span>
+                                            </div>
+                                            <p className="text-xs text-emerald-300/70">{lmStudioTest.details}</p>
+                                        </div>
+                                    )}
+
+                                    {lmStudioTest.status === 'error' && (
+                                        <div className="p-3 bg-red-950/30 border border-red-500/30 rounded-lg">
+                                            <div className="flex items-center space-x-2 mb-1">
+                                                <AlertCircle className="w-4 h-4 text-red-400" />
+                                                <span className="text-sm font-bold text-red-400">{lmStudioTest.message}</span>
+                                            </div>
+                                            <p className="text-xs text-red-300/70">{lmStudioTest.details}</p>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         </div>
                     )}
