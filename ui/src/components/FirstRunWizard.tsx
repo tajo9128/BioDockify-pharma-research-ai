@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '@/lib/api';
 import { detectAllServices, DetectedServices } from '@/lib/services/auto-config';
+import { detectLmStudioEnhanced, runSelfRepairDiagnostics, autoFixConfiguration } from '@/lib/services/self-repair';
 import {
     Check, XCircle, RefreshCcw, Database, Brain, Server,
-    HardDrive, Cpu, Gauge, Terminal
+    HardDrive, Cpu, Gauge, Terminal, AlertTriangle
 } from 'lucide-react';
 
 interface WizardProps {
@@ -22,6 +23,8 @@ interface SysInfo {
 
 export default function FirstRunWizard({ onComplete }: WizardProps) {
     const [step, setStep] = useState(0); // 0: Welcome, 1: System, 2: Research, 3: Summary
+    const [retryCount, setRetryCount] = useState(0);
+    const [repairStatus, setRepairStatus] = useState<string>('');
 
     // Check States
     const [sysInfo, setSysInfo] = useState<SysInfo | null>(null);
@@ -68,29 +71,66 @@ export default function FirstRunWizard({ onComplete }: WizardProps) {
     };
 
     const runResearchChecks = async () => {
-        console.log('[FirstRunWizard] Starting autonomous service detection...');
+        console.log('[FirstRunWizard] Starting self-repair enhanced detection...');
+        setRepairStatus('Scanning for LM Studio...');
 
         try {
-            // Use the new autonomous detection system
-            const detected = await detectAllServices();
-            setDetectedServices(detected);
+            // Use enhanced self-repair detection with retry and port scanning
+            const lmResult = await detectLmStudioEnhanced();
 
-            setResearchStatus(prev => ({
-                ...prev,
-                lm_studio: detected.lm_studio ? 'success' : 'warning'
-            }));
+            if (lmResult.available) {
+                console.log('[FirstRunWizard] LM Studio detected via self-repair:', lmResult);
 
-            console.log('[FirstRunWizard] Detection complete:', detected);
+                // Auto-fix configuration
+                await autoFixConfiguration();
+
+                setDetectedServices({
+                    lm_studio: true,
+                    lm_studio_model: lmResult.model,
+                    backend: true,
+                    grobid: false
+                });
+
+                setResearchStatus(prev => ({
+                    ...prev,
+                    lm_studio: 'success'
+                }));
+                setRepairStatus(`Found on ${lmResult.url}`);
+            } else {
+                // Fall back to standard detection
+                setRepairStatus('Trying alternative detection...');
+                const detected = await detectAllServices();
+                setDetectedServices(detected);
+
+                setResearchStatus(prev => ({
+                    ...prev,
+                    lm_studio: detected.lm_studio ? 'success' : 'warning'
+                }));
+
+                if (!detected.lm_studio) {
+                    setRepairStatus('Not detected - ensure LM Studio server is running on port 1234');
+                }
+            }
+
+            console.log('[FirstRunWizard] Detection complete');
         } catch (e) {
             console.error('[FirstRunWizard] Service detection failed:', e);
             setResearchStatus(prev => ({
                 ...prev,
                 lm_studio: 'warning'
             }));
+            setRepairStatus('Detection failed - check console for details');
         }
 
         // Auto advance
-        setTimeout(() => setStep(3), 1500);
+        setTimeout(() => setStep(3), 2000);
+    };
+
+    const retryDetection = async () => {
+        setRetryCount(prev => prev + 1);
+        setResearchStatus(prev => ({ ...prev, lm_studio: 'pending' }));
+        setRepairStatus('Retrying with extended timeout...');
+        await runResearchChecks();
     };
 
     const finish = () => {
