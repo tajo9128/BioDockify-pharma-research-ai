@@ -39,7 +39,7 @@ jobs:
           
           # EXPLICITLY INSTALL HEAVY LIBS (Redundant Safety)
           echo "Force installing critical libs..."
-          pip install tensorflow==2.15.0 numpy==1.26.3 pillow neo4j uvicorn fastapi
+          pip install tensorflow==2.15.0 numpy==1.26.3 pillow uvicorn fastapi psutil pandas pypdf nbformat
           
           # DEBUG: VISUALIZE SITE-PACKAGES
           echo "Debug: Python Site-Packages Location"
