@@ -63,27 +63,39 @@ export interface Settings {
   ai_provider: {
     mode: 'auto' | 'lm_studio' | 'z-ai';
 
-    // LM Studio
+    // LM Studio (Local)
     lm_studio_url?: string;
     lm_studio_model?: string;
 
+    // FREE APIs
     google_key?: string;
     google_model?: string;
     huggingface_key?: string;
     huggingface_model?: string;
-    openrouter_key?: string;
-    openrouter_model?: string;
-    // Groq (Free tier with high rate limits)
     groq_key?: string;
     groq_model?: string;
+
+    // PAID APIs
+    openrouter_key?: string;
+    openrouter_model?: string;
+    deepseek_key?: string;
+    deepseek_model?: string;
     glm_key?: string;
-    elsevier_key?: string;
-    semantic_scholar_key?: string; // S2 API key for higher rate limits
-    pubmed_email?: string;
+    glm_model?: string;
+    kimi_key?: string;
+    kimi_model?: string;
+    openai_key?: string;
+    openai_model?: string;
     // Custom/Paid API (OpenAI-compatible)
     custom_base_url?: string;
     custom_key?: string;
     custom_model?: string;
+
+    // Literature APIs
+    elsevier_key?: string;
+    semantic_scholar_key?: string; // S2 API key for higher rate limits
+    pubmed_email?: string;
+
     // SurfSense Knowledge Engine
     surfsense_url?: string;
     surfsense_key?: string;

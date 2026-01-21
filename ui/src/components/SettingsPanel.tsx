@@ -118,7 +118,10 @@ export default function SettingsPanel() {
         huggingface: 'idle',
         openrouter: 'idle',
         groq: 'idle',
+        deepseek: 'idle',
         glm: 'idle',
+        kimi: 'idle',
+        openai: 'idle',
         elsevier: 'idle',
         custom: 'idle'
     });
@@ -147,6 +150,10 @@ export default function SettingsPanel() {
         huggingface: { status: 'idle', progress: 0, message: '', details: '' },
         openrouter: { status: 'idle', progress: 0, message: '', details: '' },
         groq: { status: 'idle', progress: 0, message: '', details: '' },
+        deepseek: { status: 'idle', progress: 0, message: '', details: '' },
+        glm: { status: 'idle', progress: 0, message: '', details: '' },
+        kimi: { status: 'idle', progress: 0, message: '', details: '' },
+        openai: { status: 'idle', progress: 0, message: '', details: '' },
         elsevier: { status: 'idle', progress: 0, message: '', details: '' },
         custom: { status: 'idle', progress: 0, message: '', details: '' }
     });
@@ -719,14 +726,74 @@ export default function SettingsPanel() {
                                             testProgress={apiTestProgress.groq}
                                         />
                                     </div>
-                                    {/* Generic Paid / Custom API */}
+                                    {/* === PAID APIs Section === */}
+                                    <div className="border-t border-slate-800 my-4 pt-4">
+                                        <div className="flex items-center space-x-2 mb-4">
+                                            <span className="text-xs font-bold text-yellow-500 px-2 py-0.5 rounded bg-yellow-500/10 border border-yellow-500/20">PAID</span>
+                                            <h4 className="text-sm font-semibold text-white">Premium API Providers</h4>
+                                        </div>
+                                        <div className="grid gap-3">
+                                            {/* Deepseek */}
+                                            <CloudKeyBox
+                                                name="Deepseek"
+                                                icon="🚀"
+                                                modelValue={settings.ai_provider?.deepseek_model}
+                                                onModelChange={(v: string) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, deepseek_model: v } })}
+                                                modelPlaceholder="deepseek-chat"
+                                                value={settings.ai_provider?.deepseek_key}
+                                                onChange={(v: string) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, deepseek_key: v } })}
+                                                onTest={() => handleTestKey('deepseek', settings.ai_provider?.deepseek_key, 'llm', 'https://api.deepseek.com/v1', settings.ai_provider?.deepseek_model)}
+                                                testStatus={testStatus.deepseek || 'idle'}
+                                                testProgress={apiTestProgress.deepseek}
+                                            />
+                                            {/* GLM (ZhipuAI) */}
+                                            <CloudKeyBox
+                                                name="GLM (ZhipuAI)"
+                                                icon="🇨🇳"
+                                                modelValue={settings.ai_provider?.glm_model}
+                                                onModelChange={(v: string) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, glm_model: v } })}
+                                                modelPlaceholder="glm-4-flash"
+                                                value={settings.ai_provider?.glm_key}
+                                                onChange={(v: string) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, glm_key: v } })}
+                                                onTest={() => handleTestKey('glm', settings.ai_provider?.glm_key, 'llm', 'https://open.bigmodel.cn/api/paas/v4', settings.ai_provider?.glm_model)}
+                                                testStatus={testStatus.glm || 'idle'}
+                                                testProgress={apiTestProgress.glm}
+                                            />
+                                            {/* KIMI (Moonshot) */}
+                                            <CloudKeyBox
+                                                name="KIMI (Moonshot)"
+                                                icon="🌙"
+                                                modelValue={settings.ai_provider?.kimi_model}
+                                                onModelChange={(v: string) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, kimi_model: v } })}
+                                                modelPlaceholder="moonshot-v1-8k"
+                                                value={settings.ai_provider?.kimi_key}
+                                                onChange={(v: string) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, kimi_key: v } })}
+                                                onTest={() => handleTestKey('kimi', settings.ai_provider?.kimi_key, 'llm', 'https://api.moonshot.cn/v1', settings.ai_provider?.kimi_model)}
+                                                testStatus={testStatus.kimi || 'idle'}
+                                                testProgress={apiTestProgress.kimi}
+                                            />
+                                            {/* OpenAI */}
+                                            <CloudKeyBox
+                                                name="OpenAI"
+                                                icon="🤖"
+                                                modelValue={settings.ai_provider?.openai_model}
+                                                onModelChange={(v: string) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, openai_model: v } })}
+                                                modelPlaceholder="gpt-4o-mini"
+                                                value={settings.ai_provider?.openai_key}
+                                                onChange={(v: string) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, openai_key: v } })}
+                                                onTest={() => handleTestKey('openai', settings.ai_provider?.openai_key, 'llm', 'https://api.openai.com/v1', settings.ai_provider?.openai_model)}
+                                                testStatus={testStatus.openai || 'idle'}
+                                                testProgress={apiTestProgress.openai}
+                                            />
+                                        </div>
+                                    </div>
+                                    {/* Custom API (Any OpenAI-compatible endpoint) */}
                                     <div className="border-t border-slate-800 my-2 pt-4">
                                         <div className="flex items-center space-x-2 mb-3">
-                                            <span className="text-xs font-bold text-yellow-500 px-2 py-0.5 rounded bg-yellow-500/10 border border-yellow-500/20">PAID</span>
-                                            <h4 className="text-sm font-semibold text-white">Paid API (OpenAI / Compatible)</h4>
+                                            <span className="text-xs font-bold text-purple-500 px-2 py-0.5 rounded bg-purple-500/10 border border-purple-500/20">CUSTOM</span>
+                                            <h4 className="text-sm font-semibold text-white">Custom OpenAI-Compatible API</h4>
                                         </div>
                                         <div className="space-y-3 p-3 bg-slate-800/50 rounded-lg border border-slate-700/50">
-                                            {/* Base URL Input */}
                                             <div>
                                                 <label className="text-xs text-slate-400 mb-1 block">Base URL</label>
                                                 <input
@@ -736,21 +803,18 @@ export default function SettingsPanel() {
                                                     value={settings.ai_provider.custom_base_url || ''}
                                                     onChange={(e) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, custom_base_url: e.target.value } })}
                                                 />
-                                                <p className="text-[10px] text-slate-500 mt-1">
-                                                    Examples: https://api.openai.com/v1, https://api.groq.com/openai/v1
-                                                </p>
                                             </div>
-
                                             <CloudKeyBox
                                                 name="API Key"
-                                                icon="Key"
+                                                icon="🔑"
                                                 modelValue={settings.ai_provider?.custom_model}
-                                                modelPlaceholder="Model ID (e.g. gpt-4o, o1-preview)"
+                                                modelPlaceholder="Model ID"
                                                 onModelChange={(v: string) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, custom_model: v } })}
                                                 value={settings.ai_provider.custom_key}
                                                 onChange={(v: string) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, custom_key: v } })}
                                                 onTest={() => handleTestKey('custom', settings.ai_provider.custom_key, 'llm', settings.ai_provider.custom_base_url, settings.ai_provider.custom_model)}
                                                 testStatus={testStatus.custom}
+                                                testProgress={apiTestProgress.custom}
                                             />
                                         </div>
                                     </div>
