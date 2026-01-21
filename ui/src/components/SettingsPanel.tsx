@@ -132,6 +132,20 @@ export default function SettingsPanel() {
         details: ''
     });
 
+    // API Test Progress State (for all cloud APIs)
+    const [apiTestProgress, setApiTestProgress] = useState<Record<string, {
+        status: 'idle' | 'testing' | 'success' | 'error';
+        progress: number;
+        message: string;
+        details: string;
+    }>>({
+        google: { status: 'idle', progress: 0, message: '', details: '' },
+        huggingface: { status: 'idle', progress: 0, message: '', details: '' },
+        openrouter: { status: 'idle', progress: 0, message: '', details: '' },
+        elsevier: { status: 'idle', progress: 0, message: '', details: '' },
+        custom: { status: 'idle', progress: 0, message: '', details: '' }
+    });
+
     useEffect(() => { loadSettings(); }, []);
 
     const loadSettings = async () => {
@@ -310,36 +324,103 @@ export default function SettingsPanel() {
 
     const handleTestKey = async (provider: string, key?: string, serviceType: 'llm' | 'elsevier' = 'llm', baseUrl?: string, model?: string) => {
         console.log('[DEBUG] handleTestKey called with:', { provider, key: key ? '***' : 'missing', serviceType, baseUrl, model });
-        console.log('[DEBUG] Current testStatus state:', testStatus);
 
         if (!key) {
-            alert('Please enter an API key first.');
+            setApiTestProgress(prev => ({
+                ...prev,
+                [provider]: {
+                    status: 'error',
+                    progress: 100,
+                    message: 'FAILED: No API Key',
+                    details: 'Please enter an API key first.'
+                }
+            }));
             return;
         }
 
-        console.log('[DEBUG] Setting testStatus for provider:', provider, 'to testing');
+        // Step 1: Starting test
+        setApiTestProgress(prev => ({
+            ...prev,
+            [provider]: { status: 'testing', progress: 20, message: 'Validating API key format...', details: '' }
+        }));
         setTestStatus(prev => ({ ...prev, [provider]: 'testing' }));
 
         try {
-            console.log('[DEBUG] Calling api.testConnection with:', { serviceType, provider, baseUrl, model });
+            // Step 2: Connecting
+            await new Promise(r => setTimeout(r, 300)); // Brief pause for visual feedback
+            setApiTestProgress(prev => ({
+                ...prev,
+                [provider]: { ...prev[provider], progress: 50, message: 'Connecting to API endpoint...' }
+            }));
+
+            // Step 3: Making test call
             const res = await api.testConnection(serviceType, provider, key, baseUrl, model);
-            console.log('[DEBUG] API response:', res);
+
+            setApiTestProgress(prev => ({
+                ...prev,
+                [provider]: { ...prev[provider], progress: 80, message: 'Processing response...' }
+            }));
+
+            await new Promise(r => setTimeout(r, 200));
 
             if (res.status === 'success') {
                 setTestStatus(prev => ({ ...prev, [provider]: 'success' }));
-                alert(`✅ ${res.message}`);
+                setApiTestProgress(prev => ({
+                    ...prev,
+                    [provider]: {
+                        status: 'success',
+                        progress: 100,
+                        message: 'PASSED: API Connected',
+                        details: res.message || 'API key validated successfully.'
+                    }
+                }));
             } else if (res.status === 'warning') {
                 setTestStatus(prev => ({ ...prev, [provider]: 'error' }));
-                alert(`⚠️ ${res.message}`);
+                setApiTestProgress(prev => ({
+                    ...prev,
+                    [provider]: {
+                        status: 'error',
+                        progress: 100,
+                        message: 'WARNING: Partial Success',
+                        details: res.message || 'API responded with a warning.'
+                    }
+                }));
             } else {
                 setTestStatus(prev => ({ ...prev, [provider]: 'error' }));
-                alert(`❌ ${res.message}`);
+                setApiTestProgress(prev => ({
+                    ...prev,
+                    [provider]: {
+                        status: 'error',
+                        progress: 100,
+                        message: 'FAILED: API Error',
+                        details: res.message || 'API returned an error response.'
+                    }
+                }));
             }
         } catch (e: any) {
             console.error('[DEBUG] API Test Failed with exception:', e);
-            console.error('[DEBUG] Error details:', { message: e.message, stack: e.stack });
+
+            let failReason = e?.message || 'Unknown error occurred';
+            if (failReason.includes('NetworkError') || failReason.includes('fetch')) {
+                failReason = 'Network error - check your internet connection.';
+            } else if (failReason.includes('401') || failReason.includes('Unauthorized')) {
+                failReason = 'Invalid API key - please check and re-enter.';
+            } else if (failReason.includes('429') || failReason.includes('rate')) {
+                failReason = 'Rate limit exceeded - try again later.';
+            } else if (failReason.includes('timeout')) {
+                failReason = 'Connection timed out - API may be unavailable.';
+            }
+
             setTestStatus(prev => ({ ...prev, [provider]: 'error' }));
-            alert(`❌ API Test Failed: ${e.message}`);
+            setApiTestProgress(prev => ({
+                ...prev,
+                [provider]: {
+                    status: 'error',
+                    progress: 100,
+                    message: 'FAILED: Connection Error',
+                    details: failReason
+                }
+            }));
         }
     };
 
@@ -514,12 +595,12 @@ export default function SettingsPanel() {
                                         onClick={handleTestLmStudio}
                                         disabled={lmStudioTest.status === 'testing'}
                                         className={`w-full rounded-md py-2 text-xs font-bold transition-colors ${lmStudioTest.status === 'testing'
-                                                ? 'bg-indigo-800 text-indigo-300 cursor-wait'
-                                                : lmStudioTest.status === 'success'
-                                                    ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
-                                                    : lmStudioTest.status === 'error'
-                                                        ? 'bg-red-600 hover:bg-red-500 text-white'
-                                                        : 'bg-indigo-600 hover:bg-indigo-500 text-white'
+                                            ? 'bg-indigo-800 text-indigo-300 cursor-wait'
+                                            : lmStudioTest.status === 'success'
+                                                ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                                                : lmStudioTest.status === 'error'
+                                                    ? 'bg-red-600 hover:bg-red-500 text-white'
+                                                    : 'bg-indigo-600 hover:bg-indigo-500 text-white'
                                             }`}
                                     >
                                         {lmStudioTest.status === 'testing'
@@ -587,6 +668,7 @@ export default function SettingsPanel() {
                                         onChange={(v: string) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, google_key: v } })}
                                         onTest={() => handleTestKey('google', settings.ai_provider.google_key)}
                                         testStatus={testStatus.google}
+                                        testProgress={apiTestProgress.google}
                                     />
                                     {/* Hugging Face */}
                                     <CloudKeyBox
@@ -598,6 +680,7 @@ export default function SettingsPanel() {
                                         onChange={(v: string) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, huggingface_key: v } })}
                                         onTest={() => handleTestKey('huggingface', settings.ai_provider.huggingface_key)}
                                         testStatus={testStatus.huggingface}
+                                        testProgress={apiTestProgress.huggingface}
                                     />
                                     {/* OpenRouter */}
                                     <CloudKeyBox
@@ -609,6 +692,7 @@ export default function SettingsPanel() {
                                         onChange={(v: string) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, openrouter_key: v } })}
                                         onTest={() => handleTestKey('openrouter', settings.ai_provider.openrouter_key)}
                                         testStatus={testStatus.openrouter}
+                                        testProgress={apiTestProgress.openrouter}
                                     />
                                     {/* Generic Paid / Custom API */}
                                     <div className="border-t border-slate-800 my-2 pt-4">
@@ -984,7 +1068,7 @@ export default function SettingsPanel() {
 
 // --- Helper Components ---
 
-const CloudKeyBox = ({ name, value, icon, onChange, onTest, testStatus = 'idle', modelValue, onModelChange, modelPlaceholder, ...props }: any) => {
+const CloudKeyBox = ({ name, value, icon, onChange, onTest, testStatus = 'idle', testProgress, modelValue, onModelChange, modelPlaceholder, ...props }: any) => {
     const getStatusIcon = () => {
         switch (testStatus) {
             case 'testing':
@@ -1017,6 +1101,7 @@ const CloudKeyBox = ({ name, value, icon, onChange, onTest, testStatus = 'idle',
                 <div className="flex items-center space-x-2">
                     <span className="text-lg font-bold text-slate-400 font-mono bg-slate-900 px-2 py-1 rounded">{icon}</span>
                     <span className="text-sm font-medium text-slate-300">{name}</span>
+                    <span className="text-[10px] text-slate-600 bg-slate-800/50 px-2 py-0.5 rounded">OPTIONAL</span>
                 </div>
                 <div className="flex items-center space-x-2">
                     {getStatusIcon()}
@@ -1032,11 +1117,60 @@ const CloudKeyBox = ({ name, value, icon, onChange, onTest, testStatus = 'idle',
                 />
                 <button
                     onClick={onTest}
-                    className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-xs font-bold transition-colors"
+                    disabled={testStatus === 'testing'}
+                    className={`px-4 py-2 rounded text-xs font-bold transition-colors ${testStatus === 'testing'
+                        ? 'bg-slate-700 text-slate-400 cursor-wait'
+                        : 'bg-slate-800 hover:bg-slate-700 text-slate-300'
+                        }`}
                 >
-                    Test
+                    {testStatus === 'testing' ? '...' : 'Test'}
                 </button>
             </div>
+
+            {/* Progress Bar and Status Display */}
+            {testProgress && testProgress.status !== 'idle' && (
+                <div className="mt-3 space-y-2">
+                    {/* Progress Bar */}
+                    {testProgress.status === 'testing' && (
+                        <div className="space-y-1">
+                            <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                                <div
+                                    className="h-full bg-blue-500 transition-all duration-300 ease-out"
+                                    style={{ width: `${testProgress.progress}%` }}
+                                />
+                            </div>
+                            <p className="text-[10px] text-blue-300 text-center">{testProgress.message}</p>
+                        </div>
+                    )}
+
+                    {/* Success Status */}
+                    {testProgress.status === 'success' && (
+                        <div className="p-2 bg-emerald-950/30 border border-emerald-500/30 rounded">
+                            <div className="flex items-center space-x-1.5">
+                                <CheckCircle className="w-3 h-3 text-emerald-400" />
+                                <span className="text-xs font-bold text-emerald-400">{testProgress.message}</span>
+                            </div>
+                            {testProgress.details && (
+                                <p className="text-[10px] text-emerald-300/70 mt-1">{testProgress.details}</p>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Error Status */}
+                    {testProgress.status === 'error' && (
+                        <div className="p-2 bg-red-950/30 border border-red-500/30 rounded">
+                            <div className="flex items-center space-x-1.5">
+                                <AlertCircle className="w-3 h-3 text-red-400" />
+                                <span className="text-xs font-bold text-red-400">{testProgress.message}</span>
+                            </div>
+                            {testProgress.details && (
+                                <p className="text-[10px] text-red-300/70 mt-1">{testProgress.details}</p>
+                            )}
+                        </div>
+                    )}
+                </div>
+            )}
+
             {/* Model ID Input (Optional) */}
             {onModelChange && (
                 <div className="mt-3">
