@@ -75,6 +75,9 @@ export default function SettingsPanel() {
             google_key: '',
             huggingface_key: '',
             openrouter_key: '',
+            // Groq (Free Tier with high rate limits)
+            groq_key: '',
+            groq_model: 'llama-3.3-70b-versatile',
             // Generic Custom API (formerly GLM hardcoded)
             custom_base_url: '',
             custom_key: '',
@@ -114,9 +117,10 @@ export default function SettingsPanel() {
         google: 'idle',
         huggingface: 'idle',
         openrouter: 'idle',
+        groq: 'idle',
         glm: 'idle',
         elsevier: 'idle',
-        custom: 'idle'  // Added for Custom API and LM Studio tests
+        custom: 'idle'
     });
 
     // LM Studio Test State with Progress
@@ -142,6 +146,7 @@ export default function SettingsPanel() {
         google: { status: 'idle', progress: 0, message: '', details: '' },
         huggingface: { status: 'idle', progress: 0, message: '', details: '' },
         openrouter: { status: 'idle', progress: 0, message: '', details: '' },
+        groq: { status: 'idle', progress: 0, message: '', details: '' },
         elsevier: { status: 'idle', progress: 0, message: '', details: '' },
         custom: { status: 'idle', progress: 0, message: '', details: '' }
     });
@@ -694,6 +699,26 @@ export default function SettingsPanel() {
                                         testStatus={testStatus.openrouter}
                                         testProgress={apiTestProgress.openrouter}
                                     />
+                                    {/* Groq - FREE with high rate limits */}
+                                    <div className="border-t border-slate-800 my-2 pt-4">
+                                        <div className="flex items-center space-x-2 mb-3">
+                                            <span className="text-xs font-bold text-emerald-500 px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20">FREE</span>
+                                            <h4 className="text-sm font-semibold text-white">Groq Cloud (High Speed)</h4>
+                                        </div>
+                                        <p className="text-[10px] text-slate-500 mb-3">Free tier with 30 requests/min. Uses Llama 3.3 70B. Get key at <a href="https://console.groq.com/keys" target="_blank" rel="noreferrer" className="text-teal-400 underline">console.groq.com</a></p>
+                                        <CloudKeyBox
+                                            name="Groq API"
+                                            icon="⚡"
+                                            modelValue={settings.ai_provider?.groq_model}
+                                            onModelChange={(v: string) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, groq_model: v } })}
+                                            modelPlaceholder="llama-3.3-70b-versatile"
+                                            value={settings.ai_provider.groq_key}
+                                            onChange={(v: string) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, groq_key: v } })}
+                                            onTest={() => handleTestKey('groq', settings.ai_provider.groq_key, 'llm', 'https://api.groq.com/openai/v1', settings.ai_provider.groq_model)}
+                                            testStatus={testStatus.groq}
+                                            testProgress={apiTestProgress.groq}
+                                        />
+                                    </div>
                                     {/* Generic Paid / Custom API */}
                                     <div className="border-t border-slate-800 my-2 pt-4">
                                         <div className="flex items-center space-x-2 mb-3">

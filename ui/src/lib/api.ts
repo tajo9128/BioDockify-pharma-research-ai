@@ -68,8 +68,14 @@ export interface Settings {
     lm_studio_model?: string;
 
     google_key?: string;
+    google_model?: string;
     huggingface_key?: string;
+    huggingface_model?: string;
     openrouter_key?: string;
+    openrouter_model?: string;
+    // Groq (Free tier with high rate limits)
+    groq_key?: string;
+    groq_model?: string;
     glm_key?: string;
     elsevier_key?: string;
     semantic_scholar_key?: string; // S2 API key for higher rate limits
