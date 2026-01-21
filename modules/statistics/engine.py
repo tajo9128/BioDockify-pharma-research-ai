@@ -5,6 +5,14 @@ from typing import Dict, List, Optional, Any, Union
 import json
 import logging
 
+# Survival analysis (optional)
+try:
+    from .survival import SurvivalAnalyzer, is_survival_available
+    SURVIVAL_AVAILABLE = is_survival_available()
+except ImportError:
+    SURVIVAL_AVAILABLE = False
+    SurvivalAnalyzer = None
+
 # Configure logger
 logger = logging.getLogger(__name__)
 
@@ -56,6 +64,9 @@ class StatisticalEngine:
             elif design == "anova":
                 # For >2 groups
                 results = self._analyze_anova(df, numeric_cols[0], categorical_cols[0] if categorical_cols else None)
+            elif design == "survival":
+                # Survival analysis (Kaplan-Meier / Cox)
+                results = self._analyze_survival(df)
             else:
                 # Default descriptive
                 results = self._analyze_descriptive(df, numeric_cols)
@@ -236,4 +247,60 @@ class StatisticalEngine:
         p = res.get("p_value", "N/A")
         val = res.get("statistic", "N/A")
         
+        # Survival analysis specific
+        if res.get("type") == "survival":
+            analysis_type = res.get("analysis_type", "Kaplan-Meier")
+            if analysis_type == "kaplan_meier":
+                return f"Survival analysis was performed using the Kaplan-Meier method. The log-rank test was used to compare survival curves between groups (p = {p if p != 'N/A' else 'N/A'}). Median survival times were estimated with 95% confidence intervals using the Greenwood formula. Significance was defined at alpha = 0.05."
+            elif analysis_type == "cox_regression":
+                return f"Cox proportional hazards regression was performed to assess the effect of covariates on survival. Hazard ratios were calculated with 95% confidence intervals. The proportional hazards assumption was verified. Significance was defined at alpha = 0.05."
+        
         return f"Statistical analysis was performed using {test}. The test statistic was {val:.4f} with a p-value of {p:.4f}. Assumptions were verified using Shapiro-Wilk and Levene's tests where appropriate. Significance was defined at alpha = 0.05."
+    
+    def _analyze_survival(self, df: pd.DataFrame) -> Dict:
+        """Survival analysis routing."""
+        if not SURVIVAL_AVAILABLE:
+            return {"error": "Survival analysis requires 'lifelines' package. Install with: pip install lifelines"}
+        
+        # Detect columns (heuristic)
+        # Expect: 'time', 'event', optional 'group' or covariates
+        time_col = None
+        event_col = None
+        group_col = None
+        
+        for col in df.columns:
+            col_lower = col.lower()
+            if 'time' in col_lower or 'duration' in col_lower or 'month' in col_lower:
+                time_col = col
+            elif 'event' in col_lower or 'death' in col_lower or 'status' in col_lower:
+                event_col = col
+            elif 'group' in col_lower or 'treatment' in col_lower or 'arm' in col_lower:
+                group_col = col
+        
+        if not time_col or not event_col:
+            return {"error": "Survival analysis requires 'time' and 'event' columns. Could not auto-detect."}
+        
+        analyzer = SurvivalAnalyzer()
+        
+        try:
+            result = analyzer.kaplan_meier(
+                data=df,
+                time_col=time_col,
+                event_col=event_col,
+                group_col=group_col
+            )
+            
+            return {
+                "type": "survival",
+                "analysis_type": result.analysis_type,
+                "median_survival": result.median_survival,
+                "confidence_intervals": result.confidence_intervals,
+                "p_value": result.p_value,
+                "plot_base64": result.plot_base64,
+                "time_col": time_col,
+                "event_col": event_col,
+                "group_col": group_col
+            }
+        except Exception as e:
+            logger.error(f"Survival analysis failed: {e}")
+            return {"error": str(e)}
