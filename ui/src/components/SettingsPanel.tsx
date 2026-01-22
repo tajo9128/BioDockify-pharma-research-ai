@@ -248,7 +248,9 @@ export default function SettingsPanel() {
             // Step 1: Check if server is reachable
             setLmStudioTest(prev => ({ ...prev, progress: 25, message: 'Checking server availability...' }));
 
-            const modelsRes = await fetch(`${url}/models`, {
+            // User provides full endpoint URL (e.g., http://localhost:1234/v1/models)
+            // So we use it as-is without appending /models
+            const modelsRes = await fetch(url, {
                 method: 'GET',
                 signal: AbortSignal.timeout(5000)
             });
@@ -275,13 +277,16 @@ export default function SettingsPanel() {
             const modelId = models[0]?.id || 'unknown';
 
             // Step 3: Test model response
+            // Extract base URL (remove /models endpoint)
+            const baseUrl = url.replace(/\/models$/, '');
+
             setLmStudioTest(prev => ({
                 ...prev,
                 progress: 75,
                 message: `Testing model: ${modelId.split('/').pop()}...`
             }));
 
-            const testRes = await fetch(`${url}/chat/completions`, {
+            const testRes = await fetch(`${baseUrl}/chat/completions`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
