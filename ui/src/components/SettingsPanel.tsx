@@ -803,11 +803,12 @@ export default function SettingsPanel() {
                                                 <label className="text-xs text-slate-400 mb-1 block">Base URL</label>
                                                 <input
                                                     type="text"
-                                                    placeholder="https://api.openai.com/v1"
+                                                    placeholder="https://api.deepseek.com/v1"
                                                     className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-sm text-white focus:outline-none focus:border-teal-500/50"
                                                     value={settings.ai_provider.custom_base_url || ''}
                                                     onChange={(e) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, custom_base_url: e.target.value } })}
                                                 />
+                                                <p className="text-xs text-slate-500 mt-1">Include /v1 for OpenAI-compatible APIs (e.g., DeepSeek, Groq, etc.)</p>
                                             </div>
                                             <CloudKeyBox
                                                 name="API Key"
