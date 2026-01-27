@@ -731,74 +731,58 @@ export default function SettingsPanel() {
                                             testProgress={apiTestProgress.groq}
                                         />
                                     </div>
-                                    {/* === PAID APIs Section === */}
+                                    {/* === PAID / CUSTOM API Section (Unified) === */}
                                     <div className="border-t border-slate-800 my-4 pt-4">
-                                        <div className="flex items-center space-x-2 mb-4">
-                                            <span className="text-xs font-bold text-yellow-500 px-2 py-0.5 rounded bg-yellow-500/10 border border-yellow-500/20">PAID</span>
-                                            <h4 className="text-sm font-semibold text-white">Premium API Providers</h4>
-                                        </div>
-                                        <div className="grid gap-3">
-                                            {/* Deepseek */}
-                                            <CloudKeyBox
-                                                name="Deepseek"
-                                                icon="🚀"
-                                                modelValue={settings.ai_provider?.deepseek_model}
-                                                onModelChange={(v: string) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, deepseek_model: v } })}
-                                                modelPlaceholder="deepseek-chat"
-                                                value={settings.ai_provider?.deepseek_key}
-                                                onChange={(v: string) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, deepseek_key: v } })}
-                                                onTest={() => handleTestKey('deepseek', settings.ai_provider?.deepseek_key, 'llm', 'https://api.deepseek.com/v1', settings.ai_provider?.deepseek_model)}
-                                                testStatus={testStatus.deepseek || 'idle'}
-                                                testProgress={apiTestProgress.deepseek}
-                                            />
-                                            {/* GLM (ZhipuAI) */}
-                                            <CloudKeyBox
-                                                name="GLM (ZhipuAI)"
-                                                icon="🇨🇳"
-                                                modelValue={settings.ai_provider?.glm_model}
-                                                onModelChange={(v: string) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, glm_model: v } })}
-                                                modelPlaceholder="glm-4-flash"
-                                                value={settings.ai_provider?.glm_key}
-                                                onChange={(v: string) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, glm_key: v } })}
-                                                onTest={() => handleTestKey('glm', settings.ai_provider?.glm_key, 'llm', 'https://open.bigmodel.cn/api/paas/v4', settings.ai_provider?.glm_model)}
-                                                testStatus={testStatus.glm || 'idle'}
-                                                testProgress={apiTestProgress.glm}
-                                            />
-                                            {/* KIMI (Moonshot) */}
-                                            <CloudKeyBox
-                                                name="KIMI (Moonshot)"
-                                                icon="🌙"
-                                                modelValue={settings.ai_provider?.kimi_model}
-                                                onModelChange={(v: string) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, kimi_model: v } })}
-                                                modelPlaceholder="moonshot-v1-8k"
-                                                value={settings.ai_provider?.kimi_key}
-                                                onChange={(v: string) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, kimi_key: v } })}
-                                                onTest={() => handleTestKey('kimi', settings.ai_provider?.kimi_key, 'llm', 'https://api.moonshot.cn/v1', settings.ai_provider?.kimi_model)}
-                                                testStatus={testStatus.kimi || 'idle'}
-                                                testProgress={apiTestProgress.kimi}
-                                            />
-                                            {/* OpenAI */}
-                                            <CloudKeyBox
-                                                name="OpenAI"
-                                                icon="🤖"
-                                                modelValue={settings.ai_provider?.openai_model}
-                                                onModelChange={(v: string) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, openai_model: v } })}
-                                                modelPlaceholder="gpt-4o-mini"
-                                                value={settings.ai_provider?.openai_key}
-                                                onChange={(v: string) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, openai_key: v } })}
-                                                onTest={() => handleTestKey('openai', settings.ai_provider?.openai_key, 'llm', 'https://api.openai.com/v1', settings.ai_provider?.openai_model)}
-                                                testStatus={testStatus.openai || 'idle'}
-                                                testProgress={apiTestProgress.openai}
-                                            />
-                                        </div>
-                                    </div>
-                                    {/* Custom API (Any OpenAI-compatible endpoint) */}
-                                    <div className="border-t border-slate-800 my-2 pt-4">
                                         <div className="flex items-center space-x-2 mb-3">
-                                            <span className="text-xs font-bold text-purple-500 px-2 py-0.5 rounded bg-purple-500/10 border border-purple-500/20">CUSTOM</span>
+                                            <span className="text-xs font-bold text-yellow-500 px-2 py-0.5 rounded bg-yellow-500/10 border border-yellow-500/20">PAID</span>
                                             <h4 className="text-sm font-semibold text-white">Custom OpenAI-Compatible API</h4>
                                         </div>
                                         <div className="space-y-3 p-3 bg-slate-800/50 rounded-lg border border-slate-700/50">
+                                            {/* Provider Dropdown */}
+                                            <div>
+                                                <label className="text-xs text-slate-400 mb-1 block">Provider</label>
+                                                <select
+                                                    className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-sm text-white focus:outline-none focus:border-teal-500/50"
+                                                    value={settings.ai_provider.custom_provider || 'custom'}
+                                                    onChange={(e) => {
+                                                        const provider = e.target.value;
+                                                        const urlMap: Record<string, string> = {
+                                                            'deepseek': 'https://api.deepseek.com/v1',
+                                                            'glm': 'https://open.bigmodel.cn/api/paas/v4',
+                                                            'kimi': 'https://api.moonshot.cn/v1',
+                                                            'openai': 'https://api.openai.com/v1',
+                                                            'groq': 'https://api.groq.com/openai/v1',
+                                                            'custom': ''
+                                                        };
+                                                        setSettings({
+                                                            ...settings,
+                                                            ai_provider: {
+                                                                ...settings.ai_provider,
+                                                                custom_provider: provider,
+                                                                custom_base_url: urlMap[provider] || settings.ai_provider.custom_base_url
+                                                            }
+                                                        });
+                                                    }}
+                                                >
+                                                    <option value="deepseek">🚀 Deepseek (deepseek-chat, deepseek-reasoner)</option>
+                                                    <option value="glm">🇨🇳 GLM / ZhipuAI (glm-4-flash)</option>
+                                                    <option value="kimi">🌙 KIMI / Moonshot (moonshot-v1-8k)</option>
+                                                    <option value="openai">🤖 OpenAI (gpt-4o-mini, gpt-4o)</option>
+                                                    <option value="groq">⚡ Groq (llama-3.3-70b-versatile)</option>
+                                                    <option value="custom">🔧 Custom / Other</option>
+                                                </select>
+                                                <p className="text-xs text-slate-500 mt-1">
+                                                    {settings.ai_provider.custom_provider === 'deepseek' && '💡 DeepSeek offers powerful reasoning models'}
+                                                    {settings.ai_provider.custom_provider === 'glm' && '💡 Chinese AI provider with multilingual support'}
+                                                    {settings.ai_provider.custom_provider === 'kimi' && '💡 Long context support up to 200k tokens'}
+                                                    {settings.ai_provider.custom_provider === 'openai' && '💡 Industry-leading models from OpenAI'}
+                                                    {settings.ai_provider.custom_provider === 'groq' && '💡 Ultra-fast inference speed'}
+                                                    {settings.ai_provider.custom_provider === 'custom' && '💡 Enter your own OpenAI-compatible base URL'}
+                                                    {!settings.ai_provider.custom_provider && '💡 Select a provider to auto-fill base URL'}
+                                                </p>
+                                            </div>
+
+                                            {/* Base URL */}
                                             <div>
                                                 <label className="text-xs text-slate-400 mb-1 block">Base URL</label>
                                                 <input
@@ -807,14 +791,24 @@ export default function SettingsPanel() {
                                                     className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-sm text-white focus:outline-none focus:border-teal-500/50"
                                                     value={settings.ai_provider.custom_base_url || ''}
                                                     onChange={(e) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, custom_base_url: e.target.value } })}
+                                                    disabled={settings.ai_provider.custom_provider !== 'custom' && settings.ai_provider.custom_provider !== undefined}
                                                 />
-                                                <p className="text-xs text-slate-500 mt-1">Include /v1 for OpenAI-compatible APIs (e.g., DeepSeek, Groq, etc.)</p>
+                                                <p className="text-xs text-slate-500 mt-1">Auto-filled for selected provider. Include /v1 for OpenAI-compatible APIs.</p>
                                             </div>
+
+                                            {/* API Key & Model */}
                                             <CloudKeyBox
                                                 name="API Key"
                                                 icon="🔑"
                                                 modelValue={settings.ai_provider?.custom_model}
-                                                modelPlaceholder="Model ID"
+                                                modelPlaceholder={
+                                                    settings.ai_provider.custom_provider === 'deepseek' ? 'deepseek-chat' :
+                                                        settings.ai_provider.custom_provider === 'glm' ? 'glm-4-flash' :
+                                                            settings.ai_provider.custom_provider === 'kimi' ? 'moonshot-v1-8k' :
+                                                                settings.ai_provider.custom_provider === 'openai' ? 'gpt-4o-mini' :
+                                                                    settings.ai_provider.custom_provider === 'groq' ? 'llama-3.3-70b-versatile' :
+                                                                        'Model ID'
+                                                }
                                                 onModelChange={(v: string) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, custom_model: v } })}
                                                 value={settings.ai_provider.custom_key}
                                                 onChange={(v: string) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, custom_key: v } })}
