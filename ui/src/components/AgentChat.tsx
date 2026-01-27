@@ -81,54 +81,68 @@ How can I assist your research today?`,
     const handleSend = async () => {
         if (!input.trim()) return;
 
-        // Check if any AI provider is configured
+        // Check if any AI provider is configured (including LM Studio)
         try {
             const settings = await api.getSettings();
             const providerConfig = settings?.ai_provider || {};
+
+            // Check for cloud providers
             const hasCloudProvider = !!(
                 providerConfig.google_key ||
                 providerConfig.openrouter_key ||
                 providerConfig.huggingface_key ||
                 providerConfig.custom_key ||
-                providerConfig.glm_key
+                providerConfig.glm_key ||
+                providerConfig.groq_key
             );
 
-            // If no cloud provider and Ollama is not available, show helpful message
-            if (!hasCloudProvider) {
+            // Check for LM Studio (local AI)
+            const lmStudioUrl = providerConfig.lm_studio_url || 'http://localhost:1234/v1';
+            let hasLmStudio = false;
+
+            if (providerConfig.mode === 'lm_studio' || !hasCloudProvider) {
                 try {
-                    const ollamaStatus = await api.checkOllamaStatus();
-                    if (!ollamaStatus.available) {
-                        const userMsg: Message = { role: 'user', content: input, timestamp: new Date() };
-                        setMessages(prev => [...prev, userMsg]);
-                        setInput('');
-
-                        setMessages(prev => [...prev, {
-                            role: 'system',
-                            content: `⚠️ **No AI Provider Configured**
-
-Ollama is not available or not running. Ollama requires a good CPU or GPU to work properly.
-
-**To use Agent Zero, please configure one of these free cloud APIs:**
-
-• **Google Gemini** - Get a free API key at https://ai.google.dev/
-• **OpenRouter** - Get a free API key at https://openrouter.ai/
-• **HuggingFace** - Get a free API key at https://huggingface.co/settings/tokens
-
-**How to configure:**
-1. Go to **Settings → AI & Brain**
-2. Enter your API key in the provider field
-3. Click **Test Connection** to verify
-4. Save your settings
-
-After configuring a provider, try sending your message again.`,
-                            timestamp: new Date()
-                        }]);
-                        return;
-                    }
+                    const { universalFetch } = await import('@/lib/services/universal-fetch');
+                    const lmCheck = await universalFetch(`${lmStudioUrl}/models`, {
+                        method: 'GET',
+                        timeout: 3000
+                    });
+                    hasLmStudio = lmCheck.ok && lmCheck.data?.data?.length > 0;
                 } catch (e) {
-                    // If Ollama status check fails, continue with the request
-                    console.warn("Ollama status check failed:", e);
+                    console.log('[AgentChat] LM Studio check failed:', e);
                 }
+            }
+
+            // If no provider available, show helpful message
+            if (!hasCloudProvider && !hasLmStudio) {
+                const userMsg: Message = { role: 'user', content: input, timestamp: new Date() };
+                setMessages(prev => [...prev, userMsg]);
+                setInput('');
+
+                setMessages(prev => [...prev, {
+                    role: 'system',
+                    content: `⚠️ **No AI Provider Available**
+
+**LM Studio** is not running or no model is loaded.
+
+**Quick Fix Options:**
+
+**Option 1: Use LM Studio (Recommended for privacy)**
+1. Open LM Studio application
+2. Load any model (e.g., Llama, Mistral, Qwen)
+3. Enable "Local Server" (port 1234)
+4. Try again
+
+**Option 2: Use Free Cloud API**
+Go to **Settings → AI & Brain** and add one of these free APIs:
+• **Google Gemini** - https://ai.google.dev/
+• **Groq** - https://console.groq.com/keys
+• **HuggingFace** - https://huggingface.co/settings/tokens
+
+After configuring, try again.`,
+                    timestamp: new Date()
+                }]);
+                return;
             }
         } catch (e) {
             console.warn("Failed to check provider configuration:", e);

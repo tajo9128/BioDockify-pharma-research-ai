@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '@/lib/api';
-import { detectAllServices, DetectedServices } from '@/lib/services/auto-config';
-import { detectLmStudioEnhanced, runSelfRepairDiagnostics, autoFixConfiguration } from '@/lib/services/self-repair';
+import { DetectedServices } from '@/lib/services/auto-config';
 import {
     Check, XCircle, RefreshCcw, Database, Brain, Server,
     HardDrive, Cpu, Gauge, Terminal, AlertTriangle
@@ -71,22 +70,47 @@ export default function FirstRunWizard({ onComplete }: WizardProps) {
     };
 
     const runResearchChecks = async () => {
-        console.log('[FirstRunWizard] Starting self-repair enhanced detection...');
+        console.log('[FirstRunWizard] Starting robust LM Studio detection...');
         setRepairStatus('Scanning for LM Studio...');
 
         try {
-            // Use enhanced self-repair detection with retry and port scanning
-            const lmResult = await detectLmStudioEnhanced();
+            // ROBUST DETECTION: Extended timeout and retry
+            const { universalFetch } = await import('@/lib/services/universal-fetch');
 
-            if (lmResult.available) {
-                console.log('[FirstRunWizard] LM Studio detected via self-repair:', lmResult);
+            // Try default port first with extended timeout
+            const ports = [1234, 1235, 8080, 8000];
+            let detected = false;
+            let detectedUrl = '';
+            let detectedModel = '';
 
-                // Auto-fix configuration
-                await autoFixConfiguration();
+            for (const port of ports) {
+                if (detected) break;
 
+                const url = `http://localhost:${port}/v1`;
+                setRepairStatus(`Checking port ${port}...`);
+
+                try {
+                    const result = await universalFetch(`${url}/models`, {
+                        method: 'GET',
+                        timeout: 8000 // Extended timeout for slow startup
+                    });
+
+                    if (result.ok && result.data?.data?.length > 0) {
+                        detected = true;
+                        detectedUrl = url;
+                        detectedModel = result.data.data[0]?.id || 'Unknown';
+                        console.log(`[FirstRunWizard] Found LM Studio on port ${port}!`);
+                    }
+                } catch (e) {
+                    console.log(`[FirstRunWizard] Port ${port} failed:`, e);
+                }
+            }
+
+            if (detected) {
+                // SUCCESS - Save configuration immediately
                 setDetectedServices({
                     lm_studio: true,
-                    lm_studio_model: lmResult.model,
+                    lm_studio_model: detectedModel,
                     backend: true,
                     grobid: false
                 });
@@ -95,21 +119,28 @@ export default function FirstRunWizard({ onComplete }: WizardProps) {
                     ...prev,
                     lm_studio: 'success'
                 }));
-                setRepairStatus(`Found on ${lmResult.url}`);
+                setRepairStatus(`Connected! Model: ${detectedModel.split('/').pop()}`);
+
+                // CRITICAL: Save to localStorage for Agent Zero
+                if (typeof window !== 'undefined') {
+                    localStorage.setItem('biodockify_lm_studio_url', detectedUrl);
+                    localStorage.setItem('biodockify_lm_studio_model', detectedModel);
+                    localStorage.setItem('biodockify_ai_mode', 'lm_studio');
+                    console.log('[FirstRunWizard] LM Studio config saved to localStorage');
+                }
             } else {
-                // Fall back to standard detection
-                setRepairStatus('Trying alternative detection...');
-                const detected = await detectAllServices();
-                setDetectedServices(detected);
+                // Not detected - show warning but allow proceeding
+                setDetectedServices({
+                    lm_studio: false,
+                    backend: true,
+                    grobid: false
+                });
 
                 setResearchStatus(prev => ({
                     ...prev,
-                    lm_studio: detected.lm_studio ? 'success' : 'warning'
+                    lm_studio: 'warning'
                 }));
-
-                if (!detected.lm_studio) {
-                    setRepairStatus('Not detected - ensure LM Studio server is running on port 1234');
-                }
+                setRepairStatus('Not detected - Start LM Studio and load a model');
             }
 
             console.log('[FirstRunWizard] Detection complete');
@@ -122,8 +153,8 @@ export default function FirstRunWizard({ onComplete }: WizardProps) {
             setRepairStatus('Detection failed - check console for details');
         }
 
-        // Auto advance
-        setTimeout(() => setStep(3), 2000);
+        // Auto advance after longer delay to show result
+        setTimeout(() => setStep(3), 2500);
     };
 
     const retryDetection = async () => {
