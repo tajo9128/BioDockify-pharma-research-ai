@@ -65,28 +65,25 @@ export async function detectLmStudioEnhanced(): Promise<ServiceStatus> {
 }
 
 /**
- * Fetch with automatic retry
+ * Fetch with automatic retry using universalFetch for CORS bypass
  */
 async function fetchWithRetry(
     url: string,
     maxRetries: number = 3,
     timeout: number = DEFAULT_TIMEOUT
-): Promise<Response> {
+): Promise<{ ok: boolean; json: () => Promise<any>; data?: any }> {
+    const { universalFetch } = await import('./universal-fetch');
     let lastError: Error | null = null;
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
             console.log(`[SelfRepair] Fetch attempt ${attempt}/${maxRetries}: ${url}`);
 
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), timeout);
-
-            const response = await fetch(url, {
+            const response = await universalFetch(url, {
                 method: 'GET',
-                signal: controller.signal
+                timeout
             });
 
-            clearTimeout(timeoutId);
             return response;
 
         } catch (e: any) {

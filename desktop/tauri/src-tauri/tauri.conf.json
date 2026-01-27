@@ -86,7 +86,15 @@
             "icon": [
                 "icons/icon.ico",
                 "icons/icon.png"
-            ]
+            ],
+            "windows": {
+                "nsis": {
+                    "installerIcon": "icons/icon.ico",
+                    "headerImage": "icons/icon.png",
+                    "sidebarImage": "icons/icon.png",
+                    "displayLanguageSelector": false
+                }
+            }
         },
         "systemTray": {
             "iconPath": "icons/icon.ico",

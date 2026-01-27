@@ -36,16 +36,18 @@ function isTauri(): boolean {
  */
 export async function checkLmStudio(url: string = DEFAULT_LM_STUDIO_URL): Promise<{ available: boolean; model?: string }> {
     try {
-        const res = await fetch(`${url}/models`, {
+        const { universalFetch } = await import('./universal-fetch');
+
+        const res = await universalFetch(`${url}/models`, {
             method: 'GET',
-            signal: AbortSignal.timeout(3000)
+            timeout: 5000
         });
 
         if (!res.ok) {
             return { available: false };
         }
 
-        const data = await res.json();
+        const data = res.data;
         const models = data?.data || [];
 
         if (models.length === 0) {
@@ -58,7 +60,8 @@ export async function checkLmStudio(url: string = DEFAULT_LM_STUDIO_URL): Promis
         console.log('[AutoConfig] LM Studio model detected:', modelId);
 
         return { available: true, model: modelId };
-    } catch {
+    } catch (e) {
+        console.log('[AutoConfig] LM Studio check failed:', e);
         return { available: false };
     }
 }
@@ -81,21 +84,23 @@ export async function testLmStudioConnection(url: string = DEFAULT_LM_STUDIO_URL
         }
 
         // Try a simple completion to verify model works
-        const testRes = await fetch(`${url}/chat/completions`, {
+        const { universalFetch } = await import('./universal-fetch');
+
+        const testRes = await universalFetch(`${url}/chat/completions`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
+            body: {
                 model: check.model,
                 messages: [{ role: 'user', content: 'Hi' }],
                 max_tokens: 5
-            }),
-            signal: AbortSignal.timeout(10000)
+            },
+            timeout: 10000
         });
 
         if (testRes.ok) {
             return { success: true, model: check.model };
         } else {
-            const errData = await testRes.json().catch(() => ({}));
+            const errData = testRes.data;
             return { success: false, error: errData?.error?.message || `HTTP ${testRes.status}`, model: check.model };
         }
     } catch (e: any) {
