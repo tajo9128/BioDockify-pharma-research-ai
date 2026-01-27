@@ -1,217 +1,63 @@
-# Release Notes
+# Release Notes - BioDockify v2.17.2
 
-## v2.17.1 - Paid APIs & Global Rotation
-*Released: January 21, 2026*
+**Release Date**: January 27, 2026
 
-### 🌍 Global API Rotation
-- **New Service**: `api-rotation` service automatically switches providers when rate limits (429) are hit.
-- **Provider Chain**: 10-provider fallback strategy:
-  1. **LM Studio** (Local)
-  2. **Free Tier**: Groq (30/min) → HuggingFace → Google Gemini
-  3. **Paid Tier**: OpenRouter → Deepseek → GLM → KIMI → OpenAI → Custom
-- **Unified Integration**: All features (Deep Research, Academic Writing, Podcast, Video) now use this rotation logic.
+## 🎉 What's New
 
-### 💰 Paid API Integration
-- **New Providers**: Added native support for **Deepseek**, **GLM (ZhipuAI)**, **KIMI (Moonshot)**, and **OpenAI**.
-- **Custom API**: Support for any OpenAI-compatible endpoint with a custom base URL.
-- **Groq API**: Added as a high-speed **FREE** option (marked with a green badge).
+### ✨ Omni Tools - Fully Functional
+Complete implementation of the Omni Tools module with comprehensive functionality:
+- **PDF Tools**: Merge multiple PDFs, split with page range support
+- **Image Tools**: Convert formats, resize, compress
+- **Data Processing**: CSV/JSON/Excel conversion and profiling  
+- **Text Utilities**: Case transforms, reverse, shuffle, word/char count
+- **Math Tools**: Safe expression calculator, prime number generator
 
-### ⚙️ UX Enhancements
-- **Settings Persistence**: User settings now persist significantly better across restarts via `localStorage`.
-- **API Test Progress**: Detailed progress bars for all API connection tests (Validating → Connecting → Processing).
-- **Self-Repair**: Enhanced LM Studio detection and self-repair capabilities.
+**Status**: 9/9 unit tests passing ✅
 
-## v2.16.8 - Agent Zero Core & LiteLLM Integration
-*Released: January 20, 2026*
+### 🔧 API Connection Fixes
 
-### 🧠 Agent Zero Core Features
-- **Inner Monologue**: The Agent now "thinks" before acting. You will see a "Thinking Process" block in the chat UI showing its reasoning steps.
-- **Recursion**: Implemented `delegate_task` capability. The agent can now spawn sub-agents to handle complex sub-tasks autonomously.
-- **Strict JSON Protocol**: Transiting to a fully structured communication protocol for higher reliability.
+#### LM Studio Connection Test
+- Fixed URL handling bug where test incorrectly appended `/models` to URLs already containing the path
+- Properly extracts base URL for chat completions endpoint
+- Connection test now works reliably with `http://localhost:1234/v1/models`
 
-### ⚡ LiteLLM Integration
-- **Universal Adapter**: Replaced custom LM Studio logic with `litellm`.
-- **JSON Enforcement**: Automatically enforces valid JSON output for local models (when supported), ensuring `thoughts` and `actions` are correctly formatted.
-- **Robustness**: Improved error handling and connection logic for local AI providers.
+#### DeepSeek API Support  
+- Updated Custom API placeholder to show correct format: `https://api.deepseek.com/v1`
+- Added helper text explaining `/v1` path requirement for OpenAI-compatible APIs
+- Improved error messaging for connection failures
 
-### 💅 UI Enhancements
-- **Thinking UI**: Added collapsible "Thinking Process" visualization in the Chat interface.
-- **Action Logs**: Clearer display of executed tools/actions in the chat stream.
+### 🎨 Consolidated Paid API UI
+**Major UX Improvement**: Replaced separate API provider sections with unified dropdown
 
-## v2.15.8 - API Robustness & Fix Release
-*Released: January 17, 2026*
+**Before**: 5 separate sections (DeepSeek, GLM, KIMI, OpenAI, Custom)  
+**After**: Single dropdown with 6 providers
 
-### 🛡️ Robustness Improvements
-- **Circuit Breaker**: Added circuit breaker pattern to prevent cascading failures.
-- **Retry Logic**: Ollama adapter now has 3 retries with exponential backoff (2s, 4s, 6s).
-- **Graceful Fallbacks**: Connection failures return helpful messages instead of crashing.
-- **Startup Fix**: Ollama startup now uses 5 retries with exponential backoff (up to 26s total).
+**New Features**:
+- 🚀 **DeepSeek** - Powerful reasoning models
+- 🇨🇳 **GLM/ZhipuAI** - Multilingual support
+- 🌙 **KIMI/Moonshot** - 200k token context
+- 🤖 **OpenAI** - Industry-leading models  
+- ⚡ **Groq** - Ultra-fast inference
+- 🔧 **Custom** - Any OpenAI-compatible API
 
-### 🔧 API Fixes
-- **FIX**: `/api/v2/system/repair` undefined `svc_mgr` variable.
-- **FIX**: Model pre-check before generation with install guidance.
-- **FIX**: Auto-detect any available Ollama model (no hardcoded default).
-- **FIX**: Config mode changed from ambiguous "auto" to explicit "hybrid".
-- **FIX**: Added `ollama_fallback` and `cloud_fallback` config options.
+**Benefits**:
+- Auto-fills base URLs when provider selected
+- Dynamic model placeholders per provider
+- Context-aware hints and tips
+- Cleaner, more intuitive interface
+- Reduced UI clutter (65 lines → 59 lines)
 
-### 💾 Persistence
-- **Persistent TaskStore**: SQLite-backed task storage survives server restarts.
-- **EventSource Cleanup**: Proper cleanup on component unmount to prevent memory leaks.
+## 🐛 Bug Fixes
+- Fixed LM Studio connection test URL path handling
+- Improved custom API validation and error messages
 
-### 🧪 Testing
-- **New**: Comprehensive API verification script (`tests/verify_api_fixes.py`).
+## 📦 Updated Dependencies
+All dependencies current as of release date
 
-## v2.15.7 - Security & Stability Improvements
-- **SECURITY**: Fixed CORS vulnerability - whitelisted specific origins.
-- **SECURITY**: Added file upload validation (type + 50MB size limit).
-- **FIX**: Thread-safe AgentStateManager for concurrent requests.
-- **FIX**: WebSocket ConnectionManager thread safety with asyncio.Lock.
-- **FIX**: Added task_id to Agent API response for proper tracking.
-- **FIX**: Removed duplicate imports in main.py.
-- **NEW**: Slides Generation from Knowledge Base (KB, Search, Prompt, Documents).
-- **NEW**: 4 slide themes: Academic, Modern, Minimal, Pharmaceutical.
-
-## v2.15.6 - Critical Fixes & Stability
-- **CRITICAL FIX #1**: Added missing `OllamaAdapter` to LLM factory.
-- **CRITICAL FIX #2**: Implemented full Ollama API support with `generate()`, `chat()`, `is_available()`.
-- **CRITICAL FIX #3**: Improved service manager startup with installation check and error logging.
-- **CRITICAL FIX #4**: Added Ollama health verification before auto-mode fallback.
-- **CRITICAL FIX #5**: Added LLM pre-flight checks and proper error handling in Agent API.
-- **Agent Zero Upgrades**: Code execution, sub-agents, persistent memory, dynamic prompts.
-
-## v2.15.5 - Knowledge Hub & Podcast Generation
-- **Podcast Generation**: Generate audio podcasts from search results using OpenAI TTS.
-- **Knowledge Query API**: New `/api/knowledge/query` endpoint for direct RAG semantic search.
-- **Audio Player**: Built-in audio player in Knowledge Base UI with Play/Pause controls.
-- **UI Improvements**: Removed Deep Research icon, fixed modelPlaceholder error.
-
-## v2.15.4 - Settings Panel & Agent Zero Fixes
-- **UI Fix**: Resolved `modelPlaceholder is not defined` error in Settings Panel when collapsing Cloud APIs section.
-- **Backend**: Stabilized Agent Zero API endpoint with all self-healing actions verified.
-- **Includes v2.15.3 Fixes**: (API Indentation errors, NSIS installer path).
-
-## v2.15.3 - Final Build Release
-- **Backend**: Fixed redundant code blocks in `api/main.py` causing indentation errors.
-- **Installer**: Production-ready NSIS installer (`BioDockify_Setup_v2.15.3.exe`) with auto-path detection.
-- **Agent Zero**: Fully verified Self-Maintenance and Self-Healing capabilities.
-
-## v2.15.2 - Critical Build Fix
-- **Build Fix**: Resolved `NSIS Build Failed: Installer not found` error by correctly finding the generated installer artifact in the CI/CD pipeline.
-- **Includes v2.15.1 Fixes**: (API Indentation Hotfix + Documentation).
-- **Includes v2.15.0 Features**: (Paid API Support, DeepSeek Fixes, UI Cleanup).
-
-## v2.15.1 - Critical Hotfix
-- **Hotfix**: Resolved `IndentationError` in `api/main.py` causing backend failing start.
-- **Documentation**: Added comprehensive `SOFTWARE_SPECIFICATION.md` detailing system architecture and roles.
-- **Stability**: Verified Agent Zero's self-healing capabilities in production mode.
-
-## v2.15.0
-- **New Feature**: Added support for Paid APIs (OpenAI / Compatible) in the Settings Panel.
-- **Improvement**: Users can now specify a custom Model ID (e.g., `gpt-4o`) for API connections.
-- **UI Update**: Sidebar reorganization - "Scientific Method" merged into Workstation, "Publication" merged into Academic Suite.
-- **Fix**: Adjusted API Test connection logic to support custom models (fixing "DeepSeek" connection issues).
-- **Environment**: Improved Python environment detection for the "Doctor" diagnostic tool.
-
-## v2.14.9 - Critical Build Fix
-*Released: January 16, 2026*
-
-### 🛠️ Configuration Fixes
-- **Binary Naming**: Restored `productName` in `tauri.conf.json`. This ensures the output binary is named `BioDockify.exe` (matching build scripts) rather than `biodockify-ai.exe`.
-- **System Sync**: All components updated to v2.14.9.
-
-## v2.14.8 - Build Logic Fixes
-*Released: January 15, 2026*
-
-### 🛠️ Build Artifact Correction
-- **Installer Versioning**: Fixed stale version numbers in `tauri.conf.json` and `setup.nsi`. Installers will now correctly be named `BioDockify_2.14.8_...exe` instead of using old version identifiers.
-- **Sync**: All 7 configuration files are now strictly aligned to v2.14.8.
-
-## v2.14.7 - Self-Repair System & Doctor
-*Released: January 15, 2026*
-
-### 🏥 The "System Doctor"
-- **New Module**: `modules/system/doctor.py` actively probes system health.
-- **Service Watchdog**: `ServiceManager` now monitors and attempts to repair crashed AI services (Ollama/SurfSense).
-- **Diagnostics API**: New `/api/v2/system/diagnose` endpoint provides a full health report JSON.
-- **Self-Repair Button**: New `/api/v2/system/repair` endpoint allows the frontend to trigger service restarts.
-
-### 🐛 Fixes
-- **First Run Wizard**: Fixed critical syntax error preventing the setup screen from rendering.
-- **Dependencies**: Improved startup checks for critical Python libraries.
-
-## v2.14.6 - API V2 & Robustness Fixes
-*Released: January 15, 2026*
-
-### 🚀 Key Features
-- **Agent V2 API**: Implemented `/api/v2/agent/goal` and `thinking` endpoints to power the new Agent Zero UI.
-- **Robustness**: Added graceful fallback for Ollama service failures and portable configuration encryption.
-- **API Client Refactor**: Modularized Google, OpenRouter, and HuggingFace clients into `modules/llm`.
-
-### 🐛 Fixes
-- **Startup Resilience**: Backend no longer crashes if Local AI is missing; defaults to cloud keys.
-- **Encryption**: Configuration decryption now catches invalid keys (machine change) and resets gracefully.
-
-## v2.14.0 - Backend Stability & Fixes
-*Released: January 13, 2026*
-
-- **Bug Fix**: Resolved `NameError` in `api/main.py` causing backend test failures.
-- **Dependency**: Fixed missing `nbformat` and `tensorflow` compatibility issues in test environment.
-- **Stability**: Validated `LibraryQuery` model definition ordering.
-
-## v2.13.3 - Critical UI Fix & Service Manager
-*Released: January 9, 2026*
-
-- **Bug Fix**: Resolved critical syntax error in `ResearchWorkstation.tsx`.
-- **Feature**: Added silent auto-start for Ollama and Neo4j (`ServiceManager`).
-- **Stability**: Integrated offline mode indicators and auto-save hooks properly.
-
-## v2.13.2 - Emergency Build Trigger
-*Released: January 9, 2026*
-
-- **Emergency Release**: Fresh build trigger to bypass previous CI cache/stale state.
-- **Verification**: Confirmed `page.tsx` syntax fix is present in this build.
-
-## v2.13.1 - Robustness Application
-*Released: January 9, 2026*
-
-- **Hotfix Release**: Ensuring all robustness pillars are correctly applied and versioned.
-- **Force Sync**: Aligned `main` and `development` branches with the latest architecture.
-
-## v2.13.0 "Titanium" - The Robustness Update
-*Released: January 9, 2026*
-
-This major release focuses on enterprise-grade stability, security, and resilience, implementing the "10 Pillars of Robustness" architecture.
-
-### 🛡️ Security & Privacy
-- **Encryption at Rest**: Sensitive API keys and passwords in `config.yaml` are now encrypted using a machine-specific key.
-- **Input Hardening**: Enhanced protection against XSS attacks in the web fetcher; The system now actively strips dangerous tags (`object`, `embed`).
-- **Encrypted PDF Guard**: The ingestion engine now gracefully rejects password-protected PDFs instead of hanging.
-
-### ⚙️ Stability & Reliability
-- **Auto-Restart Sidecar**: The Python backend analysis engine will now automatically restart if it encounters a critical crash.
-- **Offline Awareness**: Added a visual "OFFLINE MODE" indicator to the workstation when network connectivity is lost.
-- **Auto-Save**: Research goals and operation modes are now automatically saved to local storage to prevent data loss during accidental closures.
-- **Database Resilience**: Implemented robust connection pooling for the local database.
-
-### 📊 Observability
-- **Structured Logging**: All backend logs now output in structured JSON format for easier debugging and monitoring.
-- **Audit Trails**: Every API request is now logged with detailed metrics (latency, status, client IP).
-- **Resource Monitoring**: A background system guard monitors RAM and CPU usage, alerting when memory exceeds 90%.
-
-### 🏗️ Infrastructure
-- **CI/CD Pipeline**: Added automated testing workflows (`ci-tests.yml`) running on every push.
-- **Backend Test Suite**: Initial coverage for API health, configuration, and security modules.
-- **Config Management**: Added support for `BIO_ENV` to load environment-specific configurations (`config.dev.yaml`, `config.prod.yaml`).
-- **Config Backup**: Automatic backup of configuration files before saving.
-
-### 🐛 Bug Fixes
-- Fixed a critical syntax error in `page.tsx` that caused build failures in v2.11.1.
-- Fixed dependency vulnerabilities in UI packages.
+## 🔗 Links
+- [GitHub Repository](https://github.com/tajo9128/BioDockify-pharma-research-ai)
+- [Documentation](https://github.com/tajo9128/BioDockify-pharma-research-ai#readme)
 
 ---
 
-## v2.11.2 - Hotfix
-- Fixed build syntax error in `page.tsx`.
-
-## v2.11.1 - Stability Patch (Deprecated)
-- Initial attempt at robustness features.
+**Full Changelog**: v2.17.1...v2.17.2
