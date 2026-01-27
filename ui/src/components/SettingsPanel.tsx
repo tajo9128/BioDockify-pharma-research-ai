@@ -162,18 +162,20 @@ export default function SettingsPanel() {
 
     const loadSettings = async () => {
         try {
-            // First try localStorage for instant load
+            let localSettings: any = null;
+
+            // PRIORITY 1: Load from localStorage (user's saved settings)
             if (typeof window !== 'undefined') {
                 const cached = localStorage.getItem('biodockify_settings');
                 if (cached) {
                     try {
-                        const parsedSettings = JSON.parse(cached);
+                        localSettings = JSON.parse(cached);
                         setSettings(prev => ({
                             ...prev,
-                            ...parsedSettings,
-                            ai_provider: { ...prev.ai_provider, ...parsedSettings.ai_provider },
-                            pharma: { ...prev.pharma, ...parsedSettings.pharma, sources: { ...prev.pharma.sources, ...parsedSettings.pharma?.sources } },
-                            persona: { ...prev.persona, ...parsedSettings.persona }
+                            ...localSettings,
+                            ai_provider: { ...prev.ai_provider, ...localSettings.ai_provider },
+                            pharma: { ...prev.pharma, ...localSettings.pharma, sources: { ...prev.pharma.sources, ...localSettings.pharma?.sources } },
+                            persona: { ...prev.persona, ...localSettings.persona }
                         }));
                         console.log('[Settings] Loaded from localStorage');
                     } catch (e) {
@@ -182,19 +184,27 @@ export default function SettingsPanel() {
                 }
             }
 
-            // Then try API for fresh data
-            const remote = await api.getSettings();
-            if (remote) {
-                setSettings(prev => ({
-                    ...prev,
-                    ...remote,
-                    ai_provider: { ...prev.ai_provider, ...remote.ai_provider },
-                    pharma: { ...prev.pharma, ...remote.pharma, sources: { ...prev.pharma.sources, ...remote.pharma?.sources } },
-                    persona: { ...prev.persona, ...remote.persona }
-                }));
+            // PRIORITY 2: Try API - but ONLY merge if localStorage was empty
+            // This prevents API from overwriting user's saved settings
+            if (!localSettings) {
+                try {
+                    const remote = await api.getSettings();
+                    if (remote) {
+                        setSettings(prev => ({
+                            ...prev,
+                            ...remote,
+                            ai_provider: { ...prev.ai_provider, ...remote.ai_provider },
+                            pharma: { ...prev.pharma, ...remote.pharma, sources: { ...prev.pharma.sources, ...remote.pharma?.sources } },
+                            persona: { ...prev.persona, ...remote.persona }
+                        }));
+                        console.log('[Settings] Loaded from API (no localStorage found)');
+                    }
+                } catch (e) {
+                    console.log('[Settings] API unavailable, using defaults');
+                }
             }
         } catch (e) {
-            console.warn('Using default/cached settings - API unavailable');
+            console.warn('Using default settings - all sources unavailable');
         } finally {
             setLoading(false);
         }
@@ -363,15 +373,81 @@ export default function SettingsPanel() {
         setTestStatus(prev => ({ ...prev, [provider]: 'testing' }));
 
         try {
+            // Use universalFetch for DIRECT API testing (bypasses backend, works offline)
+            const { universalFetch } = await import('@/lib/services/universal-fetch');
+
             // Step 2: Connecting
-            await new Promise(r => setTimeout(r, 300)); // Brief pause for visual feedback
+            await new Promise(r => setTimeout(r, 300));
             setApiTestProgress(prev => ({
                 ...prev,
                 [provider]: { ...prev[provider], progress: 50, message: 'Connecting to API endpoint...' }
             }));
 
-            // Step 3: Making test call
-            const res = await api.testConnection(serviceType, provider, key, baseUrl, model);
+            // Provider-specific API endpoints
+            const providerConfigs: Record<string, { url: string; testBody: any }> = {
+                'google': {
+                    url: 'https://generativelanguage.googleapis.com/v1beta/models?key=' + key,
+                    testBody: null // GET request
+                },
+                'groq': {
+                    url: 'https://api.groq.com/openai/v1/models',
+                    testBody: null // GET with auth header
+                },
+                'huggingface': {
+                    url: 'https://api-inference.huggingface.co/models/gpt2',
+                    testBody: { inputs: 'test' }
+                },
+                'openrouter': {
+                    url: 'https://openrouter.ai/api/v1/models',
+                    testBody: null
+                },
+                'deepseek': {
+                    url: baseUrl || 'https://api.deepseek.com/v1/models',
+                    testBody: null
+                },
+                'openai': {
+                    url: baseUrl || 'https://api.openai.com/v1/models',
+                    testBody: null
+                },
+                'custom': {
+                    url: (baseUrl || '').replace(/\/$/, '') + '/models',
+                    testBody: null
+                }
+            };
+
+            const config = providerConfigs[provider];
+            if (!config) {
+                throw new Error(`Unknown provider: ${provider}`);
+            }
+
+            let result;
+            if (provider === 'google') {
+                // Google uses API key in URL, not header
+                result = await universalFetch(config.url, {
+                    method: 'GET',
+                    timeout: 10000
+                });
+            } else if (config.testBody) {
+                // POST request (HuggingFace)
+                result = await universalFetch(config.url, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${key}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: config.testBody,
+                    timeout: 15000
+                });
+            } else {
+                // GET request with Bearer token
+                result = await universalFetch(config.url, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${key}`
+                    },
+                    timeout: 10000
+                });
+            }
 
             setApiTestProgress(prev => ({
                 ...prev,
@@ -380,7 +456,7 @@ export default function SettingsPanel() {
 
             await new Promise(r => setTimeout(r, 200));
 
-            if (res.status === 'success') {
+            if (result.ok) {
                 setTestStatus(prev => ({ ...prev, [provider]: 'success' }));
                 setApiTestProgress(prev => ({
                     ...prev,
@@ -388,37 +464,21 @@ export default function SettingsPanel() {
                         status: 'success',
                         progress: 100,
                         message: 'PASSED: API Connected',
-                        details: res.message || 'API key validated successfully.'
+                        details: 'API key validated successfully.'
                     }
                 }));
-            } else if (res.status === 'warning') {
-                setTestStatus(prev => ({ ...prev, [provider]: 'error' }));
-                setApiTestProgress(prev => ({
-                    ...prev,
-                    [provider]: {
-                        status: 'error',
-                        progress: 100,
-                        message: 'WARNING: Partial Success',
-                        details: res.message || 'API responded with a warning.'
-                    }
-                }));
+            } else if (result.status === 401 || result.status === 403) {
+                throw new Error('401 Unauthorized - Invalid API key');
+            } else if (result.status === 429) {
+                throw new Error('429 Rate limit exceeded');
             } else {
-                setTestStatus(prev => ({ ...prev, [provider]: 'error' }));
-                setApiTestProgress(prev => ({
-                    ...prev,
-                    [provider]: {
-                        status: 'error',
-                        progress: 100,
-                        message: 'FAILED: API Error',
-                        details: res.message || 'API returned an error response.'
-                    }
-                }));
+                throw new Error(`HTTP ${result.status} error`);
             }
         } catch (e: any) {
-            console.error('[DEBUG] API Test Failed with exception:', e);
+            console.error('[DEBUG] API Test Failed:', e);
 
             let failReason = e?.message || 'Unknown error occurred';
-            if (failReason.includes('NetworkError') || failReason.includes('fetch')) {
+            if (failReason.includes('NetworkError') || failReason.includes('fetch') || failReason.includes('Failed to fetch')) {
                 failReason = 'Network error - check your internet connection.';
             } else if (failReason.includes('401') || failReason.includes('Unauthorized')) {
                 failReason = 'Invalid API key - please check and re-enter.';
