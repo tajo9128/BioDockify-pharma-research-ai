@@ -4,6 +4,11 @@ FastAPI service exposing research capabilities to the UI.
 """
 
 from fastapi import FastAPI, BackgroundTasks, HTTPException
+from dotenv import load_dotenv
+import os
+
+load_dotenv() # Load environment variables from .env
+
 from pydantic import BaseModel
 from typing import Dict, Any, Optional, List
 import uuid
@@ -2583,6 +2588,32 @@ async def render_slides_html(request: dict):
         
         return {"status": "success", "html": html}
         
+
     except Exception as e:
         logger.error(f"Slides rendering failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# -----------------------------------------------------------------------------
+# AUTH & LICENSING (Supabase)
+# -----------------------------------------------------------------------------
+class AuthRequest(BaseModel):
+    name: str
+    email: str
+
+@app.post("/api/auth/verify")
+async def verify_user_license(request: AuthRequest):
+    """
+    Verify user against Supabase registry.
+    """
+    from modules.system.auth_manager import auth_manager
+    success, message = await auth_manager.verify_user(request.name, request.email)
+    
+    return {
+        "success": success,
+        "message": message,
+        "user": {
+            "name": request.name,
+            "email": request.email
+        } if success else None
+    }

@@ -51,20 +51,23 @@ export default function FirstRunWizard({ onComplete }: WizardProps) {
         }
     }, [step]);
 
+    // --- NEW: Persona State ---
+    const [personaName, setPersonaName] = useState('');
+    const [personaEmail, setPersonaEmail] = useState('');
+    const [verifying, setVerifying] = useState(false);
+    const [verificationError, setVerificationError] = useState('');
+
     const runSystemChecks = async () => {
         setSysStatus('checking');
         try {
-            // Add artificial delay for visual pacing
             await new Promise(r => setTimeout(r, 800));
             const info = await api.getSystemInfo();
             setSysInfo(info);
-            await new Promise(r => setTimeout(r, 800)); // Let user see progress
+            await new Promise(r => setTimeout(r, 800));
             setSysStatus('complete');
-            // Auto advance after short delay
             setTimeout(() => setStep(2), 1000);
         } catch (e) {
             console.error("System check failed", e);
-            // Even if failed, we proceed with null info (graceful degradation)
             setSysStatus('complete');
             setTimeout(() => setStep(2), 1500);
         }
@@ -75,10 +78,7 @@ export default function FirstRunWizard({ onComplete }: WizardProps) {
         setRepairStatus('Scanning for LM Studio...');
 
         try {
-            // ROBUST DETECTION: Extended timeout and retry
             const { universalFetch } = await import('@/lib/services/universal-fetch');
-
-            // Try default port first with extended timeout
             const ports = [1234, 1235, 8080, 8000];
             let detected = false;
             let detectedUrl = '';
@@ -86,21 +86,19 @@ export default function FirstRunWizard({ onComplete }: WizardProps) {
 
             for (const port of ports) {
                 if (detected) break;
-
                 const url = `http://localhost:${port}/v1`;
                 setRepairStatus(`Checking port ${port}...`);
 
                 try {
                     const result = await universalFetch(`${url}/models`, {
                         method: 'GET',
-                        timeout: 8000 // Extended timeout for slow startup
+                        timeout: 8000
                     });
 
                     if (result.ok && result.data?.data?.length > 0) {
                         detected = true;
                         detectedUrl = url;
                         detectedModel = result.data.data[0]?.id || 'Unknown';
-                        console.log(`[FirstRunWizard] Found LM Studio on port ${port}!`);
                     }
                 } catch (e) {
                     console.log(`[FirstRunWizard] Port ${port} failed:`, e);
@@ -108,7 +106,6 @@ export default function FirstRunWizard({ onComplete }: WizardProps) {
             }
 
             if (detected) {
-                // SUCCESS - Save configuration immediately
                 setDetectedServices({
                     lm_studio: true,
                     lm_studio_model: detectedModel,
@@ -116,45 +113,25 @@ export default function FirstRunWizard({ onComplete }: WizardProps) {
                     grobid: false
                 });
 
-                setResearchStatus(prev => ({
-                    ...prev,
-                    lm_studio: 'success'
-                }));
+                setResearchStatus(prev => ({ ...prev, lm_studio: 'success' }));
                 setRepairStatus(`Connected! Model: ${detectedModel.split('/').pop()}`);
 
-                // CRITICAL: Save to localStorage for Agent Zero
                 if (typeof window !== 'undefined') {
                     localStorage.setItem('biodockify_lm_studio_url', detectedUrl);
                     localStorage.setItem('biodockify_lm_studio_model', detectedModel);
                     localStorage.setItem('biodockify_ai_mode', 'lm_studio');
-                    console.log('[FirstRunWizard] LM Studio config saved to localStorage');
                 }
             } else {
-                // Not detected - show warning but allow proceeding
-                setDetectedServices({
-                    lm_studio: false,
-                    backend: true,
-                    grobid: false
-                });
-
-                setResearchStatus(prev => ({
-                    ...prev,
-                    lm_studio: 'warning'
-                }));
+                setDetectedServices({ lm_studio: false, backend: true, grobid: false });
+                setResearchStatus(prev => ({ ...prev, lm_studio: 'warning' }));
                 setRepairStatus('Not detected - Start LM Studio and load a model');
             }
-
-            console.log('[FirstRunWizard] Detection complete');
         } catch (e) {
             console.error('[FirstRunWizard] Service detection failed:', e);
-            setResearchStatus(prev => ({
-                ...prev,
-                lm_studio: 'warning'
-            }));
+            setResearchStatus(prev => ({ ...prev, lm_studio: 'warning' }));
             setRepairStatus('Detection failed - check console for details');
         }
 
-        // Auto advance after longer delay to show result
         setTimeout(() => setStep(3), 2500);
     };
 
@@ -165,38 +142,66 @@ export default function FirstRunWizard({ onComplete }: WizardProps) {
         await runResearchChecks();
     };
 
-    const finish = () => {
-        // Save complete settings to localStorage for persistence
-        if (typeof window !== 'undefined' && detectedServices) {
-            // Build complete settings object to save
-            // Merge with existing settings to prevent data loss (e.g. persona)
-            const existingSettingsStr = localStorage.getItem('biodockify_settings');
-            let existingSettings = {};
-            try {
-                existingSettings = existingSettingsStr ? JSON.parse(existingSettingsStr) : {};
-            } catch (e) {
-                console.error('[FirstRunWizard] Failed to parse existing settings:', e);
-            }
-
-            // Build complete settings object to save
-            const completeSettings = {
-                ...existingSettings,
-                ai_provider: {
-                    // @ts-ignore
-                    ...existingSettings.ai_provider,
-                    mode: 'lm_studio',
-                    lm_studio_url: localStorage.getItem('biodockify_lm_studio_url') || 'http://localhost:1234/v1',
-                    lm_studio_model: localStorage.getItem('biodockify_lm_studio_model') || ''
-                }
-            };
-
-            localStorage.setItem('biodockify_settings', JSON.stringify(completeSettings));
-            localStorage.setItem('biodockify_first_run_complete', 'true');
-            console.log('[FirstRunWizard] Saved complete settings (merged) to localStorage');
+    const finish = async () => {
+        if (!personaName || !personaEmail) {
+            setVerificationError("Please enter your Name and Email to proceed.");
+            return;
         }
 
-        // Pass detected services to parent for auto-configuration
-        onComplete({ detectedServices });
+        setVerifying(true);
+        setVerificationError('');
+
+        try {
+            // 1. Verify License
+            const res = await api.auth.verify(personaName, personaEmail);
+
+            if (!res.success) {
+                setVerificationError(res.message || "Verification failed. Please check details.");
+                setVerifying(false);
+                return;
+            }
+
+            // 2. Save Settings if Verified
+            if (typeof window !== 'undefined' && detectedServices) {
+                const existingSettingsStr = localStorage.getItem('biodockify_settings');
+                let existingSettings = {};
+                try {
+                    existingSettings = existingSettingsStr ? JSON.parse(existingSettingsStr) : {};
+                } catch (e) {
+                    console.error('[FirstRunWizard] Failed to parse existing settings:', e);
+                }
+
+                const completeSettings = {
+                    ...existingSettings,
+                    persona: {
+                        // @ts-ignore
+                        ...existingSettings.persona,
+                        name: personaName, // Save Full Name 
+                        email: personaEmail // Save Email
+                    },
+                    ai_provider: {
+                        // @ts-ignore
+                        ...existingSettings.ai_provider,
+                        mode: 'lm_studio',
+                        lm_studio_url: localStorage.getItem('biodockify_lm_studio_url') || 'http://localhost:1234/v1',
+                        lm_studio_model: localStorage.getItem('biodockify_lm_studio_model') || ''
+                    }
+                };
+
+                localStorage.setItem('biodockify_settings', JSON.stringify(completeSettings));
+                localStorage.setItem('biodockify_first_run_complete', 'true');
+                // CRITICAL: Set License Flag
+                localStorage.setItem('biodockify_license_active', 'true');
+            }
+
+            // 3. Complete
+            onComplete({ detectedServices });
+
+        } catch (e: any) {
+            setVerificationError("Server error: " + e.message);
+        } finally {
+            setVerifying(false);
+        }
     };
 
     // --- RENDERERS ---
@@ -269,7 +274,6 @@ export default function FirstRunWizard({ onComplete }: WizardProps) {
                             <div className="space-y-3">
                                 <CheckItem
                                     label="Operating System"
-                                    status={sysInfo ? 'success' : 'chk'}
                                     // @ts-ignore
                                     status={sysInfo ? 'success' : 'checking'}
                                     value={sysInfo?.os}
@@ -313,7 +317,7 @@ export default function FirstRunWizard({ onComplete }: WizardProps) {
                                 <div className="text-center mt-4">
                                     <p className="text-sm text-amber-400 mb-2">LM Studio not detected. Please start it and load a model.</p>
                                     <button
-                                        onClick={runResearchChecks}
+                                        onClick={retryDetection}
                                         className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-sm transition-colors"
                                     >
                                         Retry Detection
@@ -324,27 +328,41 @@ export default function FirstRunWizard({ onComplete }: WizardProps) {
                     )}
 
 
-                    {/* STEP 4: SUMMARY */}
+                    {/* STEP 4: REGISTRATION & SUMMARY */}
                     {step === 4 && (
-                        <div className="space-y-8 text-center animate-in slide-in-from-bottom-4 duration-500">
+                        <div className="space-y-6 text-center animate-in slide-in-from-bottom-4 duration-500">
                             <div>
-                                <h1 className="text-2xl font-bold text-white">System Ready</h1>
-                                <p className="text-slate-400 mt-2">Your research environment has been configured.</p>
+                                <h1 className="text-2xl font-bold text-white">Verification Required</h1>
+                                <p className="text-slate-400 mt-2">Enter your license details to unlock the workspace.</p>
                             </div>
 
-                            <div className="bg-slate-900/50 p-6 rounded-xl border border-slate-800 text-left space-y-3 max-w-sm mx-auto">
-                                <div className="flex items-center space-x-3 text-emerald-400">
-                                    <Check className="w-5 h-5" />
-                                    <span className="font-medium">Core Workspace Active</span>
+                            {/* Registration Inputs */}
+                            <div className="bg-slate-900/50 p-6 rounded-xl border border-slate-800 text-left space-y-4 max-w-sm mx-auto">
+                                <div>
+                                    <label className="text-xs font-bold text-slate-500 uppercase">Full Name</label>
+                                    <input
+                                        type="text"
+                                        className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white"
+                                        placeholder="Dr. StartUp"
+                                        value={personaName}
+                                        onChange={e => setPersonaName(e.target.value)}
+                                        disabled={verifying}
+                                    />
                                 </div>
-                                <div className="flex items-center space-x-3 text-emerald-400">
-                                    <Check className="w-5 h-5" />
-                                    <span className="font-medium">Document Engine Ready</span>
+                                <div>
+                                    <label className="text-xs font-bold text-slate-500 uppercase">Email Address</label>
+                                    <input
+                                        type="email"
+                                        className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white"
+                                        placeholder="researcher@biodockify.ai"
+                                        value={personaEmail}
+                                        onChange={e => setPersonaEmail(e.target.value)}
+                                        disabled={verifying}
+                                    />
                                 </div>
-                                {researchStatus.lm_studio === 'warning' && (
-                                    <div className="flex items-center space-x-3 text-amber-500">
-                                        <Brain className="w-5 h-5" />
-                                        <span className="font-medium">AI Assistant (LM Studio not detected)</span>
+                                {verificationError && (
+                                    <div className="p-2 bg-red-900/30 border border-red-900 rounded text-xs text-red-400">
+                                        {verificationError}
                                     </div>
                                 )}
                             </div>
@@ -352,16 +370,14 @@ export default function FirstRunWizard({ onComplete }: WizardProps) {
                             <div className="flex flex-col items-center space-y-3">
                                 <button
                                     onClick={finish}
-                                    className="bg-teal-500 hover:bg-teal-400 text-slate-950 px-10 py-3 rounded-xl font-bold text-lg transition-all w-64 shadow-lg shadow-teal-500/20"
+                                    disabled={verifying}
+                                    className="bg-teal-500 hover:bg-teal-400 text-slate-950 px-10 py-3 rounded-xl font-bold text-lg transition-all w-full max-w-sm shadow-lg shadow-teal-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
-                                    Enter Workspace
+                                    {verifying ? "Verifying..." : "Verify & Enter Workspace"}
                                 </button>
-                                <button
-                                    onClick={() => onComplete('settings')}
-                                    className="text-slate-500 text-sm hover:text-white transition-colors"
-                                >
-                                    Open Advanced Settings
-                                </button>
+                                <p className="text-xs text-slate-600">
+                                    Don't have a login? <a href="#" className="underline hover:text-slate-500">Register for Free</a>
+                                </p>
                             </div>
                         </div>
                     )}

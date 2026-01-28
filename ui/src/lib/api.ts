@@ -87,6 +87,7 @@ export interface Settings {
     openai_key?: string;
     openai_model?: string;
     // Custom/Paid API (OpenAI-compatible)
+    custom_provider?: string;
     custom_base_url?: string;
     custom_key?: string;
     custom_model?: string;
@@ -134,6 +135,7 @@ export interface Settings {
   };
   persona: {
     name?: string;
+    email?: string;
     role: 'PhD Student' | 'PG Student' | 'Senior Researcher' | 'Industry Scientist';
     strictness: 'exploratory' | 'balanced' | 'conservative';
     introduction: string;
@@ -150,6 +152,7 @@ export interface Settings {
     minimize_to_tray: boolean;
     pause_on_battery: boolean;
     max_cpu_percent: number;
+    internet_research?: boolean; // Agent Zero V2
   };
 }
 
@@ -483,6 +486,15 @@ export const api = {
       apiRequest<{ status: string; html: string }>('/slides/render', {
         method: 'POST',
         body: JSON.stringify({ slides, style, title })
+      })
+  },
+
+  // Auth & Licensing
+  auth: {
+    verify: (name: string, email: string) =>
+      apiRequest<{ success: boolean; message: string; user?: any }>('/auth/verify', {
+        method: 'POST',
+        body: JSON.stringify({ name, email })
       })
   }
 };

@@ -9,10 +9,20 @@ interface HomeProps {
 export default function HomeDashboard({ onNavigate }: HomeProps) {
     const [userName, setUserName] = useState<string>('Researcher');
     const [loading, setLoading] = useState(true);
+    const [licenseActive, setLicenseActive] = useState<boolean>(false);
 
     useEffect(() => {
         const fetchSettings = async () => {
             try {
+                // Check License First
+                const isLicenseActive = localStorage.getItem('biodockify_license_active') === 'true';
+                setLicenseActive(isLicenseActive);
+
+                if (!isLicenseActive) {
+                    setLoading(false);
+                    return; // Don't fetch settings if locked
+                }
+
                 // Try to get cached name first for speed
                 const localName = localStorage.getItem('biodockify_user_name');
                 if (localName) setUserName(localName);
@@ -22,9 +32,6 @@ export default function HomeDashboard({ onNavigate }: HomeProps) {
                     setUserName(settings.persona.name);
                     // Cache it
                     localStorage.setItem('biodockify_user_name', settings.persona.name);
-                } else if (settings && settings.project && settings.project.name) {
-                    // Fallback to project name if no user name
-                    // setUserName(settings.project.name);
                 }
             } catch (e) {
                 console.error('Failed to load user settings:', e);
@@ -35,6 +42,34 @@ export default function HomeDashboard({ onNavigate }: HomeProps) {
 
         fetchSettings();
     }, []);
+
+    if (!loading && !licenseActive) {
+        return (
+            <div className="h-full flex items-center justify-center bg-slate-950 p-8">
+                <div className="max-w-md w-full text-center space-y-6">
+                    <div className="w-20 h-20 bg-slate-900 rounded-full flex items-center justify-center mx-auto border border-slate-800">
+                        <div className="w-10 h-10 text-slate-500">
+                            {/* Lock Icon */}
+                            <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
+                        </div>
+                    </div>
+                    <div>
+                        <h1 className="text-2xl font-bold text-white">License Verification Required</h1>
+                        <p className="text-slate-400 mt-2">The free version of BioDockify requires a one-time verification to unlock the research workspace.</p>
+                    </div>
+                    <button
+                        onClick={() => onNavigate('settings')}
+                        className="w-full bg-teal-500 hover:bg-teal-400 text-slate-950 font-bold py-3 rounded-xl transition-all shadow-lg shadow-teal-500/10"
+                    >
+                        Go to Settings to Unlock
+                    </button>
+                    <p className="text-xs text-slate-600">
+                        Configured during setup? Trying restarting the app to refresh your license.
+                    </p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="h-full overflow-y-auto p-8 bg-slate-950">

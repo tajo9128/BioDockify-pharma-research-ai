@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { api, Settings } from '@/lib/api';
 import { AGENT_PERSONAS } from '@/lib/personas';
-import { Save, Server, Cloud, Cpu, RefreshCw, CheckCircle, AlertCircle, Shield, Activity, Power, BookOpen, Layers, FileText, Globe, Database, Key, FlaskConical, Link, FolderOpen, UserCircle } from 'lucide-react';
+import { Save, Server, Cloud, Cpu, RefreshCw, CheckCircle, AlertCircle, Shield, Activity, Power, BookOpen, Layers, FileText, Globe, Database, Key, FlaskConical, Link, FolderOpen, UserCircle, Lock, Unlock } from 'lucide-react';
+
 
 // Extended Settings interface matching "Fully Loaded" specs + New User Requests
 interface AdvancedSettings extends Omit<Settings, 'persona'> {
@@ -229,7 +230,8 @@ export default function SettingsPanel() {
                             ...remote,
                             ai_provider: { ...prev.ai_provider, ...remote.ai_provider },
                             pharma: { ...prev.pharma, ...remote.pharma, sources: { ...prev.pharma.sources, ...remote.pharma?.sources } },
-                            persona: { ...prev.persona, ...remote.persona }
+                            persona: { ...prev.persona, ...remote.persona },
+                            system: { ...prev.system, ...remote.system }
                         }));
                         console.log('[Settings] Loaded from API (no localStorage found)');
                     }
@@ -1172,6 +1174,18 @@ export default function SettingsPanel() {
                                     </div>
 
                                     <div className="space-y-2">
+                                        <label className="text-sm font-medium text-slate-300">Email Address</label>
+                                        <input
+                                            type="email"
+                                            value={settings.persona?.email || ''}
+                                            onChange={(e) => setSettings({ ...settings, persona: { ...settings.persona, email: e.target.value } })}
+                                            placeholder="e.g. jane@example.com"
+                                            className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-emerald-500/50"
+                                        />
+                                        <p className="text-xs text-slate-500">Required for free license verification.</p>
+                                    </div>
+
+                                    <div className="space-y-2">
                                         <label className="text-sm font-medium text-slate-300">User Role</label>
                                         <select
                                             value={settings.persona?.role || 'PhD Student'}
@@ -1190,7 +1204,7 @@ export default function SettingsPanel() {
                                         <label className="text-sm font-medium text-slate-300">Strictness Level</label>
                                         <select
                                             value={settings.persona?.strictness || 'balanced'}
-                                            onChange={(e) => setSettings({ ...settings, persona: { ...settings.persona, strictness: e.target.value } })}
+                                            onChange={(e) => setSettings({ ...settings, persona: { ...settings.persona, strictness: e.target.value as any } })}
                                             className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-emerald-500/50"
                                         >
                                             <option value="exploratory">Exploratory (Creative)</option>
@@ -1404,10 +1418,19 @@ const CloudBackupControl = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [verifying, setVerifying] = useState(false);
-    const [authCode, setAuthCode] = useState(''); // For MVP manual paste if needed, though we simulate window open
+    const [authCode, setAuthCode] = useState(''); // For MVP manual paste if needed
+
+    // License Gate Hooks
+    const [licenseActive, setLicenseActive] = useState(false);
+    const [verifyingLicense, setVerifyingLicense] = useState(false);
+    const [licenseName, setLicenseName] = useState('');
+    const [licenseEmail, setLicenseEmail] = useState('');
+    const [licenseError, setLicenseError] = useState('');
 
     useEffect(() => {
         fetchStatus();
+        const stored = localStorage.getItem('biodockify_license_active');
+        if (stored === 'true') setLicenseActive(true);
     }, []);
 
     const fetchStatus = async () => {
@@ -1423,15 +1446,34 @@ const CloudBackupControl = () => {
         }
     };
 
+    const handleVerifyLicense = async () => {
+        if (!licenseName || !licenseEmail) {
+            setLicenseError("Please enter both Name and Email.");
+            return;
+        }
+        setVerifyingLicense(true);
+        setLicenseError('');
+        try {
+            const res = await api.auth.verify(licenseName, licenseEmail);
+            if (res.success) {
+                localStorage.setItem('biodockify_license_active', 'true');
+                setLicenseActive(true);
+                alert("License Verified! Cloud features unlocked.");
+            } else {
+                setLicenseError(res.message || "Verification failed.");
+            }
+        } catch (e: any) {
+            setLicenseError("Error: " + e.message);
+        } finally {
+            setVerifyingLicense(false);
+        }
+    };
+
     const handleSignIn = async () => {
         try {
             setLoading(true);
             const { url } = await api.backup.getAuthUrl();
-            // Open in new window
             window.open(url, '_blank', 'width=500,height=600');
-            // In a real app, we'd listen for a callback or have a deep link. 
-            // For this simulated flow, we ask the user to verify (or paste code if we displayed it).
-            // But our mock backend accepts "simulated_valid_code_123".
             setError("Close the popup after signing in. (Simulation: Enter 'simulated_valid_code_123' below)");
         } catch (e: any) {
             setError("Failed to start auth: " + e.message);
@@ -1462,7 +1504,6 @@ const CloudBackupControl = () => {
             setLoading(true);
             await api.backup.runBackup();
             alert("Backup Initiated in Background");
-            // Refresh history after delay
             setTimeout(fetchStatus, 2000);
         } catch (e: any) {
             alert("Backup Failed: " + e.message);
@@ -1484,6 +1525,64 @@ const CloudBackupControl = () => {
         }
     };
 
+    // 1. Check License
+    if (!licenseActive) {
+        return (
+            <div className="flex flex-col items-center justify-center p-12 text-center space-y-6 bg-slate-900/50 rounded-xl border border-slate-800">
+                <div className="bg-slate-800 p-4 rounded-full">
+                    <Lock className="w-8 h-8 text-slate-400" />
+                </div>
+                <div>
+                    <h3 className="text-xl font-bold text-white mb-2">Cloud Features Locked</h3>
+                    <p className="text-slate-400 max-w-md mx-auto">
+                        Google Drive Backup and other cloud features are available for registered users.
+                        Enter your registration details to unlock.
+                    </p>
+                </div>
+
+                <div className="w-full max-w-sm space-y-4 text-left bg-slate-950 p-6 rounded-lg border border-slate-800">
+                    <div>
+                        <label className="text-xs text-slate-500 uppercase font-bold mb-1 block">Registered Name</label>
+                        <input
+                            type="text"
+                            className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-white"
+                            placeholder="John Doe"
+                            value={licenseName}
+                            onChange={e => setLicenseName(e.target.value)}
+                        />
+                    </div>
+                    <div>
+                        <label className="text-xs text-slate-500 uppercase font-bold mb-1 block">Registered Email</label>
+                        <input
+                            type="email"
+                            className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-white"
+                            placeholder="john@example.com"
+                            value={licenseEmail}
+                            onChange={e => setLicenseEmail(e.target.value)}
+                        />
+                    </div>
+
+                    {licenseError && (
+                        <p className="text-xs text-red-400 bg-red-950/30 p-2 rounded">{licenseError}</p>
+                    )}
+
+                    <button
+                        onClick={handleVerifyLicense}
+                        disabled={verifyingLicense}
+                        className="w-full bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white font-bold py-2 rounded-lg transition-all disabled:opacity-50"
+                    >
+                        {verifyingLicense ? "Verifying..." : "Verify & Unlock"}
+                    </button>
+
+                    <p className="text-[10px] text-center text-slate-600">
+                        Don't have a login? <a href="#" className="underline hover:text-slate-400">Register for Free</a>
+                    </p>
+                </div>
+            </div>
+        );
+    }
+
+    // 2. If connected, show control panel
     if (status?.connected) {
         return (
             <div className="space-y-6">
@@ -1540,6 +1639,7 @@ const CloudBackupControl = () => {
         );
     }
 
+    // 3. Not connected - Show Initialize Screen
     return (
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-8 text-center space-y-6">
             <div className="mx-auto w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mb-4">
@@ -1583,7 +1683,6 @@ const CloudBackupControl = () => {
         </div>
     );
 };
-
 const ToggleSetting = ({ label, desc, enabled, onChange }: any) => (
     <div className="flex items-center justify-between p-4 bg-slate-950 rounded-lg border border-slate-800">
         <div>
