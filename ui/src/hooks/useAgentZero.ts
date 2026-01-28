@@ -114,8 +114,24 @@ export function useAgentZero(): UseAgentZeroResult {
             await lifecycleManager.checkAllServices();
             const services = lifecycleManager.getAllStatuses();
 
-            const ollamaRunning = services.find(s => s.name === 'Ollama')?.running ?? false;
-            const systemMode = (ollamaRunning || bestProvider) ? 'FULL' : 'LIMITED';
+            // Check for LM Studio (priority 1 provider)
+            const lmStudioProvider = providers.find(p => p.type === 'lm_studio');
+            const hasLmStudio = lmStudioProvider !== undefined;
+
+            // Check internet connectivity
+            let hasInternet = false;
+            try {
+                const internetRes = await fetch('https://www.google.com/favicon.ico', {
+                    signal: AbortSignal.timeout(3000),
+                    mode: 'no-cors'
+                });
+                hasInternet = true;
+            } catch {
+                hasInternet = false;
+            }
+
+            // FULL MODE = LM Studio + Internet
+            const systemMode = (hasLmStudio && hasInternet) ? 'FULL' : 'LIMITED';
 
             setState({
                 initialized: true,
@@ -126,6 +142,19 @@ export function useAgentZero(): UseAgentZeroResult {
                 modelsAvailable: bestProvider?.models ? bestProvider.models.length > 0 : false,
                 aiProvider: bestProvider,
                 selfConfigured: true
+            });
+
+            // Save internet status to localStorage for other components
+            if (typeof window !== 'undefined') {
+                localStorage.setItem('biodockify_internet_available', hasInternet ? 'true' : 'false');
+            }
+
+            console.log('[useAgentZero] Initialized at FULL POTENTIAL:', {
+                mode: systemMode,
+                hasLmStudio,
+                hasInternet,
+                provider: bestProvider?.name,
+                features: systemMode === 'FULL' ? 'ALL ACTIVE' : 'LIMITED'
             });
 
             // Start health monitoring

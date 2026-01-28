@@ -172,17 +172,36 @@ export interface SystemModeDeclaration {
 }
 
 export function getSystemModeDeclaration(state: SystemState): SystemModeDeclaration {
-    const isLimited = !state.services.lm_studio_running;
+    // FULL MODE requires: LM Studio running + Internet available
+    const hasLmStudio = state.services.lm_studio_running;
+    const hasInternet = state.services.internet_available;
+    const isFullMode = hasLmStudio && hasInternet;
 
     return {
-        mode: isLimited ? 'LIMITED' : 'FULL',
-        title: isLimited ? 'Limited Mode Active' : 'Full Mode Active',
+        mode: isFullMode ? 'FULL' : 'LIMITED',
+        title: isFullMode ? 'Full Mode Active - All Features Enabled' : 'Limited Mode Active',
         capabilities: [
-            { feature: 'AI reasoning', enabled: state.services.lm_studio_running },
+            // AI Reasoning (requires LM Studio)
+            { feature: 'AI reasoning', enabled: hasLmStudio },
+            { feature: 'Research assistant', enabled: hasLmStudio },
+            { feature: 'Document analysis', enabled: hasLmStudio },
+            { feature: 'Experiment suggestions', enabled: hasLmStudio },
+
+            // Internet Features (requires Internet)
+            { feature: 'Literature search', enabled: hasInternet },
+            { feature: 'PubMed integration', enabled: hasInternet },
+            { feature: 'ChEMBL database', enabled: hasInternet },
+            { feature: 'UniProt queries', enabled: hasInternet },
+
+            // Core Features (always available)
             { feature: 'File reading', enabled: true },
             { feature: 'PDF processing', enabled: true },
-            { feature: 'Literature search', enabled: true },
-            { feature: 'Research assistant', enabled: state.services.lm_studio_running }
+            { feature: 'Local knowledge base', enabled: true },
+
+            // Full Potential Features (requires both)
+            { feature: 'Real-time research', enabled: isFullMode },
+            { feature: 'Auto-citation', enabled: isFullMode },
+            { feature: 'Cross-database analysis', enabled: isFullMode }
         ]
     };
 }
@@ -266,15 +285,22 @@ export async function verifyPostWizard(
 
 export function getHandoverMessage(state: SystemState): string {
     const mode = getSystemModeDeclaration(state);
+    const hasLmStudio = state.services.lm_studio_running;
+    const hasInternet = state.services.internet_available;
 
     if (mode.mode === 'FULL') {
-        return 'BioDockify is now fully operational.';
+        return 'BioDockify is now running at FULL POTENTIAL. All AI reasoning, research databases, and real-time features are active.';
+    } else if (hasLmStudio && !hasInternet) {
+        return 'BioDockify is ready with Local AI. Internet features (PubMed, ChEMBL, UniProt) are unavailable.';
+    } else if (!hasLmStudio && hasInternet) {
+        return 'BioDockify is ready with Internet access. AI reasoning features require LM Studio.';
     } else {
         const disabled = mode.capabilities
             .filter(c => !c.enabled)
             .map(c => c.feature)
+            .slice(0, 5)
             .join(', ');
-        return `BioDockify is ready in Limited Mode. Some features are unavailable: ${disabled}`;
+        return `BioDockify is in Limited Mode. Unavailable: ${disabled}`;
     }
 }
 
