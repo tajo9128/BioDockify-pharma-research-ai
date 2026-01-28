@@ -1,4 +1,6 @@
 # BioDockify Core Dependencies
+# Python Version: 3.10 - 3.12 (Recommended: 3.11.x)
+# Note: Python 3.13 is NOT currently supported for TensorFlow 2.15/Decimer.
 
 # Core API & Orchestration
 fastapi>=0.110.0
@@ -17,12 +19,8 @@ biopython>=1.83
 playwright>=1.41.0
 markdownify>=0.11.6
 beautifulsoup4>=4.12.0
-
-# Headless Research (Playwright)
-playwright>=1.41.0
-markdownify>=0.11.6
-beautifulsoup4>=4.12.0
 fake-useragent>=1.5.1
+opencv-python-headless<4.11.0.0
 
 # Discovery Engine
 semanticscholar>=0.6.0
@@ -32,12 +30,14 @@ habanero>=1.2.3  # CrossRef API
 # RAG & Embeddings
 sentence-transformers>=2.2.2
 faiss-cpu>=1.7.4
-numpy>=1.26.3
+numpy>=1.26.3,<2.0.0
 
 # Molecular Vision (Offline)
 # Note: DECIMER pulls in TensorFlow; ensure you have the CPU version if no GPU.
 decimer>=2.2.0
-tensorflow>=2.15.0
+tensorflow>=2.15.0,<2.16.0
+tensorflow-intel>=2.15.0,<2.16.0; sys_platform == 'win32'
+protobuf>=4.25.3,<5.0.0
 Pillow>=10.2.0
 numpy>=1.26.3
 
@@ -57,9 +57,12 @@ schedule==1.2.1
 # RAG & NotebookLM Features
 nbformat>=5.9.2
 pypdf>=3.17.4
-chromadb>=0.4.22
+chromadb==0.4.22  # Pinned to avoid Protobuf 5.x conflicts
 sentence-transformers>=2.2.2
 langchain>=0.1.0
+opentelemetry-api<1.30.0
+opentelemetry-sdk<1.30.0
+opentelemetry-proto<1.30.0
 
 # Data Science (required for PyInstaller bundling)
 pandas>=2.0.0
