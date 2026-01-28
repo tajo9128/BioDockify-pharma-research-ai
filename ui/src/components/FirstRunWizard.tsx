@@ -169,8 +169,21 @@ export default function FirstRunWizard({ onComplete }: WizardProps) {
         // Save complete settings to localStorage for persistence
         if (typeof window !== 'undefined' && detectedServices) {
             // Build complete settings object to save
+            // Merge with existing settings to prevent data loss (e.g. persona)
+            const existingSettingsStr = localStorage.getItem('biodockify_settings');
+            let existingSettings = {};
+            try {
+                existingSettings = existingSettingsStr ? JSON.parse(existingSettingsStr) : {};
+            } catch (e) {
+                console.error('[FirstRunWizard] Failed to parse existing settings:', e);
+            }
+
+            // Build complete settings object to save
             const completeSettings = {
+                ...existingSettings,
                 ai_provider: {
+                    // @ts-ignore
+                    ...existingSettings.ai_provider,
                     mode: 'lm_studio',
                     lm_studio_url: localStorage.getItem('biodockify_lm_studio_url') || 'http://localhost:1234/v1',
                     lm_studio_model: localStorage.getItem('biodockify_lm_studio_model') || ''
@@ -179,7 +192,7 @@ export default function FirstRunWizard({ onComplete }: WizardProps) {
 
             localStorage.setItem('biodockify_settings', JSON.stringify(completeSettings));
             localStorage.setItem('biodockify_first_run_complete', 'true');
-            console.log('[FirstRunWizard] Saved complete settings to localStorage');
+            console.log('[FirstRunWizard] Saved complete settings (merged) to localStorage');
         }
 
         // Pass detected services to parent for auto-configuration

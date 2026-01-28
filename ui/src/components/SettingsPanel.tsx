@@ -1160,10 +1160,22 @@ export default function SettingsPanel() {
                             <div className="space-y-6">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div className="space-y-2">
+                                        <label className="text-sm font-medium text-slate-300">Full Name</label>
+                                        <input
+                                            type="text"
+                                            value={settings.persona?.name || ''}
+                                            onChange={(e) => setSettings({ ...settings, persona: { ...settings.persona, name: e.target.value } })}
+                                            placeholder="e.g. Dr. Jane Doe"
+                                            className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-emerald-500/50"
+                                        />
+                                        <p className="text-xs text-slate-500">How should Agent Zero address you?</p>
+                                    </div>
+
+                                    <div className="space-y-2">
                                         <label className="text-sm font-medium text-slate-300">User Role</label>
                                         <select
                                             value={settings.persona?.role || 'PhD Student'}
-                                            onChange={(e) => setSettings({ ...settings, persona: { ...settings.persona, role: e.target.value } })}
+                                            onChange={(e) => setSettings({ ...settings, persona: { ...settings.persona, role: e.target.value as any } })}
                                             className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-emerald-500/50"
                                         >
                                             <option value="PhD Student">PhD Student</option>

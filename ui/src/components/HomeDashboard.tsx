@@ -1,17 +1,47 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { FlaskConical, PenTool, Brain, Search, Database, Clock, ArrowRight, Zap, Target } from 'lucide-react';
+import api from '@/lib/api';
 
 interface HomeProps {
     onNavigate: (view: string) => void;
 }
 
 export default function HomeDashboard({ onNavigate }: HomeProps) {
+    const [userName, setUserName] = useState<string>('Researcher');
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchSettings = async () => {
+            try {
+                // Try to get cached name first for speed
+                const localName = localStorage.getItem('biodockify_user_name');
+                if (localName) setUserName(localName);
+
+                const settings = await api.getSettings();
+                if (settings && settings.persona && settings.persona.name) {
+                    setUserName(settings.persona.name);
+                    // Cache it
+                    localStorage.setItem('biodockify_user_name', settings.persona.name);
+                } else if (settings && settings.project && settings.project.name) {
+                    // Fallback to project name if no user name
+                    // setUserName(settings.project.name);
+                }
+            } catch (e) {
+                console.error('Failed to load user settings:', e);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchSettings();
+    }, []);
+
     return (
         <div className="h-full overflow-y-auto p-8 bg-slate-950">
             {/* Hero Section */}
             <div className="max-w-5xl mx-auto mb-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <h1 className="text-4xl font-bold text-white mb-2">Welcome Back, Researcher</h1>
-                <p className="text-slate-400 text-lg">BioDockify v2.16.3 is ready. What shall we discover today?</p>
+                <h1 className="text-4xl font-bold text-white mb-2">Welcome Back, {userName}</h1>
+                <p className="text-slate-400 text-lg">BioDockify v2.17.4 is ready. What shall we discover today?</p>
             </div>
 
             <div className="max-w-5xl mx-auto">

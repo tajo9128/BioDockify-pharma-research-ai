@@ -133,6 +133,7 @@ export interface Settings {
     key?: string;
   };
   persona: {
+    name?: string;
     role: 'PhD Student' | 'PG Student' | 'Senior Researcher' | 'Industry Scientist';
     strictness: 'exploratory' | 'balanced' | 'conservative';
     introduction: string;
