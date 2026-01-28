@@ -245,27 +245,32 @@ export default function SettingsPanel() {
 
     // LM Studio Test with Progress Bar and Detailed Reporting
     const handleTestLmStudio = async () => {
-        const url = settings.ai_provider.lm_studio_url || 'http://localhost:1234/v1';
+        const baseUrl = (settings.ai_provider.lm_studio_url || 'http://localhost:1234/v1').replace(/\/$/, '');
+
+        // Ensure we have proper endpoint - user enters base URL like http://localhost:1234/v1
+        // We need to call /v1/models to check if server is running
+        const modelsUrl = baseUrl.endsWith('/models') ? baseUrl : `${baseUrl}/models`;
 
         setLmStudioTest({
             status: 'testing',
             progress: 10,
             message: 'Connecting to LM Studio...',
-            details: `Testing ${url}`
+            details: `Testing ${modelsUrl}`
         });
 
         try {
             // Step 1: Check if server is reachable
-            setLmStudioTest(prev => ({ ...prev, progress: 25, message: 'Checking server availability...' }));
+            setLmStudioTest(prev => ({ ...prev, progress: 25, message: 'Checking Local Server availability...' }));
 
-            // User provides full endpoint URL (e.g., http://localhost:1234/v1/models)
-            // So we use it as-is without appending /models
-            const modelsRes = await fetch(url, {
+            const modelsRes = await fetch(modelsUrl, {
                 method: 'GET',
-                signal: AbortSignal.timeout(5000)
+                signal: AbortSignal.timeout(8000)  // Increased timeout for slower startup
             });
 
             if (!modelsRes.ok) {
+                if (modelsRes.status === 404) {
+                    throw new Error('404_NOT_FOUND');
+                }
                 throw new Error(`Server returned ${modelsRes.status}`);
             }
 
@@ -279,7 +284,7 @@ export default function SettingsPanel() {
                     status: 'error',
                     progress: 100,
                     message: 'FAILED: No model loaded',
-                    details: 'LM Studio is running but no model is loaded. Please load a model in LM Studio and try again.'
+                    details: 'LM Studio server is running but no model is loaded. Please load a model in LM Studio (select a model from the sidebar and click "Load").'
                 });
                 return;
             }
@@ -287,9 +292,6 @@ export default function SettingsPanel() {
             const modelId = models[0]?.id || 'unknown';
 
             // Step 3: Test model response
-            // Extract base URL (remove /models endpoint)
-            const baseUrl = url.replace(/\/models$/, '');
-
             setLmStudioTest(prev => ({
                 ...prev,
                 progress: 75,
@@ -320,22 +322,34 @@ export default function SettingsPanel() {
                 details: `Model: ${modelId.split('/').pop()} is ready for use.`
             });
 
-            // Auto-save the detected model
+            // Auto-save the detected model and update settings
+            setSettings(prev => ({
+                ...prev,
+                ai_provider: {
+                    ...prev.ai_provider,
+                    lm_studio_model: modelId
+                }
+            }));
+
             if (typeof window !== 'undefined') {
-                localStorage.setItem('biodockify_lm_studio_url', url);
+                localStorage.setItem('biodockify_lm_studio_url', baseUrl);
                 localStorage.setItem('biodockify_lm_studio_model', modelId);
             }
 
         } catch (e: any) {
             let errorMessage = e?.message || 'Unknown error';
             let failReason = '';
+            let helpSteps = '';
 
             if (errorMessage.includes('timeout') || errorMessage.includes('AbortError')) {
-                failReason = 'Connection timed out. Is LM Studio running and the server enabled?';
-            } else if (errorMessage.includes('NetworkError') || errorMessage.includes('Failed to fetch')) {
-                failReason = 'Cannot connect. Please ensure LM Studio is running with the local server enabled on port 1234.';
+                failReason = 'Connection timed out.';
+                helpSteps = '1. Open LM Studio\n2. Click the "Local Server" tab (left sidebar)\n3. Click "Start Server"\n4. Wait for "Server running" message\n5. Retry this test';
+            } else if (errorMessage.includes('NetworkError') || errorMessage.includes('Failed to fetch') || errorMessage.includes('404_NOT_FOUND')) {
+                failReason = 'Local Server not running.';
+                helpSteps = '1. Open LM Studio\n2. Go to "Local Server" tab (↔ icon in sidebar)\n3. Toggle "Start Server" ON\n4. Wait until you see "Server started"\n5. Retry this test';
             } else if (errorMessage.includes('ECONNREFUSED')) {
-                failReason = 'Connection refused. LM Studio server is not running.';
+                failReason = 'Connection refused - server is not running.';
+                helpSteps = 'Please start LM Studio and enable the Local Server.';
             } else {
                 failReason = errorMessage;
             }
@@ -344,7 +358,7 @@ export default function SettingsPanel() {
                 status: 'error',
                 progress: 100,
                 message: 'FAILED: Connection Error',
-                details: failReason
+                details: `${failReason}${helpSteps ? '\n\nTo fix:\n' + helpSteps : ''}`
             });
         }
     };
