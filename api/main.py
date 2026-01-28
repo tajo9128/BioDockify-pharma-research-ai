@@ -2029,8 +2029,45 @@ Provide a well-structured answer based on the context above. If the context does
             errors.append(f"HuggingFace: {str(e)}")
     
     # =========================================================================
-    # PROVIDER 6: Ollama (Local, Final Fallback)
+    # PROVIDER 5.5: LM Studio (Local OpenAI-Compatible)
     # =========================================================================
+    if provider_config.get('mode') == 'lm_studio' or provider_config.get('lm_studio_url'):
+        try:
+            lm_url = provider_config.get('lm_studio_url', 'http://localhost:1234/v1')
+            lm_model = provider_config.get('lm_studio_model', 'local-model')
+            
+            # Ensure URL ends with /chat/completions if not present, but handle base URL correctly
+            # LM Studio usually gives http://localhost:1234/v1
+            if not lm_url.endswith('/chat/completions'):
+                url = f"{lm_url.rstrip('/')}/chat/completions"
+            else:
+                url = lm_url
+
+            payload = {
+                "model": lm_model,
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": enhanced_prompt}
+                ],
+                "temperature": 0.7,
+                "max_tokens": -1, # LM Studio often needs this for unlimited
+                "stream": False
+            }
+            
+            # LM Studio doesn't strictly require a key, but some setups might
+            headers = {"Content-Type": "application/json"}
+            
+            resp = req.post(url, json=payload, headers=headers, timeout=120)
+            
+            if resp.status_code == 200:
+                data = resp.json()
+                content = data.get('choices', [{}])[0].get('message', {}).get('content', '')
+                if content:
+                    return {"reply": content, "provider": "lm_studio"}
+            errors.append(f"LM Studio: {resp.status_code} - {resp.text}")
+        except Exception as e:
+            errors.append(f"LM Studio Error: {str(e)}")
+
     try:
         ollama_url = provider_config.get('ollama_url', 'http://localhost:11434')
         model = provider_config.get('ollama_model', 'llama2')
