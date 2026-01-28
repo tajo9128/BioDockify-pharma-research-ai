@@ -1,63 +1,61 @@
-# Release Notes - BioDockify v2.17.2
+# Release Notes - BioDockify Desktop v2.17.4
 
-**Release Date**: January 27, 2026
+**Release Date**: 2026-01-28
 
-## 🎉 What's New
+## 🎯 Highlights
 
-### ✨ Omni Tools - Fully Functional
-Complete implementation of the Omni Tools module with comprehensive functionality:
-- **PDF Tools**: Merge multiple PDFs, split with page range support
-- **Image Tools**: Convert formats, resize, compress
-- **Data Processing**: CSV/JSON/Excel conversion and profiling  
-- **Text Utilities**: Case transforms, reverse, shuffle, word/char count
-- **Math Tools**: Safe expression calculator, prime number generator
+### Enhanced First-Run Self-Healing System
+The first-run experience is now **robust and self-healing**. Agent Zero can automatically detect and resolve connection issues from the outset.
 
-**Status**: 9/9 unit tests passing ✅
+## ✨ New Features
 
-### 🔧 API Connection Fixes
+### LM Studio Auto-Start
+- Automatic detection on ports [1234, 1235, 8080, 5000, 8000]
+- Windows executable discovery with registry fallback
+- Background launch via subprocess for seamless startup
+- 30-second initialization wait with retry logic
 
-#### LM Studio Connection Test
-- Fixed URL handling bug where test incorrectly appended `/models` to URLs already containing the path
-- Properly extracts base URL for chat completions endpoint
-- Connection test now works reliably with `http://localhost:1234/v1/models`
+### Connectivity Healing Wizard Step
+- New **Connectivity** step in First-Run Wizard (step 1)
+- Real-time diagnosis with visual status indicators
+- "Start LM Studio" button for one-click launch
+- Client-side fallback when backend is unavailable
 
-#### DeepSeek API Support  
-- Updated Custom API placeholder to show correct format: `https://api.deepseek.com/v1`
-- Added helper text explaining `/v1` path requirement for OpenAI-compatible APIs
-- Improved error messaging for connection failures
+### New API Endpoints
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/api/diagnose/connectivity` | GET | Full system diagnosis |
+| `/api/diagnose/repair/{id}` | POST | Targeted repair attempt |
+| `/api/diagnose/lm-studio/start` | POST | Explicit LM Studio launch |
 
-### 🎨 Consolidated Paid API UI
-**Major UX Improvement**: Replaced separate API provider sections with unified dropdown
+## 🔧 Changes
 
-**Before**: 5 separate sections (DeepSeek, GLM, KIMI, OpenAI, Custom)  
-**After**: Single dropdown with 6 providers
+### Files Added
+- `modules/system/connection_doctor.py` - Self-healing connection manager (550 lines)
+- `ui/src/components/wizard/ConnectivityHealer.tsx` - Auto-repair UI component (400 lines)
 
-**New Features**:
-- 🚀 **DeepSeek** - Powerful reasoning models
-- 🇨🇳 **GLM/ZhipuAI** - Multilingual support
-- 🌙 **KIMI/Moonshot** - 200k token context
-- 🤖 **OpenAI** - Industry-leading models  
-- ⚡ **Groq** - Ultra-fast inference
-- 🔧 **Custom** - Any OpenAI-compatible API
+### Files Modified
+- `api/main.py` - Added 3 diagnosis endpoints (+120 lines)
+- `ui/src/components/FirstRunWizard.tsx` - Integrated connectivity step
+- `ui/src/components/wizard/WizardConsent.tsx` - Added privacy disclosure
 
-**Benefits**:
-- Auto-fills base URLs when provider selected
-- Dynamic model placeholders per provider
-- Context-aware hints and tips
-- Cleaner, more intuitive interface
-- Reduced UI clutter (65 lines → 59 lines)
+### First-Run Flow (Updated)
+```
+Welcome → Connectivity (NEW) → System → Research → Summary
+```
 
-## 🐛 Bug Fixes
-- Fixed LM Studio connection test URL path handling
-- Improved custom API validation and error messages
+## 🔒 Privacy
 
-## 📦 Updated Dependencies
-All dependencies current as of release date
+- Internet connectivity checks ping: `google.com`, `cloudflare.com`, `github.com`
+- LM Studio detection is local-only (localhost port scanning)
+- All checks are disclosed in the Consent flow
 
-## 🔗 Links
-- [GitHub Repository](https://github.com/tajo9128/BioDockify-pharma-research-ai)
-- [Documentation](https://github.com/tajo9128/BioDockify-pharma-research-ai#readme)
+## 📦 Version Updates
+- Root: 2.17.3 → 2.17.4
+- UI: 2.16.8 → 2.17.4
+- Desktop: 2.16.8 → 2.17.4
+- API: 2.16.8 → 2.17.4
 
 ---
 
-**Full Changelog**: v2.17.1...v2.17.2
+**Full Changelog**: v2.17.3...v2.17.4

@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '@/lib/api';
 import { DetectedServices } from '@/lib/services/auto-config';
+import ConnectivityHealer from './wizard/ConnectivityHealer';
 import {
     Check, XCircle, RefreshCcw, Database, Brain, Server,
-    HardDrive, Cpu, Gauge, Terminal, AlertTriangle
+    HardDrive, Cpu, Gauge, Terminal, AlertTriangle, Wifi
 } from 'lucide-react';
 
 interface WizardProps {
@@ -21,7 +22,7 @@ interface SysInfo {
 }
 
 export default function FirstRunWizard({ onComplete }: WizardProps) {
-    const [step, setStep] = useState(0); // 0: Welcome, 1: System, 2: Research, 3: Summary
+    const [step, setStep] = useState(0); // 0: Welcome, 1: Connectivity, 2: System, 3: Research, 4: Summary
     const [retryCount, setRetryCount] = useState(0);
     const [repairStatus, setRepairStatus] = useState<string>('');
 
@@ -36,16 +37,16 @@ export default function FirstRunWizard({ onComplete }: WizardProps) {
         export: 'success'; // Assumed
     }>({ lm_studio: 'pending', pdf: 'success', export: 'success' });
 
-    // Step 1: System Checks (Auto-run when entering step 1)
+    // Step 2: System Checks (Auto-run when entering step 2)
     useEffect(() => {
-        if (step === 1 && sysStatus === 'pending') {
+        if (step === 2 && sysStatus === 'pending') {
             runSystemChecks();
         }
     }, [step]);
 
-    // Step 2: Research Checks (Auto-run when entering step 2)
+    // Step 3: Research Checks (Auto-run when entering step 3)
     useEffect(() => {
-        if (step === 2 && researchStatus.lm_studio === 'pending') {
+        if (step === 3 && researchStatus.lm_studio === 'pending') {
             runResearchChecks();
         }
     }, [step]);
@@ -192,9 +193,10 @@ export default function FirstRunWizard({ onComplete }: WizardProps) {
                 <div className="p-8 pb-0 text-center">
                     <div className="w-16 h-16 bg-slate-900 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-inner border border-slate-800">
                         {step === 0 && <Terminal className="w-8 h-8 text-teal-400" />}
-                        {step === 1 && <Cpu className="w-8 h-8 text-sky-400 animate-pulse" />}
-                        {step === 2 && <Brain className="w-8 h-8 text-purple-400 animate-pulse" />}
-                        {step === 3 && <Check className="w-8 h-8 text-emerald-400" />}
+                        {step === 1 && <Wifi className="w-8 h-8 text-sky-400 animate-pulse" />}
+                        {step === 2 && <Cpu className="w-8 h-8 text-sky-400 animate-pulse" />}
+                        {step === 3 && <Brain className="w-8 h-8 text-purple-400 animate-pulse" />}
+                        {step === 4 && <Check className="w-8 h-8 text-emerald-400" />}
                     </div>
                 </div>
 
@@ -219,8 +221,20 @@ export default function FirstRunWizard({ onComplete }: WizardProps) {
                         </div>
                     )}
 
-                    {/* STEP 1: SYSTEM CHECKS */}
+                    {/* STEP 1: CONNECTIVITY HEALING */}
                     {step === 1 && (
+                        <ConnectivityHealer
+                            onComplete={(result) => {
+                                // Store connectivity result if needed
+                                console.log('[FirstRunWizard] Connectivity result:', result);
+                                setStep(2);
+                            }}
+                            onSkip={() => setStep(2)}
+                        />
+                    )}
+
+                    {/* STEP 2: SYSTEM CHECKS */}
+                    {step === 2 && (
                         <div className="space-y-6 w-full max-w-md mx-auto animate-in fade-in duration-300">
                             <h2 className="text-xl font-bold text-white text-center mb-6">Checking System Compatibility...</h2>
                             <div className="space-y-3">
@@ -253,7 +267,8 @@ export default function FirstRunWizard({ onComplete }: WizardProps) {
                         </div>
                     )}
 
-                    {step === 2 && (
+                    {/* STEP 3: RESEARCH CHECKS */}
+                    {step === 3 && (
                         <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
                             <h2 className="text-xl font-bold text-white text-center mb-6">Verifying Research Engine...</h2>
                             <div className="space-y-3">
@@ -280,8 +295,8 @@ export default function FirstRunWizard({ onComplete }: WizardProps) {
                     )}
 
 
-                    {/* STEP 3: SUMMARY */}
-                    {step === 3 && (
+                    {/* STEP 4: SUMMARY */}
+                    {step === 4 && (
                         <div className="space-y-8 text-center animate-in slide-in-from-bottom-4 duration-500">
                             <div>
                                 <h1 className="text-2xl font-bold text-white">System Ready</h1>

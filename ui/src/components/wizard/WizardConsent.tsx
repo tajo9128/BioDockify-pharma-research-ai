@@ -91,6 +91,11 @@ export default function WizardConsent({ onConsentComplete }: WizardConsentProps)
                         If you decline automation, BioDockify will not attempt to start services automatically.
                         You can change these settings later in the Settings panel.
                     </p>
+                    <p className="mt-2 text-xs text-slate-600">
+                        <span className="font-medium text-slate-500">Note:</span> During setup, BioDockify checks
+                        internet connectivity (pings google.com, cloudflare.com, github.com), detects LM Studio
+                        on local ports, and may auto-start LM Studio if enabled and not running.
+                    </p>
                 </div>
             </div>
 

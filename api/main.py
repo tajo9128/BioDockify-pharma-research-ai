@@ -14,7 +14,7 @@ from orchestration.executor import ResearchExecutor
 from modules.analyst.analytics_engine import ResearchAnalyst
 from modules.backup import DriveClient, BackupManager
 
-app = FastAPI(title="BioDockify - Pharma Research AI", version="2.16.8")
+app = FastAPI(title="BioDockify - Pharma Research AI", version="2.17.4")
 
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -353,6 +353,125 @@ def repair_system(service: str = "ollama"):
                 "message": "Ollama started" if success else "Failed to start Ollama"
             }
         return {"status": "error", "message": f"Unknown service: {service}"}
+
+# -----------------------------------------------------------------------------
+# V2 CONNECTIVITY DIAGNOSIS ENDPOINTS (First-Run Self-Healing)
+# -----------------------------------------------------------------------------
+from modules.system.connection_doctor import ConnectionDoctor, run_diagnosis
+
+@app.get("/api/diagnose/connectivity")
+async def diagnose_connectivity():
+    """
+    Full connectivity diagnosis with repair suggestions.
+    Used by FirstRunWizard to detect and auto-repair connection issues.
+    
+    Returns:
+        - status: overall health (healthy | degraded | offline)
+        - checks: individual check results
+        - repair_actions: suggested fixes for failed checks
+        - can_proceed: whether the system can operate in degraded mode
+    """
+    from runtime.config_loader import load_config
+    
+    try:
+        cfg = load_config()
+    except Exception:
+        cfg = {}
+    
+    doctor = ConnectionDoctor(cfg)
+    report = await doctor.full_diagnosis(auto_repair=True)
+    
+    return {
+        "status": report.overall_status,
+        "checks": [
+            {
+                "name": c.name,
+                "status": c.status.value,
+                "message": c.message,
+                "details": c.details,
+                "can_auto_repair": c.can_auto_repair,
+                "repair_action": c.repair_action
+            }
+            for c in report.checks
+        ],
+        "repair_actions": report.suggested_repairs,
+        "can_proceed": report.can_proceed_with_degraded
+    }
+
+@app.post("/api/diagnose/repair/{check_id}")
+async def attempt_connectivity_repair(check_id: str):
+    """
+    Attempt auto-repair for a specific connectivity check.
+    
+    Args:
+        check_id: Identifier of the check to repair (lm_studio, internet, api_keys, backend)
+        
+    Returns:
+        Updated check result after repair attempt
+    """
+    from runtime.config_loader import load_config
+    
+    try:
+        cfg = load_config()
+    except Exception:
+        cfg = {}
+    
+    doctor = ConnectionDoctor(cfg)
+    result = await doctor.attempt_repair(check_id)
+    
+    return {
+        "success": result.status.value == "success",
+        "name": result.name,
+        "status": result.status.value,
+        "message": result.message,
+        "details": result.details,
+        "repair_action": result.repair_action
+    }
+
+@app.post("/api/diagnose/lm-studio/start")
+async def start_lm_studio():
+    """
+    Explicitly attempt to auto-start LM Studio.
+    Used by the UI when user clicks "Start LM Studio" button.
+    
+    Returns:
+        - success: whether LM Studio was started
+        - exe_path: path to the executable (if found)
+        - message: status message
+    """
+    from runtime.config_loader import load_config
+    
+    try:
+        cfg = load_config()
+    except Exception:
+        cfg = {}
+    
+    doctor = ConnectionDoctor(cfg)
+    
+    # Find executable
+    exe_path = doctor.find_lm_studio_executable()
+    if not exe_path:
+        return {
+            "success": False,
+            "exe_path": None,
+            "message": "LM Studio not found. Please install from https://lmstudio.ai"
+        }
+    
+    # Attempt to start
+    started = await doctor.auto_start_lm_studio(exe_path)
+    
+    if started:
+        return {
+            "success": True,
+            "exe_path": exe_path,
+            "message": "LM Studio started. Please load a model and wait for initialization."
+        }
+    else:
+        return {
+            "success": False,
+            "exe_path": exe_path,
+            "message": "Failed to start LM Studio. Please start it manually."
+        }
 
 # -----------------------------------------------------------------------------
 # DIGITAL LIBRARY ENDPOINTS (Phase 5)
