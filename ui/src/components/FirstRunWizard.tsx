@@ -166,6 +166,22 @@ export default function FirstRunWizard({ onComplete }: WizardProps) {
     };
 
     const finish = () => {
+        // Save complete settings to localStorage for persistence
+        if (typeof window !== 'undefined' && detectedServices) {
+            // Build complete settings object to save
+            const completeSettings = {
+                ai_provider: {
+                    mode: 'lm_studio',
+                    lm_studio_url: localStorage.getItem('biodockify_lm_studio_url') || 'http://localhost:1234/v1',
+                    lm_studio_model: localStorage.getItem('biodockify_lm_studio_model') || ''
+                }
+            };
+
+            localStorage.setItem('biodockify_settings', JSON.stringify(completeSettings));
+            localStorage.setItem('biodockify_first_run_complete', 'true');
+            console.log('[FirstRunWizard] Saved complete settings to localStorage');
+        }
+
         // Pass detected services to parent for auto-configuration
         onComplete({ detectedServices });
     };

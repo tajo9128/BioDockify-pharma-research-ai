@@ -170,18 +170,52 @@ export default function SettingsPanel() {
                 if (cached) {
                     try {
                         localSettings = JSON.parse(cached);
-                        setSettings(prev => ({
-                            ...prev,
-                            ...localSettings,
-                            ai_provider: { ...prev.ai_provider, ...localSettings.ai_provider },
-                            pharma: { ...prev.pharma, ...localSettings.pharma, sources: { ...prev.pharma.sources, ...localSettings.pharma?.sources } },
-                            persona: { ...prev.persona, ...localSettings.persona }
-                        }));
-                        console.log('[Settings] Loaded from localStorage');
+                        console.log('[Settings] Loaded from localStorage:', Object.keys(localSettings));
                     } catch (e) {
                         console.warn('[Settings] Failed to parse localStorage cache');
                     }
                 }
+
+                // ALSO: Merge first-run wizard config (individual keys)
+                // These are saved by FirstRunWizard and should override if present
+                const firstRunUrl = localStorage.getItem('biodockify_lm_studio_url');
+                const firstRunModel = localStorage.getItem('biodockify_lm_studio_model');
+                const firstRunMode = localStorage.getItem('biodockify_ai_mode');
+
+                if (firstRunUrl || firstRunModel || firstRunMode) {
+                    console.log('[Settings] Found first-run config:', { firstRunUrl, firstRunModel, firstRunMode });
+
+                    // Merge first-run values into settings
+                    if (!localSettings) {
+                        localSettings = {};
+                    }
+                    if (!localSettings.ai_provider) {
+                        localSettings.ai_provider = {};
+                    }
+
+                    if (firstRunUrl) {
+                        localSettings.ai_provider.lm_studio_url = firstRunUrl;
+                    }
+                    if (firstRunModel) {
+                        localSettings.ai_provider.lm_studio_model = firstRunModel;
+                    }
+                    if (firstRunMode) {
+                        localSettings.ai_provider.mode = firstRunMode;
+                    }
+                }
+            }
+
+            // Apply local settings if found
+            if (localSettings) {
+                setSettings(prev => ({
+                    ...prev,
+                    ...localSettings,
+                    ai_provider: { ...prev.ai_provider, ...localSettings.ai_provider },
+                    pharma: { ...prev.pharma, ...localSettings.pharma, sources: { ...prev.pharma.sources, ...localSettings.pharma?.sources } },
+                    persona: { ...prev.persona, ...localSettings.persona },
+                    system: { ...prev.system, ...localSettings.system }
+                }));
+                console.log('[Settings] Applied local settings');
             }
 
             // PRIORITY 2: Try API - but ONLY merge if localStorage was empty
