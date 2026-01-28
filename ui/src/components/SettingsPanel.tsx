@@ -644,8 +644,8 @@ export default function SettingsPanel() {
                         </div>
                     )}
 
-                    {/* LM Studio Config (Visible only if selected) */}
-                    {settings.ai_provider.mode === 'lm_studio' && (
+                    {/* LM Studio Config (Visible only if selected AND on brain tab) */}
+                    {activeTab === 'brain' && settings.ai_provider.mode === 'lm_studio' && (
                         <div className="mt-4 p-4 bg-indigo-950/20 rounded-lg border border-indigo-500/30">
                             <div className="flex items-center justify-between mb-3">
                                 <div className="flex items-center space-x-2">
