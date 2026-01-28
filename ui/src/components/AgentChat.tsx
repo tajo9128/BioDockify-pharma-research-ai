@@ -78,8 +78,59 @@ How can I assist your research today?`,
         }
     }, [messages]);
 
+    // Check if we should prompt for API keys on first use
+    const checkFirstTimeApiPrompt = async () => {
+        if (typeof window === 'undefined') return;
+
+        const hasPrompted = localStorage.getItem('biodockify_api_prompt_shown');
+        if (hasPrompted) return;
+
+        try {
+            const settings = await api.getSettings();
+            const providerConfig = settings?.ai_provider || {};
+
+            // Check if any CLOUD provider is configured
+            const hasCloudProvider = !!(
+                providerConfig.google_key ||
+                providerConfig.openrouter_key ||
+                providerConfig.huggingface_key ||
+                providerConfig.custom_key ||
+                providerConfig.glm_key ||
+                providerConfig.groq_key ||
+                providerConfig.openai_key
+            );
+
+            // If no cloud provider, suggest adding one for full potential
+            if (!hasCloudProvider) {
+                setMessages(prev => [...prev, {
+                    role: 'system',
+                    content: `🚀 **Unlock Full Research Potential**
+                    
+While you can run locally, adding a **Free or Paid API Key** unlocks:
+• **Deep Research Mode** (Analyze 100+ papers)
+• **Academic Writing Assistant** (Higher quality drafts)
+• **Complex Reasoning** (Better gap detection)
+
+**Recommended Free Options:**
+• **Google Gemini** (High capacity, great for research)
+• **Groq** (Extremely fast)
+
+*Go to Settings → AI & Brain to configure.*`,
+                    timestamp: new Date()
+                }]);
+            }
+
+            localStorage.setItem('biodockify_api_prompt_shown', 'true');
+        } catch (e) {
+            console.error('Failed to check API settings:', e);
+        }
+    };
+
     const handleSend = async () => {
         if (!input.trim()) return;
+
+        // Check for first-time API prompt
+        await checkFirstTimeApiPrompt();
 
         // Check if any AI provider is configured (including LM Studio)
         try {
@@ -186,7 +237,7 @@ After configuring, try again.`,
                     setStatus(`Reading ${new URL(sourceUrl).hostname}...`);
                     try {
                         const page = await fetchWebPage(sourceUrl);
-                        context = `[Context retrieved from Internet (${sourceUrl})]:\n${page.markdown.slice(0, 4000)}\n\n`;
+                        context = `[Context retrieved from Internet (${sourceUrl})]:\n${page.textContent.slice(0, 4000)}\n\n`;
                     } catch (e) {
                         console.warn("Retreival failed", e);
                     }
