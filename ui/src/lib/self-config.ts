@@ -19,7 +19,7 @@ import { getServiceLifecycleManager } from './service-lifecycle';
 // ============================================================================
 
 export interface AIProvider {
-    type: 'ollama' | 'glm' | 'openai' | 'anthropic' | 'internet';
+    type: 'lm_studio' | 'ollama' | 'glm' | 'openai' | 'anthropic' | 'internet';
     name: string;
     available: boolean;
     url?: string;
@@ -40,11 +40,12 @@ export interface SelfConfigResult {
 // ============================================================================
 
 const PROVIDERS: AIProvider[] = [
-    { type: 'ollama', name: 'Ollama (Local)', available: false, url: 'http://localhost:11434', priority: 1 },
-    { type: 'glm', name: 'GLM-4 (Free)', available: false, url: 'https://open.bigmodel.cn/api/paas/v4', priority: 2 },
-    { type: 'openai', name: 'OpenAI', available: false, url: 'https://api.openai.com/v1', priority: 3 },
-    { type: 'anthropic', name: 'Anthropic Claude', available: false, url: 'https://api.anthropic.com', priority: 4 },
-    { type: 'internet', name: 'Internet Fallback', available: false, priority: 5 }
+    { type: 'lm_studio', name: 'LM Studio (Local)', available: false, url: 'http://localhost:1234/v1', priority: 1 },
+    { type: 'ollama', name: 'Ollama (Local)', available: false, url: 'http://localhost:11434', priority: 2 },
+    { type: 'glm', name: 'GLM-4 (Free)', available: false, url: 'https://open.bigmodel.cn/api/paas/v4', priority: 3 },
+    { type: 'openai', name: 'OpenAI', available: false, url: 'https://api.openai.com/v1', priority: 4 },
+    { type: 'anthropic', name: 'Anthropic Claude', available: false, url: 'https://api.anthropic.com', priority: 5 },
+    { type: 'internet', name: 'Internet Fallback', available: false, priority: 6 }
 ];
 
 /**
@@ -52,8 +53,55 @@ const PROVIDERS: AIProvider[] = [
  */
 export async function detectAIProviders(): Promise<AIProvider[]> {
     const detected: AIProvider[] = [];
+    const storedConfig = getStoredConfig();
 
-    // 1. Check Ollama
+    // 1. Check LM Studio (Priority 1)
+    // First check if we have saved LM Studio config from first-run
+    const savedLmStudioUrl = typeof window !== 'undefined' ? localStorage.getItem('biodockify_lm_studio_url') : null;
+    const savedLmStudioModel = typeof window !== 'undefined' ? localStorage.getItem('biodockify_lm_studio_model') : null;
+
+    if (savedLmStudioUrl && savedLmStudioModel) {
+        // We have saved config from first-run, trust it
+        detected.push({
+            type: 'lm_studio',
+            name: 'LM Studio (Local)',
+            available: true,
+            url: savedLmStudioUrl,
+            models: [savedLmStudioModel],
+            priority: 1
+        });
+        console.log('[SelfConfig] LM Studio detected from saved config:', savedLmStudioUrl, savedLmStudioModel);
+    } else {
+        // Try to detect LM Studio on common ports
+        const lmStudioPorts = [1234, 1235, 8080, 8000];
+        for (const port of lmStudioPorts) {
+            try {
+                const res = await fetch(`http://localhost:${port}/v1/models`, {
+                    signal: AbortSignal.timeout(5000)
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    const models = (data.data || []).map((m: any) => m.id);
+                    if (models.length > 0) {
+                        detected.push({
+                            type: 'lm_studio',
+                            name: 'LM Studio (Local)',
+                            available: true,
+                            url: `http://localhost:${port}/v1`,
+                            models,
+                            priority: 1
+                        });
+                        console.log(`[SelfConfig] LM Studio detected on port ${port} with models:`, models);
+                        break; // Found it, stop scanning
+                    }
+                }
+            } catch {
+                // Port not available, continue
+            }
+        }
+    }
+
+    // 2. Check Ollama (Priority 2)
     try {
         const ollamaRes = await fetch('http://localhost:11434/api/tags', {
             signal: AbortSignal.timeout(3000)
@@ -67,7 +115,7 @@ export async function detectAIProviders(): Promise<AIProvider[]> {
                 available: true,
                 url: 'http://localhost:11434',
                 models,
-                priority: 1
+                priority: 2
             });
             console.log('[SelfConfig] Ollama detected with models:', models);
         }
@@ -75,8 +123,7 @@ export async function detectAIProviders(): Promise<AIProvider[]> {
         console.log('[SelfConfig] Ollama not available');
     }
 
-    // 2. Check for stored API keys
-    const storedConfig = getStoredConfig();
+    // 3. Check for stored API keys (storedConfig already retrieved at top)
 
     // GLM API
     if (storedConfig.glm_api_key) {
@@ -182,6 +229,9 @@ export async function selfConfigure(): Promise<SelfConfigResult> {
     const configuredSettings: string[] = [];
 
     switch (bestProvider.type) {
+        case 'lm_studio':
+            await configureForLmStudio(bestProvider, configuredSettings);
+            break;
         case 'ollama':
             await configureForOllama(bestProvider, configuredSettings);
             break;
@@ -222,6 +272,36 @@ export async function selfConfigure(): Promise<SelfConfigResult> {
         configuredSettings,
         message: `Agent Zero configured with ${bestProvider.name}`
     };
+}
+
+/**
+ * Configure for LM Studio
+ */
+async function configureForLmStudio(provider: AIProvider, settings: string[]): Promise<void> {
+    // Set LM Studio as primary
+    settings.push('ai_provider=lm_studio');
+    settings.push(`lm_studio_url=${provider.url}`);
+
+    // Use detected model
+    if (provider.models && provider.models.length > 0) {
+        const selectedModel = provider.models[0];
+        settings.push(`lm_studio_model=${selectedModel}`);
+
+        // Also save to localStorage for persistence
+        if (typeof window !== 'undefined') {
+            localStorage.setItem('biodockify_lm_studio_url', provider.url || 'http://localhost:1234/v1');
+            localStorage.setItem('biodockify_lm_studio_model', selectedModel);
+            localStorage.setItem('biodockify_ai_mode', 'lm_studio');
+        }
+    }
+
+    // Configure optimal settings for local LM Studio
+    settings.push('context_length=8192');
+    settings.push('temperature=0.7');
+    settings.push('privacy_mode=local');
+    settings.push('all_features_enabled=true');
+
+    console.log('[SelfConfig] LM Studio configured - all features enabled');
 }
 
 /**
@@ -299,6 +379,7 @@ async function configureForInternet(settings: string[]): Promise<void> {
  */
 function getDefaultModel(type: AIProvider['type']): string {
     switch (type) {
+        case 'lm_studio': return 'local-model';
         case 'ollama': return 'llama3.2:3b';
         case 'glm': return 'glm-4-flash';
         case 'openai': return 'gpt-4-turbo';
@@ -323,7 +404,7 @@ export async function aiOptimizeSettings(): Promise<string[]> {
 
     // Check if we have an AI available
     const providers = await detectAIProviders();
-    const aiAvailable = providers.some(p => p.type === 'ollama' || p.type === 'glm' || p.type === 'openai');
+    const aiAvailable = providers.some(p => p.type === 'lm_studio' || p.type === 'ollama' || p.type === 'glm' || p.type === 'openai');
 
     if (!aiAvailable) {
         console.log('[SelfConfig] No AI available for optimization');
@@ -397,8 +478,17 @@ export async function initializeAgentZeroWithAI(): Promise<{
 export function isConfigured(): boolean {
     if (typeof window === 'undefined') return false;
 
+    // Check if first run is complete
+    const firstRunComplete = localStorage.getItem('biodockify_first_run_complete') === 'true';
+
+    // Check if LM Studio is configured (from first-run wizard or settings)
+    const lmStudioConfigured = localStorage.getItem('biodockify_lm_studio_url') !== null;
+
+    // Check stored config
     const config = getStoredConfig();
-    return config.auto_configured === true || localStorage.getItem('biodockify_first_run_complete') === 'true';
+    const autoConfigured = config.auto_configured === 'true' || config.auto_configured === true;
+
+    return firstRunComplete || autoConfigured || lmStudioConfigured;
 }
 
 /**
