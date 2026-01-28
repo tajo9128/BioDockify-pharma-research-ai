@@ -1,30 +1,33 @@
-# BioDockify v2.17.6 Release Notes
+# BioDockify Release Notes v2.17.5
 
-**Build:** 2026.01.28.01  
-**Status:** Stable / Release Candidate
+Welcome to BioDockify v2.17.5! This release marks a major milestone by consolidating the advanced features from the v3 development branch with our newly implemented licensing and stability core.
 
-## 🚀 Key Features & Updates
+## 🚀 NEW: Advanced Statistics & Survival Analysis
+We have integrated the highly anticipated Statistics Suite, previously in internal development. These features are now available to all users who verify their free license.
 
-### 1. Persistent First-Run Configuration
-- **Fixed Loop Issue:** Resolved a critical bug where the First Run Wizard would reappear on every application launch.
-- **Smart Persistence:** Settings are now merged rather than overwritten, ensuring that completion status (`biodockify_first_run_complete`) remains persistent while preserving other user preferences.
-- **Self-Healing Update:** The underlying self-configuration logic (`self-config.ts`) has been hardened to respect existing configuration flags more reliably.
+- **Statistical Analysis Tiers**: From basic descriptive statistics to advanced analytical models.
+- **Power Analysis**: Calculate required sample sizes for research studies.
+- **Survival Analysis**: Perform Kaplan-Meier and Cox Regression analysis on pharmaceutical data.
+- **Visualization Engine**: Generate publication-ready statistical plots.
 
-### 2. Personalized User Experience
-- **"Welcome Back" Feature:** The Home Dashboard now greets you by name ("Welcome Back, Dr. [Name]") instead of a generic title.
-- **New Persona Setting:** Added a **"Full Name"** input field in `Settings -> Research Persona`.
-    - Users can now define how they wish to be addressed by Agent Zero.
-    - If no name is provided, it gracefully falls back to "Researcher".
+## 🔑 Enhanced Licensing System
+Access to premium features is now gated by a simplified, free verification system.
+- **Statistics Lock**: The new statistics module now requires Name/Email verification to unlock.
+- **Persistent Persona**: Your research persona is now consistently remembered across sessions.
+- **Workspace Gating**: Centralized workspace locking for unlicensed users.
 
-### 3. General Improvements
-- **Start-up Optimization:** Improved settings loading time by caching the user's name in `localStorage` for instant dashboard rendering.
-- **Type Safety:** Resolved TypeScript checking errors in the Settings panel for better build stability.
+## 🛠️ Build & Stability Fixes
+- **TensorFlow Stability**: Resolved critical `AttributeError` and dependency conflicts on Windows.
+- **Python Environment Support**: Optimized for Python 3.10-3.12 (Legacy Stable stack).
+- **Merge Consolidation**: Successfully integrated `v3.0.0-dev` while preserving v2 enhancements.
+
+## 📦 How to Update
+Run the following in your project directory:
+```powershell
+git pull origin main
+pip install -r requirements.txt
+npm install
+```
 
 ---
-
-## 🔧 Technical Details
-- **Frontend:** Updated `FirstRunWizard.tsx`, `HomeDashboard.tsx`, `SettingsPanel.tsx`.
-- **Backend:** Bumped API version to match frontend (`v2.17.6`).
-- **State Management:** Enhanced `localStorage` handling for `biodockify_settings`.
-
-> **Note:** The planned Licensing System has been placed on hold and will be targeted for a future release (v2.18.x).
+*Thank you for being part of the BioDockify community. We’re building the future of autonomous pharmaceutical research together.*

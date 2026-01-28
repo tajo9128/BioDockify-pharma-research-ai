@@ -19,7 +19,7 @@ from orchestration.executor import ResearchExecutor
 from modules.analyst.analytics_engine import ResearchAnalyst
 from modules.backup import DriveClient, BackupManager
 
-app = FastAPI(title="BioDockify - Pharma Research AI", version="2.17.6")
+app = FastAPI(title="BioDockify - Pharma Research AI", version="2.17.5")
 
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -662,6 +662,14 @@ def analyze_statistics(req: StatisticsRequest):
     Unified Statistical Analysis Endpoint.
     Routes to the 3-Tier Statistical Engine.
     """
+    # License Check for Statistics features
+    from modules.system.auth_manager import verify_license
+    if not verify_license():
+        return JSONResponse(
+            status_code=403, 
+            content={"error": "license_required", "message": "The free version of BioDockify requires a one-time verification to unlock Advanced Statistics. Please go to Settings."}
+        )
+
     engine = StatisticalEngine()
     result = engine.analyze(req.data, req.design, req.tier)
     
