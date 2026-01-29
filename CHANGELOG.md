@@ -5,6 +5,17 @@ All notable changes to **BioDockify** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.18.4] - 2026-01-29
+### Added
+- **LLM Integration:** Full Agent Zero integration for Screening, Synthesis, Thesis, and Slide Generation modules.
+- **Literature:** Implemented Unpaywall API integration for legal open-access paper discovery.
+- **Science:** Verified Molecular Vision (DECIMER) and Statistics modules operation.
+
+### Fixed
+- **Critical:** Resolved Neo4j dependency in `server.py` allowing proper startup without graph database.
+- **Architecture:** Consolidated SurfSense clients into a single source of truth.
+- **Performance:** Optimized startup imports for faster load times.
+
 ## [2.18.0] - 2026-01-29
 ### Added
 - **Settings UI:** New Settings Page (`/settings`) for configuring API keys and System preferences.

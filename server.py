@@ -42,9 +42,16 @@ except ImportError:
 import tensorflow as tf
 import numpy as np
 import PIL
-import neo4j
 import pypdf
 import pdfminer
+
+# Optional dependencies - these modules handle missing deps gracefully
+try:
+    import neo4j
+    NEO4J_AVAILABLE = True
+except ImportError:
+    NEO4J_AVAILABLE = False
+    logging.info("Neo4j not installed - graph features will operate in offline mode")
 
 # Hint for DECIMER if available, but it might be a sub-module.
 try:

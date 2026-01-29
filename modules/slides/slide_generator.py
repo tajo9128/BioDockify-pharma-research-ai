@@ -1,9 +1,10 @@
 """
 SlideGenerator - Generate presentations from Knowledge Base content
+Agent Zero handles AI content generation - this module manages structure and export.
 """
 
 import logging
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Callable
 from pathlib import Path
 from datetime import datetime
 
@@ -19,6 +20,7 @@ class SlideGenerator:
     - Search results conversion
     - Custom prompt-based generation
     - Selected document compilation
+    - Agent Zero integration for AI-powered content generation
     """
     
     def __init__(self, llm_adapter=None, rag_engine=None):
@@ -26,12 +28,99 @@ class SlideGenerator:
         Initialize the SlideGenerator.
         
         Args:
-            llm_adapter: LLM adapter for content generation
+            llm_adapter: LLM adapter for content generation (legacy)
             rag_engine: RAG engine for Knowledge Base queries
         """
         self.llm = llm_adapter
         self.rag = rag_engine
         self.generation_history = []
+        self._agent_callback: Optional[Callable] = None
+    
+    def set_agent_callback(self, callback: Callable[[str], str]):
+        """
+        Set the Agent Zero callback for content generation.
+        
+        Args:
+            callback: Function that takes a prompt and returns generated content
+        """
+        self._agent_callback = callback
+    
+    def prepare_for_agent(
+        self,
+        topic: str,
+        style: str = "academic",
+        num_slides: int = 10
+    ) -> Dict[str, Any]:
+        """
+        Prepare slide generation data for Agent Zero to process.
+        
+        Returns structured data for Agent Zero's content generation.
+        """
+        # Query RAG for context
+        relevant_content = self._query_rag(topic, top_k=num_slides * 2)
+        
+        return {
+            "task": "slide_generation",
+            "topic": topic,
+            "style": style,
+            "num_slides": num_slides,
+            "suggested_structure": [
+                {"slide": 1, "type": "title", "title": topic},
+                {"slide": 2, "type": "overview", "title": "Outline"},
+                *[{"slide": i + 3, "type": "content", "title": f"Key Point {i + 1}"} 
+                  for i in range(num_slides - 3)],
+                {"slide": num_slides, "type": "conclusion", "title": "Conclusions"}
+            ],
+            "context": [
+                {"text": c.get("text", "")[:500], "source": c.get("metadata", {}).get("source", "")}
+                for c in relevant_content[:10]
+            ]
+        }
+    
+    def assemble_slides(
+        self,
+        topic: str,
+        slide_contents: List[Dict[str, str]],
+        style: str = "academic"
+    ) -> Dict[str, Any]:
+        """
+        Assemble slides from Agent Zero generated content.
+        
+        Args:
+            topic: Presentation topic
+            slide_contents: List of dicts with title, content, notes
+            style: Presentation style
+        
+        Returns:
+            Complete slide presentation data
+        """
+        from .slide_styles import get_style_template
+        
+        template = get_style_template(style)
+        slides = []
+        
+        for i, item in enumerate(slide_contents):
+            slide = {
+                "index": i + 1,
+                "type": item.get("type", "content"),
+                "title": item.get("title", f"Slide {i + 1}"),
+                "content": item.get("content", ""),
+                "notes": item.get("notes", ""),
+                "style": template
+            }
+            slides.append(slide)
+        
+        result = {
+            "status": "success",
+            "topic": topic,
+            "style": style,
+            "num_slides": len(slides),
+            "slides": slides,
+            "generated_at": datetime.now().isoformat()
+        }
+        
+        self.generation_history.append(result)
+        return result
     
     def generate_from_knowledge_base(
         self,

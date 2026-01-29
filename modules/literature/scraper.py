@@ -358,12 +358,63 @@ class LiteratureAggregator:
                      # Fallback to DOI resolver which might paywall, so be careful. 
                      # For OA, usually EuroPMC links are safer.
                      pass
-            
-            # Rule B: Unpaywall Check (TODO: Implementing actual API call would go here)
-            # For now, we trust the source scraper's metadata. 
+            # Rule B: Unpaywall Check - Query Unpaywall API for OA version
+            if paper.doi and not paper.is_open_access:
+                try:
+                    unpaywall_result = self._check_unpaywall(paper.doi)
+                    if unpaywall_result:
+                        paper.is_open_access = True
+                        paper.open_access_source = "Unpaywall"
+                        paper.license = unpaywall_result.get("license", "OA")
+                        paper.full_text_url = unpaywall_result.get("url")
+                except Exception as e:
+                    logger.debug(f"Unpaywall check failed for {paper.doi}: {e}")
             
             papers.append(paper)
         return papers
+    
+    def _check_unpaywall(self, doi: str) -> Optional[Dict[str, str]]:
+        """
+        Check Unpaywall API for open access version of a paper.
+        
+        Unpaywall is a free, legal API that finds open access versions of papers.
+        Rate limit: Respectful use (no official limit, but be polite).
+        
+        Returns:
+            Dict with 'url' and 'license' if OA version found, None otherwise
+        """
+        import requests
+        
+        # Use configured email for API
+        email = self.config.email
+        url = f"https://api.unpaywall.org/v2/{doi}?email={email}"
+        
+        try:
+            rate_limiter.wait()  # Be polite
+            response = requests.get(url, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                # Check if open access
+                if data.get("is_oa"):
+                    best_oa = data.get("best_oa_location", {})
+                    if best_oa:
+                        return {
+                            "url": best_oa.get("url_for_pdf") or best_oa.get("url"),
+                            "license": best_oa.get("license") or "OA",
+                            "source": best_oa.get("host_type", "Unknown")
+                        }
+            elif response.status_code == 404:
+                # DOI not found in Unpaywall - this is normal
+                pass
+            else:
+                logger.debug(f"Unpaywall returned {response.status_code} for {doi}")
+                
+        except requests.exceptions.RequestException as e:
+            logger.debug(f"Unpaywall request failed: {e}")
+        
+        return None
 
     def _deduplicate_and_add(self, master_list, new_items, seen_set):
         for item in new_items:

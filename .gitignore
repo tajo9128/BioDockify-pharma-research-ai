@@ -4,6 +4,7 @@ Thumbs.db
 .env
 .env.local
 .venv/
+.venv311/
 venv/
 env/
 __pycache__/
