@@ -1,6 +1,6 @@
 {
   "name": "biodockify-ui",
-  "version": "2.17.5",
+  "version": "2.18.0",
   "description": "BioDockify - Pharma Research AI: User Interface",
   "private": true,
   "scripts": {

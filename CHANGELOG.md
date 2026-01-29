@@ -5,6 +5,21 @@ All notable changes to **BioDockify** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.18.0] - 2026-01-29
+### Added
+- **Settings UI:** New Settings Page (`/settings`) for configuring API keys and System preferences.
+- **Chat UI:** New Agent Chat Interface (`/chat`) skeleton.
+
+### Fixed
+- **Critical:** Fixed Python 3.13 incompatibility (enforced 3.11).
+- **Critical:** Fixed "First-Run Wizard" hang by adding `/api/diagnose/connectivity` endpoint.
+- **Bug Fixes:** 
+    - Fixed `LMStudioAdapter` variable typo.
+    - Fixed Google API URL typo.
+    - Fixed HuggingFace key variable mismatch.
+    - Fixed duplicate sections in `runtime/config.yaml`.
+    - Improved `ConnectivityHealer` status handling for "degraded" states.
+
 ## [2.17.9] - 2026-01-29
 ### Changed
 - **System Stability:** Verified variable names and API endpoints for Google/HuggingFace adapters.
