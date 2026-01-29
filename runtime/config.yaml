@@ -81,8 +81,3 @@ system:
   version: 2.16.4
   auto_start: true
   minimize_to_tray: true
-"\xEF\xBB\xBFproject":
-  name: My PhD Research
-  type: PhD Thesis
-  disease_context: Alzheimer's Disease
-  stage: Literature Review
