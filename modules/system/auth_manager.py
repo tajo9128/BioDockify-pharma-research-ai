@@ -50,17 +50,9 @@ class AuthManager:
             
             # Check if any record was found
             if response.data and len(response.data) > 0:
-                user_record = response.data[0]
-                
-                # Check Name Match (Case insensitive)
-                db_name = user_record.get('name', '').lower().strip()
-                input_name = name.lower().strip()
-                
-                if db_name == input_name:
-                    logger.info(f"License Verified for: {email}")
-                    return True, "License Verified"
-                else:
-                    return False, "Email found, but Name does not match."
+                # Email matches -> Success (Name check removed as per v2.18.2 requirements)
+                logger.info(f"License Verified for: {email}")
+                return True, "License Verified"
             else:
                 return False, "Email not found in registry."
                 

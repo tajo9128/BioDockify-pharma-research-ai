@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { api } from '@/lib/api';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import { useAutoSave } from '@/hooks/useAutoSave';
-import { Search, PenTool, Layout, Play, Pause, Square, AlertCircle, FileText, Globe, Cpu, ChevronRight, Maximize2, Beaker, Save, RotateCcw, Database, X, Plus, Settings, Terminal, Network, Share2, Activity, Zap, Link as LinkIcon, WifiOff } from 'lucide-react';
+import { Search, PenTool, Layout, Play, Pause, Square, AlertCircle, FileText, Globe, Cpu, ChevronRight, Maximize2, Beaker, Save, RotateCcw, Database, X, Plus, Settings, Terminal, Network, Share2, Activity, Zap, Link as LinkIcon, WifiOff, Loader2 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import ExternalInsightImporter, { ExternalAIInsight } from './ExternalInsightImporter';
 import { DeepResearchView } from './deep-research/DeepResearchView';
@@ -223,11 +223,12 @@ export default function ResearchWorkstation({
                         <div className="grid grid-cols-3 gap-2">
                             <button
                                 onClick={onExecute}
-                                disabled={isExecuting || !goal}
+                                disabled={isExecuting || !goal.trim()}
                                 className="col-span-2 bg-teal-600 hover:bg-teal-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg py-3 font-bold flex items-center justify-center space-x-2 transition-all shadow-lg shadow-teal-900/20"
+                                title={isExecuting ? "Agent is running..." : !goal.trim() ? "Please enter a research goal" : "Start Analysis"}
                             >
-                                <Play className="w-4 h-4 fill-current" />
-                                <span>START</span>
+                                {isExecuting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4 fill-current" />}
+                                <span>{isExecuting ? 'RUNNING' : 'START'}</span>
                             </button>
                             <button
                                 onClick={onStop}

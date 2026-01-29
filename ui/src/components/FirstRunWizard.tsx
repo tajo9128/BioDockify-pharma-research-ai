@@ -52,7 +52,6 @@ export default function FirstRunWizard({ onComplete }: WizardProps) {
     }, [step]);
 
     // --- NEW: Persona State ---
-    const [personaName, setPersonaName] = useState('');
     const [personaEmail, setPersonaEmail] = useState('');
     const [verifying, setVerifying] = useState(false);
     const [verificationError, setVerificationError] = useState('');
@@ -152,8 +151,8 @@ export default function FirstRunWizard({ onComplete }: WizardProps) {
     };
 
     const finish = async () => {
-        if (!personaName || !personaEmail) {
-            setVerificationError("Please enter your Name and Email to proceed.");
+        if (!personaEmail) {
+            setVerificationError("Please enter your Email to proceed.");
             return;
         }
 
@@ -179,7 +178,6 @@ export default function FirstRunWizard({ onComplete }: WizardProps) {
                     persona: {
                         // @ts-ignore
                         ...existingSettings.persona,
-                        name: personaName,
                         email: personaEmail
                     },
                     ai_provider: {
@@ -340,17 +338,6 @@ export default function FirstRunWizard({ onComplete }: WizardProps) {
 
                             {/* Registration Inputs */}
                             <div className="bg-slate-900/50 p-6 rounded-xl border border-slate-800 text-left space-y-4 max-w-sm mx-auto">
-                                <div>
-                                    <label className="text-xs font-bold text-slate-500 uppercase">Full Name</label>
-                                    <input
-                                        type="text"
-                                        className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white"
-                                        placeholder="Dr. StartUp"
-                                        value={personaName}
-                                        onChange={e => setPersonaName(e.target.value)}
-                                        disabled={verifying}
-                                    />
-                                </div>
                                 <div>
                                     <label className="text-xs font-bold text-slate-500 uppercase">Email Address</label>
                                     <input
