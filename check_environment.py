@@ -29,22 +29,22 @@ def check_python_version():
     print()
     
     if current < MIN_PYTHON:
-        print(f"❌ FAIL: Python {current[0]}.{current[1]} is too OLD.")
-        print(f"   Please upgrade to Python 3.11.x")
+        print(f"[FAIL] Python {current[0]}.{current[1]} is too OLD.")
+        print(f"       Please upgrade to Python 3.11.x")
         return False
     elif current > MAX_PYTHON:
-        print(f"❌ FAIL: Python {current[0]}.{current[1]} is NOT SUPPORTED.")
-        print(f"   TensorFlow 2.15 does not support Python 3.13+")
+        print(f"[FAIL] Python {current[0]}.{current[1]} is NOT SUPPORTED.")
+        print(f"       TensorFlow 2.15 does not support Python 3.13+")
         print()
-        print("   SOLUTION:")
-        print("   1. Download Python 3.11.x from https://python.org/downloads/")
-        print("   2. Create a new virtual environment:")
-        print("      py -3.11 -m venv .venv")
-        print("      .venv\\Scripts\\activate")
-        print("   3. Then run: pip install -r requirements.txt")
+        print("       SOLUTION:")
+        print("       1. Download Python 3.11.x from https://python.org/downloads/")
+        print("       2. Create a new virtual environment:")
+        print("          py -3.11 -m venv .venv")
+        print("          .venv\\Scripts\\activate")
+        print("       3. Then run: pip install -r requirements.txt")
         return False
     else:
-        print(f"✅ PASS: Python {current[0]}.{current[1]} is compatible!")
+        print(f"[PASS] Python {current[0]}.{current[1]} is compatible!")
         return True
 
 def check_key_packages():
@@ -82,12 +82,12 @@ def check_key_packages():
         pass
     
     if issues:
-        print("\n⚠️  Package Version Issues Detected:")
+        print("\n[WARN] Package Version Issues Detected:")
         for issue in issues:
-            print(f"   - {issue}")
-        print("\n   SOLUTION: Clean reinstall in a fresh virtual environment:")
-        print("   pip uninstall -y numpy tensorflow opencv-python-headless")
-        print("   pip install -r requirements.txt")
+            print(f"       - {issue}")
+        print("\n       SOLUTION: Clean reinstall in a fresh virtual environment:")
+        print("       pip uninstall -y numpy tensorflow opencv-python-headless")
+        print("       pip install -r requirements.txt")
         return False
     
     return True
@@ -99,12 +99,12 @@ def main():
         packages_ok = check_key_packages()
         
         if packages_ok:
-            print("\n✅ Environment looks good! You can proceed with:")
-            print("   pip install -r requirements.txt")
+            print("\n[PASS] Environment looks good! You can proceed with:")
+            print("       pip install -r requirements.txt")
         else:
-            print("\n⚠️  Fix the package issues above before running BioDockify.")
+            print("\n[WARN] Fix the package issues above before running BioDockify.")
     else:
-        print("\n❌ Please fix Python version first!")
+        print("\n[FAIL] Please fix Python version first!")
     
     print()
     return 0 if python_ok else 1

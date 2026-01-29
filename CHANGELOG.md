@@ -5,6 +5,13 @@ All notable changes to **BioDockify** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.17.8] - 2026-01-29
+### Added
+- **Documentation:** Added Python 3.13 compatibility guide (`SETUP_PYTHON.md`) and environment check script (`check_environment.py`).
+
+### Changed
+- **First-Run Wizard:** Removed "API Keys" check step. Users execute this configuration later in Settings.
+
 ## [2.17.7] - 2026-01-29
 ### Fixed
 - **Dependencies:** Added missing `tabulate` package for pandas markdown tables.
