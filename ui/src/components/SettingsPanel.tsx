@@ -248,14 +248,11 @@ export default function SettingsPanel() {
 
     const handleSave = async () => {
         setSaving(true);
-        try {
-            console.log('Saving settings payload:', settings);
+        let apiError = null;
 
-            // Save to API
-            await api.saveSettings(settings);
-
-            // ALSO save to localStorage for persistence across sessions
-            if (typeof window !== 'undefined') {
+        // 1. Always save to localStorage FIRST (Offline-First Strategy)
+        if (typeof window !== 'undefined') {
+            try {
                 localStorage.setItem('biodockify_settings', JSON.stringify(settings));
                 localStorage.setItem('biodockify_first_run_complete', 'true');
                 localStorage.setItem('biodockify_ai_config', JSON.stringify({
@@ -265,17 +262,34 @@ export default function SettingsPanel() {
                     auto_configured: true
                 }));
                 console.log('[Settings] Persisted to localStorage');
+            } catch (e) {
+                console.error('LocalStorage save failed:', e);
+                alert('Warning: Failed to save settings locally.');
             }
-
-            // Force reload to verify persistence
-            await loadSettings();
-            alert('Settings saved successfully!');
-        } catch (e) {
-            console.error('Save failed:', e);
-            alert('Failed to save settings. Check console for details.');
-        } finally {
-            setSaving(false);
         }
+
+        // 2. Try to sync with Backend API
+        try {
+            console.log('Syncing settings to backend...');
+            await api.saveSettings(settings);
+            console.log('[Settings] Synced to backend');
+        } catch (e: any) {
+            console.warn('Backend sync failed (running offline?):', e);
+            apiError = e.message || 'Connection failed';
+        }
+
+        setSaving(false);
+
+        // 3. Feedback to user
+        if (apiError) {
+            alert('Settings saved locally! (Backend sync failed - checking connection...)');
+            // Optimistic success - logic continues
+        } else {
+            alert('Settings saved successfully!');
+        }
+
+        // Reload to refresh state
+        await loadSettings();
     };
 
 

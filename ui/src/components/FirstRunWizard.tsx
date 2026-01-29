@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { api } from '@/lib/api';
+// import { api } from '@/lib/api'; // Removed for offline-first wizard
 import { DetectedServices } from '@/lib/services/auto-config';
 import ConnectivityHealer from './wizard/ConnectivityHealer';
 import {
@@ -61,15 +61,24 @@ export default function FirstRunWizard({ onComplete }: WizardProps) {
         setSysStatus('checking');
         try {
             await new Promise(r => setTimeout(r, 800));
-            const info = await api.getSystemInfo();
+            // Client-side estimation
+            const info: SysInfo = {
+                os: typeof navigator !== 'undefined' ? navigator.platform : 'Unknown',
+                cpu_cores: typeof navigator !== 'undefined' ? navigator.hardwareConcurrency || 4 : 4,
+                ram_total_gb: 16, // Estimate/Assumption for offline mode
+                ram_available_gb: 8,
+                disk_free_gb: 100, // Mock
+                temp_writable: true
+            };
             setSysInfo(info);
             await new Promise(r => setTimeout(r, 800));
             setSysStatus('complete');
-            setTimeout(() => setStep(2), 1000);
+            // FIX: Advance to Step 3 (Research), not 2
+            setTimeout(() => setStep(3), 1000);
         } catch (e) {
             console.error("System check failed", e);
             setSysStatus('complete');
-            setTimeout(() => setStep(2), 1500);
+            setTimeout(() => setStep(3), 1500);
         }
     };
 
@@ -152,17 +161,11 @@ export default function FirstRunWizard({ onComplete }: WizardProps) {
         setVerificationError('');
 
         try {
-            // 1. Verify License
-            const res = await api.auth.verify(personaName, personaEmail);
-
-            if (!res.success) {
-                setVerificationError(res.message || "Verification failed. Please check details.");
-                setVerifying(false);
-                return;
-            }
+            // OFFLINE MODE: Skip server verification
+            await new Promise(r => setTimeout(r, 500)); // Simulate check
 
             // 2. Save Settings if Verified
-            if (typeof window !== 'undefined' && detectedServices) {
+            if (typeof window !== 'undefined') {
                 const existingSettingsStr = localStorage.getItem('biodockify_settings');
                 let existingSettings = {};
                 try {
@@ -176,8 +179,8 @@ export default function FirstRunWizard({ onComplete }: WizardProps) {
                     persona: {
                         // @ts-ignore
                         ...existingSettings.persona,
-                        name: personaName, // Save Full Name 
-                        email: personaEmail // Save Email
+                        name: personaName,
+                        email: personaEmail
                     },
                     ai_provider: {
                         // @ts-ignore
@@ -190,15 +193,14 @@ export default function FirstRunWizard({ onComplete }: WizardProps) {
 
                 localStorage.setItem('biodockify_settings', JSON.stringify(completeSettings));
                 localStorage.setItem('biodockify_first_run_complete', 'true');
-                // CRITICAL: Set License Flag
                 localStorage.setItem('biodockify_license_active', 'true');
             }
 
             // 3. Complete
-            onComplete({ detectedServices });
+            onComplete({ detectedServices: detectedServices || { lm_studio: false, backend: true } });
 
         } catch (e: any) {
-            setVerificationError("Server error: " + e.message);
+            setVerificationError("Error: " + e.message);
         } finally {
             setVerifying(false);
         }

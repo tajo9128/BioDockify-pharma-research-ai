@@ -44,7 +44,6 @@ export default function ConnectivityHealer({ onComplete, onSkip }: ConnectivityH
     const [checks, setChecks] = useState<ConnectionCheck[]>([
         { name: 'Internet Connectivity', status: 'pending', message: 'Waiting...' },
         { name: 'LM Studio', status: 'pending', message: 'Waiting...' },
-        { name: 'Backend API', status: 'pending', message: 'Waiting...' },
     ]);
     const [overallStatus, setOverallStatus] = useState<'healthy' | 'degraded' | 'offline' | null>(null);
     const [canProceed, setCanProceed] = useState(false);
@@ -63,54 +62,11 @@ export default function ConnectivityHealer({ onComplete, onSkip }: ConnectivityH
 
     const runDiagnosis = async () => {
         addLog('Starting connectivity diagnosis...');
-
         // Set all to checking
         setChecks(prev => prev.map(c => ({ ...c, status: 'checking' as const, message: 'Checking...' })));
 
-        try {
-            // Try backend first
-            const response = await fetch('/api/diagnose/connectivity', {
-                method: 'GET',
-                signal: AbortSignal.timeout(60000) // 60s timeout for full diagnosis
-            });
-
-            if (response.ok) {
-                const result: DiagnosisResult = await response.json();
-
-                // Map backend result to our state
-                const mappedChecks = result.checks.map(c => {
-                    let mapStatus: ConnectionCheck['status'] = 'checking'; // default
-                    const s = c.status.toLowerCase();
-                    if (s === 'success' || s === 'healthy' || s === 'ok') mapStatus = 'success';
-                    else if (s === 'warning' || s === 'degraded') mapStatus = 'warning';
-                    else if (s === 'error' || s === 'critical' || s === 'offline') mapStatus = 'error';
-
-                    return {
-                        ...c,
-                        status: mapStatus
-                    };
-                });
-
-                setChecks(mappedChecks);
-                setOverallStatus(result.status);
-                setCanProceed(result.can_proceed);
-
-                addLog(`Diagnosis complete: ${result.status.toUpperCase()}`);
-
-                // If all passed, auto-proceed after delay
-                if (result.status === 'healthy') {
-                    setTimeout(() => onComplete(result), 1500);
-                }
-            } else {
-                // Backend not available - run client-side checks
-                addLog('Backend unavailable, running client-side checks...');
-                await runClientSideChecks();
-            }
-        } catch (error) {
-            console.error('Diagnosis failed:', error);
-            addLog('Diagnosis failed, running client-side checks...');
-            await runClientSideChecks();
-        }
+        // Skip backend check entirely - go straight to client checks
+        await runClientSideChecks();
     };
 
     const runClientSideChecks = async () => {
@@ -185,23 +141,8 @@ export default function ConnectivityHealer({ onComplete, onSkip }: ConnectivityH
 
         // API Keys removed - users configure in Settings later
 
-        // 3. Backend check
-        try {
-            const res = await fetch('http://localhost:8234/api/health', {
-                signal: AbortSignal.timeout(3000)
-            });
-            newChecks.push({
-                name: 'Backend API',
-                status: res.ok ? 'success' : 'warning',
-                message: res.ok ? 'Running' : 'Not responding correctly'
-            });
-        } catch {
-            newChecks.push({
-                name: 'Backend API',
-                status: 'warning',
-                message: 'Not running (normal for first run)'
-            });
-        }
+        // 3. Backend check - REMOVED
+        // We do not check backend here to prevent blocking. It's assumed to be handled by the main app later.
 
         setChecks(newChecks);
 

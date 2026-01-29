@@ -9,34 +9,34 @@ print("\n--- Testing Imports ---")
 
 try:
     import numpy
-    print(f"✅ NumPy: {numpy.__version__}")
+    print(f"[PASS] NumPy: {numpy.__version__}")
 except ImportError as e:
-    print(f"❌ NumPy: FAIL - {e}")
+    print(f"[FAIL] NumPy: FAIL - {e}")
 
 try:
     import pandas
-    print(f"✅ Pandas: {pandas.__version__}")
+    print(f"[PASS] Pandas: {pandas.__version__}")
 except ImportError as e:
-    print(f"❌ Pandas: FAIL - {e}")
+    print(f"[FAIL] Pandas: FAIL - {e}")
 
 try:
     import cv2
-    print(f"✅ OpenCV: {cv2.__version__}")
+    print(f"[PASS] OpenCV: {cv2.__version__}")
 except ImportError as e:
-    print(f"❌ OpenCV: FAIL - {e}")
+    print(f"[FAIL] OpenCV: FAIL - {e}")
 
 print("\n--- Testing Critical ML Imports (May take a moment) ---")
 
 try:
     import tensorflow as tf
-    print(f"✅ TensorFlow: {tf.__version__}")
+    print(f"[PASS] TensorFlow: {tf.__version__}")
 except ImportError as e:
-    print(f"❌ TensorFlow: FAIL - {e}")
+    print(f"[FAIL] TensorFlow: FAIL - {e}")
 
 try:
     from DECIMER import predict_SMILES
-    print(f"✅ DECIMER: Loaded successfully")
+    print(f"[PASS] DECIMER: Loaded successfully")
 except ImportError as e:
-    print(f"❌ DECIMER: FAIL - {e}")
+    print(f"[FAIL] DECIMER: FAIL - {e}")
 
 print("\n--- Smoke Test Complete ---")

@@ -29,6 +29,7 @@
   !define MUI_ICON "..\desktop\tauri\src-tauri\icons\icon.ico"
   !define MUI_UNICON "..\desktop\tauri\src-tauri\icons\icon.ico"
   !define MUI_HEADERIMAGE
+  !define MUI_HEADERIMAGE_RIGHT
   !define MUI_HEADERIMAGE_BITMAP "..\desktop\tauri\src-tauri\icons\icon.bmp"
   
   ; Pages

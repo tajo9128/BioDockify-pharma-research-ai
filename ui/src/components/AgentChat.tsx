@@ -293,10 +293,20 @@ After configuring, try again.`,
                 source: sourceUrl ? `Source: ${sourceUrl}` : undefined
             }]);
 
-        } catch (error) {
+        } catch (error: any) {
+            console.error("Chat error:", error);
             setMessages(prev => [...prev, {
                 role: 'system',
-                content: "Error: Failed to reach BioDockify AI. Please check backend connection.",
+                content: `⚠️ **Connection Error**
+                
+Failed to reach the BioDockify Research Backend.
+
+**Troubleshooting:**
+1. Ensure the backend server is running (\`server.py\`)
+2. Check your network connection
+3. If using LM Studio, ensure it is running on port 1234
+
+*You can still browse your previous chats, but new messages require the backend.*`,
                 timestamp: new Date()
             }]);
         } finally {
