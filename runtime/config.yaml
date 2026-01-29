@@ -78,6 +78,6 @@ system:
   pause_on_battery: true
   max_cpu_percent: 80
   log_level: INFO
-  version: 2.18.2
+  version: 2.18.3
   auto_start: true
   minimize_to_tray: true
