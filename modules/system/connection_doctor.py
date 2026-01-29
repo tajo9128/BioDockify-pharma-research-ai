@@ -123,7 +123,8 @@ class ConnectionDoctor:
             
             if lm_failed and internet_failed:
                 report.overall_status = "offline"
-                report.can_proceed_with_degraded = False
+                # FIX: Allow user to proceed manually even in offline mode
+                report.can_proceed_with_degraded = True
             else:
                 report.overall_status = "degraded"
         elif has_warning:
@@ -225,7 +226,7 @@ class ConnectionDoctor:
                         status=CheckStatus.WARNING,
                         message="LM Studio started but no model loaded",
                         details={"auto_started": True, "exe_path": exe_path},
-                        repair_action="Please load a model in LM Studio"
+                        repair_action="Load a model and ensure 'Enable CORS' is ON"
                     )
                 else:
                     return CheckResult(
@@ -233,7 +234,7 @@ class ConnectionDoctor:
                         status=CheckStatus.ERROR,
                         message="Failed to start LM Studio",
                         details={"exe_path": exe_path},
-                        repair_action="Please start LM Studio manually and load a model"
+                        repair_action="Start LM Studio, load model, and enable CORS"
                     )
             else:
                 return CheckResult(
@@ -241,7 +242,7 @@ class ConnectionDoctor:
                     status=CheckStatus.ERROR,
                     message="LM Studio not installed or not found",
                     can_auto_repair=False,
-                    repair_action="Please install LM Studio from https://lmstudio.ai"
+                    repair_action="Install LM Studio and enable CORS in settings"
                 )
         
         return result

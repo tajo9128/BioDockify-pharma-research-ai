@@ -171,7 +171,7 @@ export default function ConnectivityHealer({ onComplete, onSkip }: ConnectivityH
                 status: 'warning',
                 message: 'Not detected on any port',
                 can_auto_repair: true,
-                repair_action: 'Start LM Studio and load a model'
+                repair_action: 'Start LM Studio and Enable CORS'
             });
         }
 
@@ -286,7 +286,7 @@ export default function ConnectivityHealer({ onComplete, onSkip }: ConnectivityH
                             ...c,
                             status: 'warning' as const,
                             message: 'Started - please load a model',
-                            repair_action: 'Load a model in LM Studio'
+                            repair_action: 'Load model & Enable CORS'
                         }
                         : c
                 ));
@@ -440,19 +440,19 @@ export default function ConnectivityHealer({ onComplete, onSkip }: ConnectivityH
             {/* Overall Status */}
             {overallStatus && allChecksComplete && (
                 <div className={`flex items-center justify-center space-x-2 p-3 rounded-lg ${overallStatus === 'healthy'
-                        ? 'bg-emerald-500/10 border border-emerald-500/30'
-                        : overallStatus === 'degraded'
-                            ? 'bg-amber-500/10 border border-amber-500/30'
-                            : 'bg-red-500/10 border border-red-500/30'
+                    ? 'bg-emerald-500/10 border border-emerald-500/30'
+                    : overallStatus === 'degraded'
+                        ? 'bg-amber-500/10 border border-amber-500/30'
+                        : 'bg-red-500/10 border border-red-500/30'
                     }`}>
                     {overallStatus === 'healthy' && <Check className="w-5 h-5 text-emerald-400" />}
                     {overallStatus === 'degraded' && <AlertTriangle className="w-5 h-5 text-amber-400" />}
                     {overallStatus === 'offline' && <XCircle className="w-5 h-5 text-red-400" />}
                     <span className={`font-medium ${overallStatus === 'healthy'
-                            ? 'text-emerald-300'
-                            : overallStatus === 'degraded'
-                                ? 'text-amber-300'
-                                : 'text-red-300'
+                        ? 'text-emerald-300'
+                        : overallStatus === 'degraded'
+                            ? 'text-amber-300'
+                            : 'text-red-300'
                         }`}>
                         {overallStatus === 'healthy' && 'All systems operational'}
                         {overallStatus === 'degraded' && 'System operational with warnings'}
@@ -472,16 +472,19 @@ export default function ConnectivityHealer({ onComplete, onSkip }: ConnectivityH
                     <span>Retry All</span>
                 </button>
 
-                {(canProceed || overallStatus === 'healthy') && (
-                    <button
-                        onClick={handleProceed}
-                        disabled={!allChecksComplete || isStartingLmStudio}
-                        className="flex items-center space-x-2 px-6 py-2 bg-teal-500 hover:bg-teal-400 text-slate-900 rounded-lg font-semibold transition-colors disabled:opacity-50"
-                    >
-                        <Check className="w-4 h-4" />
-                        <span>Continue</span>
-                    </button>
-                )}
+                <button
+                    onClick={handleProceed}
+                    disabled={isStartingLmStudio /* Always allow proceed unless busy starting */}
+                    className={`flex items-center space-x-2 px-6 py-2 rounded-lg font-semibold transition-colors disabled:opacity-50 ${hasErrors
+                        ? 'bg-amber-600 hover:bg-amber-500 text-white'
+                        : 'bg-teal-500 hover:bg-teal-400 text-slate-900'
+                        }`}
+                >
+                    <Check className="w-4 h-4" />
+                    <span>
+                        {hasErrors ? 'Continue to Settings' : 'Continue'}
+                    </span>
+                </button>
 
                 {hasErrors && !canProceed && (
                     <button
