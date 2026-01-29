@@ -5,6 +5,11 @@ All notable changes to **BioDockify** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.17.9] - 2026-01-29
+### Changed
+- **System Stability:** Verified variable names and API endpoints for Google/HuggingFace adapters.
+- **Maintenance:** Routine version bump and stability check.
+
 ## [2.17.8] - 2026-01-29
 ### Added
 - **Documentation:** Added Python 3.13 compatibility guide (`SETUP_PYTHON.md`) and environment check script (`check_environment.py`).

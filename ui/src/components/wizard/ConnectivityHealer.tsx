@@ -78,10 +78,18 @@ export default function ConnectivityHealer({ onComplete, onSkip }: ConnectivityH
                 const result: DiagnosisResult = await response.json();
 
                 // Map backend result to our state
-                const mappedChecks = result.checks.map(c => ({
-                    ...c,
-                    status: c.status as ConnectionCheck['status']
-                }));
+                const mappedChecks = result.checks.map(c => {
+                    let mapStatus: ConnectionCheck['status'] = 'checking'; // default
+                    const s = c.status.toLowerCase();
+                    if (s === 'success' || s === 'healthy' || s === 'ok') mapStatus = 'success';
+                    else if (s === 'warning' || s === 'degraded') mapStatus = 'warning';
+                    else if (s === 'error' || s === 'critical' || s === 'offline') mapStatus = 'error';
+
+                    return {
+                        ...c,
+                        status: mapStatus
+                    };
+                });
 
                 setChecks(mappedChecks);
                 setOverallStatus(result.status);

@@ -1,0 +1,42 @@
+
+import sys
+import platform
+
+print(f"Python: {sys.version}")
+print(f"Platform: {platform.platform()}")
+
+print("\n--- Testing Imports ---")
+
+try:
+    import numpy
+    print(f"✅ NumPy: {numpy.__version__}")
+except ImportError as e:
+    print(f"❌ NumPy: FAIL - {e}")
+
+try:
+    import pandas
+    print(f"✅ Pandas: {pandas.__version__}")
+except ImportError as e:
+    print(f"❌ Pandas: FAIL - {e}")
+
+try:
+    import cv2
+    print(f"✅ OpenCV: {cv2.__version__}")
+except ImportError as e:
+    print(f"❌ OpenCV: FAIL - {e}")
+
+print("\n--- Testing Critical ML Imports (May take a moment) ---")
+
+try:
+    import tensorflow as tf
+    print(f"✅ TensorFlow: {tf.__version__}")
+except ImportError as e:
+    print(f"❌ TensorFlow: FAIL - {e}")
+
+try:
+    from DECIMER import predict_SMILES
+    print(f"✅ DECIMER: Loaded successfully")
+except ImportError as e:
+    print(f"❌ DECIMER: FAIL - {e}")
+
+print("\n--- Smoke Test Complete ---")

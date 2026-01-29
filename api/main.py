@@ -1439,6 +1439,28 @@ def test_connection_endpoint(request: TestRequest):
     return {"status": "error", "message": f"Unknown service type: {request.service_type}"}
 
 
+@app.get("/api/diagnose/connectivity")
+async def diagnose_connectivity():
+    """
+    Run full connectivity diagnosis (Doctor).
+    Used by First-Run Wizard.
+    """
+    try:
+        from modules.system.connection_doctor import ConnectionDoctor
+        doctor = ConnectionDoctor()
+        # Run diagnosis
+        result = await doctor.diagnose_all()
+        return result
+    except Exception as e:
+        logger.error(f"Diagnosis failed: {e}")
+        return {
+            "status": "offline", 
+            "checks": [], 
+            "can_proceed": False,
+            "can_proceed_with_degraded": False
+        }
+
+
 
 
 

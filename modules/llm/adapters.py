@@ -186,7 +186,7 @@ class LMStudioAdapter(BaseLLMAdapter):
             selected = None
             
             # 1. Try to find preferred models
-            for pref in self.PREFERRED_MODELS:
+            for pref in LMStudioAdapter.PREFERRED_MODELS:
                 for m_id in available_ids:
                     if pref.lower() in m_id.lower():
                         selected = m_id

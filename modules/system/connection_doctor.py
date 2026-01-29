@@ -459,10 +459,10 @@ class ConnectionDoctor:
                 validation_errors.append(f"OpenRouter: {error}")
         
         # Check HuggingFace key
-        hf_key = ai_config.get("huggingface_key")
-        if hf_key:
+        huggingface_key = ai_config.get("huggingface_key")
+        if huggingface_key:
             keys_found.append("HuggingFace")
-            is_valid, error = await self._validate_huggingface_key(hf_key)
+            is_valid, error = await self._validate_huggingface_key(huggingface_key)
             if is_valid:
                 keys_valid.append("HuggingFace")
             else:
