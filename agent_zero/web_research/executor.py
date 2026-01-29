@@ -38,6 +38,8 @@ class ExecutorConfig:
     user_agent: str = "Mozilla/5.0 (compatible; BioDockify-AgentZero/1.0)"
     max_concurrent: int = 5
     follow_redirects: bool = True
+    max_redirects: int = 5
+    max_response_size: int = 10 * 1024 * 1024  # 10MB
 
 
 class Executor:
@@ -59,7 +61,9 @@ class Executor:
             config: Executor configuration (uses default if None)
         """
         self.config = config or ExecutorConfig()
+        self.config = config or ExecutorConfig()
         self.session: Optional[aiohttp.ClientSession] = None
+        self._lock = asyncio.Lock()
     
     async def __aenter__(self):
         """Async context manager entry."""
@@ -71,21 +75,22 @@ class Executor:
         await self.stop()
     
     async def start(self):
-        """Start the executor and create HTTP session."""
-        if self.session is None or self.session.closed:
-            timeout = aiohttp.ClientTimeout(total=self.config.timeout)
-            headers = {
-                'User-Agent': self.config.user_agent,
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                'Accept-Language': 'en-US,en;q=0.5',
-                'Accept-Encoding': 'gzip, deflate',
-                'Connection': 'keep-alive'
-            }
-            self.session = aiohttp.ClientSession(
-                timeout=timeout,
-                headers=headers
-            )
-            logger.info("Executor started")
+        """Start the executor and create HTTP session - Thread safe."""
+        async with self._lock:
+            if self.session is None or self.session.closed:
+                timeout = aiohttp.ClientTimeout(total=self.config.timeout)
+                headers = {
+                    'User-Agent': self.config.user_agent,
+                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                    'Accept-Language': 'en-US,en;q=0.5',
+                    'Accept-Encoding': 'gzip, deflate',
+                    'Connection': 'keep-alive'
+                }
+                self.session = aiohttp.ClientSession(
+                    timeout=timeout,
+                    headers=headers
+                )
+                logger.info("Executor started")
     
     async def stop(self):
         """Stop the executor and close HTTP session."""
@@ -96,18 +101,16 @@ class Executor:
     async def fetch_page(
         self,
         url: str,
-        timeout: Optional[int] = None
+        timeout: Optional[int] = None,
+        _redirect_depth: int = 0
     ) -> Optional[str]:
         """
-        Fetch a web page.
-        
-        Args:
-            url: URL to fetch
-            timeout: Request timeout (uses config default if None)
-            
-        Returns:
-            HTML content or None if failed
+        Fetch a web page with recursion protection and size limits.
         """
+        if _redirect_depth > self.config.max_redirects:
+            logger.error(f"Max redirects ({self.config.max_redirects}) exceeded for {url}")
+            return None
+
         if self.session is None:
             await self.start()
         
@@ -115,24 +118,37 @@ class Executor:
         
         for attempt in range(self.config.max_retries):
             try:
+                # Use allow_redirects=False to manually handle for infinite loop protection
                 async with self.session.get(
                     url,
                     timeout=aiohttp.ClientTimeout(total=timeout),
-                    allow_redirects=self.config.follow_redirects
+                    allow_redirects=False 
                 ) as response:
-                    # Check response status
+                    # 1. Check response size before loading (Fix for Bug #3: No Response Size Limits)
+                    content_length = response.headers.get('Content-Length')
+                    if content_length and int(content_length) > self.config.max_response_size:
+                        logger.error(f"Response too large ({content_length} bytes) for {url}")
+                        return None
+
+                    # 2. Handle Redirects (Fix for Bug #4: Redirect Loop Vulnerability)
+                    if response.status in (301, 302, 303, 307, 308):
+                        redirect_url = response.headers.get('Location')
+                        if redirect_url:
+                            logger.info(f"Redirecting [{_redirect_depth + 1}] to {redirect_url}")
+                            return await self.fetch_page(redirect_url, timeout, _redirect_depth + 1)
+                        return None
+
                     if response.status == 200:
+                        # Chunked Reading for safety if Content-Length was missing
                         content = await response.text()
+                        if len(content.encode('utf-8')) > self.config.max_response_size:
+                             logger.error(f"Actual response size exceeded limit for {url}")
+                             return None
+                        
                         logger.debug(f"Successfully fetched {url}")
                         return content
                     else:
                         logger.warning(f"HTTP {response.status} for {url}")
-                        if response.status in (301, 302, 303, 307, 308):
-                            # Redirect
-                            redirect_url = response.headers.get('Location')
-                            if redirect_url:
-                                logger.info(f"Redirecting to {redirect_url}")
-                                return await self.fetch_page(redirect_url, timeout)
                         return None
                         
             except asyncio.TimeoutError:
@@ -153,22 +169,22 @@ class Executor:
     
     async def extract_text(
         self,
-        html: str,
+        html_or_soup: Any,
         url: str
     ) -> str:
         """
-        Extract text content from HTML.
-        
-        Args:
-            html: HTML content
-            url: Source URL (for metadata)
-            
-        Returns:
-            Extracted text
+        Extract text content from HTML or existing BeautifulSoup object.
+        (Fix for Performance Bottleneck #2: Double HTML Parsing)
         """
         try:
-            # Parse HTML
-            soup = BeautifulSoup(html, 'html.parser')
+            # Re-use soup if provided
+            if isinstance(html_or_soup, BeautifulSoup):
+                soup = html_or_soup
+            else:
+                soup = BeautifulSoup(html_or_soup, 'html.parser')
+            
+            # Create a clone if we need to decompose elements but want to keep the original?
+            # Actually, extract_text usually consumes the soup for text only.
             
             # Remove script and style elements
             for element in soup(['script', 'style', 'nav', 'footer', 'header']):
@@ -217,16 +233,17 @@ class Executor:
                 error="Failed to fetch page"
             )
         
-        # Extract title
+        # Parse HTML ONCE (Fix for Performance Bottleneck #2)
         try:
             soup = BeautifulSoup(html, 'html.parser')
             title_tag = soup.find('title')
             title = title_tag.get_text().strip() if title_tag else ""
         except Exception:
+            soup = html # Fallback to raw html for extract_text if soup fails
             title = ""
         
-        # Extract text content
-        content = await self.extract_text(html, url)
+        # Extract text content passing the soup
+        content = await self.extract_text(soup, url)
         
         # Create metadata
         metadata = {

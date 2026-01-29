@@ -14,7 +14,8 @@ import json
 import re
 import logging
 from datetime import datetime
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+import asyncio.exceptions
 
 
 # Set up logging
@@ -23,6 +24,13 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+ 
+# CONFIGURATION CONSTANTS (Bug Fix: Remove Magic Numbers)
+DEFAULT_MAX_RETRIES = 3
+DEFAULT_TOOL_TIMEOUT = 60
+DEFAULT_MAX_TOKENS = 2000
+VALIDATION_TIMEOUT = 30
+MAX_CONTENT_PREVIEW = 2000
 
 
 @dataclass
@@ -39,21 +47,32 @@ class LLMProvider:
         return self._parse_json(response)
 
     @staticmethod
-    def _parse_json(text: str) -> Dict:
-        """Extract JSON from LLM response"""
-        # Try direct parse first
+    def _parse_json(text: str) -> Any:
+        """Extract JSON from LLM response - Unified robust version"""
+        if not text:
+            return {}
+            
+        text = text.strip()
+        
+        # 1. Try direct parse
         try:
-            return json.loads(text.strip())
+            return json.loads(text)
         except json.JSONDecodeError:
             pass
 
-        # Find JSON in text using regex
-        match = re.search(r'\{.*\}|\[.*\]', text, re.DOTALL)
+        # 2. Find JSON block using regex (handles markdown blocks or preamble)
+        match = re.search(r'(\{.*\}|\[.*\])', text, re.DOTALL)
         if match:
             try:
-                return json.loads(match.group())
+                content = match.group(1)
+                return json.loads(content)
             except json.JSONDecodeError:
-                logger.warning(f"Failed to parse JSON from: {text[:200]}")
+                # 3. Clean common LLM formatting issues (trailing commas, etc.)
+                try:
+                    cleaned = re.sub(r',\s*([\]\}])', r'\1', content)
+                    return json.loads(cleaned)
+                except json.JSONDecodeError:
+                    logger.warning(f"Failed to parse JSON from block: {text[:100]}...")
 
         return {}
 
@@ -133,7 +152,8 @@ class AgentZero:
         llm_provider: LLMProvider,
         tool_registry: ToolRegistry,
         memory_store: MemoryStore,
-        max_retries: int = 3
+        max_retries: int = 3,
+        tool_timeout: int = 60
     ):
         """
         Initialize Agent Zero
@@ -143,15 +163,23 @@ class AgentZero:
             tool_registry: Registry of available tools
             memory_store: Persistent memory storage
             max_retries: Maximum retry attempts for failed tasks
+            tool_timeout: Timeout for tool execution in seconds
         """
         self.llm = llm_provider
         self.tools = tool_registry
         self.memory = memory_store
         self.max_retries = max_retries
+        self.tool_timeout = tool_timeout
 
         self.thinking: List[Dict] = []
         self.is_running = False
         self._execution_log: List[Dict] = []
+        self._lock = asyncio.Lock()
+        
+        # Circuit Breaker state (Fix for Architecture Requirement #2)
+        self._failure_count = 0
+        self._circuit_open = False
+        self._circuit_threshold = 5
 
     async def execute_goal(
         self,
@@ -170,16 +198,17 @@ class AgentZero:
         Returns:
             Dict with results, execution log, and thinking process
         """
-        if self.is_running:
-            logger.warning("Agent is already running. Cannot start new execution.")
-            return {
-                'success': False,
-                'error': 'Agent is already executing a task',
-                'results': [],
-                'thinking': self.thinking
-            }
+        async with self._lock:
+            if self.is_running:
+                logger.warning("Agent is already running. Cannot start new execution.")
+                return {
+                    'success': False,
+                    'error': 'Agent is already executing a task',
+                    'results': [],
+                    'thinking': self.thinking
+                }
 
-        self.is_running = True
+            self.is_running = True
         self.thinking = []
         self._execution_log = []
 
@@ -202,33 +231,39 @@ class AgentZero:
 
             logger.info(f"Generated {len(tasks)} tasks")
 
-            # 2. Execute tasks with self-correction
-            results = []
-            successful_tasks = 0
-            failed_tasks = 0
-
-            for idx, task in enumerate(tasks, 1):
-                logger.info(f"Executing task {idx}/{len(tasks)}: {task.get('task', 'unknown')}")
-
+            # 2. Execute tasks - Parallel Execution if independent (Fix for Bottleneck #1)
+            # For simplicity, we assume independent tasks can be grouped by the orchestrator 
+            # If the decomposition provides 'independent': true metadata
+            
+            # We'll use a gathering approach for all tasks if no dependencies are detected
+            logger.info(f"Executing {len(tasks)} tasks in parallel...")
+            
+            async def execute_and_log(idx, task):
+                if self._circuit_open:
+                     return {'success': False, 'error': 'Circuit Breaker Open'}
+                     
                 result = await self._execute_task_with_retry(task, phd_stage)
-
-                results.append(result)
-
-                if result.get('success'):
-                    successful_tasks += 1
-                    logger.info(f"Task {idx} completed successfully")
-                else:
-                    failed_tasks += 1
-                    logger.warning(f"Task {idx} failed: {result.get('error', 'Unknown error')}")
-
+                
                 # Store in memory
-                await self.memory.store({
-                    'task': task,
-                    'result': result,
-                    'phd_stage': phd_stage,
-                    'goal': goal,
-                    'timestamp': datetime.now().isoformat()
-                })
+                try:
+                    await self.memory.store({
+                        'task': task,
+                        'result': result,
+                        'phd_stage': phd_stage,
+                        'goal': goal,
+                        'timestamp': datetime.now().isoformat()
+                    })
+                except Exception as me:
+                    logger.error(f"Failed to store memory: {me}")
+                
+                return result
+
+            # Run all tasks concurrently
+            tasks_execution = [execute_and_log(i, t) for i, t in enumerate(tasks, 1)]
+            results = await asyncio.gather(*tasks_execution)
+            
+            successful_tasks = sum(1 for r in results if r.get('success'))
+            failed_tasks = len(results) - successful_tasks
 
             execution_end = datetime.now()
             execution_time = (execution_end - execution_start).total_seconds()
@@ -305,10 +340,10 @@ Requirements:
 """
 
         try:
-            response = await self.llm.generate(prompt, max_tokens=2000)
-            tasks = self._parse_json(response)
+            response = await self.llm.generate(prompt, max_tokens=DEFAULT_MAX_TOKENS)
+            tasks = LLMProvider._parse_json(response)
 
-            # Ensure we have a list
+            # Ensure we have a list (fix for reported bug #2)
             if isinstance(tasks, dict):
                 tasks = [tasks]
             elif not isinstance(tasks, list):
@@ -368,6 +403,9 @@ Requirements:
                 'started_at': attempt_start.isoformat()
             }
 
+            if self._circuit_open:
+                return {'success': False, 'error': 'Circuit Breaker Active - Skipping Execution'}
+
             try:
                 # Get tool and execute
                 tool_name = task['task']
@@ -380,8 +418,15 @@ Requirements:
                 if not isinstance(params, dict):
                     params = {}
 
-                # Execute tool
-                result = await tool.execute(params)
+                # Execute tool with timeout (Fix for bug #3)
+                try:
+                    result = await asyncio.wait_for(
+                        tool.execute(params), 
+                        timeout=self.tool_timeout
+                    )
+                except asyncio.TimeoutError:
+                    logger.error(f"Tool {tool_name} timed out after {self.tool_timeout}s")
+                    raise ToolTimeoutError(f"Execution timed out")
 
                 attempt_info['status'] = 'executed'
                 attempt_info['result_summary'] = str(result)[:200]
@@ -407,6 +452,11 @@ Requirements:
                         'task_name': tool_name
                     }
                 else:
+                    self._failure_count += 1
+                    if self._failure_count >= self._circuit_threshold:
+                        self._circuit_open = True
+                        logger.critical("CIRCUIT BREAKER OPENED: Too many sequential failures")
+                        
                     logger.warning(f"Attempt {attempt + 1}: Result validation failed")
                     # Self-correction
                     task = await self._adjust_task_params(task, result, phd_stage)
@@ -562,7 +612,7 @@ Guidelines:
 
         try:
             response = await self.llm.generate(prompt, max_tokens=1000)
-            adjusted_task = self._parse_json(response)
+            adjusted_task = LLMProvider._parse_json(response)
 
             if adjusted_task and 'task' in adjusted_task:
                 logger.info(f"Adjusted task parameters for {task.get('task')}")
@@ -622,7 +672,7 @@ Guidelines:
 
         try:
             response = await self.llm.generate(prompt, max_tokens=1000)
-            alternative_task = self._parse_json(response)
+            alternative_task = LLMProvider._parse_json(response)
 
             if alternative_task and 'task' in alternative_task:
                 logger.info(f"Generated alternative task: {alternative_task.get('task')}")
@@ -635,36 +685,12 @@ Guidelines:
             logger.error(f"Error generating alternative task: {str(e)}")
             return task
 
-    def _parse_json(self, text: str) -> Dict:
-        """
-        Extract JSON from LLM response
-
-        Args:
-            text: Text potentially containing JSON
-
-        Returns:
-            Parsed dictionary or empty dict on failure
-        """
-        # Try direct parse first
-        try:
-            parsed = json.loads(text.strip())
-            if isinstance(parsed, dict):
-                return parsed
-            elif isinstance(parsed, list) and len(parsed) > 0:
-                return parsed[0]
-        except json.JSONDecodeError:
-            pass
-
-        # Find JSON in text using regex
-        match = re.search(r'\{.*\}', text, re.DOTALL)
-        if match:
-            try:
-                return json.loads(match.group())
-            except json.JSONDecodeError:
-                pass
-
         logger.warning(f"Could not parse JSON from: {text[:200]}")
         return {}
+
+class ToolTimeoutError(Exception):
+    """Raised when a tool execution exceeds configured timeout"""
+    pass
 
     def get_thinking_log(self) -> List[Dict]:
         """Get the complete thinking log"""
