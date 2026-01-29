@@ -5,15 +5,16 @@
  * Automatically detects and attempts to resolve connection issues:
  * - Internet connectivity
  * - LM Studio (with auto-start)
- * - API key validation
  * - Backend health
+ * 
+ * Note: API keys are configured later in Settings.
  */
 
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-    Wifi, WifiOff, Brain, Key, Server,
+    Wifi, WifiOff, Brain, Server,
     RefreshCcw, Check, XCircle, AlertTriangle,
     Loader2, Play, ExternalLink
 } from 'lucide-react';
@@ -43,7 +44,6 @@ export default function ConnectivityHealer({ onComplete, onSkip }: ConnectivityH
     const [checks, setChecks] = useState<ConnectionCheck[]>([
         { name: 'Internet Connectivity', status: 'pending', message: 'Waiting...' },
         { name: 'LM Studio', status: 'pending', message: 'Waiting...' },
-        { name: 'API Keys', status: 'pending', message: 'Waiting...' },
         { name: 'Backend API', status: 'pending', message: 'Waiting...' },
     ]);
     const [overallStatus, setOverallStatus] = useState<'healthy' | 'degraded' | 'offline' | null>(null);
@@ -175,14 +175,9 @@ export default function ConnectivityHealer({ onComplete, onSkip }: ConnectivityH
             });
         }
 
-        // 3. API Keys - can't check without backend
-        newChecks.push({
-            name: 'API Keys',
-            status: 'warning',
-            message: 'Cannot validate (backend offline)'
-        });
+        // API Keys removed - users configure in Settings later
 
-        // 4. Backend check
+        // 3. Backend check
         try {
             const res = await fetch('http://localhost:8234/api/health', {
                 signal: AbortSignal.timeout(3000)
@@ -346,8 +341,6 @@ export default function ConnectivityHealer({ onComplete, onSkip }: ConnectivityH
                 return <Wifi className="w-5 h-5 text-slate-400" />;
             case 'LM Studio':
                 return <Brain className="w-5 h-5 text-slate-400" />;
-            case 'API Keys':
-                return <Key className="w-5 h-5 text-slate-400" />;
             case 'Backend API':
                 return <Server className="w-5 h-5 text-slate-400" />;
             default:
