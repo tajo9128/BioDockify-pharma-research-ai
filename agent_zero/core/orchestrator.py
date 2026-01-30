@@ -187,7 +187,8 @@ class AgentZero:
         # Security: License state
         self._license_valid = True
         self._license_message = ""
-        self._user_email = None
+        # Auto-load email from storage if available
+        self._user_email = license_guard.get_cached_info().get('email')
 
     async def execute_goal(
         self,
@@ -225,6 +226,20 @@ class AgentZero:
 
         try:
             # 0. Security: License Check (monthly check against Supabase)
+            # Ensure we have email
+            if not self._user_email:
+                self._user_email = license_guard.get_cached_info().get('email')
+                
+            if not self._user_email:
+                 logger.warning("License check failed: No user email found")
+                 return {
+                    'success': False,
+                    'error': 'License Verification Failed: No user email found. Please sign in or complete setup.',
+                    'license_expired': True,
+                    'results': [],
+                    'thinking': []
+                }
+
             if self._user_email:
                 self._license_valid, self._license_message = await license_guard.verify(self._user_email)
                 if not self._license_valid:

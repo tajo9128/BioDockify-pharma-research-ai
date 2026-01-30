@@ -4,7 +4,7 @@ import json
 import logging
 import sys
 import os
-from unittest.mock import MagicMock, AsyncMock
+from unittest.mock import MagicMock, AsyncMock, patch
 
 # Add project root to path
 sys.path.append(os.getcwd())
@@ -19,27 +19,32 @@ async def test_concurrency():
     mock_tools = MagicMock(spec=ToolRegistry)
     mock_memory = AsyncMock(spec=MemoryStore)
     
-    agent = AgentZero(mock_llm, mock_tools, mock_memory)
-    
-    # Mock decompose to be slow
-    async def slow_decompose(*args, **kwargs):
-        await asyncio.sleep(1)
-        return []
-    agent._decompose_goal = slow_decompose
-    
-    # Start one goal
-    task1 = asyncio.create_task(agent.execute_goal("Goal 1", "early"))
-    await asyncio.sleep(0.2) # Ensure it has entered the lock
-    
-    # Try to start another while first is running
-    result2 = await agent.execute_goal("Goal 2", "early")
-    
-    print(f"Second execution result: {result2['error']}")
-    assert result2['success'] is False
-    assert "already executing" in result2['error']
-    print("PASS: Concurrency lock prevented double execution.")
-    
-    await task1
+    # Mock Security (License)
+    with patch('agent_zero.core.orchestrator.license_guard') as mock_license:
+        mock_license.get_cached_info.return_value = {'email': 'test@example.com'}
+        mock_license.verify = AsyncMock(return_value=(True, "Verified (Mock)"))
+
+        agent = AgentZero(mock_llm, mock_tools, mock_memory)
+        
+        # Mock decompose to be slow
+        async def slow_decompose(*args, **kwargs):
+            await asyncio.sleep(1)
+            return []
+        agent._decompose_goal = slow_decompose
+        
+        # Start one goal
+        task1 = asyncio.create_task(agent.execute_goal("Goal 1", "early"))
+        await asyncio.sleep(0.2) # Ensure it has entered the lock
+        
+        # Try to start another while first is running
+        result2 = await agent.execute_goal("Goal 2", "early")
+        
+        print(f"Second execution result: {result2['error']}")
+        assert result2['success'] is False
+        assert "already executing" in result2['error']
+        print("PASS: Concurrency lock prevented double execution.")
+        
+        await task1
 
 async def test_json_parsing():
     print("\n--- Testing JSON Parsing Robustness ---")
@@ -83,16 +88,26 @@ async def test_tool_timeout():
     mock_memory = AsyncMock(spec=MemoryStore)
     
     # Set short timeout
-    agent = AgentZero(mock_llm, registry, mock_memory, tool_timeout=1)
-    
-    result = await agent.execute_goal("Test Timeout", "early")
-    
-    # The task should fail due to timeout
-    task_res = result['results'][0]
-    print(f"Task result error: {task_res['error']}")
-    assert task_res['success'] is False
-    assert "timed out" in task_res['error']
-    print("PASS: Tool timeout enforced.")
+    # Set short timeout & Mock Security
+    with patch('agent_zero.core.orchestrator.license_guard') as mock_license:
+        mock_license.get_cached_info.return_value = {'email': 'test@example.com'}
+        mock_license.verify = AsyncMock(return_value=(True, "Verified (Mock)"))
+
+        agent = AgentZero(mock_llm, registry, mock_memory, tool_timeout=1)
+        
+        result = await agent.execute_goal("Test Timeout", "early")
+        
+        # The task should fail due to timeout
+        # If license check failed, result['results'] would be empty or error would be different
+        if result.get('license_expired'):
+             print("FAIL: License check blocked execution")
+             return
+
+        task_res = result['results'][0]
+        print(f"Task result error: {task_res['error']}")
+        assert task_res['success'] is False
+        assert "timed out" in task_res['error']
+        print("PASS: Tool timeout enforced.")
 
 async def test_executor_redirect_loop():
     print("\n--- Testing Executor Redirect Loop ---")
