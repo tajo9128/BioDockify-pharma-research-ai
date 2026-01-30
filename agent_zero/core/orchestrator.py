@@ -17,6 +17,9 @@ from datetime import datetime
 from dataclasses import dataclass, field
 import asyncio.exceptions
 
+# Security: License Guard import
+from modules.security.license_guard import license_guard
+
 
 # Set up logging
 logging.basicConfig(
@@ -180,6 +183,11 @@ class AgentZero:
         self._failure_count = 0
         self._circuit_open = False
         self._circuit_threshold = 5
+        
+        # Security: License state
+        self._license_valid = True
+        self._license_message = ""
+        self._user_email = None
 
     async def execute_goal(
         self,
@@ -216,6 +224,20 @@ class AgentZero:
         logger.info(f"Starting goal execution: '{goal}' (Stage: {phd_stage})")
 
         try:
+            # 0. Security: License Check (monthly check against Supabase)
+            if self._user_email:
+                self._license_valid, self._license_message = await license_guard.verify(self._user_email)
+                if not self._license_valid:
+                    logger.warning(f"License check failed: {self._license_message}")
+                    return {
+                        'success': False,
+                        'error': f'License Expired: {self._license_message}',
+                        'license_expired': True,
+                        'results': [],
+                        'thinking': []
+                    }
+                logger.info(f"License verified: {self._license_message}")
+            
             # 1. Decompose goal into tasks
             logger.info("Step 1: Decomposing goal into tasks...")
             tasks = await self._decompose_goal(goal, phd_stage, context)
@@ -699,6 +721,19 @@ class ToolTimeoutError(Exception):
     def get_execution_log(self) -> List[Dict]:
         """Get the complete execution log"""
         return self._execution_log.copy()
+    
+    def set_user_email(self, email: str):
+        """Set user email for license validation"""
+        self._user_email = email
+        logger.info(f"User email set for license validation: {email}")
+    
+    def get_license_status(self) -> Dict:
+        """Get current license status"""
+        return {
+            'valid': self._license_valid,
+            'message': self._license_message,
+            'email': self._user_email
+        }
 
     def reset(self):
         """Reset the agent state"""
@@ -706,3 +741,4 @@ class ToolTimeoutError(Exception):
         self._execution_log = []
         self.is_running = False
         logger.info("Agent state reset")
+
