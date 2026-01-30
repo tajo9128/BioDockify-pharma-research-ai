@@ -1,7 +1,8 @@
 """
 License Guard Module
 Validates license against Supabase (via internet).
-Free license valid for 1 year from registration date stored in Supabase.
+Free license valid for 1 year from signup date stored in Supabase.
+Checks are performed monthly (every 30 days).
 """
 
 import os
@@ -17,8 +18,11 @@ logger = logging.getLogger(__name__)
 SUPABASE_URL = 'https://crdajozcjvoistmxhcno.supabase.co'
 SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNyZGFqb3pjanZvaXN0bXhoY25vIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzczNjQ4MTQsImV4cCI6MjA1Mjk0MDgxNH0.SE2cB5wPoVZ64C2V4IGfHaVUJqKGJHrSobLMGJPBIYA'
 
-# License duration: 1 year from registration
+# License duration: 1 year from signup
 LICENSE_DURATION_DAYS = 365
+
+# Check interval: Monthly (every 30 days)
+LICENSE_CHECK_INTERVAL_DAYS = 30
 
 
 def get_cache_path() -> Path:
@@ -96,18 +100,19 @@ class LicenseGuard:
                     if 'license_expiry' in user and user['license_expiry']:
                         expiry = datetime.fromisoformat(user['license_expiry'].replace('Z', '+00:00'))
                     else:
-                        # Calculate from created_at + 1 year
+                        # Calculate from created_at + 1 year (signup date + 365 days)
                         created = datetime.fromisoformat(user['created_at'].replace('Z', '+00:00'))
                         expiry = created + timedelta(days=LICENSE_DURATION_DAYS)
                     
                     now = datetime.now(expiry.tzinfo) if expiry.tzinfo else datetime.now()
+                    expiry_date_str = expiry.strftime('%B %d, %Y')  # e.g., "January 30, 2027"
                     
                     if now > expiry:
                         days_expired = (now - expiry).days
-                        return False, f"License expired {days_expired} days ago. Renew at biodockify.com", user
+                        return False, f"License expired on {expiry_date_str} ({days_expired} days ago). Renew at biodockify.com", user
                     
                     days_remaining = (expiry - now).days
-                    return True, f"License valid ({days_remaining} days remaining)", user
+                    return True, f"License valid until {expiry_date_str} ({days_remaining} days remaining)", user
                     
         except Exception as e:
             logger.error(f"Online license check failed: {e}")
@@ -140,20 +145,42 @@ class LicenseGuard:
         expiry_str = self.cache.get('expiry_date')
         if expiry_str:
             expiry = datetime.fromisoformat(expiry_str)
+            expiry_date_str = expiry.strftime('%B %d, %Y')
             if datetime.now() > expiry:
-                return False, "License expired (cached)"
+                return False, f"License expired on {expiry_date_str}"
             
             days_remaining = (expiry - datetime.now()).days
-            return True, f"License valid - offline mode ({days_remaining} days remaining)"
+            return True, f"License valid until {expiry_date_str} ({days_remaining} days remaining)"
         
         return False, "Invalid cache data"
     
-    async def verify(self, email: str) -> Tuple[bool, str]:
+    def _should_check_online(self, email: str) -> bool:
+        """Determine if we need to check online (monthly interval)."""
+        if not self.cache:
+            return True
+        
+        cached_email = self.cache.get('email')
+        if cached_email != email:
+            return True  # Different user, need fresh check
+        
+        last_check = self.cache.get('last_online_check')
+        if not last_check:
+            return True
+        
+        try:
+            last_check_date = datetime.fromisoformat(last_check)
+            days_since_check = (datetime.now() - last_check_date).days
+            return days_since_check >= LICENSE_CHECK_INTERVAL_DAYS  # Monthly check
+        except Exception:
+            return True
+    
+    async def verify(self, email: str, force_online: bool = False) -> Tuple[bool, str]:
         """
-        Verify license - tries online first, falls back to cache.
+        Verify license - checks online monthly, uses cache otherwise.
         
         Args:
             email: User's registered email
+            force_online: Force online check even if cache is valid
             
         Returns:
             (is_valid, message)
@@ -161,7 +188,20 @@ class LicenseGuard:
         if not email:
             return False, "Email required for verification"
         
-        # Try online verification first
+        # Check if we need to verify online (monthly)
+        need_online_check = force_online or self._should_check_online(email)
+        
+        if not need_online_check:
+            # Use cached license (checked within last 30 days)
+            cache_valid, cache_msg = self.check_license_cached(email)
+            if cache_valid:
+                days_since = 0
+                last_check = self.cache.get('last_online_check')
+                if last_check:
+                    days_since = (datetime.now() - datetime.fromisoformat(last_check)).days
+                return True, f"{cache_msg} (next check in {LICENSE_CHECK_INTERVAL_DAYS - days_since} days)"
+        
+        # Monthly check or first run - verify online
         is_valid, message, user_data = await self.check_license_online(email)
         
         if user_data:
@@ -173,7 +213,7 @@ class LicenseGuard:
                 'user_data': user_data
             }
             
-            # Calculate expiry for cache
+            # Calculate expiry for cache (1 year from signup)
             if 'license_expiry' in user_data and user_data['license_expiry']:
                 self.cache['expiry_date'] = user_data['license_expiry']
             elif 'created_at' in user_data:
@@ -182,9 +222,10 @@ class LicenseGuard:
                 self.cache['expiry_date'] = expiry.isoformat()
             
             self._save_cache()
+            logger.info(f"License verified: {email} - valid={is_valid}")
             return is_valid, message
         
-        # Online failed, try cached
+        # Online failed, try cached if network error
         if "Network error" in message or "Unable to verify" in message:
             cache_valid, cache_msg = self.check_license_cached(email)
             if cache_valid:
