@@ -9,10 +9,10 @@
 
   !define APPNAME "BioDockify"
   !define PRODUCT_NAME "BioDockify - Pharma Research AI"
-  !define PRODUCT_VERSION "2.18.3"
+  !define PRODUCT_VERSION "2.18.5"
   !define PRODUCT_PUBLISHER "BioDockify AI"
   Name "${PRODUCT_NAME}"
-  OutFile "BioDockify_Setup_v2.18.3.exe"
+  OutFile "BioDockify_Setup_v2.18.5.exe"
   
   ; safe install directory
   InstallDir "$PROGRAMFILES64\${APPNAME}"
@@ -126,7 +126,7 @@ Section "Install Files" SecInstall
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}" "InstallLocation" "$INSTDIR"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}" "DisplayIcon" "$INSTDIR\BioDockify.exe,0"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}" "Publisher" "${PRODUCT_PUBLISHER}"
-  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}" "DisplayVersion" "2.18.3"
+  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}" "DisplayVersion" "2.18.5"
   WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}" "NoModify" 1
   WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}" "NoRepair" 1
 

@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-// import { api } from '@/lib/api'; // Removed for offline-first wizard
 import { DetectedServices } from '@/lib/services/auto-config';
 import ConnectivityHealer from './wizard/ConnectivityHealer';
 import {
     Check, XCircle, RefreshCcw, Database, Brain, Server,
-    HardDrive, Cpu, Gauge, Terminal, AlertTriangle, Wifi
+    HardDrive, Cpu, Gauge, Terminal, AlertTriangle, Wifi,
+    Settings, ExternalLink, UserCheck, Shield, Save, Home, Mail
 } from 'lucide-react';
 
 interface WizardProps {
@@ -22,7 +22,8 @@ interface SysInfo {
 }
 
 export default function FirstRunWizard({ onComplete }: WizardProps) {
-    const [step, setStep] = useState(0); // 0: Welcome, 1: Connectivity, 2: System, 3: Research, 4: Summary
+    // Steps: 0=Welcome, 1=Connectivity, 2=System, 3=Research, 4=Settings, 5=Registration, 6=Verification
+    const [step, setStep] = useState(0);
     const [retryCount, setRetryCount] = useState(0);
     const [repairStatus, setRepairStatus] = useState<string>('');
 
@@ -33,9 +34,18 @@ export default function FirstRunWizard({ onComplete }: WizardProps) {
 
     const [researchStatus, setResearchStatus] = useState<{
         lm_studio: 'pending' | 'success' | 'warning';
-        pdf: 'success'; // Assumed
-        export: 'success'; // Assumed
+        pdf: 'success';
+        export: 'success';
     }>({ lm_studio: 'pending', pdf: 'success', export: 'success' });
+
+    // Settings State (Step 4)
+    const [settingsSaved, setSettingsSaved] = useState(false);
+    const [savingSettings, setSavingSettings] = useState(false);
+
+    // Persona/Verification State (Step 6)
+    const [personaEmail, setPersonaEmail] = useState('');
+    const [verifying, setVerifying] = useState(false);
+    const [verificationError, setVerificationError] = useState('');
 
     // Step 2: System Checks (Auto-run when entering step 2)
     useEffect(() => {
@@ -51,28 +61,21 @@ export default function FirstRunWizard({ onComplete }: WizardProps) {
         }
     }, [step]);
 
-    // --- NEW: Persona State ---
-    const [personaEmail, setPersonaEmail] = useState('');
-    const [verifying, setVerifying] = useState(false);
-    const [verificationError, setVerificationError] = useState('');
-
     const runSystemChecks = async () => {
         setSysStatus('checking');
         try {
             await new Promise(r => setTimeout(r, 800));
-            // Client-side estimation
             const info: SysInfo = {
                 os: typeof navigator !== 'undefined' ? navigator.platform : 'Unknown',
                 cpu_cores: typeof navigator !== 'undefined' ? navigator.hardwareConcurrency || 4 : 4,
-                ram_total_gb: 16, // Estimate/Assumption for offline mode
+                ram_total_gb: 16,
                 ram_available_gb: 8,
-                disk_free_gb: 100, // Mock
+                disk_free_gb: 100,
                 temp_writable: true
             };
             setSysInfo(info);
             await new Promise(r => setTimeout(r, 800));
             setSysStatus('complete');
-            // FIX: Advance to Step 3 (Research), not 2
             setTimeout(() => setStep(3), 1000);
         } catch (e) {
             console.error("System check failed", e);
@@ -129,6 +132,9 @@ export default function FirstRunWizard({ onComplete }: WizardProps) {
                     localStorage.setItem('biodockify_lm_studio_model', detectedModel);
                     localStorage.setItem('biodockify_ai_mode', 'lm_studio');
                 }
+
+                // Advance to Step 4 (Settings)
+                setTimeout(() => setStep(4), 2500);
             } else {
                 setDetectedServices({ lm_studio: false, backend: true, grobid: false });
                 setResearchStatus(prev => ({ ...prev, lm_studio: 'warning' }));
@@ -139,8 +145,6 @@ export default function FirstRunWizard({ onComplete }: WizardProps) {
             setResearchStatus(prev => ({ ...prev, lm_studio: 'warning' }));
             setRepairStatus('Detection failed - check console for details');
         }
-
-        setTimeout(() => setStep(3), 2500);
     };
 
     const retryDetection = async () => {
@@ -150,9 +154,32 @@ export default function FirstRunWizard({ onComplete }: WizardProps) {
         await runResearchChecks();
     };
 
-    const finish = async () => {
+    // Step 4: Save Settings and proceed
+    const handleSaveSettings = async () => {
+        setSavingSettings(true);
+        try {
+            // Simulate saving settings (already auto-saved by SettingsPanel)
+            await new Promise(r => setTimeout(r, 1000));
+
+            if (typeof window !== 'undefined') {
+                localStorage.setItem('biodockify_settings_saved', 'true');
+            }
+
+            setSettingsSaved(true);
+            setSavingSettings(false);
+
+            // Advance to Step 5 (Registration)
+            setTimeout(() => setStep(5), 500);
+        } catch (e) {
+            console.error('Failed to save settings:', e);
+            setSavingSettings(false);
+        }
+    };
+
+    // Step 6: Final Verification against Supabase (Direct Internet Call)
+    const handleVerify = async () => {
         if (!personaEmail) {
-            setVerificationError("Please enter your Email to proceed.");
+            setVerificationError("Please enter your registered Email to proceed.");
             return;
         }
 
@@ -160,10 +187,37 @@ export default function FirstRunWizard({ onComplete }: WizardProps) {
         setVerificationError('');
 
         try {
-            // OFFLINE MODE: Skip server verification
-            await new Promise(r => setTimeout(r, 500)); // Simulate check
+            // Direct Supabase REST API call (no backend required)
+            const SUPABASE_URL = 'https://crdajozcjvoistmxhcno.supabase.co';
+            const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNyZGFqb3pjanZvaXN0bXhoY25vIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzczNjQ4MTQsImV4cCI6MjA1Mjk0MDgxNH0.SE2cB5wPoVZ64C2V4IGfHaVUJqKGJHrSobLMGJPBIYA';
 
-            // 2. Save Settings if Verified
+            const response = await fetch(
+                `${SUPABASE_URL}/rest/v1/users?email=eq.${encodeURIComponent(personaEmail)}&select=email`,
+                {
+                    method: 'GET',
+                    headers: {
+                        'apikey': SUPABASE_ANON_KEY,
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                        'Content-Type': 'application/json'
+                    }
+                }
+            );
+
+            if (!response.ok) {
+                setVerificationError("Unable to verify. Check your internet connection.");
+                setVerifying(false);
+                return;
+            }
+
+            const data = await response.json();
+
+            if (!data || data.length === 0) {
+                setVerificationError("Email not found. Please register at www.biodockify.com first.");
+                setVerifying(false);
+                return;
+            }
+
+            // Verification successful - Save settings
             if (typeof window !== 'undefined') {
                 const existingSettingsStr = localStorage.getItem('biodockify_settings');
                 let existingSettings = {};
@@ -194,7 +248,7 @@ export default function FirstRunWizard({ onComplete }: WizardProps) {
                 localStorage.setItem('biodockify_license_active', 'true');
             }
 
-            // 3. Complete
+            // Complete wizard
             onComplete({ detectedServices: detectedServices || { lm_studio: false, backend: true } });
 
         } catch (e: any) {
@@ -205,7 +259,6 @@ export default function FirstRunWizard({ onComplete }: WizardProps) {
     };
 
     // --- RENDERERS ---
-
     const CheckItem = ({ label, status, value }: { label: string, status: 'success' | 'warning' | 'pending' | 'checking', value?: string }) => (
         <div className="flex items-center justify-between p-3 bg-slate-900 border border-slate-800 rounded-lg">
             <span className="text-slate-300 font-medium">{label}</span>
@@ -223,14 +276,16 @@ export default function FirstRunWizard({ onComplete }: WizardProps) {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/95 backdrop-blur-md animate-in fade-in duration-500">
             <div className="w-full max-w-2xl bg-slate-950 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col min-h-[500px]">
 
-                {/* Header (Minimal) */}
+                {/* Header */}
                 <div className="p-8 pb-0 text-center">
                     <div className="w-16 h-16 bg-slate-900 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-inner border border-slate-800">
                         {step === 0 && <Terminal className="w-8 h-8 text-teal-400" />}
                         {step === 1 && <Wifi className="w-8 h-8 text-sky-400 animate-pulse" />}
                         {step === 2 && <Cpu className="w-8 h-8 text-sky-400 animate-pulse" />}
                         {step === 3 && <Brain className="w-8 h-8 text-purple-400 animate-pulse" />}
-                        {step === 4 && <Check className="w-8 h-8 text-emerald-400" />}
+                        {step === 4 && <Settings className="w-8 h-8 text-indigo-400" />}
+                        {step === 5 && <ExternalLink className="w-8 h-8 text-teal-400" />}
+                        {step === 6 && <UserCheck className="w-8 h-8 text-emerald-400" />}
                     </div>
                 </div>
 
@@ -239,27 +294,26 @@ export default function FirstRunWizard({ onComplete }: WizardProps) {
                     {/* STEP 0: WELCOME */}
                     {step === 0 && (
                         <div className="text-center space-y-6 animate-in slide-in-from-bottom-4 duration-500">
-                            <h1 className="text-3xl font-bold text-white tracking-tight">BioDockify Research Workspace</h1>
+                            <h1 className="text-3xl font-bold text-white tracking-tight">Welcome to BioDockify! 👋</h1>
                             <p className="text-slate-400 text-lg leading-relaxed">
-                                This software is preparing your research environment.<br />
-                                All system checks will run automatically.
+                                Your AI-powered research assistant is almost ready.<br />
+                                <span className="text-teal-400">Just a few quick steps and you're all set!</span>
                             </p>
                             <div className="pt-8">
                                 <button
                                     onClick={() => setStep(1)}
-                                    className="bg-white text-slate-950 hover:bg-slate-200 px-10 py-3 rounded-full font-bold text-lg transition-all hover:scale-105 active:scale-95"
+                                    className="bg-gradient-to-r from-teal-500 to-emerald-500 text-white hover:from-teal-400 hover:to-emerald-400 px-10 py-4 rounded-full font-bold text-lg transition-all hover:scale-105 active:scale-95 shadow-lg shadow-teal-500/30"
                                 >
-                                    Start Setup
+                                    Let's Get Started! 🚀
                                 </button>
                             </div>
                         </div>
                     )}
 
-                    {/* STEP 1: CONNECTIVITY HEALING */}
+                    {/* STEP 1: CONNECTIVITY */}
                     {step === 1 && (
                         <ConnectivityHealer
                             onComplete={(result) => {
-                                // Store connectivity result if needed
                                 console.log('[FirstRunWizard] Connectivity result:', result);
                                 setStep(2);
                             }}
@@ -270,29 +324,26 @@ export default function FirstRunWizard({ onComplete }: WizardProps) {
                     {/* STEP 2: SYSTEM CHECKS */}
                     {step === 2 && (
                         <div className="space-y-6 w-full max-w-md mx-auto animate-in fade-in duration-300">
-                            <h2 className="text-xl font-bold text-white text-center mb-6">Checking System Compatibility...</h2>
+                            <h2 className="text-xl font-bold text-white text-center mb-2">Checking Your Computer... ⚡</h2>
+                            <p className="text-slate-400 text-center text-sm mb-4">Making sure everything is good to go!</p>
                             <div className="space-y-3">
                                 <CheckItem
                                     label="Operating System"
-                                    // @ts-ignore
                                     status={sysInfo ? 'success' : 'checking'}
                                     value={sysInfo?.os}
                                 />
                                 <CheckItem
-                                    label="Processor Cores"
-                                    // @ts-ignore
+                                    label="Processor"
                                     status={sysInfo ? 'success' : 'checking'}
                                     value={sysInfo ? `${sysInfo.cpu_cores} Cores` : ''}
                                 />
                                 <CheckItem
-                                    label="System Memory"
-                                    // @ts-ignore
+                                    label="Memory"
                                     status={sysInfo ? 'success' : 'checking'}
                                     value={sysInfo ? `${sysInfo.ram_available_gb}GB Available` : ''}
                                 />
                                 <CheckItem
-                                    label="Storage Space"
-                                    // @ts-ignore
+                                    label="Storage"
                                     status={sysInfo ? 'success' : 'checking'}
                                     value={sysInfo ? `${sysInfo.disk_free_gb}GB Free` : ''}
                                 />
@@ -303,69 +354,173 @@ export default function FirstRunWizard({ onComplete }: WizardProps) {
                     {/* STEP 3: RESEARCH CHECKS */}
                     {step === 3 && (
                         <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
-                            <h2 className="text-xl font-bold text-white text-center mb-6">Verifying Research Engine...</h2>
+                            <h2 className="text-xl font-bold text-white text-center mb-2">Setting Up Your AI Assistant... 🧠</h2>
+                            <p className="text-slate-400 text-center text-sm mb-4">We're connecting to your local AI model</p>
                             <div className="space-y-3">
-                                <CheckItem label="Research Editor" status="success" />
-                                <CheckItem label="PDF Processing Engine" status="success" />
+                                <CheckItem label="Document Reader" status="success" />
+                                <CheckItem label="PDF Support" status="success" />
                                 <CheckItem
-                                    label="LM Studio (Local AI)"
+                                    label="AI Brain (LM Studio)"
                                     status={researchStatus.lm_studio === 'pending' ? 'checking' : researchStatus.lm_studio}
-                                    value={detectedServices?.lm_studio_model ? `Model: ${detectedServices.lm_studio_model.split('/').pop()}` : undefined}
+                                    value={detectedServices?.lm_studio_model ? `${detectedServices.lm_studio_model.split('/').pop()}` : undefined}
                                 />
                             </div>
                             {researchStatus.lm_studio === 'warning' && (
-                                <div className="text-center mt-4">
-                                    <p className="text-sm text-amber-400 mb-2">LM Studio not detected. Please start it and load a model.</p>
+                                <div className="text-center mt-4 p-4 bg-amber-900/20 rounded-xl border border-amber-800/50">
+                                    <p className="text-sm text-amber-300 mb-3">💡 LM Studio not found. Don't worry!</p>
+                                    <p className="text-xs text-slate-400 mb-3">Open LM Studio and load any model, then click retry.</p>
                                     <button
                                         onClick={retryDetection}
-                                        className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-sm transition-colors"
+                                        className="px-6 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-sm font-medium transition-colors"
                                     >
-                                        Retry Detection
+                                        Try Again
                                     </button>
                                 </div>
                             )}
                         </div>
                     )}
 
-
-                    {/* STEP 4: REGISTRATION & SUMMARY */}
+                    {/* STEP 4: SETTINGS PANEL */}
                     {step === 4 && (
                         <div className="space-y-6 text-center animate-in slide-in-from-bottom-4 duration-500">
                             <div>
-                                <h1 className="text-2xl font-bold text-white">Verification Required</h1>
-                                <p className="text-slate-400 mt-2">Enter your license details to unlock the workspace.</p>
+                                <h1 className="text-2xl font-bold text-white">You're Almost There! ✨</h1>
+                                <p className="text-slate-400 mt-2">
+                                    Your AI research assistant is ready to help you.
+                                </p>
                             </div>
 
-                            {/* Registration Inputs */}
-                            <div className="bg-slate-900/50 p-6 rounded-xl border border-slate-800 text-left space-y-4 max-w-sm mx-auto">
+                            <div className="bg-gradient-to-br from-emerald-900/30 to-teal-900/30 p-6 rounded-xl border border-emerald-500/30 text-left space-y-4">
+                                <div className="flex items-center space-x-3 text-emerald-400">
+                                    <Check className="w-5 h-5" />
+                                    <span className="font-medium">AI Connected: LM Studio</span>
+                                </div>
+                                {detectedServices?.lm_studio_model && (
+                                    <div className="flex items-center space-x-3 text-emerald-400">
+                                        <Check className="w-5 h-5" />
+                                        <span className="font-medium">Model: {detectedServices.lm_studio_model.split('/').pop()}</span>
+                                    </div>
+                                )}
+                                <p className="text-xs text-slate-400 mt-4">
+                                    Tip: You can change AI settings anytime from the Settings page.
+                                </p>
+                            </div>
+
+                            <div className="flex flex-col items-center space-y-3 pt-4">
+                                <button
+                                    onClick={handleSaveSettings}
+                                    disabled={savingSettings}
+                                    className="bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-400 hover:to-emerald-400 text-white px-10 py-3 rounded-xl font-bold text-lg transition-all w-full max-w-sm shadow-lg shadow-teal-500/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+                                >
+                                    {savingSettings ? (
+                                        <>
+                                            <RefreshCcw className="w-5 h-5 animate-spin" />
+                                            <span>Saving...</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <span>Continue →</span>
+                                        </>
+                                    )}
+                                </button>
+                                <button
+                                    onClick={() => onComplete('settings')}
+                                    className="text-sm text-slate-500 hover:text-slate-300 underline"
+                                >
+                                    I want to customize settings first
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* STEP 5: REGISTRATION PROMPT */}
+                    {step === 5 && (
+                        <div className="space-y-6 text-center animate-in slide-in-from-bottom-4 duration-500">
+                            <div>
+                                <h1 className="text-2xl font-bold text-white">One Last Step! 🎉</h1>
+                                <p className="text-slate-400 mt-2">
+                                    Create your free account to unlock all features.
+                                </p>
+                            </div>
+
+                            <div className="bg-gradient-to-br from-teal-900/30 to-indigo-900/30 p-8 rounded-xl border border-teal-500/30 space-y-5">
+                                <div className="flex items-center justify-center space-x-2 text-teal-400">
+                                    <Shield className="w-6 h-6" />
+                                    <span className="font-bold text-lg">🆓 100% Free for Students</span>
+                                </div>
+                                <div className="text-left bg-slate-900/50 p-4 rounded-lg space-y-2">
+                                    <p className="text-slate-300 text-sm flex items-center"><span className="text-teal-400 mr-2">➀</span> Sign up on our website with your email</p>
+                                    <p className="text-slate-300 text-sm flex items-center"><span className="text-teal-400 mr-2">➁</span> Click the verification link in your inbox</p>
+                                    <p className="text-slate-300 text-sm flex items-center"><span className="text-teal-400 mr-2">➂</span> Come back here and click continue!</p>
+                                </div>
+                                <a
+                                    href="https://www.biodockify.com"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center space-x-2 bg-white text-slate-950 px-8 py-3 rounded-xl font-bold text-lg transition-all hover:scale-105 active:scale-95 shadow-lg"
+                                >
+                                    <ExternalLink className="w-5 h-5" />
+                                    <span>Sign Up for Free</span>
+                                </a>
+                            </div>
+
+                            <button
+                                onClick={() => setStep(6)}
+                                className="bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-400 hover:to-emerald-400 text-white px-10 py-3 rounded-xl font-bold text-lg transition-all w-full max-w-sm shadow-lg shadow-teal-500/20"
+                            >
+                                I've Signed Up - Let's Go! →
+                            </button>
+                        </div>
+                    )}
+
+                    {/* STEP 6: VERIFICATION */}
+                    {step === 6 && (
+                        <div className="space-y-6 text-center animate-in slide-in-from-bottom-4 duration-500">
+                            <div>
+                                <h1 className="text-2xl font-bold text-white">Verify Your Email 📧</h1>
+                                <p className="text-slate-400 mt-2">Enter the email you used to sign up</p>
+                            </div>
+
+                            <div className="bg-gradient-to-br from-emerald-900/20 to-teal-900/20 p-6 rounded-xl border border-emerald-500/30 text-left space-y-4 max-w-sm mx-auto">
                                 <div>
-                                    <label className="text-xs font-bold text-slate-500 uppercase">Email Address</label>
+                                    <label className="text-xs font-medium text-slate-400">Your Email Address</label>
                                     <input
                                         type="email"
-                                        className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white"
-                                        placeholder="researcher@biodockify.ai"
+                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white mt-2 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 focus:outline-none transition-all text-lg"
+                                        placeholder="yourname@university.edu"
                                         value={personaEmail}
                                         onChange={e => setPersonaEmail(e.target.value)}
                                         disabled={verifying}
                                     />
                                 </div>
                                 {verificationError && (
-                                    <div className="p-2 bg-red-900/30 border border-red-900 rounded text-xs text-red-400">
-                                        {verificationError}
+                                    <div className="p-3 bg-red-900/30 border border-red-800 rounded-lg text-sm text-red-300 flex items-start space-x-2">
+                                        <span>⚠️</span>
+                                        <span>{verificationError}</span>
                                     </div>
                                 )}
                             </div>
 
                             <div className="flex flex-col items-center space-y-3">
                                 <button
-                                    onClick={finish}
+                                    onClick={handleVerify}
                                     disabled={verifying}
-                                    className="bg-teal-500 hover:bg-teal-400 text-slate-950 px-10 py-3 rounded-xl font-bold text-lg transition-all w-full max-w-sm shadow-lg shadow-teal-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white px-10 py-3 rounded-xl font-bold text-lg transition-all w-full max-w-sm shadow-lg shadow-emerald-500/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
                                 >
-                                    {verifying ? "Verifying..." : "Verify & Enter Workspace"}
+                                    {verifying ? (
+                                        <>
+                                            <RefreshCcw className="w-5 h-5 animate-spin" />
+                                            <span>Checking...</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <UserCheck className="w-5 h-5" />
+                                            <span>Verify & Start Research!</span>
+                                        </>
+                                    )}
                                 </button>
-                                <p className="text-xs text-slate-600">
-                                    Don't have a login? <a href="#" className="underline hover:text-slate-500">Register for Free</a>
+                                <p className="text-xs text-slate-500">
+                                    Need an account? <a href="https://www.biodockify.com" target="_blank" rel="noopener noreferrer" className="text-teal-400 underline hover:text-teal-300">Sign up free</a>
                                 </p>
                             </div>
                         </div>

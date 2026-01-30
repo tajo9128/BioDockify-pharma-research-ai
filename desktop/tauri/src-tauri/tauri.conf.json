@@ -7,7 +7,7 @@
     },
     "package": {
         "productName": "BioDockify - Pharma Research AI",
-        "version": "2.18.4"
+        "version": "2.18.5"
     },
     "tauri": {
         "allowlist": {
@@ -91,7 +91,7 @@
                 "nsis": {
                     "installerIcon": "icons/icon.ico",
                     "headerImage": "icons/icon.png",
-                    "sidebarImage": "icons/icon.png",
+                    "sidebarImage": "icons/installer_sidebar.png",
                     "displayLanguageSelector": false
                 }
             }
