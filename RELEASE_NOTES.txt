@@ -1,0 +1,14 @@
+[RELEASE NOTES]
+Version: 2.19.0
+Date: 2026-02-01
+
+Features:
+- **Optional Verification**: Users can now skip the initial email verification setup and explore the application in "Limited Mode".
+- **Feature Gating**: Premium features (Research Workstation, Academic Suite, Deep Research, OmniTools) are now protected and require a verified account.
+- **Improved UX**: New "Locked" visual states for restricted modules, preserving the application layout while clearly indicating requirements.
+- **Security**: Added robust internal access guards to prevent unauthorized access to sensitive components.
+
+Fixes:
+- Fixed an issue where the Deep Research module would fail due to an API response type mismatch.
+- Corrected database target tables for license verification (Supabase 'profiles').
+- Resolved startup connectivity check issues.
