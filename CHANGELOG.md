@@ -5,11 +5,14 @@ All notable changes to **BioDockify** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v2.18.8] - 2026-02-01
+### Fixed
+- **Release Automation**: Fixed release trigger by ensuring version tags are properly used to fire the CI/CD pipeline.
+- **Build**: Consolidated build fix for backend sidecar.
+
 ## [v2.18.7] - 2026-02-01
-### 🔧 Connectivity & Reliability Fixes
-- **Backend Port Fix**: Resolved a critical issue where the Desktop App (using port 8234) could not connect to the Backend server (running on port 8000). The server now correctly binds to port **8234**.
-- **Agent Self-Repair**: Added a "Self Repair" button to the Agent Chat interface for one-click system diagnosis.
-- **Robust LM Studio Connection**: Increased the connection timeout for local AI models from 3s to **10s** (in chat) and **15s** (in settings) to prevent false "Offline" errors on slower machines.
+### Fixed
+- **Connectivity**: Resolved critical port mismatch between Desktop App (8234) and Backend (8000).
 - **Error Handling**: Improved error messages when the backend is unreachable.
 - **Build System**: Fixed "os error 2" during bundling by ensuring the backend sidecar binary is correctly built and placed in `src-tauri/bin`.
 
