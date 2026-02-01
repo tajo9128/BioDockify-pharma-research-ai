@@ -59,7 +59,7 @@ fn main() {
             tauri::async_runtime::spawn(async move {
                 loop {
                     println!("[BioDockify Host] Spawning Backend Sidecar...");
-                    let (rx, _child) = match Command::new_sidecar("biodockify-engine")
+                    let (mut rx, _child) = match Command::new_sidecar("biodockify-engine")
                         .expect("failed to create sidecar configuration")
                         .spawn() {
                             Ok(res) => res,

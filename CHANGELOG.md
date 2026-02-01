@@ -5,6 +5,10 @@ All notable changes to **BioDockify** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v2.18.9] - 2026-02-01
+### Fixed
+- **Build**: Fixed Rust compilation error by restoring mutability to sidecar receiver channel.
+
 ## [v2.18.8] - 2026-02-01
 ### Fixed
 - **Release Automation**: Fixed release trigger by ensuring version tags are properly used to fire the CI/CD pipeline.
