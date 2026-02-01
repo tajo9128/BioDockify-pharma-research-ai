@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Bot, User, Sparkles, Terminal, Play, Globe, ShieldAlert, Brain } from 'lucide-react';
+import { Send, Bot, User, Sparkles, Terminal, Play, Globe, ShieldAlert, Brain, Wrench } from 'lucide-react';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { api } from '@/lib/api';
 import { searchWeb, fetchWebPage } from '@/lib/web_fetcher';
@@ -338,6 +338,13 @@ Failed to reach the BioDockify Research Backend.
                 </div>
                 {/* Actions */}
                 <div className="flex items-center gap-2">
+                    <button
+                        onClick={() => setIsDiagnosisOpen(true)}
+                        className="px-3 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 text-xs font-medium rounded-full border border-amber-500/30 transition-colors flex items-center gap-2"
+                        title="Run System Diagnosis"
+                    >
+                        <Wrench className="w-3 h-3" /> Self Repair
+                    </button>
                     <button
                         onClick={() => setDeepResearchQuery("New Research")}
                         className="px-4 py-1.5 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 text-xs font-medium rounded-full border border-indigo-500/30 transition-colors flex items-center gap-2"

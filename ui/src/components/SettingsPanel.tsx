@@ -309,12 +309,15 @@ export default function SettingsPanel() {
         });
 
         try {
+            // Use universalFetch for reliable connection testing (handles timeouts/CORS better)
+            const { universalFetch } = await import('@/lib/services/universal-fetch');
+
             // Step 1: Check if server is reachable
             setLmStudioTest(prev => ({ ...prev, progress: 25, message: 'Checking Local Server availability...' }));
 
-            const modelsRes = await fetch(modelsUrl, {
+            const modelsRes = await universalFetch(modelsUrl, {
                 method: 'GET',
-                signal: AbortSignal.timeout(8000)  // Increased timeout for slower startup
+                timeout: 15000 // Increased timeout to 15s for stability
             });
 
             if (!modelsRes.ok) {
@@ -348,7 +351,7 @@ export default function SettingsPanel() {
                 message: `Testing model: ${modelId.split('/').pop()}...`
             }));
 
-            const testRes = await fetch(`${baseUrl}/chat/completions`, {
+            const testRes = await universalFetch(`${baseUrl}/chat/completions`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -356,7 +359,7 @@ export default function SettingsPanel() {
                     messages: [{ role: 'user', content: 'Hello' }],
                     max_tokens: 5
                 }),
-                signal: AbortSignal.timeout(15000)
+                timeout: 15000
             });
 
             if (!testRes.ok) {

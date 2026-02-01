@@ -186,27 +186,93 @@ export default function FirstRunWizard({ onComplete }: WizardProps) {
         setVerifying(true);
         setVerificationError('');
 
+        // Helper: Connectivity Check
+        const checkConnectivity = async () => {
+            try {
+                // Try Google first (reliable global CDN)
+                await fetch('https://www.google.com/favicon.ico', { mode: 'no-cors', cache: 'no-store' });
+                return true;
+            } catch (e) {
+                return false;
+            }
+        };
+
+        // Helper: Delay
+        const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
+
         try {
-            // Direct Supabase REST API call (no backend required)
+            // 1. Strict Connectivity Check First
+            // "No API only internet checking... when internet connected its software failure"
+            const isOnlineInitial = await checkConnectivity();
+            if (!isOnlineInitial) {
+                throw new Error("No internet connection detected. Please check your network.");
+            }
+
             const SUPABASE_URL = 'https://crdajozcjvoistmxhcno.supabase.co';
             const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNyZGFqb3pjanZvaXN0bXhoY25vIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzczNjQ4MTQsImV4cCI6MjA1Mjk0MDgxNH0.SE2cB5wPoVZ64C2V4IGfHaVUJqKGJHrSobLMGJPBIYA';
 
-            const response = await fetch(
-                `${SUPABASE_URL}/rest/v1/users?email=eq.${encodeURIComponent(personaEmail)}&select=email`,
-                {
-                    method: 'GET',
-                    headers: {
-                        'apikey': SUPABASE_ANON_KEY,
-                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-                        'Content-Type': 'application/json'
+            let response: Response | null = null;
+            let lastError = null;
+            const maxRetries = 3;
+
+            // 2. Supabase Verification Loop
+            for (let i = 0; i < maxRetries; i++) {
+                try {
+                    if (i > 0) {
+                        setVerificationError(`Verifying... (Attempt ${i + 1}/${maxRetries})`);
+                        await delay(1500);
                     }
+
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+
+                    response = await fetch(
+                        `${SUPABASE_URL}/rest/v1/users?email=eq.${encodeURIComponent(personaEmail)}&select=email`,
+                        {
+                            method: 'GET',
+                            headers: {
+                                'apikey': SUPABASE_ANON_KEY,
+                                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                                'Content-Type': 'application/json'
+                            },
+                            signal: controller.signal
+                        }
+                    );
+                    clearTimeout(timeoutId);
+
+                    if (response.ok) break; // Success!
+
+                    if (response.status >= 500) {
+                        // Server error, retry
+                        throw new Error(`Server error (${response.status})`);
+                    } else {
+                        // 4xx or actual response (e.g. 404/400), don't retry blindly
+                        break;
+                    }
+
+                } catch (e: any) {
+                    console.warn(`Attempt ${i + 1} failed:`, e);
+                    lastError = e;
                 }
-            );
+            }
+
+            // 3. Robust Error Analysis
+            if (!response) {
+                // All retries failed (Network/Fetch errors)
+                const isOnlineNow = await checkConnectivity();
+                if (!isOnlineNow) {
+                    // Connection dropped during attempts
+                    throw new Error("Connection lost. Please check your internet connection.");
+                } else {
+                    // **CRITICAL**: Internet IS connected, but Supabase failed.
+                    // This is the "Software Failure" the user mentioned.
+                    throw new Error("Verification Service Error. Please try again later or contact support.");
+                }
+            }
 
             if (!response.ok) {
-                setVerificationError("Unable to verify. Check your internet connection.");
-                setVerifying(false);
-                return;
+                // The server responded, but with an error status
+                throw new Error(`Verification service returned error (Status: ${response.status})`);
             }
 
             const data = await response.json();
@@ -252,7 +318,8 @@ export default function FirstRunWizard({ onComplete }: WizardProps) {
             onComplete({ detectedServices: detectedServices || { lm_studio: false, backend: true } });
 
         } catch (e: any) {
-            setVerificationError("Error: " + e.message);
+            // Display the exact error message we formulated above
+            setVerificationError(e.message);
         } finally {
             setVerifying(false);
         }
