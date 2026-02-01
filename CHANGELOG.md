@@ -5,6 +5,10 @@ All notable changes to **BioDockify** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.18.6] - 2026-02-01
+### Fixed
+- **Testing:** Fixed a timeout in CI caused by `DECIMER` model downloading during smoke tests. Verification is now metadata-based.
+
 ## [2.18.4] - 2026-01-29
 ### Added
 - **LLM Integration:** Full Agent Zero integration for Screening, Synthesis, Thesis, and Slide Generation modules.
