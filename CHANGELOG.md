@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Agent Self-Repair**: Added a "Self Repair" button to the Agent Chat interface for one-click system diagnosis.
 - **Robust LM Studio Connection**: Increased the connection timeout for local AI models from 3s to **10s** (in chat) and **15s** (in settings) to prevent false "Offline" errors on slower machines.
 - **Error Handling**: Improved error messages when the backend is unreachable.
+- **Build System**: Fixed "os error 2" during bundling by ensuring the backend sidecar binary is correctly built and placed in `src-tauri/bin`.
 
 ## [2.18.6] - 2026-02-01
 ### Fixed

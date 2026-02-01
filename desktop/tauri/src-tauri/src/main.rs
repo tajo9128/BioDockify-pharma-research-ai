@@ -53,13 +53,13 @@ fn main() {
             _ => {}
         })
         .setup(|app| {
-            let window = app.get_window("main").unwrap();
+            let _window = app.get_window("main").unwrap();
             
             // Spawn the Agent Zero Backend Sidecar (Auto-Restart Monitor)
             tauri::async_runtime::spawn(async move {
                 loop {
                     println!("[BioDockify Host] Spawning Backend Sidecar...");
-                    let (mut rx, mut child) = match Command::new_sidecar("biodockify-engine")
+                    let (rx, _child) = match Command::new_sidecar("biodockify-engine")
                         .expect("failed to create sidecar configuration")
                         .spawn() {
                             Ok(res) => res,
