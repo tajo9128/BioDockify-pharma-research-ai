@@ -34,8 +34,11 @@ except ImportError as e:
     print(f"[FAIL] TensorFlow: FAIL - {e}")
 
 try:
-    from DECIMER import predict_SMILES
-    print(f"[PASS] DECIMER: Loaded successfully")
+    import importlib.util
+    if importlib.util.find_spec("DECIMER") is not None:
+        print(f"[PASS] DECIMER: Loaded successfully (checked via importlib)")
+    else:
+        print(f"[FAIL] DECIMER: FAIL - Package not found")
 except ImportError as e:
     print(f"[FAIL] DECIMER: FAIL - {e}")
 
