@@ -15,8 +15,9 @@ from typing import Tuple, Optional, Dict, Any
 logger = logging.getLogger(__name__)
 
 # Supabase configuration (same as FirstRunWizard)
-SUPABASE_URL = 'https://crdajozcjvoistmxhcno.supabase.co'
-SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNyZGFqb3pjanZvaXN0bXhoY25vIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzczNjQ4MTQsImV4cCI6MjA1Mjk0MDgxNH0.SE2cB5wPoVZ64C2V4IGfHaVUJqKGJHrSobLMGJPBIYA'
+# Ideally these should come from environment variables
+SUPABASE_URL = os.environ.get('SUPABASE_URL', 'https://ohzfktmtwmubyhvspexv.supabase.co')
+SUPABASE_ANON_KEY = os.environ.get('SUPABASE_KEY', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9oemZrdG10d211YnlodnNwZXh2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM4MTk2MjgsImV4cCI6MjA3OTM5NTYyOH0.v8qHeRx5jkL8iaNEbEP_NMIvvUk4oidwwW6PkXo_DVY')
 
 # License duration: 1 year from signup
 LICENSE_DURATION_DAYS = 365
@@ -78,7 +79,7 @@ class LicenseGuard:
         
         try:
             async with aiohttp.ClientSession() as session:
-                url = f"{SUPABASE_URL}/rest/v1/users?email=eq.{email}&select=email,created_at,license_expiry"
+                url = f"{SUPABASE_URL}/rest/v1/profiles?email=eq.{email}&select=email,created_at"
                 headers = {
                     'apikey': SUPABASE_ANON_KEY,
                     'Authorization': f'Bearer {SUPABASE_ANON_KEY}',

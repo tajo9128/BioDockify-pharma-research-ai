@@ -9,6 +9,25 @@ interface AcademicWriterHubProps {
 }
 
 export const AcademicWriterHub: React.FC<AcademicWriterHubProps> = ({ onSelectMode }) => {
+    // License Guard
+    const isLicenseActive = typeof window !== 'undefined' && localStorage.getItem('biodockify_license_active') === 'true';
+
+    if (!isLicenseActive) {
+        return (
+            <div className="h-full flex items-center justify-center p-12 bg-slate-950">
+                <div className="text-center space-y-4 bg-slate-900/50 p-8 rounded-2xl border border-slate-800 backdrop-blur-sm max-w-lg">
+                    <div className="w-16 h-16 bg-slate-800/50 rounded-full flex items-center justify-center mx-auto mb-4 border border-slate-700">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-amber-500"><rect width="18" height="11" x="3" y="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
+                    </div>
+                    <h2 className="text-2xl font-bold text-white">Academic Suite Locked</h2>
+                    <p className="text-slate-400">
+                        Thesis and Review writing modules are available to verified researchers only.
+                    </p>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="h-full bg-slate-950 text-slate-200 overflow-y-auto p-12 flex flex-col items-center font-sans">
 

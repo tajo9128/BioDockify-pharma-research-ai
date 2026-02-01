@@ -35,7 +35,7 @@ export default function Sidebar({ activeView, onViewChange }: SidebarProps) {
   const NavItem = ({ item, isBottom = false }: { item: any, isBottom?: boolean }) => {
     const Icon = item.icon;
     const isActive = activeView === item.id;
-    const isLocked = item.id === 'statistics' && localStorage.getItem('biodockify_license_active') !== 'true';
+    const isLocked = ['research', 'writers', 'omnitools', 'statistics'].includes(item.id) && localStorage.getItem('biodockify_license_active') !== 'true';
 
     return (
       <div className="relative group">

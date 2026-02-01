@@ -208,8 +208,8 @@ export default function FirstRunWizard({ onComplete }: WizardProps) {
                 throw new Error("No internet connection detected. Please check your network.");
             }
 
-            const SUPABASE_URL = 'https://crdajozcjvoistmxhcno.supabase.co';
-            const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNyZGFqb3pjanZvaXN0bXhoY25vIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzczNjQ4MTQsImV4cCI6MjA1Mjk0MDgxNH0.SE2cB5wPoVZ64C2V4IGfHaVUJqKGJHrSobLMGJPBIYA';
+            const SUPABASE_URL = 'https://ohzfktmtwmubyhvspexv.supabase.co';
+            const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9oemZrdG10d211YnlodnNwZXh2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM4MTk2MjgsImV4cCI6MjA3OTM5NTYyOH0.v8qHeRx5jkL8iaNEbEP_NMIvvUk4oidwwW6PkXo_DVY';
 
             let response: Response | null = null;
             let lastError = null;
@@ -227,7 +227,7 @@ export default function FirstRunWizard({ onComplete }: WizardProps) {
                     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
 
                     response = await fetch(
-                        `${SUPABASE_URL}/rest/v1/users?email=eq.${encodeURIComponent(personaEmail)}&select=email`,
+                        `${SUPABASE_URL}/rest/v1/profiles?email=eq.${encodeURIComponent(personaEmail)}&select=email`,
                         {
                             method: 'GET',
                             headers: {
@@ -323,6 +323,30 @@ export default function FirstRunWizard({ onComplete }: WizardProps) {
         } finally {
             setVerifying(false);
         }
+    };
+
+    // Skip Verification (Limited Mode)
+    const handleSkipVerification = () => {
+        if (typeof window !== 'undefined') {
+            // Set first run complete but DO NOT set license_active
+            localStorage.setItem('biodockify_first_run_complete', 'true');
+            // Ensure any stale license is cleared
+            localStorage.removeItem('biodockify_license_active');
+
+            // Also ensure settings are saved if valid
+            if (!localStorage.getItem('biodockify_settings')) {
+                const defaultSettings = {
+                    ai_provider: {
+                        mode: 'lm_studio',
+                        lm_studio_url: 'http://localhost:1234/v1',
+                        lm_studio_model: ''
+                    }
+                };
+                localStorage.setItem('biodockify_settings', JSON.stringify(defaultSettings));
+            }
+        }
+
+        onComplete({ detectedServices: detectedServices || { lm_studio: false, backend: true }, skippedVerification: true });
     };
 
     // --- RENDERERS ---
@@ -586,7 +610,15 @@ export default function FirstRunWizard({ onComplete }: WizardProps) {
                                         </>
                                     )}
                                 </button>
-                                <p className="text-xs text-slate-500">
+
+                                <button
+                                    onClick={handleSkipVerification}
+                                    className="text-slate-500 hover:text-slate-300 text-sm underline transition-colors"
+                                >
+                                    Skip for now (Limited Access)
+                                </button>
+
+                                <p className="text-xs text-slate-500 pt-2">
                                     Need an account? <a href="https://www.biodockify.com" target="_blank" rel="noopener noreferrer" className="text-teal-400 underline hover:text-teal-300">Sign up free</a>
                                 </p>
                             </div>

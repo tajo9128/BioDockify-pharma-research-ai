@@ -1,38 +1,14 @@
-# UTF-8
-#
-# Windows Version Info for BioDockify Engine
-# This file helps antivirus software trust the executable
-# by providing proper metadata about the application.
-#
-VSVersionInfo(
-  ffi=FixedFileInfo(
-    filevers=(2, 18, 9, 0),
-    prodvers=(2, 18, 9, 0),
-    mask=0x3f,
-    flags=0x0,
-    OS=0x40004,
-    fileType=0x1,
-    subtype=0x0,
-    date=(0, 0)
-    ),
-  kids=[
-    StringFileInfo(
-      [
-        StringTable(
-          u'040904B0',
-          [
-            StringStruct(u'CompanyName', u'BioDockify Team'),
-            StringStruct(u'FileDescription', u'BioDockify - Pharma Research AI'),
-            StringStruct(u'FileVersion', u'2.18.9.0'),
-            StringStruct(u'InternalName', u'biodockify-engine'),
-            StringStruct(u'LegalCopyright', u'Copyright (c) 2024-2026 BioDockify Team. MIT License.'),
-            StringStruct(u'OriginalFilename', u'biodockify-engine.exe'),
-            StringStruct(u'ProductName', u'BioDockify - Pharma Research AI'),
-            StringStruct(u'ProductVersion', u'2.18.9.0'),
-          ]
-        )
-      ]
-    ),
-    VarFileInfo([VarStruct(u'Translation', [1033, 1200])])
-  ]
-)
+[RELEASE NOTES]
+Version: 2.19.0
+Date: 2026-02-01
+
+Features:
+- **Optional Verification**: Users can now skip the initial email verification setup and explore the application in "Limited Mode".
+- **Feature Gating**: Premium features (Research Workstation, Academic Suite, Deep Research, OmniTools) are now protected and require a verified account.
+- **Improved UX**: New "Locked" visual states for restricted modules, preserving the application layout while clearly indicating requirements.
+- **Security**: Added robust internal access guards to prevent unauthorized access to sensitive components.
+
+Fixes:
+- Fixed an issue where the Deep Research module would fail due to an API response type mismatch.
+- Corrected database target tables for license verification (Supabase 'profiles').
+- Resolved startup connectivity check issues.

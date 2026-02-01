@@ -43,49 +43,57 @@ export default function HomeDashboard({ onNavigate }: HomeProps) {
         fetchSettings();
     }, []);
 
-    if (!loading && !licenseActive) {
+    const RestrictedCard = ({ onClick, children, id }: { onClick: () => void, children: React.ReactNode, id: string }) => {
+        const isLocked = !licenseActive;
+
         return (
-            <div className="h-full flex items-center justify-center bg-slate-950 p-8">
-                <div className="max-w-md w-full text-center space-y-6">
-                    <div className="w-20 h-20 bg-slate-900 rounded-full flex items-center justify-center mx-auto border border-slate-800">
-                        <div className="w-10 h-10 text-slate-500">
-                            {/* Lock Icon */}
-                            <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
+            <button
+                onClick={() => {
+                    if (isLocked) {
+                        onNavigate('settings');
+                        return;
+                    }
+                    onClick();
+                }}
+                className={`group relative p-6 bg-gradient-to-br from-slate-900 border rounded-2xl transition-all text-left overflow-hidden ${isLocked
+                    ? 'border-slate-800 opacity-75 grayscale cursor-not-allowed'
+                    : 'from-opacity-20 to-slate-900 border-opacity-20 hover:border-opacity-50'
+                    }`}
+                style={!isLocked ? {} : { borderColor: '#334155' }} // Fallback style
+            >
+                {/* Lock Overlay */}
+                {isLocked && (
+                    <div className="absolute inset-0 bg-slate-950/60 flex items-center justify-center z-10 backdrop-blur-[1px]">
+                        <div className="bg-slate-900 px-3 py-1.5 rounded-full border border-slate-700 flex items-center space-x-2 shadow-xl">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-amber-400"><rect width="18" height="11" x="3" y="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
+                            <span className="text-xs font-bold text-slate-300">LOCKED</span>
                         </div>
                     </div>
-                    <div>
-                        <h1 className="text-2xl font-bold text-white">License Verification Required</h1>
-                        <p className="text-slate-400 mt-2">The free version of BioDockify requires a one-time verification to unlock the research workspace.</p>
-                    </div>
-                    <button
-                        onClick={() => onNavigate('settings')}
-                        className="w-full bg-teal-500 hover:bg-teal-400 text-slate-950 font-bold py-3 rounded-xl transition-all shadow-lg shadow-teal-500/10"
-                    >
-                        Go to Settings to Unlock
-                    </button>
-                    <p className="text-xs text-slate-600">
-                        Configured during setup? Trying restarting the app to refresh your license.
-                    </p>
-                </div>
-            </div>
+                )}
+
+                {children}
+            </button>
         );
-    }
+    };
 
     return (
         <div className="h-full overflow-y-auto p-8 bg-slate-950">
             {/* Hero Section */}
             <div className="max-w-5xl mx-auto mb-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <h1 className="text-4xl font-bold text-white mb-2">Welcome Back, {userName}</h1>
-                <p className="text-slate-400 text-lg">BioDockify v2.17.5 is ready. What shall we discover today?</p>
+                <p className="text-slate-400 text-lg">BioDockify v2.19.0 is ready. What shall we discover today?</p>
+                {!licenseActive && (
+                    <div className="mt-4 p-4 bg-amber-900/20 border border-amber-500/30 rounded-lg inline-flex items-center space-x-3">
+                        <span className="text-amber-400">⚠️ Limited Mode Active.</span>
+                        <button onClick={() => onNavigate('settings')} className="text-sm font-bold text-white underline hover:text-amber-300">Unlock Full Access</button>
+                    </div>
+                )}
             </div>
 
             <div className="max-w-5xl mx-auto">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-                    {/* Main Action 1 */}
-                    <button
-                        onClick={() => onNavigate('research')}
-                        className="group relative p-6 bg-gradient-to-br from-teal-900/30 to-slate-900 border border-teal-500/20 rounded-2xl hover:border-teal-500/50 transition-all text-left overflow-hidden"
-                    >
+                    {/* Main Action 1 - Research */}
+                    <RestrictedCard id="research" onClick={() => onNavigate('research')}>
                         <div className="absolute top-0 right-0 p-4 opacity-50 group-hover:opacity-100 transition-opacity">
                             <ArrowRight className="w-5 h-5 text-teal-400" />
                         </div>
@@ -94,13 +102,10 @@ export default function HomeDashboard({ onNavigate }: HomeProps) {
                         </div>
                         <h3 className="text-xl font-bold text-white mb-2">Start Research</h3>
                         <p className="text-sm text-slate-400">Launch the research workstation to analyze targets and synthesize data.</p>
-                    </button>
+                    </RestrictedCard>
 
-                    {/* Main Action 2 */}
-                    <button
-                        onClick={() => onNavigate('writers')}
-                        className="group relative p-6 bg-gradient-to-br from-indigo-900/30 to-slate-900 border border-indigo-500/20 rounded-2xl hover:border-indigo-500/50 transition-all text-left overflow-hidden"
-                    >
+                    {/* Main Action 2 - Academic */}
+                    <RestrictedCard id="writers" onClick={() => onNavigate('writers')}>
                         <div className="absolute top-0 right-0 p-4 opacity-50 group-hover:opacity-100 transition-opacity">
                             <ArrowRight className="w-5 h-5 text-indigo-400" />
                         </div>
@@ -109,13 +114,10 @@ export default function HomeDashboard({ onNavigate }: HomeProps) {
                         </div>
                         <h3 className="text-xl font-bold text-white mb-2">Academic Suite</h3>
                         <p className="text-sm text-slate-400">Draft thesis chapters, review papers, and manage citations.</p>
-                    </button>
+                    </RestrictedCard>
 
-                    {/* Main Action 3 */}
-                    <button
-                        onClick={() => onNavigate('autonomous')}
-                        className="group relative p-6 bg-gradient-to-br from-purple-900/30 to-slate-900 border border-purple-500/20 rounded-2xl hover:border-purple-500/50 transition-all text-left overflow-hidden"
-                    >
+                    {/* Main Action 3 - Deep Research */}
+                    <RestrictedCard id="autonomous" onClick={() => onNavigate('autonomous')}>
                         <div className="absolute top-0 right-0 p-4 opacity-50 group-hover:opacity-100 transition-opacity">
                             <ArrowRight className="w-5 h-5 text-purple-400" />
                         </div>
@@ -124,9 +126,9 @@ export default function HomeDashboard({ onNavigate }: HomeProps) {
                         </div>
                         <h3 className="text-xl font-bold text-white mb-2">Deep Research</h3>
                         <p className="text-sm text-slate-400">Initiate autonomous deep-dive investigations into complex topics.</p>
-                    </button>
+                    </RestrictedCard>
 
-                    {/* Main Action 4 (External) */}
+                    {/* Main Action 4 (External) - ALWAYS UNLOCKED */}
                     <button
                         onClick={() => window.open('https://www.biodockify.com', '_blank')}
                         className="group relative p-6 bg-gradient-to-br from-cyan-900/30 to-slate-900 border border-cyan-500/20 rounded-2xl hover:border-cyan-500/50 transition-all text-left overflow-hidden"
