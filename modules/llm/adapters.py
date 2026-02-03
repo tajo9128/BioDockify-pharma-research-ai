@@ -110,7 +110,11 @@ class CustomAdapter(BaseLLMAdapter):
     
     def __init__(self, api_key: str, base_url: str, model: str):
         self.api_key = api_key
-        self.base_url = base_url.rstrip('/')
+        # Robustly handle URLs ending in /models
+        base_url = base_url.rstrip('/')
+        if base_url.endswith('/models'):
+             base_url = base_url[:-7]
+        self.base_url = base_url
         self.model = model
 
     def generate(self, prompt: str, **kwargs) -> str:
@@ -154,6 +158,11 @@ class LMStudioAdapter(BaseLLMAdapter):
     ]
 
     def __init__(self, base_url: str = "http://localhost:1234/v1", model: str = "auto"):
+        # Robustly handle URLs ending in /models by stripping it
+        base_url = base_url.rstrip('/')
+        if base_url.endswith('/models'):
+             base_url = base_url[:-7] # Remove /models
+             
         self.base_url = base_url.rstrip('/')
         self.config_model = model
         self.api_base = self.base_url

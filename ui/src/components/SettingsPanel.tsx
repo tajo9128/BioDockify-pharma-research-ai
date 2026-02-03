@@ -70,7 +70,7 @@ export default function SettingsPanel() {
 
 
             // LM Studio
-            lm_studio_url: 'http://localhost:1234/v1',
+            lm_studio_url: 'http://localhost:1234/v1/models',
             lm_studio_model: '',
 
             google_key: '',
@@ -295,11 +295,13 @@ export default function SettingsPanel() {
 
     // LM Studio Test with Progress Bar and Detailed Reporting
     const handleTestLmStudio = async () => {
-        const baseUrl = (settings.ai_provider.lm_studio_url || 'http://localhost:1234/v1').replace(/\/$/, '');
+        const rawUrl = (settings.ai_provider.lm_studio_url || 'http://localhost:1234/v1/models').replace(/\/$/, '');
 
-        // Ensure we have proper endpoint - user enters base URL like http://localhost:1234/v1
-        // We need to call /v1/models to check if server is running
-        const modelsUrl = baseUrl.endsWith('/models') ? baseUrl : `${baseUrl}/models`;
+        // We want the base URL for chat/completions (strip /models)
+        const baseUrl = rawUrl.replace(/\/models\/?$/, '');
+
+        // We want the full models URL for checking status
+        const modelsUrl = `${baseUrl}/models`;
 
         setLmStudioTest({
             status: 'testing',
@@ -450,119 +452,55 @@ export default function SettingsPanel() {
                 [provider]: { ...prev[provider], progress: 50, message: 'Connecting to API endpoint...' }
             }));
 
-            // Provider-specific API endpoints
-            const providerConfigs: Record<string, { url: string; testBody: any }> = {
-                'google': {
-                    url: 'https://generativelanguage.googleapis.com/v1beta/models?key=' + key,
-                    testBody: null // GET request
-                },
-                'groq': {
-                    url: 'https://api.groq.com/openai/v1/models',
-                    testBody: null // GET with auth header
-                },
-                'huggingface': {
-                    url: 'https://api-inference.huggingface.co/models/gpt2',
-                    testBody: { inputs: 'test' }
-                },
-                'openrouter': {
-                    url: 'https://openrouter.ai/api/v1/models',
-                    testBody: null
-                },
-                'deepseek': {
-                    url: baseUrl || 'https://api.deepseek.com/v1/models',
-                    testBody: null
-                },
-                'openai': {
-                    url: baseUrl || 'https://api.openai.com/v1/models',
-                    testBody: null
-                },
-                'custom': {
-                    url: (baseUrl || '').replace(/\/$/, '') + '/models',
-                    testBody: null
+            // Delegate testing to the Backend (Source of Truth)
+            // This avoids CORS issues and ensures the backend can actually connect
+            try {
+                const result = await api.testConnection(
+                    serviceType,
+                    provider,
+                    key,
+                    // Pass baseUrl for custom or special providers if needed (SettingsPanel mostly relies on defaults for known providers)
+                    provider === 'custom' ? baseUrl : undefined,
+                    model
+                );
+
+                if (result.status === 'success') {
+                    setTestStatus(prev => ({ ...prev, [provider]: 'success' }));
+                    setApiTestProgress(prev => ({
+                        ...prev,
+                        [provider]: {
+                            status: 'success',
+                            progress: 100,
+                            message: 'PASSED: API Connected',
+                            details: result.message
+                        }
+                    }));
+                } else {
+                    throw new Error(result.message || 'Verification failed on server');
                 }
-            };
-
-            const config = providerConfigs[provider];
-            if (!config) {
-                throw new Error(`Unknown provider: ${provider}`);
-            }
-
-            let result;
-            if (provider === 'google') {
-                // Google uses API key in URL, not header
-                result = await universalFetch(config.url, {
-                    method: 'GET',
-                    timeout: 10000
-                });
-            } else if (config.testBody) {
-                // POST request (HuggingFace)
-                result = await universalFetch(config.url, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${key}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: config.testBody,
-                    timeout: 15000
-                });
-            } else {
-                // GET request with Bearer token
-                result = await universalFetch(config.url, {
-                    method: 'GET',
-                    headers: {
-                        'Authorization': `Bearer ${key}`
-                    },
-                    timeout: 10000
-                });
-            }
-
-            setApiTestProgress(prev => ({
-                ...prev,
-                [provider]: { ...prev[provider], progress: 80, message: 'Processing response...' }
-            }));
-
-            await new Promise(r => setTimeout(r, 200));
-
-            if (result.ok) {
-                setTestStatus(prev => ({ ...prev, [provider]: 'success' }));
+            } catch (err: any) {
+                // Determine user-friendly error
+                const msg = err.message || 'Unknown error';
+                setTestStatus(prev => ({ ...prev, [provider]: 'error' }));
                 setApiTestProgress(prev => ({
                     ...prev,
                     [provider]: {
-                        status: 'success',
+                        status: 'error',
                         progress: 100,
-                        message: 'PASSED: API Connected',
-                        details: 'API key validated successfully.'
+                        message: 'FAILED: Connection Error',
+                        details: msg
                     }
                 }));
-            } else if (result.status === 401 || result.status === 403) {
-                throw new Error('401 Unauthorized - Invalid API key');
-            } else if (result.status === 429) {
-                throw new Error('429 Rate limit exceeded');
-            } else {
-                throw new Error(`HTTP ${result.status} error`);
             }
         } catch (e: any) {
-            console.error('[DEBUG] API Test Failed:', e);
-
-            let failReason = e?.message || 'Unknown error occurred';
-            if (failReason.includes('NetworkError') || failReason.includes('fetch') || failReason.includes('Failed to fetch')) {
-                failReason = 'Network error - check your internet connection.';
-            } else if (failReason.includes('401') || failReason.includes('Unauthorized')) {
-                failReason = 'Invalid API key - please check and re-enter.';
-            } else if (failReason.includes('429') || failReason.includes('rate')) {
-                failReason = 'Rate limit exceeded - try again later.';
-            } else if (failReason.includes('timeout')) {
-                failReason = 'Connection timed out - API may be unavailable.';
-            }
-
-            setTestStatus(prev => ({ ...prev, [provider]: 'error' }));
+            console.error('[DEBUG] API Test Failed (System):', e);
             setApiTestProgress(prev => ({
                 ...prev,
                 [provider]: {
                     status: 'error',
                     progress: 100,
-                    message: 'FAILED: Connection Error',
-                    details: failReason
+                    message: 'FAILED: System Error',
+                    details: e.message
                 }
             }));
         }
@@ -714,9 +652,9 @@ export default function SettingsPanel() {
                                 <div>
                                     <label className="text-xs text-slate-400 block mb-1">Local Server URL</label>
                                     <input
-                                        value={settings.ai_provider.lm_studio_url || 'http://localhost:1234/v1'}
+                                        value={settings.ai_provider.lm_studio_url || 'http://localhost:1234/v1/models'}
                                         onChange={(e) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, lm_studio_url: e.target.value } })}
-                                        placeholder="http://localhost:1234/v1"
+                                        placeholder="http://localhost:1234/v1/models"
                                         className="w-full bg-slate-900 border border-slate-700 rounded-md px-3 py-2 text-sm text-white font-mono"
                                     />
                                 </div>

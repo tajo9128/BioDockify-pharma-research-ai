@@ -1405,6 +1405,64 @@ def test_connection_endpoint(request: TestRequest):
                       return {"status": "warning", "message": "Invalid GLM Key format"}
                  return {"status": "success", "message": "GLM Key valid"}
 
+            elif provider == "groq":
+                # Verify Groq
+                headers = {"Authorization": f"Bearer {request.key}"}
+                resp = requests.get("https://api.groq.com/openai/v1/models", headers=headers, timeout=10)
+                if resp.status_code == 200:
+                    return {"status": "success", "message": "Groq Key Verified"}
+                else:
+                    return {"status": "error", "message": f"Groq Error: {resp.status_code}"}
+
+            elif provider == "openai":
+                # Verify OpenAI
+                headers = {"Authorization": f"Bearer {request.key}"}
+                resp = requests.get("https://api.openai.com/v1/models", headers=headers, timeout=10)
+                if resp.status_code == 200:
+                    return {"status": "success", "message": "OpenAI Key Verified"}
+                else:
+                    return {"status": "error", "message": f"OpenAI Error: {resp.status_code}"}
+
+            elif provider == "deepseek":
+                # Verify DeepSeek
+                headers = {"Authorization": f"Bearer {request.key}"}
+                # DeepSeek often uses /user/balance or /models
+                resp = requests.get("https://api.deepseek.com/models", headers=headers, timeout=10)
+                if resp.status_code == 200:
+                    return {"status": "success", "message": "DeepSeek Key Verified"}
+                else:
+                    return {"status": "error", "message": f"DeepSeek Error: {resp.status_code}"}
+
+            elif provider == "lm_studio":
+                # Verify LM Studio Local Server
+                if not request.base_url:
+                     return {"status": "error", "message": "LM Studio URL is missing"}
+                
+                # Robustly handle /models suffix
+                base = request.base_url.rstrip("/")
+                if base.endswith("/models"):
+                    base = base[:-7]
+                
+                try:
+                    # Check models endpoint
+                    models_url = f"{base}/models"
+                    resp = requests.get(models_url, timeout=2) # Fast timeout for local
+                    if resp.status_code == 200:
+                        try:
+                            data = resp.json()
+                            count = len(data.get('data', []))
+                            if count == 0:
+                                return {"status": "warning", "message": "Connected, but NO models loaded!"}
+                            return {"status": "success", "message": f"LM Studio Connected! ({count} models loaded)"}
+                        except:
+                            return {"status": "success", "message": "LM Studio Connected!"}
+                    else:
+                        return {"status": "error", "message": f"Connected but returned status {resp.status_code}"}
+                except requests.exceptions.ConnectionError:
+                     return {"status": "error", "message": "Connection Refused. Is LM Studio Server running?"}
+                except Exception as e:
+                     return {"status": "error", "message": f"LM Studio Error: {str(e)}"}
+
             elif provider == "custom":
                 # Verify Generic OpenAI Compatible API
                 # Requires Base URL + Key
@@ -1412,6 +1470,8 @@ def test_connection_endpoint(request: TestRequest):
                     return {"status": "error", "message": "Base URL required for Custom API"}
                 
                 base = request.base_url.rstrip("/")
+                if base.endswith("/models"):
+                    base = base[:-7]
                 headers = {"Authorization": f"Bearer {request.key}", "Content-Type": "application/json"}
                 
                 # Method 1: Try /models endpoint (works for OpenAI, Groq, etc.)

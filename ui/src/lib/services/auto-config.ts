@@ -8,7 +8,7 @@
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8234';
 
 // Default service URLs
-const DEFAULT_LM_STUDIO_URL = 'http://localhost:1234/v1';
+const DEFAULT_LM_STUDIO_URL = 'http://localhost:1234/v1/models';
 const DEFAULT_GROBID_URL = 'http://localhost:8070';
 
 export interface DetectedServices {
@@ -38,7 +38,11 @@ export async function checkLmStudio(url: string = DEFAULT_LM_STUDIO_URL): Promis
     try {
         const { universalFetch } = await import('./universal-fetch');
 
-        const res = await universalFetch(`${url}/models`, {
+        // Normalize URL: Strip /models suffix if present to get base
+        const baseUrl = url.replace(/\/models\/?$/, '');
+        const targetUrl = `${baseUrl}/models`;
+
+        const res = await universalFetch(targetUrl, {
             method: 'GET',
             timeout: 5000
         });
@@ -86,7 +90,10 @@ export async function testLmStudioConnection(url: string = DEFAULT_LM_STUDIO_URL
         // Try a simple completion to verify model works
         const { universalFetch } = await import('./universal-fetch');
 
-        const testRes = await universalFetch(`${url}/chat/completions`, {
+        // Normalize: Ensure we use base URL for chat completions
+        const baseUrl = url.replace(/\/models\/?$/, '');
+
+        const testRes = await universalFetch(`${baseUrl}/chat/completions`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: {

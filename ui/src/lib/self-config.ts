@@ -40,7 +40,7 @@ export interface SelfConfigResult {
 // ============================================================================
 
 const PROVIDERS: AIProvider[] = [
-    { type: 'lm_studio', name: 'LM Studio (Local)', available: false, url: 'http://localhost:1234/v1', priority: 1 },
+    { type: 'lm_studio', name: 'LM Studio (Local)', available: false, url: 'http://localhost:1234/v1/models', priority: 1 },
     { type: 'ollama', name: 'Ollama (Local)', available: false, url: 'http://localhost:11434', priority: 2 },
     { type: 'glm', name: 'GLM-4 (Free)', available: false, url: 'https://open.bigmodel.cn/api/paas/v4', priority: 3 },
     { type: 'openai', name: 'OpenAI', available: false, url: 'https://api.openai.com/v1', priority: 4 },
@@ -289,7 +289,7 @@ async function configureForLmStudio(provider: AIProvider, settings: string[]): P
 
         // Also save to localStorage for persistence
         if (typeof window !== 'undefined') {
-            localStorage.setItem('biodockify_lm_studio_url', provider.url || 'http://localhost:1234/v1');
+            localStorage.setItem('biodockify_lm_studio_url', provider.url || 'http://localhost:1234/v1/models');
             localStorage.setItem('biodockify_lm_studio_model', selectedModel);
             localStorage.setItem('biodockify_ai_mode', 'lm_studio');
         }

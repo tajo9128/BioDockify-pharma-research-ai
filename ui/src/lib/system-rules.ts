@@ -224,7 +224,7 @@ export async function commitConfiguration(
         first_run: false,
         consent: state.consent,
         services: {
-            lm_studio_url: state.services.lm_studio_running ? 'http://localhost:1234/v1' : '',
+            lm_studio_url: state.services.lm_studio_running ? 'http://localhost:1234/v1/models' : '',
             lm_studio_enabled: state.consent.auto_start_lm_studio
         },
         mode: state.mode

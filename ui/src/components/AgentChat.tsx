@@ -148,13 +148,15 @@ While you can run locally, adding a **Free or Paid API Key** unlocks:
             );
 
             // Check for LM Studio (local AI)
-            const lmStudioUrl = providerConfig.lm_studio_url || 'http://localhost:1234/v1';
+            const rawLmUrl = providerConfig.lm_studio_url || 'http://localhost:1234/v1/models';
+            const baseLmUrl = rawLmUrl.replace(/\/models\/?$/, ''); // Strip /models for safety
+
             let hasLmStudio = false;
 
             if (providerConfig.mode === 'lm_studio' || !hasCloudProvider) {
                 try {
                     const { universalFetch } = await import('@/lib/services/universal-fetch');
-                    const lmCheck = await universalFetch(`${lmStudioUrl}/models`, {
+                    const lmCheck = await universalFetch(`${baseLmUrl}/models`, {
                         method: 'GET',
                         timeout: 3000
                     });
