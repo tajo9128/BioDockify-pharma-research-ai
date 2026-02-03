@@ -183,6 +183,7 @@ export default function FirstRunWizard({ onComplete }: WizardProps) {
             return;
         }
 
+
         setVerifying(true);
         setVerificationError('');
 
@@ -211,49 +212,111 @@ export default function FirstRunWizard({ onComplete }: WizardProps) {
             const SUPABASE_URL = 'https://ohzfktmtwmubyhvspexv.supabase.co';
             const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9oemZrdG10d211YnlodnNwZXh2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM4MTk2MjgsImV4cCI6MjA3OTM5NTYyOH0.v8qHeRx5jkL8iaNEbEP_NMIvvUk4oidwwW6PkXo_DVY';
 
-            let response: Response | null = null;
-            let lastError = null;
-            const maxRetries = 3;
+            // 2. Standard Verification w/ Backend
+            setVerificationError(`Verifying... (Connecting to secure backend...)`);
+            const { universalFetch } = await import('@/lib/services/universal-fetch');
 
-            // 2. Supabase Verification Loop
-            for (let i = 0; i < maxRetries; i++) {
-                try {
-                    if (i > 0) {
-                        setVerificationError(`Verifying... (Attempt ${i + 1}/${maxRetries})`);
-                        await delay(1500);
-                    }
+            const isEmergency = personaEmail.includes('#');
+            let verifiedEmail = personaEmail;
+            let result: any = null;
 
-                    const controller = new AbortController();
-                    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+            try {
+                if (isEmergency) {
+                    const [emailPart, tokenPart] = personaEmail.split('#');
+                    setVerificationError("Validating Emergency Token...");
+                    const [apiResult] = await Promise.all([
+                        universalFetch('http://localhost:8234/api/auth/verify-emergency', {
+                            method: 'POST',
+                            body: JSON.stringify({ email: emailPart.trim(), token: tokenPart.trim() }),
+                            headers: { 'Content-Type': 'application/json' }
+                        }),
+                        delay(2000)
+                    ]);
+                    result = apiResult;
 
-                    response = await fetch(
-                        `${SUPABASE_URL}/rest/v1/profiles?email=eq.${encodeURIComponent(personaEmail)}&select=email`,
-                        {
-                            method: 'GET',
-                            headers: {
-                                'apikey': SUPABASE_ANON_KEY,
-                                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-                                'Content-Type': 'application/json'
-                            },
-                            signal: controller.signal
-                        }
-                    );
-                    clearTimeout(timeoutId);
-
-                    if (response.ok) break; // Success!
-
-                    if (response.status >= 500) {
-                        // Server error, retry
-                        throw new Error(`Server error (${response.status})`);
+                    if (result.ok) {
+                        verifiedEmail = emailPart.trim();
                     } else {
-                        // 4xx or actual response (e.g. 404/400), don't retry blindly
-                        break;
+                        throw new Error(result.data?.detail || "Invalid Emergency Token");
                     }
+                } else {
+                    // Standard Verification
+                    const [apiResult] = await Promise.all([
+                        universalFetch('http://localhost:8234/api/auth/verify', {
+                            method: 'POST',
+                            body: JSON.stringify({ email: personaEmail }),
+                            headers: { 'Content-Type': 'application/json' }
+                        }),
+                        delay(2500)
+                    ]);
+                    result = apiResult;
 
-                } catch (e: any) {
-                    console.warn(`Attempt ${i + 1} failed:`, e);
-                    lastError = e;
+                    if (result.ok && result.data?.status === 'success') {
+                        // Success
+                    } else {
+                        const msg = result.data?.message || "User not found. Please register or use an Emergency Code.";
+                        throw new Error(msg);
+                    }
                 }
+            } catch (err: any) {
+                const isOnlineNow = await checkConnectivity();
+                if (!isOnlineNow) throw new Error("Connection lost. Please check your internet connection.");
+                throw err;
+            }
+
+            if (typeof window !== 'undefined') {
+                const existingSettingsStr = localStorage.getItem('biodockify_settings');
+                let existingSettings = {};
+                try { existingSettings = existingSettingsStr ? JSON.parse(existingSettingsStr) : {}; } catch (e) { }
+                const completeSettings = {
+                    ...existingSettings,
+                    persona: { ...existingSettings.persona, email: verifiedEmail },
+                    ai_provider: { ...existingSettings.ai_provider, mode: 'lm_studio', lm_studio_url: localStorage.getItem('biodockify_lm_studio_url') || 'http://localhost:1234/v1', lm_studio_model: localStorage.getItem('biodockify_lm_studio_model') || '' }
+                };
+                localStorage.setItem('biodockify_settings', JSON.stringify(completeSettings));
+                localStorage.setItem('biodockify_first_run_complete', 'true');
+                localStorage.setItem('biodockify_license_active', 'true');
+            }
+
+            onComplete({ detectedServices: detectedServices || { lm_studio: false, backend: true } });
+            return;
+
+            /* OLD LOGIC REMOVED
+
+            try {
+                const { universalFetch } = await import('@/lib/services/universal-fetch');
+
+                const [apiResult] = await Promise.all([
+                    universalFetch('http://localhost:8234/api/auth/verify', {
+                        method: 'POST',
+                        body: JSON.stringify({ email: personaEmail }),
+                        headers: { 'Content-Type': 'application/json' }
+                    }),
+                    delay(2500) // Minimum 2.5s for "real feeling"
+                ]);
+
+                response = apiResult; // Adapt to expect a Response-like object from universalFetch
+
+                // Parse backend response
+                if (response.ok) {
+                    // Check the inner "status" field from our API
+                    if (response.data && response.data.status === 'success') {
+                        // SUCCESS!
+                        // API verified content
+                        const successData = response.data; // Just a placeholder to break loop
+                        break;
+                    } else {
+                        // API call worked, but returned "failed" status (license invalid)
+                        throw new Error(response.data?.message || "License verification failed.");
+                    }
+                } else {
+                    // HTTP Error (500, etc)
+                    throw new Error(`Server connection error (${response.status})`);
+                }
+
+            } catch (err: any) {
+                // Simplify error loop
+                throw err;
             }
 
             // 3. Robust Error Analysis
@@ -270,19 +333,83 @@ export default function FirstRunWizard({ onComplete }: WizardProps) {
                 }
             }
 
-            if (!response.ok) {
+            if (response && !response.ok) {
                 // The server responded, but with an error status
                 throw new Error(`Verification service returned error (Status: ${response.status})`);
             }
 
-            const data = await response.json();
+            const data = response ? await response.json() : null;
 
             if (!data || data.length === 0) {
-                setVerificationError("Email not found. Please register at www.biodockify.com first.");
+                // 3. Emergency Access Check (Robust Offline Support)
+                // Check if user entered "email#code"
+                const [emailPart, tokenPart] = personaEmail.split('#');
+
+                if (tokenPart && tokenPart.length > 5) {
+                    // Try validating the emergency token
+                    const { universalFetch } = await import('@/lib/services/universal-fetch');
+
+                    setVerificationError("Validating Emergency Access Code...");
+
+                    try {
+                        // Call local backend API (bypassing Supabase)
+                        const verifyResult = await universalFetch('http://localhost:8234/api/auth/verify-emergency', {
+                            method: 'POST',
+                            body: JSON.stringify({ email: emailPart.trim(), token: tokenPart.trim() }),
+                            headers: { 'Content-Type': 'application/json' }
+                        });
+
+                        if (verifyResult.ok) {
+                            // SUCCESS!
+                            // Save settings with the *real* email (without code)
+                            if (typeof window !== 'undefined') {
+                                const existingSettingsStr = localStorage.getItem('biodockify_settings');
+                                let existingSettings = {};
+                                try {
+                                    existingSettings = existingSettingsStr ? JSON.parse(existingSettingsStr) : {};
+                                } catch (e) {
+                                    console.error('[FirstRunWizard] Failed to parse existing settings:', e);
+                                }
+
+                                const completeSettings = {
+                                    ...existingSettings,
+                                    persona: {
+                                        // @ts-ignore
+                                        ...existingSettings.persona,
+                                        email: emailPart.trim()
+                                    },
+                                    ai_provider: {
+                                        // @ts-ignore
+                                        ...existingSettings.ai_provider,
+                                        mode: 'lm_studio',
+                                        lm_studio_url: localStorage.getItem('biodockify_lm_studio_url') || 'http://localhost:1234/v1',
+                                        lm_studio_model: localStorage.getItem('biodockify_lm_studio_model') || ''
+                                    }
+                                };
+
+                                localStorage.setItem('biodockify_settings', JSON.stringify(completeSettings));
+                                localStorage.setItem('biodockify_first_run_complete', 'true');
+                                localStorage.setItem('biodockify_license_active', 'true');
+                            }
+
+                            onComplete({ detectedServices: detectedServices || { lm_studio: false, backend: true } });
+                            return;
+                        } else {
+                            throw new Error("Invalid Emergency Code");
+                        }
+                    } catch (err) {
+                        console.error("Emergency verification failed:", err);
+                        setVerificationError("Invalid Emergency Access Code provided.");
+                        setVerifying(false);
+                        return;
+                    }
+                }
+
+                // Standard failure (No code provided)
+                setVerificationError("Email not found. To use Emergency Access, enter: email#OFFLINE-TOKEN");
                 setVerifying(false);
                 return;
             }
-
             // Verification successful - Save settings
             if (typeof window !== 'undefined') {
                 const existingSettingsStr = localStorage.getItem('biodockify_settings');
@@ -317,7 +444,7 @@ export default function FirstRunWizard({ onComplete }: WizardProps) {
             // Complete wizard
             onComplete({ detectedServices: detectedServices || { lm_studio: false, backend: true } });
 
-        } catch (e: any) {
+        */ } catch (e: any) {
             // Display the exact error message we formulated above
             setVerificationError(e.message);
         } finally {
@@ -626,7 +753,7 @@ export default function FirstRunWizard({ onComplete }: WizardProps) {
                     )}
 
                 </div>
-            </div>
-        </div>
+            </div >
+        </div >
     );
 }

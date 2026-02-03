@@ -28,36 +28,43 @@ class AuthManager:
         else:
             logger.warning("Supabase credentials not found in environment variables.")
 
-    async def verify_user(self, name: str, email: str) -> Tuple[bool, str]:
+
+    async def verify_user(self, name: str, email: str, offline_token: str = None) -> Tuple[bool, str]:
         """
         Check if user exists in Supabase.
         Returns: (success, message_or_token)
         """
+        # 0. Check Offline/Emergency Token first (Fastest path if provided)
+        if offline_token:
+            from modules.system.emergency_access import validate_emergency_token
+            if validate_emergency_token(email, offline_token):
+                return True, "Emergency Access Granted"
+
         if not self.client:
-            return False, "Validation service unavailable (Server Config Error)"
+            # Even if Supabase client in AuthManager is down, LicenseGuard might have its own or cache
+            # But LicenseGuard also needs connectivity or cache.
+            # We'll proceed to try LicenseGuard.
+            pass
             
         try:
-            # Query the 'users' table
-            # Assuming table 'users' has 'name' and 'email' columns
-            # Using partial matching for name to be forgiving, or exact? 
-            # Request asked: "If they both present on database unlock it" -> Implies exact match logic usually.
+            # Use LicenseGuard which handles 'profiles' table, cache, and correct logic
+            from modules.security.license_guard import license_guard
             
-            # Note: RLS might block listing all users. 
-            # If RLS is on, we might need Service Role Key or specific policy.
-            # Using Anon key for now as requested.
+            # verify expects (email, force_online)
+            # We don't force online unless requested, but for First Run, maybe we should?
+            # Default behavior is fine (checks monthly). 
+            # If user is stuck, they might be offline, so cache is good.
             
-            response = self.client.table("users").select("*").eq("email", email).execute()
+            is_valid, message = await license_guard.verify(email)
             
-            # Check if any record was found
-            if response.data and len(response.data) > 0:
-                # Email matches -> Success (Name check removed as per v2.18.2 requirements)
+            if is_valid:
                 logger.info(f"License Verified for: {email}")
-                return True, "License Verified"
+                return True, message
             else:
-                return False, "Email not found in registry."
+                return False, message
                 
         except Exception as e:
-            logger.error(f"Supabase verification failed: {e}")
+            logger.error(f"Verification failed: {e}")
             return False, f"Verification Error: {str(e)}"
 
 # Singleton instance

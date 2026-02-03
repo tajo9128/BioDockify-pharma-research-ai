@@ -35,8 +35,12 @@ except ImportError as e:
 
 try:
     import importlib.util
-    if importlib.util.find_spec("DECIMER") is not None:
-        print(f"[PASS] DECIMER: Loaded successfully (checked via importlib)")
+    # Note: Package is usually lowercase 'decimer' but imported as DECIMER depending on version
+    # Let's try finding the spec for lowercase first as that is standard
+    if importlib.util.find_spec("decimer") is not None:
+        print(f"[PASS] DECIMER: Loaded successfully (found 'decimer')")
+    elif importlib.util.find_spec("DECIMER") is not None:
+         print(f"[PASS] DECIMER: Loaded successfully (found 'DECIMER')")
     else:
         print(f"[FAIL] DECIMER: FAIL - Package not found")
 except ImportError as e:

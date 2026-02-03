@@ -1,0 +1,41 @@
+import urllib.request
+import urllib.error
+import json
+
+def post_json(url, data):
+    req = urllib.request.Request(
+        url, 
+        data=json.dumps(data).encode('utf-8'),
+        headers={'Content-Type': 'application/json'}
+    )
+    try:
+        with urllib.request.urlopen(req) as f:
+            return f.status, json.loads(f.read().decode('utf-8'))
+    except urllib.error.HTTPError as e:
+        return e.code, json.loads(e.read().decode('utf-8'))
+
+def test_verify():
+    url = "http://localhost:8234/api/auth/verify"
+    email = "test_user@example.com"
+    
+    print(f"Testing Standard Verification: {url}")
+    print(f"Email: {email}")
+    
+    # Test 1: Standard Verify
+    # Note: Unless this email is actually in the 'profiles' table, it should fail.
+    # But checking 'profiles' means we are checking the REAL database logic.
+    
+    status, resp = post_json(url, {"email": email})
+    print(f"Status: {status}")
+    print(f"Response: {resp}")
+    
+    if status == 200:
+        if resp.get("status") == "success":
+             print("PASS: Verification Succeeded (Email found)")
+        else:
+             print("PASS: API Reachable (Email not found / license invalid)")
+    else:
+        print(f"FAIL: Server Error {status}")
+
+if __name__ == "__main__":
+    test_verify()

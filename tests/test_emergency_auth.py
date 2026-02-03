@@ -1,0 +1,71 @@
+import urllib.request
+import urllib.error
+import hmac
+import hashlib
+import json
+import base64
+import time
+
+# Use the key from emergency_access.py
+SECRET = "BIODOCKIFY_PHARMA_RESEARCH_OFFLINE_ACCESS_KEY_V1"
+
+def generate_token(email):
+    payload = {
+        "email": email,
+        "exp": int(time.time()) + 3600
+    }
+    json_str = json.dumps(payload)
+    b64_payload = base64.urlsafe_b64encode(json_str.encode()).decode().rstrip("=")
+    signature = hmac.new(SECRET.encode(), b64_payload.encode(), hashlib.sha256).hexdigest()
+    return f"{b64_payload}.{signature}"
+
+def post_json(url, data):
+    req = urllib.request.Request(
+        url, 
+        data=json.dumps(data).encode('utf-8'),
+        headers={'Content-Type': 'application/json'}
+    )
+    try:
+        with urllib.request.urlopen(req) as f:
+            return f.status, json.loads(f.read().decode('utf-8'))
+    except urllib.error.HTTPError as e:
+        return e.code, json.loads(e.read().decode('utf-8'))
+
+def test_endpoint():
+    email = "test_user@example.com"
+    token = generate_token(email)
+    
+    url = "http://localhost:8234/api/auth/verify-emergency"
+    
+    print(f"Testing with Email: {email}")
+    print(f"Token: {token}")
+    
+    print("\n--- Test 1: Valid Token ---")
+    status, resp = post_json(url, {"email": email, "token": token})
+    print(f"Status: {status}")
+    print(f"Response: {resp}")
+    if status == 200 and resp.get("status") == "success":
+        print("PASS")
+    else:
+        print("FAIL")
+
+    print("\n--- Test 2: Email Mismatch ---")
+    status, resp = post_json(url, {"email": "wrong@example.com", "token": token})
+    print(f"Status: {status}")
+    print(f"Response: {resp}")
+    if status == 403:
+        print("PASS")
+    else:
+        print("FAIL (Expected 403)")
+
+    print("\n--- Test 3: Bad Signature ---")
+    status, resp = post_json(url, {"email": email, "token": token + "invalid"})
+    print(f"Status: {status}")
+    print(f"Response: {resp}")
+    if status == 403:
+        print("PASS")
+    else:
+        print("FAIL (Expected 403)")
+
+if __name__ == "__main__":
+    test_endpoint()

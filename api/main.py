@@ -210,6 +210,45 @@ class AgentStateManager:
 
 agent_state = AgentStateManager()
 
+# Standard Verification API (called by UI)
+@app.post("/api/auth/verify")
+async def verify_user_license(request: Dict[str, str]):
+    """
+    Standard verification endpoint.
+    Delegates to AuthManager -> LicenseGuard -> Supabase 'profiles'.
+    """
+    email = request.get("email")
+    if not email:
+        raise HTTPException(status_code=400, detail="Email is required")
+        
+    # Standard check (will check cache first, then online if needed)
+    # For First Run Wizard, we might want to force online if cache is old?
+    # But LicenseGuard handles that automatically (monthly check).
+    success, msg = await auth_manager.verify_user(name="User", email=email)
+    
+    if success:
+        return {"status": "success", "message": msg}
+    else:
+        # 403 Forbidden is appropriate for invalid license
+        # But we return 200 with status=failed so UI can show message nicely
+        # avoiding confusing fetch errors.
+        return {"status": "failed", "message": msg}
+
+@app.post("/api/auth/verify-emergency")
+async def verify_emergency_access(request: Dict[str, str]):
+    email = request.get("email")
+    token = request.get("token")
+    
+    if not email or not token:
+        raise HTTPException(status_code=400, detail="Email and Token are required")
+        
+    success, msg = await auth_manager.verify_user(name="EmergencyUser", email=email, offline_token=token)
+    
+    if success:
+        return {"status": "success", "message": msg}
+    else:
+        raise HTTPException(status_code=403, detail="Invalid or Expired Emergency Token")
+
 @app.post("/api/v2/agent/goal")
 async def set_agent_goal(request: AgentGoal, background_tasks: BackgroundTasks):
     """
