@@ -1,6 +1,6 @@
 [RELEASE NOTES]
-Version: 2.19.0
-Date: 2026-02-01
+Version: 2.19.4
+Date: 2026-02-04
 
 Features:
 - **Optional Verification**: Users can now skip the initial email verification setup and explore the application in "Limited Mode".
