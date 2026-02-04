@@ -244,6 +244,12 @@ export const api = {
   getRecentExports: () =>
     apiRequest<{ id: string; type: string; filename: string; createdAt: string }[]>('/lab/exports'),
 
+  // Agent Zero System Diagnosis
+  diagnoseLmStudio: () =>
+    apiRequest<{ status: string; repairs_attempted: boolean; message: string }>('/diagnose/lm-studio/start', {
+      method: 'POST'
+    }),
+
   exportResult: (format: 'pdf' | 'docx' | 'xlsx', data: any) =>
     apiRequest<{ path: string }>('/export', {
       method: 'POST',

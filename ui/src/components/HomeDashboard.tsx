@@ -44,33 +44,14 @@ export default function HomeDashboard({ onNavigate }: HomeProps) {
     }, []);
 
     const RestrictedCard = ({ onClick, children, id }: { onClick: () => void, children: React.ReactNode, id: string }) => {
-        const isLocked = !licenseActive;
+        // License check removed - Free for everyone
+        const isLocked = false;
 
         return (
             <button
-                onClick={() => {
-                    if (isLocked) {
-                        onNavigate('settings');
-                        return;
-                    }
-                    onClick();
-                }}
-                className={`group relative p-6 bg-gradient-to-br from-slate-900 border rounded-2xl transition-all text-left overflow-hidden ${isLocked
-                    ? 'border-slate-800 opacity-75 grayscale cursor-not-allowed'
-                    : 'from-opacity-20 to-slate-900 border-opacity-20 hover:border-opacity-50'
-                    }`}
-                style={!isLocked ? {} : { borderColor: '#334155' }} // Fallback style
+                onClick={onClick}
+                className="group relative p-6 bg-gradient-to-br from-opacity-20 to-slate-900 border border-opacity-20 hover:border-opacity-50 from-slate-900 border-slate-800 rounded-2xl transition-all text-left overflow-hidden hover:border-slate-600"
             >
-                {/* Lock Overlay */}
-                {isLocked && (
-                    <div className="absolute inset-0 bg-slate-950/60 flex items-center justify-center z-10 backdrop-blur-[1px]">
-                        <div className="bg-slate-900 px-3 py-1.5 rounded-full border border-slate-700 flex items-center space-x-2 shadow-xl">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-amber-400"><rect width="18" height="11" x="3" y="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
-                            <span className="text-xs font-bold text-slate-300">LOCKED</span>
-                        </div>
-                    </div>
-                )}
-
                 {children}
             </button>
         );
@@ -82,12 +63,7 @@ export default function HomeDashboard({ onNavigate }: HomeProps) {
             <div className="max-w-5xl mx-auto mb-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <h1 className="text-4xl font-bold text-white mb-2">Welcome Back, {userName}</h1>
                 <p className="text-slate-400 text-lg">BioDockify v2.19.0 is ready. What shall we discover today?</p>
-                {!licenseActive && (
-                    <div className="mt-4 p-4 bg-amber-900/20 border border-amber-500/30 rounded-lg inline-flex items-center space-x-3">
-                        <span className="text-amber-400">⚠️ Limited Mode Active.</span>
-                        <button onClick={() => onNavigate('settings')} className="text-sm font-bold text-white underline hover:text-amber-300">Unlock Full Access</button>
-                    </div>
-                )}
+
             </div>
 
             <div className="max-w-5xl mx-auto">

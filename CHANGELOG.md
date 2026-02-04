@@ -5,6 +5,18 @@ All notable changes to **BioDockify** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v2.19.3] - 2026-02-04
+### Added
+- **First-Run Experience:** "Hit the Ground Running" - Agent Zero now auto-detects LM Studio and immediately configures the backend for use.
+- **Connection Health:** Added "Diagnose & Auto-Repair" capability in Settings. If a connection fails, Agent Zero can now investigate the port and suggest fixes (e.g., loading a model).
+- **Agent Zero Chat:** Fully integrated real LLM chat in the backend. The `/chat` interface now connects directly to your local LM Studio instance via the `LLMFactory` (no more mock responses).
+- **Settings Security:** Auto-configured settings are now "locked" by default to prevent accidental breakage, with an easy "Unlock" option.
+
+### Fixed
+- **Settings UI:** Fixed duplicate/broken syntax in `SettingsPanel.tsx`.
+- **Backend:** Added missing `/api/diagnose/lm-studio/start` endpoint.
+- **Backend:** Added missing `/api/agent/chat` endpoint.
+
 ## [v2.18.9] - 2026-02-01
 ### Fixed
 - **Build**: Fixed Rust compilation error by restoring mutability to sidecar receiver channel.

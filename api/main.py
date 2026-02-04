@@ -19,7 +19,7 @@ from orchestration.executor import ResearchExecutor
 from modules.analyst.analytics_engine import ResearchAnalyst
 from modules.backup import DriveClient, BackupManager
 
-app = FastAPI(title="BioDockify - Pharma Research AI", version="2.18.3")
+app = FastAPI(title="BioDockify - Pharma Research AI", version="2.19.3")
 
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -248,6 +248,60 @@ async def verify_emergency_access(request: Dict[str, str]):
         return {"status": "success", "message": msg}
     else:
         raise HTTPException(status_code=403, detail="Invalid or Expired Emergency Token")
+
+class AgentRequest(BaseModel):
+    message: str
+    mode: str = "chat"
+
+@app.post("/api/agent/chat")
+async def agent_chat(request: AgentRequest):
+    """
+    Direct Chat Endpoint for Agent Zero.
+    """
+    try:
+        from runtime.config_loader import load_config
+        # Simple Echo for now, or connect to LLM
+        # In a real impl, this would call the agent runtime
+        
+        # Check LLM Provider
+        cfg = load_config()
+        
+        # Instantiate LLM using Factory
+        from modules.llm.factory import LLMFactory
+        
+        provider_mode = cfg.get("ai_provider", {}).get("mode", "auto")
+        
+        # Explicit mapping for "lm_studio" mode if configured in SettingsPanel
+        if provider_mode == "lm_studio":
+            # Ensure config object has expected attributes for Factory
+            if not hasattr(cfg, 'lm_studio_url'):
+                cfg.lm_studio_url = cfg.get("ai_provider", {}).get("lm_studio_url", "http://localhost:1234/v1")
+            if not hasattr(cfg, 'lm_studio_model'):
+                cfg.lm_studio_model = cfg.get("ai_provider", {}).get("lm_studio_model", "auto")
+            
+            adapter = LLMFactory.get_adapter("lm_studio", cfg)
+        else:
+            # Fallback/Auto logic for other providers (Google, OpenRouter, etc)
+            # For brevity/safety, we'll try to find a configured one or default to LM Studio if local
+            adapter = LLMFactory.get_adapter("lm_studio", cfg) # Defaulting to local for now as per user focus
+            
+        if not adapter:
+             return {
+                "reply": "Agent Zero Configuration Error: No valid AI provider found. Please check Settings.",
+                "provider": "error"
+            }
+
+        # Generate Response
+        response_text = adapter.generate(request.message)
+        
+        return {
+            "reply": response_text,
+            "provider": getattr(adapter, 'config_model', 'unknown')
+        }
+    except Exception as e:
+        logger.error(f"Agent Chat Failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.post("/api/v2/agent/goal")
 async def set_agent_goal(request: AgentGoal, background_tasks: BackgroundTasks):
@@ -946,8 +1000,8 @@ async def resource_monitor_middleware(request: Request, call_next):
     """
     Resource Management: Reject heavy requests if system is under stress.
     """
-    # Skip for simple health checks
-    if request.url.path in ["/health", "/api/system/info"]:
+    # Skip for simple health checks and critical auth endpoints
+    if request.url.path in ["/health", "/api/system/info", "/api/auth/verify", "/api/auth/verify-emergency"]:
         return await call_next(request)
 
     # Check RAM

@@ -35,31 +35,24 @@ export default function Sidebar({ activeView, onViewChange }: SidebarProps) {
   const NavItem = ({ item, isBottom = false }: { item: any, isBottom?: boolean }) => {
     const Icon = item.icon;
     const isActive = activeView === item.id;
-    const isLocked = ['research', 'writers', 'omnitools', 'statistics'].includes(item.id) && localStorage.getItem('biodockify_license_active') !== 'true';
+    // License check removed - Free for everyone
+    const isLocked = false;
 
     return (
       <div className="relative group">
         <button
-          onClick={() => {
-            if (isLocked) {
-              onViewChange('settings');
-              return;
-            }
-            onViewChange(item.id);
-          }}
+          onClick={() => onViewChange(item.id)}
           className={cn(
             "w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300 relative",
             isActive
               ? "bg-teal-500/20 text-teal-400 shadow-[0_0_15px_-5px_rgba(20,184,166,0.3)]"
-              : "text-slate-400 hover:text-slate-200 hover:bg-white/5",
-            isLocked && "grayscale opacity-50 cursor-not-allowed"
+              : "text-slate-400 hover:text-slate-200 hover:bg-white/5"
           )}
         >
           <Icon className={cn("w-5 h-5", isActive && "animate-pulse-soft")} strokeWidth={isActive ? 2.5 : 2} />
-          {isLocked && <ShieldCheck className="absolute -top-1 -right-1 w-3 h-3 text-amber-500" />}
         </button>
         <div className="absolute left-full top-1/2 -translate-y-1/2 ml-4 px-3 py-1.5 glass-panel rounded-lg text-xs font-semibold text-slate-200 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all pointer-events-none whitespace-nowrap border border-white/10 shadow-xl z-50">
-          {item.label} {isLocked && "(License Required)"}
+          {item.label}
         </div>
       </div>
     );

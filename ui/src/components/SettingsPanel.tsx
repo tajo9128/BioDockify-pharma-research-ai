@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api, Settings } from '@/lib/api';
 import { AGENT_PERSONAS } from '@/lib/personas';
-import { Save, Server, Cloud, Cpu, RefreshCw, CheckCircle, AlertCircle, Shield, Activity, Power, BookOpen, Layers, FileText, Globe, Database, Key, FlaskConical, Link, FolderOpen, UserCircle, Lock, Unlock } from 'lucide-react';
+import { Save, Server, Cloud, Cpu, RefreshCw, CheckCircle, AlertCircle, Shield, Activity, Power, BookOpen, Layers, FileText, Globe, Database, Key, FlaskConical, Link, FolderOpen, UserCircle, Lock, Unlock, Sparkles, Wrench } from 'lucide-react';
 
 
 // Extended Settings interface matching "Fully Loaded" specs + New User Requests
@@ -112,6 +112,7 @@ export default function SettingsPanel() {
     const [ollamaModels, setOllamaModels] = useState<string[]>([]);
 
     const [connectionMsg, setConnectionMsg] = useState('');
+    const [availableModels, setAvailableModels] = useState<{ id: string }[]>([]);
 
     // API Test Status Tracking
     const [testStatus, setTestStatus] = useState<Record<string, 'idle' | 'testing' | 'success' | 'error'>>({
@@ -139,6 +140,11 @@ export default function SettingsPanel() {
         message: '',
         details: ''
     });
+
+
+
+    // Auto-Configuration State
+    const [isAutoConfigured, setIsAutoConfigured] = useState(false);
 
     // API Test Progress State (for all cloud APIs)
     const [apiTestProgress, setApiTestProgress] = useState<Record<string, {
@@ -216,6 +222,24 @@ export default function SettingsPanel() {
                     persona: { ...prev.persona, ...localSettings.persona },
                     system: { ...prev.system, ...localSettings.system }
                 }));
+
+                // Check for Auto-Configuration Flag
+                const autoConfigured = localStorage.getItem('biodockify_lm_studio_auto_configured');
+                if (autoConfigured === 'true') {
+                    setIsAutoConfigured(true);
+                }
+                // Enforce /models suffix if present as just /v1 (Normalization)
+                const currentUrl = localSettings?.ai_provider?.lm_studio_url;
+                if (currentUrl && currentUrl.endsWith('/v1')) {
+                    setSettings(prev => ({
+                        ...prev,
+                        ai_provider: {
+                            ...prev.ai_provider,
+                            lm_studio_url: `${currentUrl}/models`
+                        }
+                    }));
+                }
+
                 console.log('[Settings] Applied local settings');
             }
 
@@ -341,10 +365,19 @@ export default function SettingsPanel() {
                     message: 'FAILED: No model loaded',
                     details: 'LM Studio server is running but no model is loaded. Please load a model in LM Studio (select a model from the sidebar and click "Load").'
                 });
+                setAvailableModels([]);
                 return;
             }
 
-            const modelId = models[0]?.id || 'unknown';
+            setAvailableModels(models);
+
+            // If current model is empty or not in list, default to first available
+            const currentModelValid = settings.ai_provider.lm_studio_model && models.some((m: any) => m.id === settings.ai_provider.lm_studio_model);
+            let modelId = settings.ai_provider.lm_studio_model;
+
+            if (!currentModelValid) {
+                modelId = models[0]?.id || 'unknown';
+            }
 
             // Step 3: Test model response
             setLmStudioTest(prev => ({
@@ -413,7 +446,7 @@ export default function SettingsPanel() {
                 status: 'error',
                 progress: 100,
                 message: 'FAILED: Connection Error',
-                details: `${failReason}${helpSteps ? '\n\nTo fix:\n' + helpSteps : ''}`
+                details: `${failReason}${helpSteps ? '\n\nTo fix:\n' + helpSteps : ''}\n\n(Debug: ${typeof e === 'object' ? (e.message || JSON.stringify(e)) : String(e)})`
             });
         }
     };
@@ -649,23 +682,59 @@ export default function SettingsPanel() {
                             </div>
 
                             <div className="space-y-3">
+                                {isAutoConfigured && (
+                                    <div className="p-3 bg-teal-500/10 border border-teal-500/30 rounded flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <Sparkles className="w-4 h-4 text-teal-400" />
+                                            <span className="text-xs font-bold text-teal-300">Auto-Configured by Wizard</span>
+                                        </div>
+                                        <button
+                                            onClick={() => {
+                                                if (confirm("Are you sure you want to manually edit the configuration?")) {
+                                                    setIsAutoConfigured(false);
+                                                    localStorage.removeItem('biodockify_lm_studio_auto_configured');
+                                                }
+                                            }}
+                                            className="text-[10px] text-slate-400 underline hover:text-white"
+                                        >
+                                            Unlock Settings
+                                        </button>
+                                    </div>
+                                )}
                                 <div>
                                     <label className="text-xs text-slate-400 block mb-1">Local Server URL</label>
                                     <input
                                         value={settings.ai_provider.lm_studio_url || 'http://localhost:1234/v1/models'}
                                         onChange={(e) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, lm_studio_url: e.target.value } })}
                                         placeholder="http://localhost:1234/v1/models"
-                                        className="w-full bg-slate-900 border border-slate-700 rounded-md px-3 py-2 text-sm text-white font-mono"
+                                        disabled={isAutoConfigured}
+                                        className={`w-full bg-slate-900 border border-slate-700 rounded-md px-3 py-2 text-sm text-white font-mono ${isAutoConfigured ? 'opacity-50 cursor-not-allowed' : ''}`}
                                     />
                                 </div>
                                 <div>
                                     <label className="text-xs text-slate-400 block mb-1">Model ID (Optional)</label>
-                                    <input
-                                        value={settings.ai_provider.lm_studio_model || ''}
-                                        onChange={(e) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, lm_studio_model: e.target.value } })}
-                                        placeholder="Enter Model ID (Leave empty to use loaded model)"
-                                        className="w-full bg-slate-900 border border-slate-700 rounded-md px-3 py-2 text-sm text-white"
-                                    />
+                                    {availableModels.length > 0 ? (
+                                        <select
+                                            value={settings.ai_provider.lm_studio_model || ''}
+                                            onChange={(e) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, lm_studio_model: e.target.value } })}
+                                            disabled={isAutoConfigured}
+                                            className={`w-full bg-slate-900 border border-slate-700 rounded-md px-3 py-2 text-sm text-white outline-none focus:border-indigo-500 appearance-none ${isAutoConfigured ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                        >
+                                            {availableModels.map((model) => (
+                                                <option key={model.id} value={model.id}>
+                                                    {model.id.split('/').pop()}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    ) : (
+                                        <input
+                                            value={settings.ai_provider.lm_studio_model || ''}
+                                            disabled={isAutoConfigured}
+                                            onChange={(e) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, lm_studio_model: e.target.value } })}
+                                            placeholder="Enter Model ID (Leave empty to use loaded model)"
+                                            className="w-full bg-slate-900 border border-slate-700 rounded-md px-3 py-2 text-sm text-white"
+                                        />
+                                    )}
                                     <p className="text-[10px] text-slate-500 mt-1">
                                         Recommended for 8GB RAM: <b>BioMedLM-2.7B</b> or <b>LFM-2 2.6B</b>.
                                     </p>
@@ -719,12 +788,43 @@ export default function SettingsPanel() {
                                     )}
 
                                     {lmStudioTest.status === 'error' && (
-                                        <div className="p-3 bg-red-950/30 border border-red-500/30 rounded-lg">
-                                            <div className="flex items-center space-x-2 mb-1">
-                                                <AlertCircle className="w-4 h-4 text-red-400" />
-                                                <span className="text-sm font-bold text-red-400">{lmStudioTest.message}</span>
+                                        <div className="space-y-2">
+                                            <div className="p-3 bg-red-950/30 border border-red-500/30 rounded-lg">
+                                                <div className="flex items-center space-x-2 mb-1">
+                                                    <AlertCircle className="w-4 h-4 text-red-400" />
+                                                    <span className="text-sm font-bold text-red-400">{lmStudioTest.message}</span>
+                                                </div>
+                                                <p className="text-xs text-red-300/70">{lmStudioTest.details}</p>
                                             </div>
-                                            <p className="text-xs text-red-300/70">{lmStudioTest.details}</p>
+
+                                            {/* Agent Zero Auto-Repair Button */}
+                                            <button
+                                                onClick={async () => {
+                                                    setLmStudioTest(prev => ({ ...prev, status: 'testing', message: '🤖 Agent Zero is attempting repairs...', progress: 10 }));
+                                                    try {
+                                                        const res = await api.diagnoseLmStudio();
+                                                        setLmStudioTest({
+                                                            status: 'success', // Provisional success if repair trigger works, but normally we'd re-test
+                                                            progress: 100,
+                                                            message: 'Diagnosis Complete',
+                                                            details: res.message || 'Repairs attempted. Please re-test connection.'
+                                                        });
+                                                        // Auto-trigger retest after 2s
+                                                        setTimeout(() => handleTestLmStudio(), 2000);
+                                                    } catch (e: any) {
+                                                        setLmStudioTest(prev => ({
+                                                            status: 'error',
+                                                            progress: 100,
+                                                            message: 'Repair Failed',
+                                                            details: e.message || 'Agent Zero could not fix the issue.'
+                                                        }));
+                                                    }
+                                                }}
+                                                className="w-full flex items-center justify-center space-x-2 bg-amber-600 hover:bg-amber-500 text-white py-2 rounded-md font-bold transition-colors"
+                                            >
+                                                <Wrench className="w-4 h-4" />
+                                                <span>Diagnose & Auto-Repair with Agent Zero</span>
+                                            </button>
                                         </div>
                                     )}
                                 </div>

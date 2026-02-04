@@ -43,8 +43,11 @@ export default function FirstRunWizard({ onComplete }: WizardProps) {
     const [savingSettings, setSavingSettings] = useState(false);
 
     // Persona/Verification State (Step 6)
+    // Persona/Verification State (Step 6)
     const [personaEmail, setPersonaEmail] = useState('');
     const [verifying, setVerifying] = useState(false);
+    const [verifyProgress, setVerifyProgress] = useState(0);
+    const [verifyStage, setVerifyStage] = useState('');
     const [verificationError, setVerificationError] = useState('');
 
     // Step 2: System Checks (Auto-run when entering step 2)
@@ -108,7 +111,7 @@ export default function FirstRunWizard({ onComplete }: WizardProps) {
 
                     if (result.ok && result.data?.data?.length > 0) {
                         detected = true;
-                        detectedUrl = url;
+                        detectedUrl = `${url}/models`;
                         detectedModel = result.data.data[0]?.id || 'Unknown';
                     }
                 } catch (e) {
@@ -131,6 +134,8 @@ export default function FirstRunWizard({ onComplete }: WizardProps) {
                     localStorage.setItem('biodockify_lm_studio_url', detectedUrl);
                     localStorage.setItem('biodockify_lm_studio_model', detectedModel);
                     localStorage.setItem('biodockify_ai_mode', 'lm_studio');
+                    // Auto-lock settings to prevent accidental changes
+                    localStorage.setItem('biodockify_lm_studio_auto_configured', 'true');
                 }
 
                 // Advance to Step 4 (Settings)
@@ -183,14 +188,15 @@ export default function FirstRunWizard({ onComplete }: WizardProps) {
             return;
         }
 
-
         setVerifying(true);
         setVerificationError('');
+        setVerifyProgress(5);
+        setVerifyStage('Initializing...');
 
         // Helper: Connectivity Check
         const checkConnectivity = async () => {
+            // Try Google first (reliable global CDN)
             try {
-                // Try Google first (reliable global CDN)
                 await fetch('https://www.google.com/favicon.ico', { mode: 'no-cors', cache: 'no-store' });
                 return true;
             } catch (e) {
@@ -203,19 +209,25 @@ export default function FirstRunWizard({ onComplete }: WizardProps) {
 
         try {
             // 1. Strict Connectivity Check First
-            // "No API only internet checking... when internet connected its software failure"
+            setVerifyProgress(15);
+            setVerifyStage('Checking Internet Connection...');
+            await delay(500); // Visual pacing
+
             const isOnlineInitial = await checkConnectivity();
             if (!isOnlineInitial) {
-                throw new Error("No internet connection detected. Please check your network.");
+                // Double check with another reliable source just in case
+                try {
+                    await fetch('https://1.1.1.1', { mode: 'no-cors', cache: 'no-store' });
+                } catch (e) {
+                    throw new Error("No internet connection detected. Please check your network cables or Wi-Fi.");
+                }
             }
 
-            const SUPABASE_URL = 'https://ohzfktmtwmubyhvspexv.supabase.co';
-            const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9oemZrdG10d211YnlodnNwZXh2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM4MTk2MjgsImV4cCI6MjA3OTM5NTYyOH0.v8qHeRx5jkL8iaNEbEP_NMIvvUk4oidwwW6PkXo_DVY';
-
             // 2. Standard Verification w/ Backend
-            setVerificationError(`Verifying... (Connecting to secure backend...)`);
-            const { universalFetch } = await import('@/lib/services/universal-fetch');
+            setVerifyProgress(40);
+            setVerifyStage('Connecting to Secure Backend...');
 
+            const { universalFetch } = await import('@/lib/services/universal-fetch');
             const isEmergency = personaEmail.includes('#');
             let verifiedEmail = personaEmail;
             let result: any = null;
@@ -223,229 +235,87 @@ export default function FirstRunWizard({ onComplete }: WizardProps) {
             try {
                 if (isEmergency) {
                     const [emailPart, tokenPart] = personaEmail.split('#');
-                    setVerificationError("Validating Emergency Token...");
+                    setVerifyProgress(60);
+                    setVerifyStage('Validating Emergency Token...');
+
                     const [apiResult] = await Promise.all([
                         universalFetch('http://localhost:8234/api/auth/verify-emergency', {
                             method: 'POST',
                             body: JSON.stringify({ email: emailPart.trim(), token: tokenPart.trim() }),
                             headers: { 'Content-Type': 'application/json' }
                         }),
-                        delay(2000)
+                        delay(1500)
                     ]);
                     result = apiResult;
 
                     if (result.ok) {
                         verifiedEmail = emailPart.trim();
                     } else {
+                        // Simplify backend error structure for user display
                         throw new Error(result.data?.detail || "Invalid Emergency Token");
                     }
                 } else {
                     // Standard Verification
+                    setVerifyProgress(50);
+                    setVerifyStage('Verifying License...');
+
                     const [apiResult] = await Promise.all([
                         universalFetch('http://localhost:8234/api/auth/verify', {
                             method: 'POST',
                             body: JSON.stringify({ email: personaEmail }),
                             headers: { 'Content-Type': 'application/json' }
                         }),
-                        delay(2500)
+                        delay(2000)
                     ]);
                     result = apiResult;
 
+                    setVerifyProgress(80);
+
                     if (result.ok && result.data?.status === 'success') {
-                        // Success
+                        setVerifyStage('License Verified!');
                     } else {
                         const msg = result.data?.message || "User not found. Please register or use an Emergency Code.";
                         throw new Error(msg);
                     }
                 }
             } catch (err: any) {
+                // If API call fails, diagnose WHY
                 const isOnlineNow = await checkConnectivity();
-                if (!isOnlineNow) throw new Error("Connection lost. Please check your internet connection.");
+                if (!isOnlineNow) throw new Error("Connection lost during verification. Please check your internet connection.");
+
+                // If we are online but API failed, it's likely the backend or the API response itself
+                if (err.message && err.message.includes('Failed to fetch')) {
+                    throw new Error("Cannot reach BioDockify Backend (Port 8234). Is the core service running?");
+                }
+
                 throw err;
             }
 
+            setVerifyProgress(90);
+            setVerifyStage('Finalizing Setup...');
+
             if (typeof window !== 'undefined') {
                 const existingSettingsStr = localStorage.getItem('biodockify_settings');
-                let existingSettings = {};
+                let existingSettings: any = {};
                 try { existingSettings = existingSettingsStr ? JSON.parse(existingSettingsStr) : {}; } catch (e) { }
                 const completeSettings = {
                     ...existingSettings,
                     persona: { ...existingSettings.persona, email: verifiedEmail },
-                    ai_provider: { ...existingSettings.ai_provider, mode: 'lm_studio', lm_studio_url: localStorage.getItem('biodockify_lm_studio_url') || 'http://localhost:1234/v1', lm_studio_model: localStorage.getItem('biodockify_lm_studio_model') || '' }
+                    ai_provider: { ...existingSettings.ai_provider, mode: 'lm_studio', lm_studio_url: localStorage.getItem('biodockify_lm_studio_url') || 'http://localhost:1234/v1/models', lm_studio_model: localStorage.getItem('biodockify_lm_studio_model') || '' }
                 };
                 localStorage.setItem('biodockify_settings', JSON.stringify(completeSettings));
                 localStorage.setItem('biodockify_first_run_complete', 'true');
                 localStorage.setItem('biodockify_license_active', 'true');
             }
+
+            setVerifyProgress(100);
+            await delay(500);
 
             onComplete({ detectedServices: detectedServices || { lm_studio: false, backend: true } });
             return;
 
-            /* OLD LOGIC REMOVED
-
-            try {
-                const { universalFetch } = await import('@/lib/services/universal-fetch');
-
-                const [apiResult] = await Promise.all([
-                    universalFetch('http://localhost:8234/api/auth/verify', {
-                        method: 'POST',
-                        body: JSON.stringify({ email: personaEmail }),
-                        headers: { 'Content-Type': 'application/json' }
-                    }),
-                    delay(2500) // Minimum 2.5s for "real feeling"
-                ]);
-
-                response = apiResult; // Adapt to expect a Response-like object from universalFetch
-
-                // Parse backend response
-                if (response.ok) {
-                    // Check the inner "status" field from our API
-                    if (response.data && response.data.status === 'success') {
-                        // SUCCESS!
-                        // API verified content
-                        const successData = response.data; // Just a placeholder to break loop
-                        break;
-                    } else {
-                        // API call worked, but returned "failed" status (license invalid)
-                        throw new Error(response.data?.message || "License verification failed.");
-                    }
-                } else {
-                    // HTTP Error (500, etc)
-                    throw new Error(`Server connection error (${response.status})`);
-                }
-
-            } catch (err: any) {
-                // Simplify error loop
-                throw err;
-            }
-
-            // 3. Robust Error Analysis
-            if (!response) {
-                // All retries failed (Network/Fetch errors)
-                const isOnlineNow = await checkConnectivity();
-                if (!isOnlineNow) {
-                    // Connection dropped during attempts
-                    throw new Error("Connection lost. Please check your internet connection.");
-                } else {
-                    // **CRITICAL**: Internet IS connected, but Supabase failed.
-                    // This is the "Software Failure" the user mentioned.
-                    throw new Error("Verification Service Error. Please try again later or contact support.");
-                }
-            }
-
-            if (response && !response.ok) {
-                // The server responded, but with an error status
-                throw new Error(`Verification service returned error (Status: ${response.status})`);
-            }
-
-            const data = response ? await response.json() : null;
-
-            if (!data || data.length === 0) {
-                // 3. Emergency Access Check (Robust Offline Support)
-                // Check if user entered "email#code"
-                const [emailPart, tokenPart] = personaEmail.split('#');
-
-                if (tokenPart && tokenPart.length > 5) {
-                    // Try validating the emergency token
-                    const { universalFetch } = await import('@/lib/services/universal-fetch');
-
-                    setVerificationError("Validating Emergency Access Code...");
-
-                    try {
-                        // Call local backend API (bypassing Supabase)
-                        const verifyResult = await universalFetch('http://localhost:8234/api/auth/verify-emergency', {
-                            method: 'POST',
-                            body: JSON.stringify({ email: emailPart.trim(), token: tokenPart.trim() }),
-                            headers: { 'Content-Type': 'application/json' }
-                        });
-
-                        if (verifyResult.ok) {
-                            // SUCCESS!
-                            // Save settings with the *real* email (without code)
-                            if (typeof window !== 'undefined') {
-                                const existingSettingsStr = localStorage.getItem('biodockify_settings');
-                                let existingSettings = {};
-                                try {
-                                    existingSettings = existingSettingsStr ? JSON.parse(existingSettingsStr) : {};
-                                } catch (e) {
-                                    console.error('[FirstRunWizard] Failed to parse existing settings:', e);
-                                }
-
-                                const completeSettings = {
-                                    ...existingSettings,
-                                    persona: {
-                                        // @ts-ignore
-                                        ...existingSettings.persona,
-                                        email: emailPart.trim()
-                                    },
-                                    ai_provider: {
-                                        // @ts-ignore
-                                        ...existingSettings.ai_provider,
-                                        mode: 'lm_studio',
-                                        lm_studio_url: localStorage.getItem('biodockify_lm_studio_url') || 'http://localhost:1234/v1',
-                                        lm_studio_model: localStorage.getItem('biodockify_lm_studio_model') || ''
-                                    }
-                                };
-
-                                localStorage.setItem('biodockify_settings', JSON.stringify(completeSettings));
-                                localStorage.setItem('biodockify_first_run_complete', 'true');
-                                localStorage.setItem('biodockify_license_active', 'true');
-                            }
-
-                            onComplete({ detectedServices: detectedServices || { lm_studio: false, backend: true } });
-                            return;
-                        } else {
-                            throw new Error("Invalid Emergency Code");
-                        }
-                    } catch (err) {
-                        console.error("Emergency verification failed:", err);
-                        setVerificationError("Invalid Emergency Access Code provided.");
-                        setVerifying(false);
-                        return;
-                    }
-                }
-
-                // Standard failure (No code provided)
-                setVerificationError("Email not found. To use Emergency Access, enter: email#OFFLINE-TOKEN");
-                setVerifying(false);
-                return;
-            }
-            // Verification successful - Save settings
-            if (typeof window !== 'undefined') {
-                const existingSettingsStr = localStorage.getItem('biodockify_settings');
-                let existingSettings = {};
-                try {
-                    existingSettings = existingSettingsStr ? JSON.parse(existingSettingsStr) : {};
-                } catch (e) {
-                    console.error('[FirstRunWizard] Failed to parse existing settings:', e);
-                }
-
-                const completeSettings = {
-                    ...existingSettings,
-                    persona: {
-                        // @ts-ignore
-                        ...existingSettings.persona,
-                        email: personaEmail
-                    },
-                    ai_provider: {
-                        // @ts-ignore
-                        ...existingSettings.ai_provider,
-                        mode: 'lm_studio',
-                        lm_studio_url: localStorage.getItem('biodockify_lm_studio_url') || 'http://localhost:1234/v1',
-                        lm_studio_model: localStorage.getItem('biodockify_lm_studio_model') || ''
-                    }
-                };
-
-                localStorage.setItem('biodockify_settings', JSON.stringify(completeSettings));
-                localStorage.setItem('biodockify_first_run_complete', 'true');
-                localStorage.setItem('biodockify_license_active', 'true');
-            }
-
-            // Complete wizard
-            onComplete({ detectedServices: detectedServices || { lm_studio: false, backend: true } });
-
-        */ } catch (e: any) {
-            // Display the exact error message we formulated above
+        } catch (e: any) {
+            setVerifyProgress(0); // Reset progress on failure to discourage "stuck" look
             setVerificationError(e.message);
         } finally {
             setVerifying(false);
@@ -465,7 +335,7 @@ export default function FirstRunWizard({ onComplete }: WizardProps) {
                 const defaultSettings = {
                     ai_provider: {
                         mode: 'lm_studio',
-                        lm_studio_url: 'http://localhost:1234/v1',
+                        lm_studio_url: 'http://localhost:1234/v1/models',
                         lm_studio_model: ''
                     }
                 };
@@ -711,10 +581,44 @@ export default function FirstRunWizard({ onComplete }: WizardProps) {
                                         disabled={verifying}
                                     />
                                 </div>
+
+                                {verifying && (
+                                    <div className="space-y-2 animate-in fade-in duration-300">
+                                        <div className="flex justify-between text-xs text-slate-400">
+                                            <span>{verifyStage}</span>
+                                            <span>{Math.round(verifyProgress)}%</span>
+                                        </div>
+                                        <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
+                                            <div
+                                                className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-500 ease-out"
+                                                style={{ width: `${verifyProgress}%` }}
+                                            />
+                                        </div>
+                                    </div>
+                                )}
+
                                 {verificationError && (
-                                    <div className="p-3 bg-red-900/30 border border-red-800 rounded-lg text-sm text-red-300 flex items-start space-x-2">
-                                        <span>⚠️</span>
-                                        <span>{verificationError}</span>
+                                    <div className="p-4 bg-red-950/40 border border-red-900/50 rounded-lg animate-in slide-in-from-top-2 duration-300">
+                                        <div className="flex items-start space-x-3">
+                                            <XCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                                            <div className="space-y-2">
+                                                <h3 className="text-sm font-semibold text-red-400">Verification Failed</h3>
+                                                <p className="text-xs text-red-300/80 leading-relaxed">
+                                                    {verificationError}
+                                                </p>
+                                                <div className="pt-2 flex gap-2">
+                                                    <button
+                                                        onClick={() => {
+                                                            setVerificationError('');
+                                                            handleVerify();
+                                                        }}
+                                                        className="px-3 py-1.5 bg-red-900/30 hover:bg-red-900/50 border border-red-800 text-red-300 text-xs rounded transition-colors"
+                                                    >
+                                                        Try Again
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                 )}
                             </div>
@@ -728,7 +632,7 @@ export default function FirstRunWizard({ onComplete }: WizardProps) {
                                     {verifying ? (
                                         <>
                                             <RefreshCcw className="w-5 h-5 animate-spin" />
-                                            <span>Checking...</span>
+                                            <span>Verifying...</span>
                                         </>
                                     ) : (
                                         <>
