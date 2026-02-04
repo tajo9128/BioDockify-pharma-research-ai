@@ -1,6 +1,6 @@
 {
     "name": "biodockify-desktop",
-    "version": "2.19.5",
+    "version": "2.19.6",
     "description": "BioDockify - Pharma Research AI: Desktop Application",
     "private": true,
     "scripts": {

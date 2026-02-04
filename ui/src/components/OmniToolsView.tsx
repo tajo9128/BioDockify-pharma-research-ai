@@ -59,7 +59,8 @@ export default function OmniToolsView() {
     const [params, setParams] = useState<any>({});
 
     // License Guard (Includes GDrive if added later)
-    const isLicenseActive = typeof window !== 'undefined' && localStorage.getItem('biodockify_license_active') === 'true';
+    // License Guard - Unlocked for everyone
+    const isLicenseActive = true;
 
     if (!isLicenseActive) {
         return (
