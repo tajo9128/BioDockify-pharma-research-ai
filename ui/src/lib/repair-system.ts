@@ -84,8 +84,8 @@ export class RepairManager {
                             const { Command } = await import('@tauri-apps/api/shell');
                             console.log('[Repair] Using Tauri to start backend...');
 
-                            // Start the backend server
-                            const cmd = new Command('cmd', ['/c', 'start', '/b', '.venv\\Scripts\\python.exe', 'server.py']);
+                            // Start the backend server via robust launcher
+                            const cmd = new Command('cmd', ['/c', 'start', '/b', '.venv\\Scripts\\python.exe', 'backend_launcher.py']);
                             await cmd.execute();
 
                             // Wait for startup
@@ -190,7 +190,7 @@ export class RepairManager {
         }
 
         // 4. AI Model Pull (if no models available)
-        const modelCheck = diagnosis.checks.find(c => c.id === 'local_models');
+        const modelCheck = diagnosis.checks.find(c => c.id === 'local_models_ollama'); // Updated ID from diagnostics.ts
         if (modelCheck && modelCheck.status !== 'ok') {
             actions.push({
                 id: 'pull_model',
@@ -199,6 +199,41 @@ export class RepairManager {
                 action: async () => {
                     console.log('[Repair] Downloading required model...');
                     return await manager.ensureDefaultModel();
+                }
+            });
+        }
+
+        // 5. SurfSense (Knowledge Base) Repair
+        const ssCheck = diagnosis.checks.find(c => c.id === 'surfsense_service');
+        if (ssCheck && ssCheck.status !== 'ok') {
+            actions.push({
+                id: 'start_surfsense',
+                description: 'Start Knowledge Engine (SurfSense)',
+                risk: 'medium',
+                action: async () => {
+                    console.log('[Repair] Attempting to start SurfSense...');
+
+                    // Try via Backend API first (if it supports docker control)
+                    try {
+                        const res = await fetch('http://localhost:8234/api/v2/system/start-surfsense', {
+                            method: 'POST',
+                            signal: AbortSignal.timeout(15000)
+                        });
+                        if (res.ok) return true;
+                    } catch { }
+
+                    // Fallback to Lifecycle Manager (Docker Compose via Shell)
+                    // Note: This matches the logic we saw in service-lifecycle.ts
+                    // We need to cast manager to access the private/protected method if not exposed, 
+                    // or better, rely on autoStartServices relative to config.
+                    // But effectively, let's try to toggle it.
+
+                    // Actually, service-lifecycle has autoStartServices which internally calls startFurfSense
+                    // We can reuse that public method.
+                    const res = await manager.autoStartServices();
+                    // Check if SurfSense is now running
+                    const status = await manager.checkService('surfsense');
+                    return status.running;
                 }
             });
         }
@@ -287,7 +322,7 @@ export class RepairManager {
      * Executes the actions in the plan sequentially.
      * MUST be triggered by explicit user approval.
      */
-    public async executeRepairPlan(plan: RepairPlan): Promise<RepairResult> {
+    public async executeRepairPlan(plan: RepairPlan, options: any = {}): Promise<RepairResult> {
         console.log('[RepairManager] Executing approved repair plan:', plan.id);
 
         const results: { description: string; success: boolean }[] = [];
@@ -309,7 +344,7 @@ export class RepairManager {
 
         // STEP 5: Verification
         console.log('[RepairManager] Verifying repairs...');
-        const finalDiagnosis = await this.diagnosticEngine.runDiagnosis();
+        const finalDiagnosis = await this.diagnosticEngine.runDiagnosis(options);
 
         const success = !finalDiagnosis.issuesFound;
 

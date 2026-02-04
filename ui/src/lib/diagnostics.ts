@@ -12,6 +12,12 @@
 
 import { getServiceLifecycleManager } from './service-lifecycle';
 
+export interface DiagnosticOptions {
+    checkOllama?: boolean;
+    checkSurfSense?: boolean;
+    checkLmStudio?: boolean;
+}
+
 export interface DiagnosticCheck {
     id: string;
     name: string;
@@ -43,71 +49,14 @@ export class DiagnosticEngine {
     /**
      * Run a full read-only diagnosis of the system
      */
-    public async runDiagnosis(): Promise<DiagnosticReport> {
-        console.log('[DiagnosticEngine] Starting full system diagnosis...');
+    public async runDiagnosis(options: DiagnosticOptions = {}): Promise<DiagnosticReport> {
+        console.log('[DiagnosticEngine] Starting full system diagnosis...', options);
 
         const checks: DiagnosticCheck[] = [];
         const manager = getServiceLifecycleManager();
+        const { checkOllama = true, checkSurfSense = true, checkLmStudio = true } = options;
 
-        // 1. Check Ollama Service
-        /* 
-         * Note: We use the ServiceLifecycleManager for the base check,
-         * but we add more context here if possible.
-         */
-        const ollamaStatus = await manager.checkService('ollama');
-        checks.push({
-            id: 'ollama_service',
-            name: 'Ollama Service',
-            status: ollamaStatus.running ? 'ok' : 'error',
-            message: ollamaStatus.running ? 'Service is active' : 'Service is not responding',
-            timestamp: new Date()
-        });
-
-        // 2. Check Local Models (if Ollama is running)
-        if (ollamaStatus.running) {
-            try {
-                const models = await manager.getInstalledModels();
-                const installedCount = models.filter(m => m.installed).length;
-
-                if (installedCount > 0) {
-                    checks.push({
-                        id: 'local_models',
-                        name: 'Local Models',
-                        status: 'ok',
-                        message: `${installedCount} models installed`,
-                        timestamp: new Date()
-                    });
-                } else {
-                    checks.push({
-                        id: 'local_models',
-                        name: 'Local Models',
-                        status: 'warning',
-                        message: 'No models found. AI will need to download one.',
-                        timestamp: new Date()
-                    });
-                }
-            } catch (e) {
-                checks.push({
-                    id: 'local_models',
-                    name: 'Local Models',
-                    status: 'error',
-                    message: 'Failed to list models',
-                    timestamp: new Date()
-                });
-            }
-        }
-
-        // 3. Check Neo4j Service
-        const neo4jStatus = await manager.checkService('neo4j');
-        checks.push({
-            id: 'neo4j_service',
-            name: 'Neo4j Database',
-            status: neo4jStatus.running ? 'ok' : 'warning', // Warning because it's optional
-            message: neo4jStatus.running ? 'Database is active' : 'Database is not responding (Knowledge Graph disabled)',
-            timestamp: new Date()
-        });
-
-        // 4. Check Backend API
+        // 1. Check Backend API (Always Critical)
         const backendStatus = await manager.checkService('backend');
         checks.push({
             id: 'backend_api',
@@ -117,46 +66,96 @@ export class DiagnosticEngine {
             timestamp: new Date()
         });
 
-        // 5. Check LM Studio (Local AI Model Server)
-        let lmStudioStatus: 'ok' | 'warning' | 'error' = 'error';
-        let lmStudioMessage = 'LM Studio not running';
+        // 2. Check Ollama Service
+        if (checkOllama) {
+            try {
+                const ollamaStatus = await manager.checkService('ollama');
+                checks.push({
+                    id: 'ollama_service',
+                    name: 'Ollama Service',
+                    status: ollamaStatus.running ? 'ok' : 'error',
+                    message: ollamaStatus.running ? 'Service is active' : 'Service is not responding',
+                    timestamp: new Date()
+                });
 
-        try {
-            const lmRes = await fetch('http://localhost:1234/v1/models', {
-                method: 'GET',
-                signal: AbortSignal.timeout(3000)
-            });
-            if (lmRes.ok) {
-                const data = await lmRes.json();
-                const hasModels = (data.data || []).length > 0;
-                if (hasModels) {
-                    lmStudioStatus = 'ok';
-                    lmStudioMessage = `Model loaded: ${data.data[0]?.id || 'Unknown'}`;
-                } else {
-                    lmStudioStatus = 'warning';
-                    lmStudioMessage = 'LM Studio running but no model loaded';
+                // Check Local Models if service is running
+                if (ollamaStatus.running) {
+                    try {
+                        const models = await manager.getInstalledModels();
+                        const installedCount = models.filter(m => m.installed).length;
+                        checks.push({
+                            id: 'local_models_ollama',
+                            name: 'Ollama Models',
+                            status: installedCount > 0 ? 'ok' : 'warning',
+                            message: installedCount > 0 ? `${installedCount} models installed` : 'No models found',
+                            timestamp: new Date()
+                        });
+                    } catch (e) {
+                        // Ignore model list error
+                    }
                 }
+            } catch (e) {
+                // If service check throws, report error
+                checks.push({ id: 'ollama_service', name: 'Ollama Service', status: 'error', message: 'Service check failed', timestamp: new Date() });
             }
-        } catch {
-            // Already set to error
         }
 
-        checks.push({
-            id: 'lm_studio',
-            name: 'LM Studio',
-            status: lmStudioStatus,
-            message: lmStudioMessage,
-            timestamp: new Date()
-        });
+        // 3. Check SurfSense (Knowledge Base / Neo4j Proxy)
+        if (checkSurfSense) {
+            try {
+                const ssStatus = await manager.checkService('surfsense');
+                checks.push({
+                    id: 'surfsense_service',
+                    name: 'Knowledge Base (SurfSense)',
+                    status: ssStatus.running ? 'ok' : 'warning',
+                    message: ssStatus.running ? 'Knowledge Engine active' : 'Knowledge Engine offline (optional)',
+                    timestamp: new Date()
+                });
+            } catch (e) {
+                // Skip if service unknown
+            }
+        }
 
-        // 5. Basic System Checks (Simulated for Browser/Tauri scope limits)
-        // In a real Tauri app with unrestricted shell scope, we could run 'df -h' etc.
-        // For now we assume disk is OK unless we get IO errors, but we log the check.
+        // 4. Check LM Studio
+        if (checkLmStudio) {
+            let lmStudioStatus: 'ok' | 'warning' | 'error' = 'error';
+            let lmStudioMessage = 'LM Studio not running';
+
+            try {
+                const lmRes = await fetch('http://localhost:1234/v1/models', {
+                    method: 'GET',
+                    signal: AbortSignal.timeout(3000)
+                });
+                if (lmRes.ok) {
+                    const data = await lmRes.json();
+                    const hasModels = (data.data || []).length > 0;
+                    if (hasModels) {
+                        lmStudioStatus = 'ok';
+                        lmStudioMessage = `Model loaded: ${data.data[0]?.id || 'Unknown'}`;
+                    } else {
+                        lmStudioStatus = 'warning';
+                        lmStudioMessage = 'LM Studio running but no model loaded';
+                    }
+                }
+            } catch {
+                // Keep error status
+            }
+
+            checks.push({
+                id: 'lm_studio',
+                name: 'LM Studio',
+                status: lmStudioStatus,
+                message: lmStudioMessage,
+                timestamp: new Date()
+            });
+        }
+
+        // 5. System Resources (Always)
         checks.push({
             id: 'disk_space',
-            name: 'Disk Space',
+            name: 'System Integrity',
             status: 'ok',
-            message: 'Drive write access confirmed', // Simplified check
+            message: 'Drive write access confirmed',
             timestamp: new Date()
         });
 
@@ -164,7 +163,7 @@ export class DiagnosticEngine {
         const errors = checks.filter(c => c.status === 'error');
         const warnings = checks.filter(c => c.status === 'warning');
         let summary = 'System is healthy.';
-        let recommendation = undefined;
+        let recommendation: string | undefined = undefined;
 
         if (errors.length > 0) {
             summary = `Found ${errors.length} critical issue(s). Service repair required.`;

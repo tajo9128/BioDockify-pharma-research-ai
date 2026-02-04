@@ -73,9 +73,10 @@ async function tryStartBackend(): Promise<boolean> {
     try {
         const { Command } = await import('@tauri-apps/api/shell');
 
-        // Start the backend server
-        console.log('[BackendInitializer] Attempting to start backend via Tauri...');
-        const cmd = new Command('cmd', ['/c', 'start', '/b', '.venv\\Scripts\\python.exe', 'server.py']);
+        // Start the backend server via launcher for auto-restart
+        console.log('[BackendInitializer] Attempting to start backend via Tauri (Launcher)...');
+        // We use backend_launcher.py which runs an infinite loop
+        const cmd = new Command('cmd', ['/c', 'start', '/b', '.venv\\Scripts\\python.exe', 'backend_launcher.py']);
         await cmd.execute();
 
         // Wait a bit for it to start

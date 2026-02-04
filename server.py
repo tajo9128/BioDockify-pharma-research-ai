@@ -54,10 +54,8 @@ except ImportError:
     logging.info("Neo4j not installed - graph features will operate in offline mode")
 
 # Hint for DECIMER if available, but it might be a sub-module.
-try:
-    import DECIMER
-except ImportError:
-    pass
+# We skip top-level import to avoid startup hangs due to heavy weights.
+# The modules using it (like im2smiles) handle lazy loading internally.
 
 from api.main import app
 

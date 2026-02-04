@@ -33,13 +33,16 @@ export async function universalFetch(url: string, options: FetchOptions = {}): P
         // Use Tauri's HTTP client (bypasses CORS)
         try {
             // @ts-ignore - Tauri types may not be available at compile time
-            const { fetch: tauriFetch } = await import('@tauri-apps/api/http');
+            const { fetch: tauriFetch, Body } = await import('@tauri-apps/api/http');
+
+            const payload = body ? (typeof body === 'string' ? JSON.parse(body) : body) : undefined;
+            const requestBody = payload ? Body.json(payload) : undefined;
 
             const response = await tauriFetch(url, {
                 method,
                 timeout,
                 headers,
-                body: body ? (typeof body === 'string' ? JSON.parse(body) : body) : undefined
+                body: requestBody
             });
 
             return {

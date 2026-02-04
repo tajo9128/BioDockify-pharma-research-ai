@@ -1,8 +1,3 @@
-"""
-BioDockify API Backend
-FastAPI service exposing research capabilities to the UI.
-"""
-
 from fastapi import FastAPI, BackgroundTasks, HTTPException
 from dotenv import load_dotenv
 import os
@@ -13,13 +8,12 @@ from pydantic import BaseModel
 from typing import Dict, Any, Optional, List
 import uuid
 
-# Import Core Systems
 from orchestration.planner.orchestrator import ResearchOrchestrator, OrchestratorConfig
 from orchestration.executor import ResearchExecutor
 from modules.analyst.analytics_engine import ResearchAnalyst
 from modules.backup import DriveClient, BackupManager
 
-app = FastAPI(title="BioDockify - Pharma Research AI", version="2.19.4")
+app = FastAPI(title="BioDockify - Pharma Research AI", version="2.19.7")
 
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -99,53 +93,66 @@ async def startup_event():
     """
     logger.info("Initializing BioDockify Backend...")
     
-    # 1. Warm up Embedding Model (Lazy loading is default, we force it here)
-    try:
-        logger.info("Pre-loading Embedding Model...")
-        from modules.rag.vector_store import get_vector_store
-        # Trigger model load by accessing the singleton
-        vs = get_vector_store()
-        # Initialize dependencies if lazy loaded
-        if vs.model is None:
-             vs._load_dependencies()
-        if vs.model:
-             vs.model.encode(["warmup"])
-        logger.info("Embedding Model Loaded.")
-    except Exception as e:
-        logger.warning(f"Failed to pre-load embedding model: {e}")
-
-    # 2. Check Resource Availability
-    mem = psutil.virtual_memory()
-    logger.info(f"System Memory: {mem.percent}% used ({mem.available / (1024**3):.2f} GB available)")
-    
-    # 3. Start Background Services (Ollama/Neo4j)
-    # Only if configured to do so (default True)
-    from runtime.config_loader import load_config
-    from runtime.service_manager import get_service_manager
-    
-    config = load_config()
-    if config.get("system", {}).get("auto_start_services", True):
-        logger.info("Auto-starting background services...")
-        svc_mgr = get_service_manager(config)
+    # 1. Background Initialization (Models + Services)
+    def background_init():
+        """Runs heavy startup tasks without blocking API availability."""
+        # A. Wait for server bind
+        time.sleep(2) 
         
-        # Check if we should start Ollama (from ai_provider config or system default)
-        if config.get("ai_provider", {}).get("mode") in ["auto", "ollama"]:
-             try:
-                 svc_mgr.start_ollama()
-             except Exception as e:
-                 logger.warning(f"Failed to start Local AI (Ollama): {e}")
-                 logger.info("System will attempt to fallback to Cloud APIs if keys are available.")
-                 # We do NOT raise exception here to keep backend alive
-             
-        # Check SurfSense (Replaces Neo4j)
-        svc_mgr.start_surfsense()
+        # B. Warm up Embedding Model
+        try:
+            logger.info("Probe: Pre-loading Embedding Model...")
+            from modules.rag.vector_store import get_vector_store
+            vs = get_vector_store()
+            if vs.model is None:
+                 vs._load_dependencies()
+            if vs.model:
+                 vs.model.encode(["warmup"])
+            logger.info("Probe: Embedding Model Ready.")
+        except Exception as e:
+            logger.warning(f"Probe: Model warmup failed: {e}")
+
+        # C. Start Background Services (Ollama/SurfSense)
+        try:
+            from runtime.config_loader import load_config
+            from runtime.service_manager import get_service_manager
+            
+            config = load_config()
+            if config.get("system", {}).get("auto_start_services", True):
+                logger.info("Probe: Auto-starting services...")
+                svc_mgr = get_service_manager(config)
+                
+                # Ollama
+                if config.get("ai_provider", {}).get("mode") in ["auto", "ollama"]:
+                     try:
+                         if hasattr(svc_mgr, 'start_ollama'):
+                             svc_mgr.start_ollama()
+                         else:
+                             # Fallback/Mock if method missing
+                             logger.info("Probe: start_ollama not implemented in ServiceManager (skipping)")
+                     except Exception as e:
+                         logger.warning(f"Probe: Ollama start failed: {e}")
+                
+                # SurfSense
+                try:
+                    svc_mgr.start_surfsense()
+                except Exception as e:
+                    logger.warning(f"Probe: SurfSense start failed: {e}")
+                    
+        except Exception as e:
+            logger.error(f"Probe: Service init failed: {e}")
+
+    import threading
+    threading.Thread(target=background_init, daemon=True).start()
+    logger.info("Background initialization thread started.")
 
     # 4. Start Background Monitoring Loop
     asyncio.create_task(background_monitor())
 
     # 4. Check for high memory usage warning
-    if mem.percent > 90:
-        logger.warning(f"High Memory Usage on Startup: {mem.percent}%")
+    mem_status = psutil.virtual_memory()
+    if mem_status.percent > 90:
+        logger.warning(f"High Memory Usage on Startup: {mem_status.percent}%")
 
 
 
@@ -268,22 +275,32 @@ async def agent_chat(request: AgentRequest):
         
         # Instantiate LLM using Factory
         from modules.llm.factory import LLMFactory
+        import types
         
-        provider_mode = cfg.get("ai_provider", {}).get("mode", "auto")
+        ai_config = cfg.get("ai_provider", {})
+        provider_mode = ai_config.get("mode", "auto")
         
+        # Create a lightweight config object (Namespace) from the dict
+        # This ensures LLMFactory can use dot notation (config.google_key)
+        config_obj = types.SimpleNamespace(**ai_config)
+        
+        # Ensure LM Studio specific attributes exist on the object
+        if not hasattr(config_obj, 'lm_studio_url'):
+            config_obj.lm_studio_url = ai_config.get("lm_studio_url", "http://localhost:1234/v1")
+        if not hasattr(config_obj, 'lm_studio_model'):
+            config_obj.lm_studio_model = ai_config.get("lm_studio_model", "auto")
+
         # Explicit mapping for "lm_studio" mode if configured in SettingsPanel
         if provider_mode == "lm_studio":
-            # Ensure config object has expected attributes for Factory
-            if not hasattr(cfg, 'lm_studio_url'):
-                cfg.lm_studio_url = cfg.get("ai_provider", {}).get("lm_studio_url", "http://localhost:1234/v1")
-            if not hasattr(cfg, 'lm_studio_model'):
-                cfg.lm_studio_model = cfg.get("ai_provider", {}).get("lm_studio_model", "auto")
-            
-            adapter = LLMFactory.get_adapter("lm_studio", cfg)
+            adapter = LLMFactory.get_adapter("lm_studio", config_obj)
         else:
             # Fallback/Auto logic for other providers (Google, OpenRouter, etc)
-            # For brevity/safety, we'll try to find a configured one or default to LM Studio if local
-            adapter = LLMFactory.get_adapter("lm_studio", cfg) # Defaulting to local for now as per user focus
+            # Pass the manufactured object, not the raw dict
+            adapter = LLMFactory.get_adapter(provider_mode, config_obj)
+            
+            # If auto failed and local is preferred/default
+            if not adapter:
+                 adapter = LLMFactory.get_adapter("lm_studio", config_obj)
             
         if not adapter:
              return {
@@ -1000,8 +1017,8 @@ async def resource_monitor_middleware(request: Request, call_next):
     """
     Resource Management: Reject heavy requests if system is under stress.
     """
-    # Skip for simple health checks and critical auth endpoints
-    if request.url.path in ["/health", "/api/system/info", "/api/auth/verify", "/api/auth/verify-emergency"]:
+    # Skip for simple health checks and critical auth/settings endpoints
+    if request.url.path in ["/health", "/api/system/info", "/api/auth/verify", "/api/auth/verify-emergency", "/api/settings/test"]:
         return await call_next(request)
 
     # Check RAM
@@ -2775,6 +2792,106 @@ async def render_slides_html(request: dict):
     except Exception as e:
         logger.error(f"Slides rendering failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# -----------------------------------------------------------------------------
+# SETTINGS & CONNECTION TEST
+# -----------------------------------------------------------------------------
+class TestConnectionRequest(BaseModel):
+    service_type: str  # 'llm', 'elsevier'
+    provider: Optional[str] = None
+    key: Optional[str] = None
+    base_url: Optional[str] = None
+    model: Optional[str] = None
+
+@app.post("/api/settings/test")
+async def test_connection_endpoint(request: TestConnectionRequest):
+    """
+    Test connection to external services to avoid CORS issues.
+    Proxies the request from the backend.
+    """
+    try:
+        # 1. LLM Testing
+        if request.service_type == "llm":
+            from modules.llm.adapters import (
+                GoogleGeminiAdapter, 
+                OpenRouterAdapter, 
+                HuggingFaceAdapter, 
+                CustomAdapter, 
+                ZhipuAdapter
+            )
+            
+            adapter = None
+            
+            # Map provider to Adapter
+            if request.provider == "custom":
+                # For Deepseek, Groq, local, etc. used via Custom/OpenAI-Compatible
+                if not request.base_url:
+                     return {"status": "error", "message": "Base URL required for custom provider"}
+                
+                # Normalize URL (remove /chat/completions if user added it, CustomAdapter adds it)
+                base = request.base_url.rstrip("/")
+                if base.endswith("/chat/completions"):
+                    base = base.replace("/chat/completions", "")
+                
+                adapter = CustomAdapter(request.key or "dummy", base, request.model)
+
+            elif request.provider == "google":
+                adapter = GoogleGeminiAdapter(request.key)
+            elif request.provider == "openrouter":
+                adapter = OpenRouterAdapter(request.key, model=request.model or "mistralai/mistral-7b-instruct")
+            elif request.provider == "huggingface":
+                adapter = HuggingFaceAdapter(request.key)
+            elif request.provider == "glm" or request.provider == "zhipu":
+                adapter = ZhipuAdapter(request.key)
+            elif request.provider == "groq": # If using dedicated Groq preset (though likely uses Custom logic in UI)
+                 # Groq is openai compatible, can use CustomAdapter 
+                 adapter = CustomAdapter(request.key, "https://api.groq.com/openai/v1", request.model or "llama-3.3-70b-versatile")
+            
+            if not adapter:
+                 return {"status": "error", "message": f"Unsupported provider: {request.provider}"}
+
+            # Perform test generation
+            # We use a very simple prompt to save tokens/time
+            response = adapter.generate("Test. Reply with 'OK'.", system_prompt="You are a connection tester.")
+            
+            if response:
+                 return {"status": "success", "message": f"Connected! Response: {response[:50]}..."}
+            else:
+                 return {"status": "error", "message": "No response received from API."}
+
+        # 2. Elsevier Testing
+        elif request.service_type == "elsevier":
+             if not request.key:
+                 return {"status": "error", "message": "API Key required"}
+             
+             # Simple test query to ScienceDirect or Scopus
+             # We use requests directly here
+             headers = {
+                 "X-ELS-APIKey": request.key,
+                 "Accept": "application/json"
+             }
+             # Search for something static
+             url = "https://api.elsevier.com/content/search/scopus?query=heart&count=1"
+             
+             def _do_req():
+                 with requests.Session() as session:
+                     return session.get(url, headers=headers, timeout=10)
+            
+             resp = await asyncio.get_event_loop().run_in_executor(None, _do_req)
+                 
+             if resp.status_code == 200:
+                  return {"status": "success", "message": "Elsevier API Connected via Scopus"}
+             elif resp.status_code == 401:
+                  return {"status": "error", "message": "Invalid API Key"}
+             else:
+                  return {"status": "error", "message": f"API Error: {resp.status_code} {resp.text[:100]}"}
+
+        return {"status": "error", "message": f"Unknown service type: {request.service_type}"}
+
+    except Exception as e:
+        logger.error(f"Connection test failed: {e}")
+        return {"status": "error", "message": str(e)}
 
 
 # -----------------------------------------------------------------------------

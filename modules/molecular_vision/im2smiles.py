@@ -12,17 +12,29 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("BioDockify.Vision")
 
 # Global availability flag
-DECIMER_AVAILABLE = False
+# We'll check availability dynamically to avoid top-level hang
+_DECIMER_LOADED = False
 
-try:
-    # Attempt to import DECIMER
-    # Note: In a real environment, this import might take a few seconds due to TensorFlow
-    from DECIMER import predict_SMILES
-    DECIMER_AVAILABLE = True
-except ImportError:
-    logger.warning("DECIMER-Image2SMILES library not installed. Vision features will be disabled.")
-except Exception as e:
-    logger.error(f"Error initializing DECIMER: {e}")
+def _try_import_decimer():
+    global _DECIMER_LOADED
+    try:
+        from DECIMER import predict_SMILES
+        _DECIMER_LOADED = True
+        return predict_SMILES
+    except ImportError:
+        logger.warning("DECIMER-Image2SMILES library not installed. Vision features will be disabled.")
+        return None
+    except Exception as e:
+        logger.error(f"Error initializing DECIMER: {e}")
+        return None
+
+def is_decimer_available() -> bool:
+    """Check if the DECIMER engine is loaded and ready."""
+    try:
+        from DECIMER import predict_SMILES
+        return True
+    except:
+        return False
 
 def is_decimer_available() -> bool:
     """Check if the DECIMER engine is loaded and ready."""
@@ -38,7 +50,8 @@ def extract_smiles_from_image(image_path: str) -> str:
     Returns:
         str: Predicted SMILES string, or error code (e.g., "[DECIMER_NOT_AVAILABLE]")
     """
-    if not DECIMER_AVAILABLE:
+    predict_func = _try_import_decimer()
+    if not predict_func:
         return "[DECIMER_NOT_AVAILABLE]"
     
     if not os.path.exists(image_path):
@@ -48,7 +61,7 @@ def extract_smiles_from_image(image_path: str) -> str:
     try:
         logger.info(f"Running DECIMER inference on: {image_path}")
         # Run inference (CPU-compatible by default if TF is CPU-only)
-        smiles = predict_SMILES(image_path)
+        smiles = predict_func(image_path)
         return smiles
     except Exception as e:
         logger.error(f"Inference failed for {image_path}: {e}")

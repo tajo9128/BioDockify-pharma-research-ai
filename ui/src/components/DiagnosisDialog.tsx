@@ -65,14 +65,36 @@ export default function DiagnosisDialog({ isOpen, onClose }: DiagnosisDialogProp
     const startDiagnosis = async () => {
         setStep('scanning');
 
-        // Define the services to check
+        // 1. Determine active configuration
+        let aiMode = 'auto';
+        if (typeof window !== 'undefined') {
+            try {
+                const saved = localStorage.getItem('biodockify_ai_config');
+                if (saved) {
+                    const conf = JSON.parse(saved);
+                    aiMode = conf.mode || 'auto';
+                }
+            } catch (e) { }
+        }
+
+        // 2. Define relevant services to check
         const services = [
             { name: 'Backend API', key: 'backend' },
-            { name: 'LM Studio', key: 'lm_studio' },
-            { name: 'Ollama Service', key: 'ollama' },
-            { name: 'Neo4j Database', key: 'neo4j' },
-            { name: 'System Resources', key: 'system' }
+            { name: 'System Integrity', key: 'system' }
         ];
+
+        // Conditional Checks based on Mode
+        const checkLmStudio = (aiMode === 'lm_studio' || aiMode === 'auto');
+        // Only check Ollama if explicitly in Ollama mode or Auto (and likely not running LM Studio)
+        // If user selected LM Studio, we assume they don't want Ollama noises.
+        const checkOllama = (aiMode !== 'lm_studio' && aiMode !== 'z-ai');
+
+        // Always check SurfSense (Knowledge Base) as it's core, but labeled correctly
+        const checkSurfSense = true;
+
+        if (checkLmStudio) services.push({ name: 'LM Studio', key: 'lm_studio' });
+        if (checkOllama) services.push({ name: 'Ollama Service', key: 'ollama' });
+        if (checkSurfSense) services.push({ name: 'Knowledge Engine', key: 'surfsense' });
 
         // Initialize progress items
         setProgressItems(services.map(s => ({ name: s.name, status: 'pending' })));
@@ -87,14 +109,21 @@ export default function DiagnosisDialog({ isOpen, onClose }: DiagnosisDialogProp
             // Wait a bit for visual feedback
             await new Promise(r => setTimeout(r, 600));
 
-            // Mark as done
+            // Provisional "done" (actual status comes from report)
             setProgressItems(prev => prev.map((item, idx) =>
                 idx === i ? { ...item, status: 'done' } : item
             ));
         }
 
         setCurrentAction('Generating report...');
-        const diagnosis = await diagnosticEngine.runDiagnosis();
+
+        // 3. Run ACTUAL Diagnosis with options
+        const diagnosis = await diagnosticEngine.runDiagnosis({
+            checkOllama,
+            checkLmStudio,
+            checkSurfSense
+        });
+
         setReport(diagnosis);
 
         if (diagnosis.issuesFound) {
@@ -135,7 +164,21 @@ export default function DiagnosisDialog({ isOpen, onClose }: DiagnosisDialogProp
         }
 
         setCurrentAction('Verifying repairs...');
-        const finalDiagnosis = await diagnosticEngine.runDiagnosis();
+
+        // Re-calculate options for verification
+        let aiMode = 'auto';
+        try {
+            const conf = JSON.parse(localStorage.getItem('biodockify_ai_config') || '{}');
+            aiMode = conf.mode || 'auto';
+        } catch { }
+
+        const options = {
+            checkLmStudio: (aiMode === 'lm_studio' || aiMode === 'auto'),
+            checkOllama: (aiMode !== 'lm_studio' && aiMode !== 'z-ai'),
+            checkSurfSense: true
+        };
+
+        const finalDiagnosis = await diagnosticEngine.runDiagnosis(options);
 
         setResult({
             success: !finalDiagnosis.issuesFound,
@@ -361,8 +404,8 @@ export default function DiagnosisDialog({ isOpen, onClose }: DiagnosisDialogProp
                             <div key={action.id} className="flex items-center justify-between text-sm">
                                 <span className="text-slate-300">{action.description}</span>
                                 <span className={`text-xs px-2 py-0.5 rounded ${idx < repairProgress.current - 1 ? 'bg-emerald-500/20 text-emerald-400' :
-                                        idx === repairProgress.current - 1 ? 'bg-amber-500/20 text-amber-400' :
-                                            'bg-slate-700 text-slate-500'
+                                    idx === repairProgress.current - 1 ? 'bg-amber-500/20 text-amber-400' :
+                                        'bg-slate-700 text-slate-500'
                                     }`}>
                                     {idx < repairProgress.current - 1 ? '✓ Fixed' :
                                         idx === repairProgress.current - 1 ? 'In Progress' : 'Pending'}

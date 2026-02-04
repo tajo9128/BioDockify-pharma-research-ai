@@ -123,7 +123,8 @@ How can I assist your research today?`,
         if (typeof window !== 'undefined' && '__TAURI__' in window) {
             try {
                 const { Command } = await import('@tauri-apps/api/shell');
-                const cmd = new Command('cmd', ['/c', 'start', '/b', '.venv\\Scripts\\python.exe', 'server.py']);
+                // Use the robust launcher
+                const cmd = new Command('cmd', ['/c', 'start', '/b', '.venv\\Scripts\\python.exe', 'backend_launcher.py']);
                 await cmd.execute();
             } catch (e) {
                 console.error('Failed to start backend:', e);
@@ -375,9 +376,9 @@ After configuring, try again.`,
 Failed to reach the BioDockify Research Backend.
 
 **Troubleshooting:**
-1. Ensure the backend server is running (\`server.py\`)
-2. Check your network connection
-3. If using LM Studio, ensure it is running on port 1234
+1. Click **"Start Services"** or **"Self Repair"** in the top bar.
+2. If manually starting, run \`backend_launcher.py\` instead of server.py.
+3. Check if your antivirus is blocking port 8234.
 
 *You can still browse your previous chats, but new messages require the backend.*`,
                 timestamp: new Date()
