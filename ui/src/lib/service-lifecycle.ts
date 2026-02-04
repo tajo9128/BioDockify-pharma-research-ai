@@ -42,10 +42,10 @@ export interface LifecycleConfig {
 // ============================================================================
 
 const DEFAULT_CONFIG: LifecycleConfig = {
-    autoStartOllama: false,
-    autoStartSurfSense: false,
-    autoStartOmniTools: false,
-    autoPullModels: false,
+    autoStartOllama: true,
+    autoStartSurfSense: true,
+    autoStartOmniTools: true,
+    autoPullModels: true,
     healthCheckInterval: 30000, // 30 seconds
     autoRecovery: true
 };

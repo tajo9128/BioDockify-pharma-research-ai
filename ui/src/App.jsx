@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
 import apiService from './api';
 import ResearchDashboard from './components/ResearchDashboard';
+import BackendInitializer from './components/BackendInitializer';
 import { Microscope, ArrowRight, Play } from 'lucide-react';
 
 const LandingPage = () => {
@@ -92,12 +93,14 @@ const LandingPage = () => {
 
 const App = () => {
     return (
-        <Router>
-            <Routes>
-                <Route path="/" element={<LandingPage />} />
-                <Route path="/dashboard/:taskId" element={<ResearchDashboard />} />
-            </Routes>
-        </Router>
+        <BackendInitializer>
+            <Router>
+                <Routes>
+                    <Route path="/" element={<LandingPage />} />
+                    <Route path="/dashboard/:taskId" element={<ResearchDashboard />} />
+                </Routes>
+            </Router>
+        </BackendInitializer>
     );
 };
 

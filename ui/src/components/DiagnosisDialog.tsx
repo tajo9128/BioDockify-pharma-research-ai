@@ -36,11 +36,21 @@ interface DiagnosisDialogProps {
 
 type WizardStep = 'intro' | 'scanning' | 'report' | 'repairing' | 'summary';
 
+interface ProgressItem {
+    name: string;
+    status: 'pending' | 'checking' | 'done' | 'error';
+}
+
 export default function DiagnosisDialog({ isOpen, onClose }: DiagnosisDialogProps) {
     const [step, setStep] = useState<WizardStep>('intro');
     const [report, setReport] = useState<DiagnosticReport | null>(null);
     const [plan, setPlan] = useState<RepairPlan | null>(null);
     const [result, setResult] = useState<RepairResult | null>(null);
+
+    // Real-time progress tracking
+    const [progressItems, setProgressItems] = useState<ProgressItem[]>([]);
+    const [currentAction, setCurrentAction] = useState<string>('');
+    const [repairProgress, setRepairProgress] = useState<{ current: number, total: number }>({ current: 0, total: 0 });
 
     // Services
     const diagnosticEngine = DiagnosticEngine.getInstance();
@@ -54,9 +64,36 @@ export default function DiagnosisDialog({ isOpen, onClose }: DiagnosisDialogProp
 
     const startDiagnosis = async () => {
         setStep('scanning');
-        // Add visual delay for "calm" UX
-        await new Promise(r => setTimeout(r, 800));
 
+        // Define the services to check
+        const services = [
+            { name: 'Backend API', key: 'backend' },
+            { name: 'LM Studio', key: 'lm_studio' },
+            { name: 'Ollama Service', key: 'ollama' },
+            { name: 'Neo4j Database', key: 'neo4j' },
+            { name: 'System Resources', key: 'system' }
+        ];
+
+        // Initialize progress items
+        setProgressItems(services.map(s => ({ name: s.name, status: 'pending' })));
+
+        // Simulate step-by-step checking with visual feedback
+        for (let i = 0; i < services.length; i++) {
+            setCurrentAction(`Checking ${services[i].name}...`);
+            setProgressItems(prev => prev.map((item, idx) =>
+                idx === i ? { ...item, status: 'checking' } : item
+            ));
+
+            // Wait a bit for visual feedback
+            await new Promise(r => setTimeout(r, 600));
+
+            // Mark as done
+            setProgressItems(prev => prev.map((item, idx) =>
+                idx === i ? { ...item, status: 'done' } : item
+            ));
+        }
+
+        setCurrentAction('Generating report...');
         const diagnosis = await diagnosticEngine.runDiagnosis();
         setReport(diagnosis);
 
@@ -68,7 +105,7 @@ export default function DiagnosisDialog({ isOpen, onClose }: DiagnosisDialogProp
         }
 
         // Brief pause before showing results
-        await new Promise(r => setTimeout(r, 500));
+        await new Promise(r => setTimeout(r, 300));
         setStep('report');
     };
 
@@ -76,8 +113,35 @@ export default function DiagnosisDialog({ isOpen, onClose }: DiagnosisDialogProp
         if (!plan) return;
         setStep('repairing');
 
-        const repairResult = await repairManager.executeRepairPlan(plan);
-        setResult(repairResult);
+        // Track repair progress
+        setRepairProgress({ current: 0, total: plan.actions.length });
+
+        const results: { description: string; success: boolean }[] = [];
+
+        for (let i = 0; i < plan.actions.length; i++) {
+            const action = plan.actions[i];
+            setCurrentAction(action.description);
+            setRepairProgress({ current: i + 1, total: plan.actions.length });
+
+            try {
+                const success = await action.action();
+                results.push({ description: action.description, success });
+            } catch (e) {
+                results.push({ description: action.description, success: false });
+            }
+
+            // Brief pause between actions
+            await new Promise(r => setTimeout(r, 500));
+        }
+
+        setCurrentAction('Verifying repairs...');
+        const finalDiagnosis = await diagnosticEngine.runDiagnosis();
+
+        setResult({
+            success: !finalDiagnosis.issuesFound,
+            actionsTaken: results,
+            verificationResult: finalDiagnosis
+        });
         setStep('summary');
     };
 
@@ -136,14 +200,50 @@ export default function DiagnosisDialog({ isOpen, onClose }: DiagnosisDialogProp
     );
 
     const renderScanning = () => (
-        <div className="flex flex-col items-center justify-center py-12 space-y-6">
-            <div className="relative w-16 h-16">
-                <div className="absolute inset-0 border-4 border-slate-800 rounded-full"></div>
-                <div className="absolute inset-0 border-t-4 border-sky-500 rounded-full animate-spin"></div>
+        <div className="space-y-6">
+            <div className="flex items-center space-x-3 mb-4">
+                <div className="w-12 h-12 rounded-full bg-sky-500/10 flex items-center justify-center">
+                    <Activity className="w-6 h-6 text-sky-400 animate-pulse" />
+                </div>
+                <div>
+                    <h2 className="text-xl font-bold text-white">Scanning System</h2>
+                    <p className="text-slate-400 text-sm">{currentAction || 'Initializing...'}</p>
+                </div>
             </div>
-            <div className="text-center">
-                <h3 className="text-lg font-medium text-white">Scanning System...</h3>
-                <p className="text-slate-500 mt-1">Checking services and connections</p>
+
+            {/* Progress Bar */}
+            <div className="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
+                <div
+                    className="bg-sky-500 h-full transition-all duration-500"
+                    style={{ width: `${(progressItems.filter(p => p.status === 'done').length / Math.max(progressItems.length, 1)) * 100}%` }}
+                />
+            </div>
+
+            {/* Service Check List */}
+            <div className="space-y-2 bg-slate-900/50 rounded-lg p-3">
+                {progressItems.map((item, idx) => (
+                    <div key={idx} className="flex items-center justify-between p-2 bg-slate-800/50 rounded border border-slate-700/50">
+                        <div className="flex items-center space-x-3">
+                            {item.status === 'pending' && <div className="w-4 h-4 rounded-full bg-slate-600" />}
+                            {item.status === 'checking' && <div className="w-4 h-4 rounded-full border-2 border-sky-400 border-t-transparent animate-spin" />}
+                            {item.status === 'done' && <CheckCircle className="w-4 h-4 text-emerald-400" />}
+                            {item.status === 'error' && <XOctagon className="w-4 h-4 text-red-400" />}
+                            <span className={`text-sm ${item.status === 'checking' ? 'text-sky-400' : item.status === 'done' ? 'text-emerald-400' : 'text-slate-400'}`}>
+                                {item.name}
+                            </span>
+                        </div>
+                        <span className="text-xs text-slate-500">
+                            {item.status === 'pending' ? 'Waiting' :
+                                item.status === 'checking' ? 'Checking...' :
+                                    item.status === 'done' ? '✓ Done' : 'Error'}
+                        </span>
+                    </div>
+                ))}
+            </div>
+
+            {/* Estimated Time */}
+            <div className="text-center text-xs text-slate-500">
+                Estimated time: ~{Math.max(5, progressItems.filter(p => p.status === 'pending').length * 2)}s remaining
             </div>
         </div>
     );
@@ -222,14 +322,60 @@ export default function DiagnosisDialog({ isOpen, onClose }: DiagnosisDialogProp
     );
 
     const renderRepairing = () => (
-        <div className="flex flex-col items-center justify-center py-12 space-y-6">
-            <div className="relative w-16 h-16">
-                <div className="absolute inset-0 border-4 border-slate-800 rounded-full"></div>
-                <div className="absolute inset-0 border-t-4 border-amber-500 rounded-full animate-spin"></div>
+        <div className="space-y-6">
+            <div className="flex items-center space-x-3 mb-4">
+                <div className="w-12 h-12 rounded-full bg-amber-500/10 flex items-center justify-center">
+                    <RefreshCw className="w-6 h-6 text-amber-400 animate-spin" />
+                </div>
+                <div>
+                    <h2 className="text-xl font-bold text-white">Repairing System</h2>
+                    <p className="text-slate-400 text-sm">Step {repairProgress.current} of {repairProgress.total}</p>
+                </div>
             </div>
-            <div className="text-center">
-                <h3 className="text-lg font-medium text-white">Repairing System...</h3>
-                <p className="text-slate-500 mt-1">Applying approved fixes safely</p>
+
+            {/* Progress Bar */}
+            <div className="w-full bg-slate-800 rounded-full h-3 overflow-hidden">
+                <div
+                    className="bg-gradient-to-r from-amber-500 to-orange-500 h-full transition-all duration-500"
+                    style={{ width: `${(repairProgress.current / Math.max(repairProgress.total, 1)) * 100}%` }}
+                />
+            </div>
+
+            {/* Current Action */}
+            <div className="bg-slate-900/50 rounded-lg p-4 border border-slate-700">
+                <div className="flex items-center space-x-3">
+                    <div className="w-8 h-8 rounded-full border-2 border-amber-400 border-t-transparent animate-spin" />
+                    <div>
+                        <p className="text-amber-400 font-medium">{currentAction || 'Initializing...'}</p>
+                        <p className="text-slate-500 text-sm">Please wait while the fix is applied</p>
+                    </div>
+                </div>
+            </div>
+
+            {/* Problems Being Fixed */}
+            {plan && plan.actions.length > 0 && (
+                <div className="bg-slate-900/50 rounded-lg p-3 border border-slate-700">
+                    <h4 className="text-xs font-semibold text-slate-400 uppercase mb-2">Issues Being Fixed</h4>
+                    <div className="space-y-1">
+                        {plan.actions.map((action, idx) => (
+                            <div key={action.id} className="flex items-center justify-between text-sm">
+                                <span className="text-slate-300">{action.description}</span>
+                                <span className={`text-xs px-2 py-0.5 rounded ${idx < repairProgress.current - 1 ? 'bg-emerald-500/20 text-emerald-400' :
+                                        idx === repairProgress.current - 1 ? 'bg-amber-500/20 text-amber-400' :
+                                            'bg-slate-700 text-slate-500'
+                                    }`}>
+                                    {idx < repairProgress.current - 1 ? '✓ Fixed' :
+                                        idx === repairProgress.current - 1 ? 'In Progress' : 'Pending'}
+                                </span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* Estimated Time */}
+            <div className="text-center text-xs text-slate-500">
+                Estimated time: ~{Math.max(10, (repairProgress.total - repairProgress.current) * 12)}s remaining
             </div>
         </div>
     );

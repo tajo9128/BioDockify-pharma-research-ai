@@ -61,86 +61,52 @@ export class RepairManager {
 
     /**
      * STEP 3: Generate Repair Plan
-     * Takes a diagnosis and proposes safe repair actions.
+     * Takes a diagnosis and proposes REAL repair actions using backend APIs.
      */
     public createRepairPlan(diagnosis: DiagnosticReport): RepairPlan {
         const actions: RepairAction[] = [];
         const manager = getServiceLifecycleManager();
         let riskLevel: 'low' | 'medium' | 'high' = 'low';
 
-        // 1. Ollama Repair
-        const ollamaCheck = diagnosis.checks.find(c => c.id === 'ollama_service');
-        if (ollamaCheck && ollamaCheck.status !== 'ok') {
-            actions.push({
-                id: 'restart_ollama',
-                description: 'Start/Restart Ollama Service',
-                risk: 'low',
-                action: async () => {
-                    const res = await manager.autoStartServices(); // Reuse auto-start logic
-                    // If it failed to start, try to return false (requires checking result)
-                    // Simplified: check status after attempt
-                    const status = await manager.checkService('ollama');
-                    return status.running;
-                }
-            });
-        }
-
-        // 2. Model Repair
-        const modelCheck = diagnosis.checks.find(c => c.id === 'local_models');
-        if (modelCheck && modelCheck.status !== 'ok') {
-            actions.push({
-                id: 'pull_default_model',
-                description: 'Download Repair Model (llama3.2:3b)',
-                risk: 'low', // Bandwidth usage
-                action: async () => {
-                    return await manager.ensureDefaultModel();
-                }
-            });
-        }
-
-        // 3. Neo4j Repair
-        const neo4jCheck = diagnosis.checks.find(c => c.id === 'neo4j_service');
-        if (neo4jCheck && neo4jCheck.status === 'error') { // Only fix if strictly error, not just warning (optional)
-            // User prompt explicitly asked for Neo4j recovery, so we include it.
-            actions.push({
-                id: 'restart_neo4j',
-                description: 'Start/Restart Neo4j Database',
-                risk: 'low',
-                action: async () => {
-                    const { started } = await manager.autoStartServices();
-                    if (started.includes('Neo4j')) return true;
-
-                    // Double check status
-                    const status = await manager.checkService('neo4j');
-                    return status.running;
-                }
-            });
-        }
-
-        // 4. Backend/API Repair
-        // If backend is down, we can attempt to restart it via Tauri shell
+        // 1. Backend API Repair - CRITICAL, must be first
         const backendCheck = diagnosis.checks.find(c => c.id === 'backend_api');
         if (backendCheck && backendCheck.status === 'error') {
             actions.push({
-                id: 'restart_backend',
-                description: 'Restart Backend API Service',
+                id: 'start_backend',
+                description: 'Start Backend API Server',
                 risk: 'medium',
                 action: async () => {
-                    try {
-                        // Attempt to restart the backend by calling a recovery endpoint
-                        // or triggering the sidecar restart via Tauri
-                        const res = await fetch('http://localhost:8234/api/health', {
-                            signal: AbortSignal.timeout(5000)
-                        });
-                        if (res.ok) return true;
-                    } catch {
-                        // If health check fails, the backend is truly down
-                        // In a Tauri app, we could restart the sidecar here
-                        console.log('[Repair] Backend unreachable, sidecar restart may be needed');
+                    console.log('[Repair] Attempting to start backend server...');
+
+                    // Try Tauri shell first (desktop app)
+                    if (typeof window !== 'undefined' && '__TAURI__' in window) {
+                        try {
+                            const { Command } = await import('@tauri-apps/api/shell');
+                            console.log('[Repair] Using Tauri to start backend...');
+
+                            // Start the backend server
+                            const cmd = new Command('cmd', ['/c', 'start', '/b', '.venv\\Scripts\\python.exe', 'server.py']);
+                            await cmd.execute();
+
+                            // Wait for startup
+                            await new Promise(r => setTimeout(r, 12000));
+
+                            // Verify
+                            const healthRes = await fetch('http://localhost:8234/health', {
+                                signal: AbortSignal.timeout(5000)
+                            });
+
+                            if (healthRes.ok) {
+                                console.log('[Repair] Backend started successfully via Tauri');
+                                return true;
+                            }
+                        } catch (e) {
+                            console.error('[Repair] Tauri start failed:', e);
+                        }
                     }
 
-                    // Re-check after a brief delay
-                    await new Promise(r => setTimeout(r, 2000));
+                    // Fallback: check if it came online
+                    await new Promise(r => setTimeout(r, 3000));
                     const status = await manager.checkService('backend');
                     return status.running;
                 }
@@ -148,10 +114,162 @@ export class RepairManager {
             riskLevel = 'medium';
         }
 
+        // 2. LM Studio Repair - Use backend auto-start API
+        const lmStudioCheck = diagnosis.checks.find(c => c.id === 'lm_studio');
+        if (lmStudioCheck && (lmStudioCheck.status === 'error' || lmStudioCheck.status === 'warning')) {
+            actions.push({
+                id: 'start_lm_studio',
+                description: 'Start LM Studio (Local AI)',
+                risk: 'low',
+                action: async () => {
+                    console.log('[Repair] Attempting to start LM Studio...');
+
+                    try {
+                        // Use the backend API to start LM Studio
+                        const res = await fetch('http://localhost:8234/api/diagnose/lm-studio/start', {
+                            method: 'POST',
+                            signal: AbortSignal.timeout(30000) // LM Studio takes time to start
+                        });
+
+                        if (res.ok) {
+                            const data = await res.json();
+                            console.log('[Repair] LM Studio start result:', data);
+
+                            if (data.success) {
+                                // Wait for LM Studio to fully initialize
+                                await new Promise(r => setTimeout(r, 5000));
+
+                                // Verify it's responding
+                                const verifyRes = await fetch('http://localhost:1234/v1/models', {
+                                    signal: AbortSignal.timeout(5000)
+                                });
+                                return verifyRes.ok;
+                            }
+                        }
+                    } catch (e) {
+                        console.error('[Repair] LM Studio start failed:', e);
+                    }
+
+                    return false;
+                }
+            });
+        }
+
+        // 3. Ollama Repair - Use backend API
+        const ollamaCheck = diagnosis.checks.find(c => c.id === 'ollama_service');
+        if (ollamaCheck && ollamaCheck.status !== 'ok') {
+            actions.push({
+                id: 'restart_ollama',
+                description: 'Start Ollama Service',
+                risk: 'low',
+                action: async () => {
+                    console.log('[Repair] Attempting to repair Ollama...');
+
+                    try {
+                        // Use the backend repair API
+                        const res = await fetch('http://localhost:8234/api/v2/system/repair?service=ollama', {
+                            method: 'POST',
+                            signal: AbortSignal.timeout(30000)
+                        });
+
+                        if (res.ok) {
+                            const data = await res.json();
+                            console.log('[Repair] Ollama repair result:', data);
+                            return data.status === 'success';
+                        }
+                    } catch (e) {
+                        console.log('[Repair] Backend API unavailable, trying local...');
+                    }
+
+                    // Fallback to lifecycle manager
+                    const result = await manager.autoStartServices();
+                    const status = await manager.checkService('ollama');
+                    return status.running;
+                }
+            });
+        }
+
+        // 4. AI Model Pull (if no models available)
+        const modelCheck = diagnosis.checks.find(c => c.id === 'local_models');
+        if (modelCheck && modelCheck.status !== 'ok') {
+            actions.push({
+                id: 'pull_model',
+                description: 'Download AI Model (llama3.2:3b)',
+                risk: 'low',
+                action: async () => {
+                    console.log('[Repair] Downloading required model...');
+                    return await manager.ensureDefaultModel();
+                }
+            });
+        }
+
+        // 5. Full Connectivity Diagnosis & Auto-Repair
+        if (actions.length > 0) {
+            actions.push({
+                id: 'full_connectivity_repair',
+                description: 'Run Full Connectivity Repair',
+                risk: 'low',
+                action: async () => {
+                    console.log('[Repair] Running full connectivity diagnosis with auto-repair...');
+
+                    try {
+                        const res = await fetch('http://localhost:8234/api/diagnose/connectivity', {
+                            method: 'GET',
+                            signal: AbortSignal.timeout(30000)
+                        });
+
+                        if (res.ok) {
+                            const data = await res.json();
+                            console.log('[Repair] Connectivity diagnosis:', data);
+
+                            // The backend auto-repairs when auto_repair=True
+                            return data.status === 'healthy' || data.can_proceed;
+                        }
+                    } catch (e) {
+                        console.error('[Repair] Connectivity repair failed:', e);
+                    }
+
+                    return false;
+                }
+            });
+        }
+
+        // 6. Settings Reset (if critical issues)
+        if (diagnosis.checks.filter(c => c.status === 'error').length >= 3) {
+            actions.push({
+                id: 'reset_settings',
+                description: 'Reset to Default Settings',
+                risk: 'high',
+                action: async () => {
+                    console.log('[Repair] Resetting settings to defaults...');
+
+                    try {
+                        const res = await fetch('http://localhost:8234/api/settings/reset', {
+                            method: 'POST',
+                            signal: AbortSignal.timeout(10000)
+                        });
+
+                        if (res.ok) {
+                            const data = await res.json();
+                            console.log('[Repair] Settings reset result:', data);
+                            return data.status === 'success';
+                        }
+                    } catch (e) {
+                        console.error('[Repair] Settings reset failed:', e);
+                    }
+
+                    return false;
+                }
+            });
+            riskLevel = 'high';
+        }
+
         // Determine overall explanation
         let explanation = 'No repairs needed.';
         if (actions.length > 0) {
-            explanation = `Proposed fixes for ${actions.length} issue(s). Will attempt to restart services and ensure AI models are available.`;
+            const issues = diagnosis.checks.filter(c => c.status === 'error').map(c => c.name);
+            explanation = `Found ${issues.length} issue(s): ${issues.join(', ')}. ` +
+                `Will attempt ${actions.length} repair action(s) using system APIs.`;
         }
 
         return {

@@ -117,6 +117,38 @@ export class DiagnosticEngine {
             timestamp: new Date()
         });
 
+        // 5. Check LM Studio (Local AI Model Server)
+        let lmStudioStatus: 'ok' | 'warning' | 'error' = 'error';
+        let lmStudioMessage = 'LM Studio not running';
+
+        try {
+            const lmRes = await fetch('http://localhost:1234/v1/models', {
+                method: 'GET',
+                signal: AbortSignal.timeout(3000)
+            });
+            if (lmRes.ok) {
+                const data = await lmRes.json();
+                const hasModels = (data.data || []).length > 0;
+                if (hasModels) {
+                    lmStudioStatus = 'ok';
+                    lmStudioMessage = `Model loaded: ${data.data[0]?.id || 'Unknown'}`;
+                } else {
+                    lmStudioStatus = 'warning';
+                    lmStudioMessage = 'LM Studio running but no model loaded';
+                }
+            }
+        } catch {
+            // Already set to error
+        }
+
+        checks.push({
+            id: 'lm_studio',
+            name: 'LM Studio',
+            status: lmStudioStatus,
+            message: lmStudioMessage,
+            timestamp: new Date()
+        });
+
         // 5. Basic System Checks (Simulated for Browser/Tauri scope limits)
         // In a real Tauri app with unrestricted shell scope, we could run 'df -h' etc.
         // For now we assume disk is OK unless we get IO errors, but we log the check.

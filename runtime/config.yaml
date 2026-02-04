@@ -39,10 +39,9 @@ pharma:
 ai_provider:
   mode: auto
   primary_model: ollama
-  ollama_fallback: true
   cloud_fallback: true
-  ollama_url: http://localhost:11434
-  ollama_model: 'llama2'
+  lm_studio_url: http://localhost:1234/v1
+  lm_studio_model: ''
   google_key: ''
   openrouter_key: ''
   huggingface_key: ''
@@ -54,6 +53,9 @@ ai_provider:
   custom_model: gpt-3.5-turbo
   serper_key: ''
   jina_key: ''
+  ollama_fallback: true
+  ollama_url: http://localhost:11434
+  ollama_model: llama2
 ai_advanced:
   context_window: 8192
   gpu_layers: -1
@@ -78,6 +80,6 @@ system:
   pause_on_battery: true
   max_cpu_percent: 80
   log_level: INFO
-  version: 2.18.3
+  version: 2.16.4
   auto_start: true
   minimize_to_tray: true

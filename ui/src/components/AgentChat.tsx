@@ -1,6 +1,6 @@
 'use client';
-import React, { useState, useRef, useEffect } from 'react';
-import { Send, Bot, User, Sparkles, Terminal, Play, Globe, ShieldAlert, Brain, Wrench } from 'lucide-react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { Send, Bot, User, Sparkles, Terminal, Play, Globe, ShieldAlert, Brain, Wrench, Power, CheckCircle2, AlertCircle, Loader2, RefreshCw } from 'lucide-react';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { api } from '@/lib/api';
 import { searchWeb, fetchWebPage } from '@/lib/web_fetcher';
@@ -15,6 +15,11 @@ interface Message {
     source?: string;
     thoughts?: string[];
     action?: any;
+}
+
+interface ServiceHealth {
+    backend: 'checking' | 'online' | 'offline';
+    lmStudio: 'checking' | 'online' | 'offline' | 'no_model';
 }
 
 const REPAIR_TRIGGERS = [
@@ -71,6 +76,72 @@ How can I assist your research today?`,
     const [isDiagnosisOpen, setIsDiagnosisOpen] = useState(false);
     const [deepResearchQuery, setDeepResearchQuery] = useState<string | null>(null);
     const scrollRef = useRef<HTMLDivElement>(null);
+
+    // Health monitoring state
+    const [health, setHealth] = useState<ServiceHealth>({
+        backend: 'checking',
+        lmStudio: 'checking'
+    });
+    const [isStartingServices, setIsStartingServices] = useState(false);
+
+    // Health check function
+    const checkHealth = useCallback(async () => {
+        // Check backend
+        try {
+            const res = await fetch('http://localhost:8234/health', {
+                method: 'GET',
+                signal: AbortSignal.timeout(3000)
+            });
+            setHealth(h => ({ ...h, backend: res.ok ? 'online' : 'offline' }));
+        } catch {
+            setHealth(h => ({ ...h, backend: 'offline' }));
+        }
+
+        // Check LM Studio
+        try {
+            const res = await fetch('http://localhost:1234/v1/models', {
+                method: 'GET',
+                signal: AbortSignal.timeout(3000)
+            });
+            if (res.ok) {
+                const data = await res.json();
+                const hasModels = (data.data || []).length > 0;
+                setHealth(h => ({ ...h, lmStudio: hasModels ? 'online' : 'no_model' }));
+            } else {
+                setHealth(h => ({ ...h, lmStudio: 'offline' }));
+            }
+        } catch {
+            setHealth(h => ({ ...h, lmStudio: 'offline' }));
+        }
+    }, []);
+
+    // Start services manually
+    const handleStartServices = async () => {
+        setIsStartingServices(true);
+
+        // If in Tauri, try to start backend
+        if (typeof window !== 'undefined' && '__TAURI__' in window) {
+            try {
+                const { Command } = await import('@tauri-apps/api/shell');
+                const cmd = new Command('cmd', ['/c', 'start', '/b', '.venv\\Scripts\\python.exe', 'server.py']);
+                await cmd.execute();
+            } catch (e) {
+                console.error('Failed to start backend:', e);
+            }
+        }
+
+        // Wait and recheck
+        await new Promise(r => setTimeout(r, 5000));
+        await checkHealth();
+        setIsStartingServices(false);
+    };
+
+    // Initial health check and periodic monitoring
+    useEffect(() => {
+        checkHealth();
+        const interval = setInterval(checkHealth, 30000); // Every 30 seconds
+        return () => clearInterval(interval);
+    }, [checkHealth]);
 
     useEffect(() => {
         if (scrollRef.current) {
@@ -340,6 +411,61 @@ Failed to reach the BioDockify Research Backend.
                 </div>
                 {/* Actions */}
                 <div className="flex items-center gap-2">
+                    {/* Health Status Indicator */}
+                    <div className="flex items-center gap-1 px-3 py-1.5 bg-slate-800/50 rounded-full border border-slate-700 text-xs">
+                        {/* Backend Status */}
+                        <div className="flex items-center gap-1" title={`Backend: ${health.backend}`}>
+                            {health.backend === 'online' ? (
+                                <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                            ) : health.backend === 'checking' ? (
+                                <Loader2 className="w-3 h-3 text-blue-400 animate-spin" />
+                            ) : (
+                                <AlertCircle className="w-3 h-3 text-red-400" />
+                            )}
+                            <span className="text-slate-400">API</span>
+                        </div>
+                        <span className="text-slate-600">|</span>
+                        {/* LM Studio Status */}
+                        <div className="flex items-center gap-1" title={`LM Studio: ${health.lmStudio}`}>
+                            {health.lmStudio === 'online' ? (
+                                <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                            ) : health.lmStudio === 'no_model' ? (
+                                <AlertCircle className="w-3 h-3 text-amber-400" />
+                            ) : health.lmStudio === 'checking' ? (
+                                <Loader2 className="w-3 h-3 text-blue-400 animate-spin" />
+                            ) : (
+                                <AlertCircle className="w-3 h-3 text-red-400" />
+                            )}
+                            <span className="text-slate-400">LM</span>
+                        </div>
+                    </div>
+
+                    {/* Start Services Button - Show when offline */}
+                    {(health.backend === 'offline' || health.lmStudio === 'offline') && (
+                        <button
+                            onClick={handleStartServices}
+                            disabled={isStartingServices}
+                            className="px-3 py-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 text-xs font-medium rounded-full border border-emerald-500/30 transition-colors flex items-center gap-2 disabled:opacity-50"
+                            title="Start Backend Services"
+                        >
+                            {isStartingServices ? (
+                                <Loader2 className="w-3 h-3 animate-spin" />
+                            ) : (
+                                <Power className="w-3 h-3" />
+                            )}
+                            {isStartingServices ? 'Starting...' : 'Start Services'}
+                        </button>
+                    )}
+
+                    {/* Refresh Health Button */}
+                    <button
+                        onClick={checkHealth}
+                        className="p-1.5 bg-slate-800/50 hover:bg-slate-700/50 text-slate-400 rounded-full border border-slate-700 transition-colors"
+                        title="Refresh Health Status"
+                    >
+                        <RefreshCw className="w-3 h-3" />
+                    </button>
+
                     <button
                         onClick={() => setIsDiagnosisOpen(true)}
                         className="px-3 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 text-xs font-medium rounded-full border border-amber-500/30 transition-colors flex items-center gap-2"

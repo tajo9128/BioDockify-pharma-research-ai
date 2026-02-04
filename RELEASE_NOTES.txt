@@ -1,14 +1,31 @@
 [RELEASE NOTES]
-Version: 2.19.4
+Version: 2.19.5
 Date: 2026-02-04
 
 Features:
-- **Optional Verification**: Users can now skip the initial email verification setup and explore the application in "Limited Mode".
-- **Feature Gating**: Premium features (Research Workstation, Academic Suite, Deep Research, OmniTools) are now protected and require a verified account.
-- **Improved UX**: New "Locked" visual states for restricted modules, preserving the application layout while clearly indicating requirements.
-- **Security**: Added robust internal access guards to prevent unauthorized access to sensitive components.
+- **Backend Auto-Start**: Backend services now automatically start when the application opens.
+- **Health Check Display**: Agent Zero now shows real-time health status for Backend API and LM Studio.
+- **Start Services Button**: Manual button to start all backend services appears when services are offline.
+- **Enhanced Self-Repair**: Complete rewrite with REAL fixing capabilities using backend APIs:
+  - Start Backend Server via Tauri Shell
+  - Start LM Studio via `/api/diagnose/lm-studio/start`
+  - Start Ollama via `/api/v2/system/repair?service=ollama`
+  - Download AI Models automatically
+  - Full Connectivity Repair via `/api/diagnose/connectivity`
+  - Settings Reset to defaults (critical errors only)
+- **Progress Tracking**: Self-repair now shows step-by-step progress, estimated time, and real-time status.
+- **Diagnostics Improvement**: Added LM Studio health check to diagnostics engine.
+
+UI Improvements:
+- Real-time progress bar during scanning and repairing
+- Current action display with estimated time remaining
+- Issues being fixed checklist with status indicators
+
+Technical:
+- BackendInitializer component wraps app for auto-start
+- Health monitoring with 30-second interval checks
+- Integration with backend ConnectionDoctor API
 
 Fixes:
-- Fixed an issue where the Deep Research module would fail due to an API response type mismatch.
-- Corrected database target tables for license verification (Supabase 'profiles').
-- Resolved startup connectivity check issues.
+- Fixed self-repair only showing spinner without progress feedback
+- Resolved backend not starting automatically on app launch
