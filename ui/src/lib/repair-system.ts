@@ -68,50 +68,24 @@ export class RepairManager {
         const manager = getServiceLifecycleManager();
         let riskLevel: 'low' | 'medium' | 'high' = 'low';
 
-        // 1. Backend API Repair - CRITICAL, must be first
+        // 1. Backend API Repair - If we're here, the backend is likely OK,
+        // but we verify it's responding to /health correctly.
         const backendCheck = diagnosis.checks.find(c => c.id === 'backend_api');
         if (backendCheck && backendCheck.status === 'error') {
             actions.push({
-                id: 'start_backend',
-                description: 'Start Backend API Server',
-                risk: 'medium',
+                id: 'verify_backend',
+                description: 'Verify Backend API Status',
+                risk: 'low',
                 action: async () => {
-                    console.log('[Repair] Attempting to start backend server...');
-
-                    // Try Tauri shell first (desktop app)
-                    if (typeof window !== 'undefined' && '__TAURI__' in window) {
-                        try {
-                            const { Command } = await import('@tauri-apps/api/shell');
-                            console.log('[Repair] Using Tauri to start backend...');
-
-                            // Start the backend server via robust launcher
-                            const cmd = new Command('cmd', ['/c', 'start', '/b', '.venv\\Scripts\\python.exe', 'backend_launcher.py']);
-                            await cmd.execute();
-
-                            // Wait for startup
-                            await new Promise(r => setTimeout(r, 12000));
-
-                            // Verify
-                            const healthRes = await fetch('http://localhost:8234/health', {
-                                signal: AbortSignal.timeout(5000)
-                            });
-
-                            if (healthRes.ok) {
-                                console.log('[Repair] Backend started successfully via Tauri');
-                                return true;
-                            }
-                        } catch (e) {
-                            console.error('[Repair] Tauri start failed:', e);
-                        }
-                    }
-
-                    // Fallback: check if it came online
-                    await new Promise(r => setTimeout(r, 3000));
+                    console.log('[Repair] Verifying backend status...');
+                    // Since the sidecar manages the backend, we just wait and verify.
+                    // If it was down, the sidecar should be restarting it.
+                    await new Promise(r => setTimeout(r, 2000));
                     const status = await manager.checkService('backend');
                     return status.running;
                 }
             });
-            riskLevel = 'medium';
+            riskLevel = 'low';
         }
 
         // 2. LM Studio Repair - Use backend auto-start API

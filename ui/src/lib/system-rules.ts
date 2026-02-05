@@ -29,6 +29,8 @@ export interface SystemState {
     };
     consent: {
         auto_start_lm_studio: boolean;
+        auto_start_ollama: boolean;
+        auto_start_neo4j: boolean;
         remember_choice: boolean;
     };
     mode: 'LIMITED' | 'FULL';
@@ -47,6 +49,8 @@ export const DEFAULT_SYSTEM_STATE: SystemState = {
     },
     consent: {
         auto_start_lm_studio: false,
+        auto_start_ollama: true,
+        auto_start_neo4j: true,
         remember_choice: false
     },
     mode: 'LIMITED'
@@ -118,6 +122,18 @@ export function getConsentRequests(state: SystemState): ConsentRequest[] {
             label: 'Allow BioDockify to check LM Studio availability',
             description: 'We will verify connection to local AI automatically.',
             granted: state.consent.auto_start_lm_studio
+        },
+        {
+            id: 'auto_start_ollama',
+            label: 'Auto-start Ollama (Local AI Engine)',
+            description: 'Required for fast local reasoning without cloud APIs.',
+            granted: state.consent.auto_start_ollama
+        },
+        {
+            id: 'auto_start_neo4j',
+            label: 'Auto-start Knowledge Engine (SurfSense)',
+            description: 'Required for advanced pharma graph research.',
+            granted: state.consent.auto_start_neo4j
         },
         {
             id: 'remember_choice',

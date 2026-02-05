@@ -111,7 +111,8 @@ manual_datas = [
     ('modules', 'modules'),
     ('nlp', 'nlp'),
     ('orchestration', 'orchestration'),
-    ('export', 'export')
+    ('export', 'export'),
+    ('runtime', 'runtime')
 ]
 
 # --- EXTENDED HIDDEN IMPORTS ---

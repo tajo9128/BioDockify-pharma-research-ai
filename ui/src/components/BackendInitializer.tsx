@@ -124,24 +124,18 @@ export const BackendInitializer: React.FC<BackendInitializerProps> = ({
             return;
         }
 
-        // Backend not running - try to start it
+        // Backend not running - we wait for the sidecar (started by Rust/Tauri)
         if (!startAttempted) {
             setStatus(s => ({
                 ...s,
                 backend: 'starting',
-                message: 'Starting backend server...'
+                message: 'Waiting for BioDockify Engine...'
             }));
             setStartAttempted(true);
 
-            const started = await tryStartBackend();
-            if (!started) {
-                // Not in Tauri or start failed - show manual instructions
-                setStatus({
-                    backend: 'error',
-                    lmStudio: 'not_configured',
-                    message: 'Please start the backend manually: python server.py'
-                });
-            }
+            // In production, the Rust sidecar handles the launch.
+            // We just wait and retry health checks.
+            console.log('[BackendInitializer] Waiting for Tauri Sidecar to initialize...');
         }
 
         // Retry after interval

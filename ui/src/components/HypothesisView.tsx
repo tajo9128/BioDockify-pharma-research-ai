@@ -31,7 +31,7 @@ export default function HypothesisView() {
             // Wait, I should perform the api.ts update first or inline the fetch.
             // I'll inline fetch for now to be safe, then refactor to api.ts.
 
-            const res = await fetch('http://localhost:8000/api/hypothesis');
+            const res = await fetch('http://localhost:8234/api/hypothesis');
             if (res.ok) {
                 const data = await res.json();
                 setHypotheses(data);
@@ -46,7 +46,7 @@ export default function HypothesisView() {
     const handleCreate = async () => {
         if (!newStatement.trim()) return;
         try {
-            const res = await fetch('http://localhost:8000/api/hypothesis?statement=' + encodeURIComponent(newStatement) + '&rationale=' + encodeURIComponent(newRationale), {
+            const res = await fetch('http://localhost:8234/api/hypothesis?statement=' + encodeURIComponent(newStatement) + '&rationale=' + encodeURIComponent(newRationale), {
                 method: 'POST'
             });
             if (res.ok) {

@@ -293,7 +293,7 @@ export default function ResearchWorkstation({
                         <div className="p-4 border-b border-slate-800">
                             <AgentStatusPanel
                                 useWebSocket={true}
-                                apiBaseUrl="http://localhost:8000"
+                                apiBaseUrl="http://localhost:8234"
                             />
                         </div>
                     )}

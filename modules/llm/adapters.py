@@ -116,6 +116,10 @@ class CustomAdapter(BaseLLMAdapter):
              base_url = base_url[:-7]
         self.base_url = base_url
         self.model = model
+        # Robustly handle Bearer prefix if user accidentally included it
+        if api_key and api_key.startswith("Bearer "):
+            api_key = api_key.replace("Bearer ", "")
+        self.api_key = api_key
 
     def generate(self, prompt: str, **kwargs) -> str:
         url = f"{self.base_url}/chat/completions"
@@ -126,15 +130,26 @@ class CustomAdapter(BaseLLMAdapter):
         }
         
         try:
-            resp = requests.post(
-                url, 
-                json=payload, 
-                headers={"Authorization": f"Bearer {self.api_key}"}, 
-                timeout=60
-            )
+            headers = {
+                "Authorization": f"Bearer {self.api_key}",
+                "Content-Type": "application/json"
+            }
+            resp = requests.post(url, json=payload, headers=headers, timeout=60)
+            
+            if resp.status_code == 401:
+                raise ValueError("Invalid API Key (401 Unauthorized)")
+            elif resp.status_code == 404:
+                raise ValueError(f"Endpoint not found (404). Check Base URL: {url}")
+            elif resp.status_code == 403:
+                raise ValueError("Access Denied (403 Forbidden)")
+                
             resp.raise_for_status()
             data = resp.json()
             return data["choices"][0]["message"]["content"]
+        except requests.exceptions.Timeout:
+            raise ValueError("Connection timed out. The server might be slow.")
+        except requests.exceptions.ConnectionError:
+            raise ValueError(f"Could not connect to {self.base_url}. Check if the server is running.")
         except Exception as e:
             raise ValueError(f"Custom API Error: {e}")
 
@@ -279,12 +294,11 @@ class ZhipuAdapter(BaseLLMAdapter):
         }
         
         try:
-            resp = requests.post(
-                self.url, 
-                json=payload, 
-                headers={"Authorization": f"Bearer {self.api_key}"}, 
-                timeout=60
-            )
+            headers = {
+                "Authorization": f"Bearer {self.api_key}",
+                "Content-Type": "application/json"
+            }
+            resp = requests.post(self.url, json=payload, headers=headers, timeout=60)
             resp.raise_for_status()
             data = resp.json()
             return data["choices"][0]["message"]["content"]

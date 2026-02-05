@@ -66,9 +66,8 @@ def main():
     except:
         pass
 
-    print("Starting BioDockify AI Engine on port 8234...")
-    # Bind to localhost 8234 (Matches Frontend)
-    uvicorn.run(app, host="127.0.0.1", port=8234, log_level="info")
+    # Bind to 0.0.0.0 (More robust for Windows/IPv6 resolution of localhost)
+    uvicorn.run(app, host="0.0.0.0", port=8234, log_level="info")
 
 if __name__ == "__main__":
     main()

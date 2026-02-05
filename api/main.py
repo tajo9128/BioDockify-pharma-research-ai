@@ -13,7 +13,7 @@ from orchestration.executor import ResearchExecutor
 from modules.analyst.analytics_engine import ResearchAnalyst
 from modules.backup import DriveClient, BackupManager
 
-app = FastAPI(title="BioDockify - Pharma Research AI", version="2.19.7")
+app = FastAPI(title="BioDockify - Pharma Research AI", version="2.19.8")
 
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -468,6 +468,20 @@ def repair_system(service: str = "ollama"):
                 "message": "Ollama started" if success else "Failed to start Ollama"
             }
         return {"status": "error", "message": f"Unknown service: {service}"}
+
+@app.post("/api/v2/system/start-surfsense")
+def start_surfsense():
+    """
+    V2: Explicitly start SurfSense Knowledge Engine via Docker.
+    """
+    from runtime.config_loader import load_config
+    from runtime.service_manager import get_service_manager
+    
+    cfg = load_config()
+    svc_mgr = get_service_manager(cfg)
+    
+    svc_mgr.start_surfsense()
+    return {"status": "success", "message": "SurfSense start initiated"}
 
 # -----------------------------------------------------------------------------
 # V2 CONNECTIVITY DIAGNOSIS ENDPOINTS (First-Run Self-Healing)
@@ -1105,11 +1119,10 @@ async def global_exception_handler(request: Request, exc: Exception):
         content={"detail": "Internal Server Error", "message": str(exc)},
     )
 
-def safe_request(method, url, **kwargs):
+def safe_request(method, url, max_retries=3, **kwargs):
     """
     Resilient HTTP request with retries (Circuit Breaker Lite).
     """
-    max_retries = 3
     for attempt in range(max_retries):
         try:
             resp = requests.request(method, url, **kwargs)
@@ -1131,7 +1144,8 @@ from runtime.task_manager import task_manager
 # -----------------------------------------------------------------------------
 
 class ResearchRequest(BaseModel):
-    title: str
+    title: Optional[str] = None
+    topic: Optional[str] = None # Added for frontend compatibility
     mode: str = "synthesize" # search, synthesize, write
     
 class TaskStatus(BaseModel):
@@ -1176,7 +1190,7 @@ def run_research_task(task_id: str, title: str, mode: str):
         orchestrator = ResearchOrchestrator(config)
         
         # Pass the research mode to the planner
-        plan = orchestrator.plan_research(title, mode=mode)
+        plan = orchestrator.plan_research(title, mode=mode, task_id=task_id)
         
         task["status"] = "executing"
         task_manager.save_task(task_id, task)
@@ -1261,6 +1275,7 @@ def run_research_task(task_id: str, title: str, mode: str):
 # -----------------------------------------------------------------------------
 
 @app.get("/health")
+@app.get("/api/health")
 def health_check():
     """
     Comprehensive System Health Check.
@@ -1279,14 +1294,28 @@ def health_check():
         from runtime.config_loader import load_config
         cfg = load_config()
         ai_conf = cfg.get("ai_provider", {})
-        ollama_url = ai_conf.get("ollama_url", "http://localhost:11434")
         
-        # Ping
-        resp = safe_request('GET', f"{ollama_url}/api/tags", timeout=2)
-        if resp.status_code == 200:
-             status["components"]["ai_core"] = {"status": "ok", "provider": "ollama"}
+        # Determine active provider
+        mode = ai_conf.get("mode", "auto")
+        
+        if mode in ["auto", "ollama"]:
+            ollama_url = ai_conf.get("ollama_url", "http://localhost:11434")
+            # Ping with NO retries for fast health check
+            resp = safe_request('GET', f"{ollama_url}/api/tags", max_retries=1, timeout=1.5)
+            if resp.status_code == 200:
+                 status["components"]["ai_core"] = {"status": "ok", "provider": "ollama"}
+            else:
+                 status["components"]["ai_core"] = {"status": "degraded", "message": f"Ollama Unreachable ({resp.status_code})"}
+        elif mode == "lm_studio":
+            lm_url = ai_conf.get("lm_studio_url", "http://localhost:1234/v1")
+            resp = safe_request('GET', f"{lm_url}/models", max_retries=1, timeout=1.5)
+            if resp.status_code == 200:
+                 status["components"]["ai_core"] = {"status": "ok", "provider": "lm_studio"}
+            else:
+                 status["components"]["ai_core"] = {"status": "degraded", "message": f"LM Studio Unreachable"}
         else:
-             status["components"]["ai_core"] = {"status": "degraded", "message": f"Ollama Unreachable ({resp.status_code})"}
+            status["components"]["ai_core"] = {"status": "ok", "provider": mode, "message": "Cloud-based provider active"}
+            
     except Exception as e:
          status["components"]["ai_core"] = {"status": "error", "message": str(e)}
 
@@ -1322,16 +1351,21 @@ async def start_research(request: ResearchRequest, background_tasks: BackgroundT
     """Start a new research task in the background."""
     task_id = str(uuid.uuid4())
     
+    # Use topic if title is missing (frontend sends topic)
+    research_title = request.title or request.topic
+    if not research_title:
+        raise HTTPException(status_code=400, detail="Either 'title' or 'topic' is required")
+
     # Init Valid Task State on Disk immediately
     initial_state = {
         "task_id": task_id,
-        "title": request.title, 
+        "title": research_title, 
         "status": "pending",
         "created_at": str(uuid.uuid1().time) # timestamp proxy
     }
     task_manager.save_task(task_id, initial_state)
     
-    background_tasks.add_task(run_research_task, task_id, request.title, request.mode)
+    background_tasks.add_task(run_research_task, task_id, research_title, request.mode)
     
     return {"task_id": task_id, "status": "started"}
 
@@ -1370,10 +1404,7 @@ from runtime.config_loader import load_config, save_config, reset_config
 
 # ... (existing imports)
 
-# -----------------------------------------------------------------------------
-# Settings API
-# -----------------------------------------------------------------------------
-
+# Legacy Settings API (Removed duplicate test endpoint, using modern version at end of file)
 @app.get("/api/settings")
 def get_settings():
     """Retrieve current application configuration."""
@@ -1391,224 +1422,6 @@ def reset_settings():
     """Reset settings to factory defaults."""
     config = reset_config()
     return {"status": "success", "message": "Settings reset to defaults", "config": config}
-
-class TestRequest(BaseModel):
-    service_type: str # llm, elsevier
-    provider: Optional[str] = None # google, openrouter, huggingface, custom
-    key: Optional[str] = None
-    base_url: Optional[str] = None # For custom provider
-    model: Optional[str] = None # For custom provider strict validation
-
-@app.post("/api/settings/test")
-def test_connection_endpoint(request: TestRequest):
-    """
-    Test connection to external services with provided credentials.
-    """
-    logger.info(f"[DEBUG] test_connection_endpoint called with: service_type={request.service_type}, provider={request.provider}, has_key={bool(request.key)}, base_url={request.base_url}, model={request.model}")
-
-    if request.service_type == "llm":
-        if not request.key:
-             logger.warning("[DEBUG] API Key is missing")
-             return {"status": "error", "message": "API Key is missing"}
-
-        import requests
-        provider = request.provider
-        logger.info(f"[DEBUG] Testing LLM provider: {provider}")
-
-        try:
-            if provider == "google":
-                # Verify with Google Generative Language API
-                logger.info("[DEBUG] Testing Google Gemini API")
-                url = f"https://generativelanguage.googleapis.com/v1beta/models?key={request.key}"
-                logger.debug(f"[DEBUG] Google API URL: {url}")
-                resp = requests.get(url, timeout=10)
-                logger.info(f"[DEBUG] Google API response status: {resp.status_code}")
-                if resp.status_code == 200:
-                     return {"status": "success", "message": "Google Gemini Key Verified"}
-                else:
-                    try:
-                        err = resp.json().get('error', {})
-                        msg = err.get('message', 'Unknown Google API Error')
-                        status = err.get('status', resp.status_code)
-                        logger.error(f"[DEBUG] Google API Error: {status} - {msg}")
-                        return {"status": "error", "message": f"Google Error ({status}): {msg}"}
-                    except Exception as e:
-                        logger.error(f"[DEBUG] Google API error parsing failed: {e}")
-                        return {"status": "error", "message": f"Google API Error: {resp.status_code}"}
-            
-            elif provider == "openrouter":
-                # Verify with OpenRouter Auth API
-                # OpenRouter requires Referer and Title headers for best practice/compliance
-                headers = {
-                    "Authorization": f"Bearer {request.key}",
-                    "HTTP-Referer": "http://localhost:3000", # Localhost for dev/desktop app
-                    "X-Title": "BioDockify"
-                }
-                resp = requests.get("https://openrouter.ai/api/v1/auth/key", headers=headers, timeout=10)
-                
-                if resp.status_code == 200:
-                     data = resp.json()
-                     return {"status": "success", "message": "OpenRouter Key Verified"}
-                else:
-                     try:
-                         err_msg = resp.json().get('error', {}).get('message', 'Unknown Error')
-                     except:
-                         err_msg = f"Status {resp.status_code}"
-                     return {"status": "error", "message": f"OpenRouter Error: {err_msg}"}
-           
-            elif provider == "huggingface":
-                # Verify with HF WhoAmI
-                headers = {"Authorization": f"Bearer {request.key}"}
-                resp = requests.get("https://huggingface.co/api/whoami", headers=headers, timeout=10)
-                if resp.status_code == 200:
-                    user = resp.json().get("name", "User")
-                    return {"status": "success", "message": f"HuggingFace Connected as {user}"}
-                else:
-                    try:
-                        err_msg = resp.json().get('error', 'Invalid Token')
-                    except:
-                        err_msg = f"Status {resp.status_code}"
-                    return {"status": "error", "message": f"HuggingFace Error: {err_msg}"}
-            
-            elif provider == "glm":
-                 # Removed: Migrated to 'custom' generic provider, but keeping for backward compat if needed
-                 if "." not in request.key:
-                      return {"status": "warning", "message": "Invalid GLM Key format"}
-                 return {"status": "success", "message": "GLM Key valid"}
-
-            elif provider == "groq":
-                # Verify Groq
-                headers = {"Authorization": f"Bearer {request.key}"}
-                resp = requests.get("https://api.groq.com/openai/v1/models", headers=headers, timeout=10)
-                if resp.status_code == 200:
-                    return {"status": "success", "message": "Groq Key Verified"}
-                else:
-                    return {"status": "error", "message": f"Groq Error: {resp.status_code}"}
-
-            elif provider == "openai":
-                # Verify OpenAI
-                headers = {"Authorization": f"Bearer {request.key}"}
-                resp = requests.get("https://api.openai.com/v1/models", headers=headers, timeout=10)
-                if resp.status_code == 200:
-                    return {"status": "success", "message": "OpenAI Key Verified"}
-                else:
-                    return {"status": "error", "message": f"OpenAI Error: {resp.status_code}"}
-
-            elif provider == "deepseek":
-                # Verify DeepSeek
-                headers = {"Authorization": f"Bearer {request.key}"}
-                # DeepSeek often uses /user/balance or /models
-                resp = requests.get("https://api.deepseek.com/models", headers=headers, timeout=10)
-                if resp.status_code == 200:
-                    return {"status": "success", "message": "DeepSeek Key Verified"}
-                else:
-                    return {"status": "error", "message": f"DeepSeek Error: {resp.status_code}"}
-
-            elif provider == "lm_studio":
-                # Verify LM Studio Local Server
-                if not request.base_url:
-                     return {"status": "error", "message": "LM Studio URL is missing"}
-                
-                # Robustly handle /models suffix
-                base = request.base_url.rstrip("/")
-                if base.endswith("/models"):
-                    base = base[:-7]
-                
-                try:
-                    # Check models endpoint
-                    models_url = f"{base}/models"
-                    resp = requests.get(models_url, timeout=2) # Fast timeout for local
-                    if resp.status_code == 200:
-                        try:
-                            data = resp.json()
-                            count = len(data.get('data', []))
-                            if count == 0:
-                                return {"status": "warning", "message": "Connected, but NO models loaded!"}
-                            return {"status": "success", "message": f"LM Studio Connected! ({count} models loaded)"}
-                        except:
-                            return {"status": "success", "message": "LM Studio Connected!"}
-                    else:
-                        return {"status": "error", "message": f"Connected but returned status {resp.status_code}"}
-                except requests.exceptions.ConnectionError:
-                     return {"status": "error", "message": "Connection Refused. Is LM Studio Server running?"}
-                except Exception as e:
-                     return {"status": "error", "message": f"LM Studio Error: {str(e)}"}
-
-            elif provider == "custom":
-                # Verify Generic OpenAI Compatible API
-                # Requires Base URL + Key
-                if not request.base_url:
-                    return {"status": "error", "message": "Base URL required for Custom API"}
-                
-                base = request.base_url.rstrip("/")
-                if base.endswith("/models"):
-                    base = base[:-7]
-                headers = {"Authorization": f"Bearer {request.key}", "Content-Type": "application/json"}
-                
-                # Method 1: Try /models endpoint (works for OpenAI, Groq, etc.)
-                try:
-                    models_url = f"{base}/models"
-                    resp = requests.get(models_url, headers=headers, timeout=5)
-                    if resp.status_code == 200:
-                        try:
-                            data = resp.json()
-                            if 'data' in data and isinstance(data['data'], list):
-                                count = len(data['data'])
-                                return {"status": "success", "message": f"Connected! Found {count} models."}
-                            return {"status": "success", "message": "Connected! (via /models)"}
-                        except:
-                            return {"status": "success", "message": "Connected!"}
-                except:
-                    pass  # Fall through to Method 2
-                
-                # Method 2: Try a minimal chat completion (works for GLM, custom endpoints)
-                try:
-                    chat_url = f"{base}/chat/completions"
-                    # Use provided model or fallback to strict GPT-3.5-turbo (which might fail on others)
-                    # Ideally, for "Test", we should use a model user specified.
-                    test_model = request.model if request.model else "gpt-3.5-turbo"
-                    
-                    payload = {
-                        "model": test_model, 
-                        "messages": [{"role": "user", "content": "hi"}],
-                        "max_tokens": 5
-                    }
-                    resp = requests.post(chat_url, headers=headers, json=payload, timeout=10)
-                    
-                    if resp.status_code == 200:
-                        return {"status": "success", "message": "Custom API Connected! (via chat test)"}
-                    elif resp.status_code == 401:
-                        return {"status": "error", "message": "Invalid API Key (401 Unauthorized)"}
-                    elif resp.status_code == 403:
-                        return {"status": "error", "message": "Access Denied (403 Forbidden)"}
-                    elif resp.status_code == 404:
-                        return {"status": "error", "message": f"Endpoint not found. Check Base URL."}
-                    else:
-                        try:
-                            err = resp.json().get('error', {}).get('message', f'Status {resp.status_code}')
-                            return {"status": "error", "message": f"API Error: {err}"}
-                        except:
-                            return {"status": "error", "message": f"Connection Failed: Status {resp.status_code}"}
-                except requests.exceptions.ConnectionError:
-                    return {"status": "error", "message": f"Cannot connect to {base}. Is the server running?"}
-                except requests.exceptions.Timeout:
-                    return {"status": "error", "message": "Connection timed out. Server may be slow."}
-                except Exception as e:
-                    return {"status": "error", "message": f"Test failed: {str(e)}"}
-            
-            return {"status": "error", "message": f"Unknown provider: {provider}"}
-            
-        except requests.exceptions.RequestException as e:
-            return {"status": "error", "message": f"Network Error: {str(e)}"}
-
-    elif request.service_type == "elsevier":
-        if not request.key:
-            return {"status": "error", "message": "Elsevier Key missing"}
-        return {"status": "success", "message": "Elsevier Key configured (Mock Test)"}
-
-    return {"status": "error", "message": f"Unknown service type: {request.service_type}"}
-
-
 @app.get("/api/diagnose/connectivity")
 async def diagnose_connectivity():
     """
@@ -2808,8 +2621,10 @@ class TestConnectionRequest(BaseModel):
 async def test_connection_endpoint(request: TestConnectionRequest):
     """
     Test connection to external services to avoid CORS issues.
-    Proxies the request from the backend.
+    Proxies the request from the backend to escape browser restrictions.
     """
+    logger.info(f"[DEBUG] test_connection_endpoint called: service_type={request.service_type}, provider={request.provider}, has_key={bool(request.key)}, base_url={request.base_url}, model={request.model}")
+    
     try:
         # 1. LLM Testing
         if request.service_type == "llm":
@@ -2824,40 +2639,48 @@ async def test_connection_endpoint(request: TestConnectionRequest):
             adapter = None
             
             # Map provider to Adapter
-            if request.provider == "custom":
-                # For Deepseek, Groq, local, etc. used via Custom/OpenAI-Compatible
-                if not request.base_url:
-                     return {"status": "error", "message": "Base URL required for custom provider"}
-                
-                # Normalize URL (remove /chat/completions if user added it, CustomAdapter adds it)
-                base = request.base_url.rstrip("/")
-                if base.endswith("/chat/completions"):
-                    base = base.replace("/chat/completions", "")
-                
-                adapter = CustomAdapter(request.key or "dummy", base, request.model)
-
-            elif request.provider == "google":
+            # Dedicated presets
+            if request.provider == "google":
                 adapter = GoogleGeminiAdapter(request.key)
             elif request.provider == "openrouter":
                 adapter = OpenRouterAdapter(request.key, model=request.model or "mistralai/mistral-7b-instruct")
             elif request.provider == "huggingface":
                 adapter = HuggingFaceAdapter(request.key)
-            elif request.provider == "glm" or request.provider == "zhipu":
+            elif request.provider in ["glm", "zhipu"]:
                 adapter = ZhipuAdapter(request.key)
-            elif request.provider == "groq": # If using dedicated Groq preset (though likely uses Custom logic in UI)
-                 # Groq is openai compatible, can use CustomAdapter 
-                 adapter = CustomAdapter(request.key, "https://api.groq.com/openai/v1", request.model or "llama-3.3-70b-versatile")
+            elif request.provider == "deepseek":
+                # DeepSeek dedicated case (using CustomAdapter with official base URL)
+                adapter = CustomAdapter(request.key, "https://api.deepseek.com", request.model or "deepseek-chat")
+            elif request.provider == "groq":
+                adapter = CustomAdapter(request.key, "https://api.groq.com/openai/v1", request.model or "llama-3.3-70b-versatile")
+            
+            # Generic Custom case
+            elif request.provider == "custom":
+                if not request.base_url:
+                     return {"status": "error", "message": "Base URL required for custom provider"}
+                
+                # Normalize URL
+                base = request.base_url.rstrip("/")
+                if base.endswith("/chat/completions"):
+                    base = base.replace("/chat/completions", "")
+                
+                adapter = CustomAdapter(request.key or "dummy", base, request.model)
             
             if not adapter:
                  return {"status": "error", "message": f"Unsupported provider: {request.provider}"}
 
-            # Perform test generation
-            # We use a very simple prompt to save tokens/time
-            response = adapter.generate("Test. Reply with 'OK'.", system_prompt="You are a connection tester.")
+            # Perform test generation in a threadpool to avoid blocking the event loop
+            def _run_test():
+                return adapter.generate("Test. Reply with 'OK'.", system_prompt="You are a connection tester.")
+            
+            logger.info(f"[DEBUG] Running {request.provider} test via executor...")
+            response = await asyncio.get_event_loop().run_in_executor(None, _run_test)
             
             if response:
+                 logger.info(f"[DEBUG] {request.provider} test SUCCESS")
                  return {"status": "success", "message": f"Connected! Response: {response[:50]}..."}
             else:
+                 logger.warning(f"[DEBUG] {request.provider} test FAILED: No response")
                  return {"status": "error", "message": "No response received from API."}
 
         # 2. Elsevier Testing

@@ -74,7 +74,7 @@ class ServiceManager:
         ports = {
             "lm_studio": 1234,
             "surfsense": 3003,
-            "api": 8000
+            "api": 8234
         }
         
         port = ports.get(service_name)

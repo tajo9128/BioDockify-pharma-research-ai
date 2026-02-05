@@ -252,11 +252,11 @@ class ResearchOrchestrator:
     # Main Planning Method
     # -------------------------------------------------------------------------
     
-    def plan_research(self, title: str, mode: str = "synthesize") -> ResearchPlan:
+    def plan_research(self, title: str, mode: str = "synthesize", task_id: Optional[str] = None) -> ResearchPlan:
         """
         Decompose a research title into a structured research plan.
         Respects Mode Enforcement and Citation Lock rules.
-        
+
         Args:
             title: Research title/topic
             mode: search | synthesize | write
@@ -264,6 +264,20 @@ class ResearchOrchestrator:
         Returns:
             ResearchPlan with structured steps
         """
+        
+        def _log(msg, type="thought"):
+            if task_id:
+                try:
+                    from runtime.task_manager import task_manager
+                    task = task_manager.load_task(task_id)
+                    if task:
+                        if "logs" not in task: task["logs"] = []
+                        task["logs"].append(f"[{type.upper()}] {msg}")
+                        task_manager.save_task(task_id, task)
+                except: pass
+
+        _log(f"Planning research strategy for: {title}", "thought")
+
         print(f"\n{'='*60}")
         print(f"Planning Research: {title} [Mode: {mode.upper()}]")
         print(f"{'='*60}")

@@ -33,7 +33,7 @@ export default function NotebookLM() {
         try {
             const formData = new FormData();
             formData.append('file', file);
-            const res = await fetch('http://localhost:8000/api/rag/upload', { method: 'POST', body: formData });
+            const res = await fetch('http://localhost:8234/api/rag/upload', { method: 'POST', body: formData });
             if (!res.ok) throw new Error('Upload failed');
             setSources(prev => [...prev, file.name]);
         } catch (err) {
@@ -49,7 +49,7 @@ export default function NotebookLM() {
         if (!url) return;
         setUploading(true);
         try {
-            const res = await fetch('http://localhost:8000/api/rag/link', {
+            const res = await fetch('http://localhost:8234/api/rag/link', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ url })
@@ -72,7 +72,7 @@ export default function NotebookLM() {
         setLoading(true);
 
         try {
-            const res = await fetch('http://localhost:8000/api/rag/chat', {
+            const res = await fetch('http://localhost:8234/api/rag/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ query: q })

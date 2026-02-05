@@ -565,93 +565,38 @@ export default function FirstRunWizard({ onComplete }: WizardProps) {
                     {step === 6 && (
                         <div className="space-y-6 text-center animate-in slide-in-from-bottom-4 duration-500">
                             <div>
-                                <h1 className="text-2xl font-bold text-white">Verify Your Email 📧</h1>
-                                <p className="text-slate-400 mt-2">Enter the email you used to sign up</p>
+                                <h1 className="text-2xl font-bold text-white">Setup Successful! 🎉</h1>
+                                <p className="text-slate-400 mt-2">Your research environment is ready. Let's configure your AI preferences.</p>
                             </div>
 
-                            <div className="bg-gradient-to-br from-emerald-900/20 to-teal-900/20 p-6 rounded-xl border border-emerald-500/30 text-left space-y-4 max-w-sm mx-auto">
-                                <div>
-                                    <label className="text-xs font-medium text-slate-400">Your Email Address</label>
-                                    <input
-                                        type="email"
-                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white mt-2 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 focus:outline-none transition-all text-lg"
-                                        placeholder="yourname@university.edu"
-                                        value={personaEmail}
-                                        onChange={e => setPersonaEmail(e.target.value)}
-                                        disabled={verifying}
-                                    />
+                            <div className="bg-gradient-to-br from-emerald-900/20 to-teal-900/20 p-8 rounded-xl border border-emerald-500/30 text-left space-y-4 max-w-sm mx-auto shadow-2xl">
+                                <div className="flex items-center space-x-3 text-emerald-400">
+                                    <Shield className="w-6 h-6" />
+                                    <span className="font-bold text-lg">Instant Access Enabled</span>
                                 </div>
-
-                                {verifying && (
-                                    <div className="space-y-2 animate-in fade-in duration-300">
-                                        <div className="flex justify-between text-xs text-slate-400">
-                                            <span>{verifyStage}</span>
-                                            <span>{Math.round(verifyProgress)}%</span>
-                                        </div>
-                                        <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
-                                            <div
-                                                className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-500 ease-out"
-                                                style={{ width: `${verifyProgress}%` }}
-                                            />
-                                        </div>
-                                    </div>
-                                )}
-
-                                {verificationError && (
-                                    <div className="p-4 bg-red-950/40 border border-red-900/50 rounded-lg animate-in slide-in-from-top-2 duration-300">
-                                        <div className="flex items-start space-x-3">
-                                            <XCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
-                                            <div className="space-y-2">
-                                                <h3 className="text-sm font-semibold text-red-400">Verification Failed</h3>
-                                                <p className="text-xs text-red-300/80 leading-relaxed">
-                                                    {verificationError}
-                                                </p>
-                                                <div className="pt-2 flex gap-2">
-                                                    <button
-                                                        onClick={() => {
-                                                            setVerificationError('');
-                                                            handleVerify();
-                                                        }}
-                                                        className="px-3 py-1.5 bg-red-900/30 hover:bg-red-900/50 border border-red-800 text-red-300 text-xs rounded transition-colors"
-                                                    >
-                                                        Try Again
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
+                                <p className="text-sm text-slate-300 leading-relaxed">
+                                    We've bypassed the standard verification for you. You can now access all features immediately.
+                                </p>
+                                <div className="pt-2 text-xs text-slate-500">
+                                    Note: You can still register an account later from the settings panel to sync your research across devices.
+                                </div>
                             </div>
 
-                            <div className="flex flex-col items-center space-y-3">
+                            <div className="flex flex-col items-center space-y-3 pt-4">
                                 <button
-                                    onClick={handleVerify}
-                                    disabled={verifying}
-                                    className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white px-10 py-3 rounded-xl font-bold text-lg transition-all w-full max-w-sm shadow-lg shadow-emerald-500/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+                                    onClick={() => onComplete('settings')}
+                                    className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white px-10 py-4 rounded-xl font-bold text-xl transition-all w-full max-w-sm shadow-lg shadow-emerald-500/30 hover:scale-[1.02] active:scale-95 flex items-center justify-center space-x-3"
                                 >
-                                    {verifying ? (
-                                        <>
-                                            <RefreshCcw className="w-5 h-5 animate-spin" />
-                                            <span>Verifying...</span>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <UserCheck className="w-5 h-5" />
-                                            <span>Verify & Start Research!</span>
-                                        </>
-                                    )}
+                                    <Settings className="w-6 h-6 animate-spin-slow" />
+                                    <span>Open Settings Panel →</span>
                                 </button>
 
                                 <button
                                     onClick={handleSkipVerification}
                                     className="text-slate-500 hover:text-slate-300 text-sm underline transition-colors"
                                 >
-                                    Skip for now (Limited Access)
+                                    Finish Setup (Go to Dashboard)
                                 </button>
-
-                                <p className="text-xs text-slate-500 pt-2">
-                                    Need an account? <a href="https://www.biodockify.com" target="_blank" rel="noopener noreferrer" className="text-teal-400 underline hover:text-teal-300">Sign up free</a>
-                                </p>
                             </div>
                         </div>
                     )}

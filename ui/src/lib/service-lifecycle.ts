@@ -83,7 +83,7 @@ export class ServiceLifecycleManager {
         this.services.set('surfsense', {
             name: 'SurfSense',
             running: false,
-            url: 'http://localhost:8000',
+            url: 'http://localhost:8234',
             lastCheck: new Date()
         });
 
@@ -167,7 +167,7 @@ export class ServiceLifecycleManager {
 
     private async checkSurfSense(): Promise<boolean> {
         try {
-            const res = await fetch('http://localhost:8000/health', {
+            const res = await fetch('http://localhost:8234/health', {
                 signal: AbortSignal.timeout(3000)
             });
             return res.ok;
@@ -178,7 +178,8 @@ export class ServiceLifecycleManager {
 
     private async checkBackend(): Promise<boolean> {
         try {
-            const res = await fetch('http://localhost:8234/api/health', {
+            // Use the root /health endpoint which whitelists CORS and is optimized
+            const res = await fetch('http://localhost:8234/health', {
                 signal: AbortSignal.timeout(3000)
             });
             return res.ok;

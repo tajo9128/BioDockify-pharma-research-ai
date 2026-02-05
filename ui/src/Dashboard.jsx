@@ -68,7 +68,7 @@ const Dashboard = () => {
     useEffect(() => {
         if (status === 'running' || status === 'pending') {
             // In a real app, this connects to the backend
-            // const ws = new WebSocket('ws://localhost:8000/ws/status');
+            // const ws = new WebSocket('ws://localhost:8234/ws/status');
             // For Zero-Cost MVP validation, we'll simulate the stream if API isn't present
 
             const timer = setInterval(() => {
@@ -111,7 +111,7 @@ const Dashboard = () => {
         addLog(`Task: ${researchTitle}`);
 
         // API Call would go here:
-        // await fetch('http://localhost:8000/api/research/start', ...)
+        // await fetch('http://localhost:8234/api/research/start', ...)
     };
 
     const steps = [

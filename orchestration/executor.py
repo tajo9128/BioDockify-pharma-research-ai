@@ -67,23 +67,48 @@ class ResearchExecutor:
         except:
             pass # Ignore if offline
 
+    def log_to_task(self, message: str, type: str = "info"):
+        """Append a log entry to the task state on disk."""
+        if not self.task_id:
+            return
+        
+        try:
+            from runtime.task_manager import task_manager
+            task = task_manager.load_task(self.task_id)
+            if task:
+                if "logs" not in task:
+                    task["logs"] = []
+                # Simple string log, the UI parses type from keywords if needed 
+                # or we can use a structured format
+                log_entry = f"[{type.upper()}] {message}"
+                task["logs"].append(log_entry)
+                task_manager.save_task(self.task_id, task)
+        except Exception as e:
+            logger.error(f"Failed to log to task: {e}")
+
     def execute_plan(self, plan: ResearchPlan) -> ResearchContext:
         """
         Execute the entire research plan with checkpointing.
         """
         logger.info(f"Starting execution of plan: {plan.research_title}")
+        self.log_to_task(f"Starting research on: {plan.research_title}", "info")
+        
         context = ResearchContext(topic=plan.research_title)
         
         # Load previous context if resuming (Simplified logic for now)
         # In a full production version, we would deserialize context from disk here.
         
         total_steps = len(plan.steps)
+        self.log_to_task(f"Plan contains {total_steps} analysis steps.", "thought")
         
         for idx, step in enumerate(plan.steps):
             logger.info(f"--- Executing Step {step.step_id}: {step.title} ---")
+            self.log_to_task(f"Step {idx+1}/{total_steps}: {step.title}", "action")
+            
             try:
                 self._execute_step(step, context)
                 logger.info(f"✓ Step {step.step_id} completed.")
+                self.log_to_task(f"Completed {step.title}", "result")
                 
                 # CHECKPOINTING
                 if self.task_id:
@@ -105,6 +130,7 @@ class ResearchExecutor:
 
             except Exception as e:
                 logger.error(f"✗ Step {step.step_id} failed: {e}")
+                self.log_to_task(f"Error in {step.title}: {str(e)}", "error")
                 if self.task_id:
                      from runtime.task_manager import task_manager
                      task = task_manager.load_task(self.task_id)
@@ -114,6 +140,7 @@ class ResearchExecutor:
                          task_manager.save_task(self.task_id, task)
                 raise e # Re-raise to stop execution
         
+        self.log_to_task("Research execution finished successfully.", "result")
         return context
 
     def _execute_step(self, step: ResearchStep, context: ResearchContext):
