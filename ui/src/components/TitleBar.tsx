@@ -1,8 +1,10 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
-import { appWindow } from '@tauri-apps/api/window';
-import { Minus, Square, X, FolderOpen, FileText, Settings, Type, ZoomIn, ZoomOut, Eye, BookOpen, Mail, Activity } from 'lucide-react';
+import React, { useState } from 'react';
+import { Minus, Square, X, FolderOpen, FileText, Settings, ZoomIn, ZoomOut, Eye, BookOpen, Mail, Activity } from 'lucide-react';
+
+// Check if we're in Tauri environment
+const isTauri = typeof window !== 'undefined' && (window as any).__TAURI__;
 
 interface MenuItemConfig {
     label?: string;
@@ -14,64 +16,120 @@ interface MenuItemConfig {
 export default function TitleBar() {
     const [openMenu, setOpenMenu] = useState<string | null>(null);
 
-    const handleMinimize = () => appWindow.minimize();
-    const toggleMaximize = async () => {
-        const isMax = await appWindow.isMaximized();
-        if (isMax) {
-            appWindow.unmaximize();
-        } else {
-            appWindow.maximize();
+    // Window controls - only work in Tauri, no-op in browser/Docker
+    const handleMinimize = async () => {
+        if (isTauri) {
+            try {
+                const { appWindow } = await import('@tauri-apps/api/window');
+                appWindow.minimize();
+            } catch (e) {
+                console.log('Minimize not available in Docker mode');
+            }
         }
     };
-    const handleClose = () => {
-        if (typeof window !== 'undefined') {
-            appWindow.close();
+
+    const toggleMaximize = async () => {
+        if (isTauri) {
+            try {
+                const { appWindow } = await import('@tauri-apps/api/window');
+                const isMax = await appWindow.isMaximized();
+                if (isMax) {
+                    appWindow.unmaximize();
+                } else {
+                    appWindow.maximize();
+                }
+            } catch (e) {
+                console.log('Maximize not available in Docker mode');
+            }
+        } else {
+            // Browser fullscreen toggle
+            if (document.fullscreenElement) {
+                document.exitFullscreen?.();
+            } else {
+                document.documentElement.requestFullscreen?.();
+            }
+        }
+    };
+
+    const handleClose = async () => {
+        if (isTauri) {
+            try {
+                const { appWindow } = await import('@tauri-apps/api/window');
+                appWindow.close();
+            } catch (e) {
+                console.log('Close not available in Docker mode');
+            }
+        } else {
+            // In Docker/browser, close tab
+            window.close();
         }
     };
 
     const handleFileImport = async (type: string) => {
-        try {
-            const { open } = await import('@tauri-apps/api/dialog');
-            let extensions: string[] = [];
-            let filterName = '';
+        if (isTauri) {
+            try {
+                const { open } = await import('@tauri-apps/api/dialog');
+                let extensions: string[] = [];
+                let filterName = '';
 
-            switch (type) {
-                case 'pdf':
-                    extensions = ['pdf'];
-                    filterName = 'PDF Documents';
-                    break;
-                case 'doc':
-                    extensions = ['doc', 'docx'];
-                    filterName = 'Word Documents';
-                    break;
-                case 'text':
-                    extensions = ['txt', 'md'];
-                    filterName = 'Text Files';
-                    break;
-                case 'notebook':
-                    extensions = ['ipynb'];
-                    filterName = 'Jupyter Notebooks';
-                    break;
-                case 'data':
-                    extensions = ['csv', 'json'];
-                    filterName = 'Data Files';
-                    break;
-                case 'all':
-                    extensions = ['pdf', 'doc', 'docx', 'txt', 'md', 'ipynb', 'csv', 'json'];
-                    filterName = 'All Supported Files';
-                    break;
-            }
+                switch (type) {
+                    case 'pdf':
+                        extensions = ['pdf'];
+                        filterName = 'PDF Documents';
+                        break;
+                    case 'doc':
+                        extensions = ['doc', 'docx'];
+                        filterName = 'Word Documents';
+                        break;
+                    case 'text':
+                        extensions = ['txt', 'md'];
+                        filterName = 'Text Files';
+                        break;
+                    case 'notebook':
+                        extensions = ['ipynb'];
+                        filterName = 'Jupyter Notebooks';
+                        break;
+                    case 'data':
+                        extensions = ['csv', 'json'];
+                        filterName = 'Data Files';
+                        break;
+                    case 'all':
+                        extensions = ['pdf', 'doc', 'docx', 'txt', 'md', 'ipynb', 'csv', 'json'];
+                        filterName = 'All Supported Files';
+                        break;
+                }
 
-            const selected = await open({
-                multiple: true,
-                filters: [{ name: filterName, extensions }]
-            });
-            if (selected) {
-                console.log(`Importing ${type} files:`, selected);
-                window.dispatchEvent(new CustomEvent('import-to-notebook', { detail: { files: selected, type } }));
+                const selected = await open({
+                    multiple: true,
+                    filters: [{ name: filterName, extensions }]
+                });
+                if (selected) {
+                    console.log(`Importing ${type} files:`, selected);
+                    window.dispatchEvent(new CustomEvent('import-to-notebook', { detail: { files: selected, type } }));
+                }
+            } catch (e) {
+                console.error('File import failed:', e);
             }
-        } catch (e) {
-            console.error('File import failed:', e);
+        } else {
+            // In Docker/browser, use HTML file input
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.multiple = true;
+            input.accept = type === 'all' ? '.pdf,.doc,.docx,.txt,.md,.ipynb,.csv,.json' :
+                type === 'pdf' ? '.pdf' :
+                    type === 'doc' ? '.doc,.docx' :
+                        type === 'text' ? '.txt,.md' :
+                            type === 'notebook' ? '.ipynb' :
+                                type === 'data' ? '.csv,.json' : '*';
+            input.onchange = (e) => {
+                const files = (e.target as HTMLInputElement).files;
+                if (files?.length) {
+                    window.dispatchEvent(new CustomEvent('import-to-notebook', {
+                        detail: { files: Array.from(files).map(f => f.name), type }
+                    }));
+                }
+            };
+            input.click();
         }
     };
 
@@ -170,6 +228,9 @@ export default function TitleBar() {
         );
     };
 
+    // In Docker/browser mode, hide window controls since browser handles them
+    const showWindowControls = isTauri;
+
     return (
         <div className="fixed top-0 left-0 right-0 h-10 bg-slate-950 flex items-center justify-between z-[60] select-none border-b border-white/5 shadow-sm">
             {/* Left: Branding & Menu */}
@@ -191,32 +252,34 @@ export default function TitleBar() {
                 </div>
             </div>
 
-            {/* Center: Draggable Area */}
+            {/* Center: Draggable Area (Tauri only) */}
             <div data-tauri-drag-region className="flex-1 max-w-xl mx-4 flex items-center justify-center h-full">
                 {/* Empty draggable space */}
             </div>
 
-            {/* Right: Window Controls */}
-            <div className="flex items-center h-full pointer-events-auto">
-                <button
-                    onClick={handleMinimize}
-                    className="w-12 h-full flex items-center justify-center text-slate-400 hover:bg-white/10 hover:text-white transition-colors cursor-pointer"
-                >
-                    <Minus className="w-4 h-4 pointer-events-none" />
-                </button>
-                <button
-                    onClick={toggleMaximize}
-                    className="w-12 h-full flex items-center justify-center text-slate-400 hover:bg-white/10 hover:text-white transition-colors cursor-pointer"
-                >
-                    <Square className="w-3.5 h-3.5 pointer-events-none" />
-                </button>
-                <button
-                    onClick={handleClose}
-                    className="w-12 h-full flex items-center justify-center text-slate-400 hover:bg-red-500 hover:text-white transition-colors cursor-pointer"
-                >
-                    <X className="w-4 h-4 pointer-events-none" />
-                </button>
-            </div>
+            {/* Right: Window Controls - Only show in Tauri mode */}
+            {showWindowControls && (
+                <div className="flex items-center h-full pointer-events-auto">
+                    <button
+                        onClick={handleMinimize}
+                        className="w-12 h-full flex items-center justify-center text-slate-400 hover:bg-white/10 hover:text-white transition-colors cursor-pointer"
+                    >
+                        <Minus className="w-4 h-4 pointer-events-none" />
+                    </button>
+                    <button
+                        onClick={toggleMaximize}
+                        className="w-12 h-full flex items-center justify-center text-slate-400 hover:bg-white/10 hover:text-white transition-colors cursor-pointer"
+                    >
+                        <Square className="w-3.5 h-3.5 pointer-events-none" />
+                    </button>
+                    <button
+                        onClick={handleClose}
+                        className="w-12 h-full flex items-center justify-center text-slate-400 hover:bg-red-500 hover:text-white transition-colors cursor-pointer"
+                    >
+                        <X className="w-4 h-4 pointer-events-none" />
+                    </button>
+                </div>
+            )}
         </div>
     );
 }

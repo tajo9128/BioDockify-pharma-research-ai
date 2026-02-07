@@ -1,5 +1,7 @@
-import { fetch } from '@tauri-apps/api/http';
 import { cleanHtml, CleanedWebPage } from './html_cleaner';
+
+// Check if we're in Tauri environment
+const isTauri = typeof window !== 'undefined' && (window as any).__TAURI__;
 
 // Configuration for HeadlessX
 // TODO: Move these to App Settings in a future update
@@ -11,12 +13,76 @@ const HEADLESSX_CONFIG = {
 };
 
 /**
- * Fetches and cleans a public web page using Tauri's native HTTP client.
- * Bypasses CORS issues present in standard browser fetch.
+ * Universal fetch that works in both Tauri and browser environments
+ */
+async function universalHttpFetch(url: string, options: {
+    method?: 'GET' | 'POST';
+    timeout?: number;
+    headers?: Record<string, string>;
+    body?: any;
+}): Promise<{ ok: boolean; status: number; data: any }> {
+    const { method = 'GET', timeout = 10000, headers = {}, body } = options;
+
+    if (isTauri) {
+        try {
+            // Dynamic import for Tauri
+            const { fetch: tauriFetch, Body } = await import('@tauri-apps/api/http');
+            const requestBody = body ? Body.json(body) : undefined;
+
+            const response = await tauriFetch(url, {
+                method,
+                timeout,
+                headers,
+                body: requestBody
+            });
+
+            return {
+                ok: response.ok,
+                status: response.status,
+                data: response.data
+            };
+        } catch (e) {
+            console.error('[WebFetcher] Tauri fetch failed, using browser fetch:', e);
+        }
+    }
+
+    // Browser/Docker fallback
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+    try {
+        const response = await fetch(url, {
+            method,
+            headers: {
+                'Content-Type': 'application/json',
+                ...headers
+            },
+            body: body ? JSON.stringify(body) : undefined,
+            signal: controller.signal
+        });
+
+        clearTimeout(timeoutId);
+        const data = await response.text();
+
+        return {
+            ok: response.ok,
+            status: response.status,
+            data
+        };
+    } catch (e) {
+        clearTimeout(timeoutId);
+        throw e;
+    }
+}
+
+/**
+ * Fetches and cleans a public web page.
+ * In Tauri: Uses native HTTP client to bypass CORS.
+ * In Docker/Browser: Uses standard fetch (works for same-origin or CORS-enabled endpoints).
  * 
  * Strategy:
  * 1. Attempt HeadlessX (if enabled) for anti-detect/dynamic scraping.
- * 2. Fallback to Simple Fetch (Tauri) if HeadlessX is unreachable or fails.
+ * 2. Fallback to Simple Fetch if HeadlessX is unreachable or fails.
  */
 export async function fetchWebPage(url: string): Promise<CleanedWebPage> {
     console.log(`[WebFetcher] Fetching: ${url}`);
@@ -38,7 +104,7 @@ export async function fetchWebPage(url: string): Promise<CleanedWebPage> {
 
     // 2. Fallback to Standard Fetch
     try {
-        const response = await fetch(url, {
+        const response = await universalHttpFetch(url, {
             method: 'GET',
             timeout: 10000,
             headers: {
@@ -68,7 +134,7 @@ async function fetchWithHeadlessX(targetUrl: string): Promise<{ content: string 
     const apiUrl = `${HEADLESSX_CONFIG.baseUrl}${HEADLESSX_CONFIG.endpoint}`;
 
     try {
-        const response = await fetch(apiUrl, {
+        const response = await universalHttpFetch(apiUrl, {
             method: 'POST',
             timeout: 30000, // Longer timeout for browser rendering
             headers: {
@@ -95,8 +161,7 @@ async function fetchWithHeadlessX(targetUrl: string): Promise<{ content: string 
         }
 
         // Parse response (Assuming standard Scraping/HeadlessX format)
-        // Usually { success: true, data: { content: "<html>..." } } OR directly the data
-        const data = response.data as any;
+        const data = typeof response.data === 'string' ? JSON.parse(response.data) : response.data;
 
         // Handle varying API response structures safely
         if (data.content) return { content: data.content };
@@ -107,7 +172,6 @@ async function fetchWithHeadlessX(targetUrl: string): Promise<{ content: string 
 
     } catch (error) {
         // Quietly fail (connection refused usually)
-        // console.debug('HeadlessX not reachable');
         throw error;
     }
 }
@@ -122,7 +186,7 @@ export async function searchWeb(query: string): Promise<string[]> {
     const searchUrl = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
 
     try {
-        const response = await fetch(searchUrl, {
+        const response = await universalHttpFetch(searchUrl, {
             method: 'GET',
             timeout: 10000,
             headers: {

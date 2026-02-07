@@ -29,21 +29,44 @@ if missing:
     # raise SystemExit(1) 
 
 # Check for critical dependencies before importing heavy libs
+TF_AVAILABLE = False
 try:
     import tensorflow
+    TF_AVAILABLE = True
 except ImportError:
-    logging.error("CRITICAL: TensorFlow not found. Please run 'pip install tensorflow'.")
-    raise SystemExit(1)
+    logging.warning("⚠️ TensorFlow not found. DECIMER/ML features will be disabled.")
+    logging.warning("   Run 'pip install tensorflow' to enable full functionality.")
 # ---------------------------------
 
 
-# EXPLICIT IMPORTS TO FORCE PYINSTALLER BUNDLING
-# We remove try/except to force PyInstaller to see these as hard dependencies.
-import tensorflow as tf
-import numpy as np
-import PIL
-import pypdf
-import pdfminer
+# EXPLICIT IMPORTS FOR PYINSTALLER BUNDLING (graceful)
+# We try/except to allow Docker startup even if some deps are missing
+try:
+    import tensorflow as tf
+except ImportError:
+    tf = None
+
+try:
+    import numpy as np
+except ImportError:
+    import logging
+    logging.warning("NumPy not found")
+    np = None
+
+try:
+    import PIL
+except ImportError:
+    PIL = None
+
+try:
+    import pypdf
+except ImportError:
+    pypdf = None
+
+try:
+    import pdfminer
+except ImportError:
+    pdfminer = None
 
 # Optional dependencies - these modules handle missing deps gracefully
 try:
