@@ -6,6 +6,11 @@ from pathlib import Path
 # Add project root to sys.path
 import importlib.util
 
+# Add LatteReview to path
+LATTE_DIR = Path(os.path.abspath(__file__)).parent.parent / "_external" / "LatteReview"
+if str(LATTE_DIR) not in sys.path:
+    sys.path.insert(0, str(LATTE_DIR))
+
 # Import wrapper directly to avoid triggering agent_zero package init and its deep dependencies
 wrapper_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'agent_zero', 'skills', 'latte_review', 'wrapper.py'))
 spec = importlib.util.spec_from_file_location("latte_wrapper", wrapper_path)

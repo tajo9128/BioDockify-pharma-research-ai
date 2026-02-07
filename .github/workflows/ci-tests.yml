@@ -11,6 +11,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
+      with:
+        submodules: recursive
 
     - name: Set up Python 3.9
       uses: actions/setup-python@v4
@@ -33,6 +35,14 @@ jobs:
           echo "Warning: requirements.txt not found in root or api/"
         fi
         pip install pytest pytest-asyncio httpx requests psutil fastapi uvicorn neo4j
+
+    - name: Start Backend
+      run: |
+        python server.py &
+        echo "Waiting for backend to start..."
+        # Wait up to 60 seconds for port 8234 to be active
+        timeout 60s bash -c 'until curl -sf http://localhost:8234/api/health > /dev/null 2>&1; do sleep 2; done' || (echo "Backend failed to start" && exit 1)
+        echo "Backend is ready!"
 
     - name: Run Backend Tests
       run: |

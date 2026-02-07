@@ -42,6 +42,10 @@ except ImportError as e:
 
 from fastapi.middleware.cors import CORSMiddleware
 
+@app.get("/api/health")
+async def health_check():
+    return {"status": "healthy", "timestamp": time.time()}
+
 # CORS Configuration - Whitelist specific origins for security
 allowed_origins = [
     "http://localhost:3000",
