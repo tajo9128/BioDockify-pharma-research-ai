@@ -1,5 +1,5 @@
 # =============================================================================
-# BioDockify v2.20.9 - Docker Production Image
+# BioDockify v2.20.10 - Docker Production Image
 # =============================================================================
 # One-Command Install:
 #   docker pull tajo9128/biodockify-ai:latest
@@ -94,8 +94,7 @@ RUN pip install --no-cache-dir \
 RUN pip install --no-cache-dir tensorflow==2.15.0
 
 # Install DECIMER and RDKit (chemistry/molecular dependencies)
-RUN pip install --no-cache-dir decimer>=2.2.0 rdkit>=2023.9.4 || \
-    (pip install --no-cache-dir decimer && pip install --no-cache-dir rdkit)
+RUN pip install --no-cache-dir decimer>=2.2.0 rdkit>=2023.9.4
 
 # Install remaining requirements
 RUN pip install --no-cache-dir -r requirements_bundle.txt
@@ -116,11 +115,9 @@ RUN python -c "import tensorflow; print(f'TensorFlow {tensorflow.__version__}')"
 # -----------------------------------------------------------------------------
 
 # Copy frontend build artifacts
-COPY --from=frontend-builder /app/ui/.next/standalone /app/ui/
-COPY --from=frontend-builder /app/ui/.next/static /app/ui/.next/static
-COPY --from=frontend-builder /app/ui/public /app/ui/public
-COPY --from=frontend-builder /app/ui/.next /app/ui/.next
-COPY --from=frontend-builder /app/ui/node_modules /app/ui/node_modules
+COPY --from=frontend-builder /app/ui/.next/standalone/ /app/
+COPY --from=frontend-builder /app/ui/.next/static/ /app/ui/.next/static/
+COPY --from=frontend-builder /app/ui/public/ /app/ui/public/
 COPY --from=frontend-builder /app/ui/package.json /app/ui/package.json
 
 # Copy ALL backend application code
@@ -216,7 +213,7 @@ environment=PYTHONPATH="/app",PYTHONUNBUFFERED="1" \n\
 \n\
 [program:frontend] \n\
 command=/app/start-frontend.sh \n\
-directory=/app/ui \n\
+directory=/app \n\
 autostart=true \n\
 autorestart=true \n\
 priority=30 \n\
@@ -236,20 +233,19 @@ environment=PORT="3000",HOSTNAME="0.0.0.0",NODE_ENV="production" \n\
 # Frontend startup script with fallback options
 RUN echo '#!/bin/bash \n\
 set -e \n\
-cd /app/ui \n\
 \n\
 echo "[Frontend] Starting Next.js..." \n\
 \n\
-# Try standalone server first (fastest) \n\
-if [ -f "/app/ui/server.js" ]; then \n\
+# Try standalone server first (Next.js 15+ structure) \n\
+if [ -f "/app/server.js" ]; then \n\
     echo "[Frontend] Using standalone server.js" \n\
-    exec node server.js \n\
+    exec node /app/server.js \n\
 fi \n\
 \n\
-# Fallback to npx next start \n\
+# Fallback to npx next start (if build dir exists but server.js failed) \n\
 if [ -d "/app/ui/.next" ]; then \n\
     echo "[Frontend] Using npx next start" \n\
-    exec npx next start -p 3000 -H 0.0.0.0 \n\
+    cd /app/ui && exec npx next start -p 3000 -H 0.0.0.0 \n\
 fi \n\
 \n\
 # Last resort - serve static files \n\
@@ -261,7 +257,7 @@ exec python -m http.server 3000 --directory /tmp \n\
 # Main startup script with dependency verification
 RUN echo '#!/bin/bash \n\
 echo "================================================" \n\
-echo "  BioDockify v2.20.9 - Starting..." \n\
+echo "  BioDockify v2.20.10 - Starting..." \n\
 echo "================================================" \n\
 echo "" \n\
 echo "  Access at: http://localhost:50081" \n\
@@ -294,7 +290,7 @@ exec /usr/bin/supervisord -c /etc/supervisor/supervisord.conf \n\
 LABEL maintainer="tajo9128"
 LABEL org.opencontainers.image.title="BioDockify Pharma Research AI"
 LABEL org.opencontainers.image.description="Integrated AI Research Workstation for Pharmaceutical & Life Sciences - All Dependencies Bundled"
-LABEL org.opencontainers.image.version="2.20.9"
+LABEL org.opencontainers.image.version="2.20.10"
 LABEL org.opencontainers.image.source="https://github.com/tajo9128/BioDockify-pharma-research-ai"
 
 # -----------------------------------------------------------------------------

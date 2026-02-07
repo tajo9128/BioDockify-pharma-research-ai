@@ -1,7 +1,7 @@
 {
   "name": "biodockify-agent-zero",
-  "version": "2.20.9",
-  "description": "BioDockify v2.20.9 - Pharma Research AI: Docker Edition",
+  "version": "2.20.10",
+  "description": "BioDockify v2.20.10 - Pharma Research AI: Docker Release Fixes",
   "private": true,
   "scripts": {
     "dev": "next dev -p 3000 2>&1 | tee dev.log",

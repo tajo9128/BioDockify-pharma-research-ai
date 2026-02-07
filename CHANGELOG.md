@@ -5,6 +5,11 @@ All notable changes to **BioDockify** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v2.20.10] - 2026-02-07
+### Fixed
+- **Docker:** Comprehensive release fix. Corrected Next.js standalone paths, improved startup scripts, and removed error suppression on critical dependencies.
+- **CI:** Harmonized CI Python version to 3.11 and Node.js to 20 to match Docker environment.
+
 ## [v2.20.9] - 2026-02-07
 ### Fixed
 - **Docker:** Quoted pip version ranges in `Dockerfile` to prevent shell redirection errors (`<2.0.0` being interpreted by `/bin/sh`).
