@@ -15,6 +15,7 @@ from datetime import datetime
 import arxiv
 from Bio import Entrez
 from semanticscholar import SemanticScholar
+from .bohrium import BohriumConnector
 
 logger = logging.getLogger("literature.discovery")
 
@@ -23,7 +24,7 @@ class Paper:
     """Unified Paper Model"""
     title: str
     url: str
-    source: str  # 'pubmed', 'arxiv', 'semantic_scholar'
+    source: str  # 'pubmed', 'arxiv', 'semantic_scholar', 'bohrium'
     authors: List[str]
     abstract: str
     year: int
@@ -39,6 +40,9 @@ class LiteratureDiscovery:
         # Semantic Scholar Client
         self.sch = SemanticScholar(timeout=10)
         
+        # Bohrium Connector
+        self.bohrium = BohriumConnector()
+        
     async def search(self, query: str, limit: int = 20) -> List[Paper]:
         """Aggregate search across all sources."""
         logger.info(f"Discovery Engine: Searching for '{query}'")
@@ -47,6 +51,7 @@ class LiteratureDiscovery:
         results = await asyncio.gather(
             self.search_arxiv(query, limit=limit // 2),
             self.search_semantic_scholar(query, limit=limit // 2),
+            self.search_bohrium(query, limit=limit // 2),
             # PubMed is synchronous, run in thread if needed, or simple sync mostly fast
             self.search_pubmed(query, limit=limit // 2)
         )
@@ -187,6 +192,30 @@ class LiteratureDiscovery:
 
         except Exception as e:
             logger.error(f"PubMed search failed: {e}")
+            return []
+
+    async def search_bohrium(self, query: str, limit: int = 10) -> List[Paper]:
+        """Search Bohrium Database."""
+        try:
+            results = await self.bohrium.search_literature(query, limit=limit)
+            
+            papers = []
+            for item in results:
+                # Normalize Bohrium result to Paper model
+                papers.append(Paper(
+                    title=item.get('title', 'Untitled'),
+                    url=item.get('url', ''),
+                    source="bohrium",
+                    authors=item.get('authors', []),
+                    abstract=item.get('abstract', '') or item.get('content', '')[:500],
+                    year=item.get('year', datetime.now().year),
+                    doi=item.get('doi'),
+                    citations=item.get('citations', 0),
+                    pdf_url=item.get('pdf_url')
+                ))
+            return papers
+        except Exception as e:
+            logger.warning(f"Bohrium search failed: {e}")
             return []
 
 # Singleton instance

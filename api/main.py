@@ -12,8 +12,33 @@ from orchestration.planner.orchestrator import ResearchOrchestrator, Orchestrato
 from orchestration.executor import ResearchExecutor
 from modules.analyst.analytics_engine import ResearchAnalyst
 from modules.backup import DriveClient, BackupManager
+from modules.literature.reviewer import CitationReviewer
 
 app = FastAPI(title="BioDockify - Pharma Research AI", version="2.19.8")
+
+# Register NanoBot Hybrid Agent Routes
+try:
+    from api.routes.nanobot_routes import router as nanobot_router
+    app.include_router(nanobot_router)
+except ImportError as e:
+    import logging
+    logging.getLogger("biodockify_api").warning(f"NanoBot routes not loaded: {e}")
+
+# Register Agent Zero Enhanced Routes (Memory, Skills, Spawn)
+try:
+    from api.routes.agent_enhanced_routes import router as agent_enhanced_router
+    app.include_router(agent_enhanced_router)
+except ImportError as e:
+    import logging
+    logging.getLogger("biodockify_api").warning(f"Agent Enhanced routes not loaded: {e}")
+
+# Register Messaging Channels Routes (Telegram, WhatsApp, Discord, Feishu)
+try:
+    from api.routes.channels_routes import router as channels_router
+    app.include_router(channels_router)
+except ImportError as e:
+    import logging
+    logging.getLogger("biodockify_api").warning(f"Channels routes not loaded: {e}")
 
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -263,12 +288,26 @@ class AgentRequest(BaseModel):
 @app.post("/api/agent/chat")
 async def agent_chat(request: AgentRequest):
     """
-    Direct Chat Endpoint for Agent Zero.
+    Direct Chat Endpoint for Agent Zero - Enhanced with NanoBot capabilities.
+    
+    Features:
+    - Memory context injection (what the agent remembers)
+    - Skills summary (what the agent can do)
+    - PhD research context
     """
     try:
         from runtime.config_loader import load_config
-        # Simple Echo for now, or connect to LLM
-        # In a real impl, this would call the agent runtime
+        
+        # Get Enhanced Agent Zero with NanoBot features
+        try:
+            from agent_zero.enhanced import get_agent_zero_enhanced
+            enhanced = get_agent_zero_enhanced()
+            # Build enhanced prompt with memory + skills context
+            enhanced_message = enhanced.build_enhanced_prompt(request.message)
+        except ImportError:
+            # Fallback to basic message if NanoBot not available
+            enhanced_message = request.message
+            enhanced = None
         
         # Check LLM Provider
         cfg = load_config()
@@ -308,12 +347,21 @@ async def agent_chat(request: AgentRequest):
                 "provider": "error"
             }
 
-        # Generate Response
-        response_text = adapter.generate(request.message)
+        # Generate Response using enhanced prompt with context
+        response_text = adapter.generate(enhanced_message)
+        
+        # Save important interactions to memory (optional - based on content)
+        if enhanced and len(response_text) > 100:
+            # Only save substantial responses
+            try:
+                enhanced.save_to_memory(f"User: {request.message[:200]}...\nAgent: {response_text[:500]}...")
+            except Exception:
+                pass  # Memory save is optional
         
         return {
             "reply": response_text,
-            "provider": getattr(adapter, 'config_model', 'unknown')
+            "provider": getattr(adapter, 'config_model', 'unknown'),
+            "enhanced": enhanced is not None
         }
     except Exception as e:
         logger.error(f"Agent Chat Failed: {e}")
@@ -2403,28 +2451,30 @@ def get_system_info():
 # PHD THESIS CORE ENDPOINTS (Phase 7)
 # -----------------------------------------------------------------------------
 from modules.thesis.engine import thesis_engine
-from modules.thesis.structure import THESIS_STRUCTURE
+from modules.thesis.structure import THESIS_STRUCTURE, PharmaBranch, DegreeType
 
 class ThesisRequest(BaseModel):
     chapter_id: str
     topic: str
+    branch: PharmaBranch = PharmaBranch.GENERAL
+    degree: DegreeType = DegreeType.PHD
 
 @app.get("/api/thesis/structure")
 def get_thesis_structure():
-    """Return the strict 7-chapter structure definition."""
+    """Return the Master Pharma Thesis structure definition."""
     # Convert Enum keys to string for JSON serialization
     return {k.value: v.dict() for k, v in THESIS_STRUCTURE.items()}
 
 @app.get("/api/thesis/validate/{chapter_id}")
-def validate_chapter(chapter_id: str):
-    """Check if proofs exist for a chapter."""
+def validate_chapter(chapter_id: str, branch: PharmaBranch = PharmaBranch.GENERAL, degree: DegreeType = DegreeType.PHD):
+    """Check if proofs exist for a chapter with branch-awareness."""
     from modules.thesis.validator import thesis_validator
-    return thesis_validator.validate_chapter_readiness(chapter_id)
+    return thesis_validator.validate_chapter_readiness(chapter_id, branch, degree)
 
 @app.post("/api/thesis/generate")
 async def generate_chapter_endpoint(req: ThesisRequest):
     """Generate a chapter draft if validation passes."""
-    return await thesis_engine.generate_chapter(req.chapter_id, req.topic)
+    return await thesis_engine.generate_chapter(req.chapter_id, req.topic, branch=req.branch, degree=req.degree)
 
 # -----------------------------------------------------------------------------
 # Google Drive Backup System
@@ -2710,6 +2760,67 @@ async def test_connection_endpoint(request: TestConnectionRequest):
              else:
                   return {"status": "error", "message": f"API Error: {resp.status_code} {resp.text[:100]}"}
 
+        # 3. Bohrium Testing (MCP)
+        elif request.service_type == "bohrium":
+            target_url = request.base_url or "http://localhost:7000/mcp"
+            
+            # Simple JSON-RPC tool call
+            payload = {
+                "jsonrpc": "2.0",
+                "method": "call_tool",
+                "params": {
+                    "name": "search_papers",
+                    "arguments": {"query": "test", "limit": 1}
+                },
+                "id": 999
+            }
+            
+            def _do_bohrium_req():
+                try:
+                    return requests.post(target_url, json=payload, timeout=5)
+                except requests.exceptions.RequestException as e:
+                    return str(e)
+
+            result = await asyncio.get_event_loop().run_in_executor(None, _do_bohrium_req)
+            
+            if isinstance(result, str):
+                 return {"status": "error", "message": f"Connection Error: {result}"}
+            
+            if result.status_code == 200:
+                 return {"status": "success", "message": "Bohrium Agent Connected (MCP)"}
+            else:
+                 return {"status": "error", "message": f"Bohrium Error: {result.status_code}"}
+
+        # 4. Brave Search Testing
+        elif request.service_type == "brave":
+            if not request.key:
+                return {"status": "error", "message": "Brave API Key required"}
+            
+            headers = {
+                "Accept": "application/json",
+                "Accept-Encoding": "gzip",
+                "X-Subscription-Token": request.key
+            }
+            url = "https://api.search.brave.com/res/v1/web/search?q=test"
+            
+            def _do_brave_req():
+                try:
+                    return requests.get(url, headers=headers, timeout=10)
+                except Exception as e:
+                    return str(e)
+            
+            result = await asyncio.get_event_loop().run_in_executor(None, _do_brave_req)
+            
+            if isinstance(result, str):
+                return {"status": "error", "message": f"Connection Error: {result}"}
+            
+            if result.status_code == 200:
+                return {"status": "success", "message": "Brave Search API Connected"}
+            elif result.status_code == 401:
+                return {"status": "error", "message": "Invalid Brave API Key"}
+            else:
+                return {"status": "error", "message": f"Brave Error: {result.status_code} {result.text[:100]}"}
+
         return {"status": "error", "message": f"Unknown service type: {request.service_type}"}
 
     except Exception as e:
@@ -2740,3 +2851,23 @@ async def verify_user_license(request: AuthRequest):
             "email": request.email
         } if success else None
     }
+
+# -----------------------------------------------------------------------------
+# LITERATURE & CITATION VERIFICATION (Reviewer Agent)
+# -----------------------------------------------------------------------------
+
+class VerificationRequest(BaseModel):
+    text: str
+
+@app.post("/api/literature/verify")
+async def verify_citations(request: VerificationRequest):
+    """
+    BioDockify Reviewer Agent: Verify citations in text.
+    """
+    try:
+        reviewer = CitationReviewer()
+        results = reviewer.verify_text(request.text)
+        return results
+    except Exception as e:
+        logger.error(f"Citation verification failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

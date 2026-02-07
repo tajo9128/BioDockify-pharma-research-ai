@@ -92,6 +92,11 @@ export interface Settings {
     custom_key?: string;
     custom_model?: string;
 
+    // Search APIs
+    brave_key?: string;
+    serper_key?: string;
+    jina_key?: string;
+
     // Literature APIs
     elsevier_key?: string;
     semantic_scholar_key?: string; // S2 API key for higher rate limits
@@ -101,6 +106,9 @@ export interface Settings {
     surfsense_url?: string;
     surfsense_key?: string;
     surfsense_auto_start?: boolean;
+
+    // Bohrium Swarm Intelligence (MCP)
+    bohrium_url?: string;
   };
   // New V2 Schema Additions
   pharma: {
@@ -157,10 +165,11 @@ export interface Settings {
 }
 
 export interface ConnectionTest {
-  type: 'llm' | 'database' | 'elsevier';
+  type: 'llm' | 'database' | 'elsevier' | 'bohrium' | 'brave';
   status: 'success' | 'error' | 'warning';
   message: string;
 }
+
 
 export interface SystemInfo {
   os: string;
@@ -263,7 +272,7 @@ export const api = {
     }),
 
   // Settings endpoints
-  testConnection: (serviceType: 'llm' | 'elsevier', provider?: string, key?: string, baseUrl?: string, model?: string) =>
+  testConnection: (serviceType: 'llm' | 'elsevier' | 'bohrium' | 'brave', provider?: string, key?: string, baseUrl?: string, model?: string) =>
     apiRequest<ConnectionTest>('/settings/test', {
       method: 'POST',
       body: JSON.stringify({ service_type: serviceType, provider, key, base_url: baseUrl, model })
@@ -402,6 +411,13 @@ export const api = {
       apiRequest<{ status: string, content?: string, reason?: string, details?: any }>('/thesis/generate', {
         method: 'POST',
         body: JSON.stringify({ chapter_id: chapterId, topic })
+      })
+  },
+  literature: {
+    verifyCitations: (text: string) =>
+      apiRequest<{ integrity_score: number, total_citations: number, valid_count: number, suspicious_count: number, unverified_count: number, details: any[] }>('/literature/verify', {
+        method: 'POST',
+        body: JSON.stringify({ text })
       })
   },
   // Google Drive Backup (Phase 10)

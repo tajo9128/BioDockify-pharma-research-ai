@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AlertCircle, CheckCircle, Lock, PenTool, FileText, ChevronRight } from 'lucide-react';
+import { AlertCircle, CheckCircle, Lock, PenTool, FileText, ChevronRight, ShieldCheck, AlertTriangle, Search } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 
 interface ChapterTemplate {
@@ -22,6 +22,8 @@ export const ThesisWriterView: React.FC = () => {
     const [generatedContent, setGeneratedContent] = useState<Record<string, string>>({});
     const [loading, setLoading] = useState(false);
     const [isGenerating, setIsGenerating] = useState(false);
+    const [reviewResults, setReviewResults] = useState<Record<string, any>>({});
+    const [isReviewing, setIsReviewing] = useState(false);
 
     useEffect(() => {
         loadStructure();
@@ -65,6 +67,20 @@ export const ThesisWriterView: React.FC = () => {
             console.error("Generation failed", e);
         } finally {
             setIsGenerating(false);
+        }
+    };
+
+    const handleReviewCitations = async (chapterId: string) => {
+        const content = generatedContent[chapterId];
+        if (!content) return;
+        setIsReviewing(true);
+        try {
+            const results = await api.literature.verifyCitations(content);
+            setReviewResults(prev => ({ ...prev, [chapterId]: results }));
+        } catch (e) {
+            console.error("Citations review failed", e);
+        } finally {
+            setIsReviewing(false);
         }
     };
 
@@ -197,6 +213,79 @@ export const ThesisWriterView: React.FC = () => {
                                                 <article className="prose dark:prose-invert max-w-none">
                                                     <ReactMarkdown>{generatedContent[currentTemplate.id]}</ReactMarkdown>
                                                 </article>
+
+                                                {/* Citation Verification UI */}
+                                                <div className="mt-12 pt-8 border-t border-slate-200 dark:border-slate-800">
+                                                    <div className="flex items-center justify-between mb-4">
+                                                        <div className="flex items-center gap-2">
+                                                            <ShieldCheck className="w-5 h-5 text-blue-500" />
+                                                            <h3 className="text-lg font-bold">Reviewer Agent Analysis</h3>
+                                                        </div>
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            onClick={() => handleReviewCitations(currentTemplate.id)}
+                                                            disabled={isReviewing}
+                                                            className="border-blue-500/30 text-blue-400 hover:bg-blue-500/10"
+                                                        >
+                                                            {isReviewing ? "Verifying Citations..." : "Verify Integrity"}
+                                                            {isReviewing ? <Search className="w-4 h-4 ml-2 animate-pulse" /> : <CheckCircle className="w-4 h-4 ml-2" />}
+                                                        </Button>
+                                                    </div>
+
+                                                    {reviewResults[currentTemplate.id] ? (
+                                                        <div className="space-y-4">
+                                                            <div className="grid grid-cols-4 gap-4">
+                                                                <div className="bg-slate-50 dark:bg-slate-900/50 p-3 rounded border border-slate-200 dark:border-slate-800">
+                                                                    <div className="text-xs text-slate-500 mb-1">Integrity Score</div>
+                                                                    <div className={`text-xl font-bold ${reviewResults[currentTemplate.id].integrity_score > 80 ? 'text-green-500' : 'text-orange-500'}`}>
+                                                                        {reviewResults[currentTemplate.id].integrity_score}%
+                                                                    </div>
+                                                                </div>
+                                                                <div className="bg-slate-50 dark:bg-slate-900/50 p-3 rounded border border-slate-200 dark:border-slate-800">
+                                                                    <div className="text-xs text-slate-500 mb-1">Valid Citations</div>
+                                                                    <div className="text-xl font-bold text-green-500">{reviewResults[currentTemplate.id].valid_count}</div>
+                                                                </div>
+                                                                <div className="bg-slate-50 dark:bg-slate-900/50 p-3 rounded border border-slate-200 dark:border-slate-800">
+                                                                    <div className="text-xs text-slate-500 mb-1">Suspicious</div>
+                                                                    <div className="text-xl font-bold text-red-500">{reviewResults[currentTemplate.id].suspicious_count}</div>
+                                                                </div>
+                                                                <div className="bg-slate-50 dark:bg-slate-900/50 p-3 rounded border border-slate-200 dark:border-slate-800">
+                                                                    <div className="text-xs text-slate-500 mb-1">Unverified</div>
+                                                                    <div className="text-xl font-bold text-slate-400">{reviewResults[currentTemplate.id].unverified_count}</div>
+                                                                </div>
+                                                            </div>
+
+                                                            {reviewResults[currentTemplate.id].suspicious_count > 0 && (
+                                                                <div className="bg-red-500/10 border border-red-500/30 p-3 rounded text-red-300 text-sm flex gap-2">
+                                                                    <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+                                                                    <span>BioDockify detected <strong>{reviewResults[currentTemplate.id].suspicious_count} potential hallucinations</strong>. Review flagged citations carefully.</span>
+                                                                </div>
+                                                            )}
+
+                                                            <div className="space-y-2">
+                                                                {reviewResults[currentTemplate.id].details.map((detail: any, idx: number) => (
+                                                                    <div key={idx} className="flex items-center justify-between p-2 rounded bg-slate-50 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-800 text-xs">
+                                                                        <div className="flex items-center gap-2">
+                                                                            <Badge variant={detail.status === 'VALID' ? 'outline' : 'destructive'} className="text-[10px] scale-90">
+                                                                                {detail.status}
+                                                                            </Badge>
+                                                                            <code className="text-slate-400">{detail.citation}</code>
+                                                                        </div>
+                                                                        {detail.status === 'VALID' && (
+                                                                            <span className="text-slate-500 italic truncate ml-4 max-w-xs">{detail.match}</span>
+                                                                        )}
+                                                                        {detail.status === 'SUSPICIOUS' && (
+                                                                            <span className="text-red-400/80 italic">{detail.reason}</span>
+                                                                        )}
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    ) : (
+                                                        <p className="text-sm text-slate-500 italic">No verification performed on this draft yet. Click "Verify Integrity" to audit citations.</p>
+                                                    )}
+                                                </div>
                                             </ScrollArea>
                                         ) : (
                                             <div className="h-full flex flex-col items-center justify-center text-slate-500">

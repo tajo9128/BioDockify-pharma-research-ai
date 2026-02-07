@@ -64,9 +64,69 @@ services:
       - biodockify-network
     restart: unless-stopped
 
-  # Note: Frontend (Next.js) is not containerized in this setup
-  # It runs directly on the host machine for development
-  # The Docker services above are used as external dependencies
+  # Bohrium AI Agent (MCP)
+  bohrium:
+    build:
+      context: ./services/bohrium
+      dockerfile: Dockerfile
+    container_name: biodockify-bohrium
+    ports:
+      - "7000:7000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7000/mcp"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - biodockify-network
+    restart: unless-stopped
+    
+  # --- BioDockify CORE SERVICES ---
+
+  # Backend API (Agent Zero Core)
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: biodockify-backend
+    ports:
+      - "8234:8234"
+    environment:
+      - GROBID_URL=http://grobid:8070
+      - NEO4J_URI=bolt://neo4j:7687
+      - NEO4J_PASSWORD=biodockify2024
+      - OLLAMA_URL=http://ollama:11434
+      - BOHRIUM_API_URL=http://bohrium:7000/mcp
+    depends_on:
+      grobid:
+        condition: service_healthy
+      neo4j:
+        condition: service_healthy
+      ollama:
+        condition: service_healthy
+      bohrium:
+        condition: service_healthy
+    networks:
+      - biodockify-network
+    restart: unless-stopped
+
+  # Frontend Dashboard (Next.js)
+  frontend:
+    build:
+      context: ./ui
+      dockerfile: Dockerfile
+    container_name: biodockify-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://backend:8234
+    depends_on:
+      - backend
+    networks:
+      - biodockify-network
+    restart: unless-stopped
+
+  # --- EXTERNAL DEPENDENCIES ---
 
 volumes:
   neo4j-data:

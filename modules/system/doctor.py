@@ -96,12 +96,18 @@ class SystemDoctor:
             services["surfsense"] = "running"
         else:
             services["surfsense"] = "stopped"
-            # SurfSense is optional/experimental, so severity low
-            # self.report["issues"].append({
-            #     "type": "service",
-            #     "severity": "low",
-            #     "message": "SurfSense Knowledge Engine is inactive."
-            # })
+
+        # 3. Reviewer Agent (Citation Logic)
+        try:
+            importlib.import_module("modules.literature.reviewer")
+            services["reviewer_agent"] = "available"
+        except ImportError:
+            services["reviewer_agent"] = "missing"
+            self.report["issues"].append({
+                "type": "service",
+                "severity": "high",
+                "message": "Reviewer Agent module is missing. Citation verification will fail."
+            })
 
         self.report["checks"]["services"] = services
 

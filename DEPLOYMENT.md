@@ -2,48 +2,15 @@
 
 Complete PhD Research Automation Platform with Agent Zero orchestration, 40+ integrated tools, and real-time AI-powered research workflow.
 
-## 🚀 Quick Start
+### 🚀 Quick Start (Docker)
+BioDockify runs entirely in Docker containers. This ensures a consistent environment for all researchers and developers.
 
-### Prerequisites
-
-- **Docker** and **Docker Compose** for external services
-- **Bun** for Next.js development
-- **Node.js** 18+ (via Bun)
-
-### Installation
-
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd my-project
-   ```
-
-2. **Install dependencies**
-   ```bash
-   bun install
-   ```
-
-3. **Push database schema**
-   ```bash
-   bun run db:push
-   ```
-
-4. **Start Docker services**
-   ```bash
-   docker-compose up -d
-   ```
-
-5. **Pull Ollama model** (optional, for LLM features)
-   ```bash
-   docker-compose exec ollama ollama pull llama3.2
-   ```
-
-6. **Start development server**
-   ```bash
-   bun run dev
-   ```
-
-7. **Open the application**
+```bash
+docker-compose up -d
+```
+The application will be available at:
+- **Frontend**: http://localhost:3000
+- **Backend API**: http://localhost:8234
    ```
    http://localhost:3000
    ```

@@ -21,6 +21,7 @@ export const metadata: Metadata = {
   icons: {
     icon: "/favicon.ico",
   },
+  manifest: "/manifest.json",
   openGraph: {
     title: "BioDockify - Pharma Research AI",
     description: "Automate pharmaceutical research with AI-powered literature analysis and drug discovery",
@@ -28,6 +29,7 @@ export const metadata: Metadata = {
   },
 }
 
+import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 import TitleBarLoader from '@/components/TitleBarLoader';
 
 export default function RootLayout({
@@ -40,6 +42,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground pt-10`}
       >
+        <ServiceWorkerRegister />
         <TitleBarLoader />
         {children}
         <Toaster />

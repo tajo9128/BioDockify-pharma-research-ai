@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { api, Settings } from '@/lib/api';
 import { AGENT_PERSONAS } from '@/lib/personas';
-import { Save, Server, Cloud, Cpu, RefreshCw, CheckCircle, AlertCircle, Shield, Activity, Power, BookOpen, Layers, FileText, Globe, Database, Key, FlaskConical, Link, FolderOpen, UserCircle, Lock, Unlock, Sparkles, Wrench } from 'lucide-react';
+import ChannelsSettingsPanel from './ChannelsSettingsPanel';
+import { Save, Server, Cloud, Cpu, RefreshCw, CheckCircle, AlertCircle, Shield, Activity, Power, BookOpen, Layers, FileText, Globe, Database, Key, FlaskConical, Link, FolderOpen, UserCircle, Lock, Unlock, Sparkles, Wrench, MessageCircle, Search } from 'lucide-react';
 
 
 // Extended Settings interface matching "Fully Loaded" specs + New User Requests
@@ -88,8 +89,11 @@ export default function SettingsPanel() {
             surfsense_key: '',
             surfsense_auto_start: false,
 
-            elsevier_key: '', // Added missing key
-            semantic_scholar_key: '' // S2 API key for higher rate limits
+            elsevier_key: '',
+            semantic_scholar_key: '',
+            brave_key: '', // Brave Search API
+            serper_key: '',
+            jina_key: '',
         },
         ai_advanced: { context_window: 4096, gpu_layers: -1, thread_count: 8 },
         pharma: {
@@ -125,7 +129,10 @@ export default function SettingsPanel() {
         kimi: 'idle',
         openai: 'idle',
         elsevier: 'idle',
-        custom: 'idle'
+        custom: 'idle',
+        brave: 'idle',
+        serper: 'idle',
+        jina: 'idle'
     });
 
     // LM Studio Test State with Progress
@@ -162,7 +169,10 @@ export default function SettingsPanel() {
         kimi: { status: 'idle', progress: 0, message: '', details: '' },
         openai: { status: 'idle', progress: 0, message: '', details: '' },
         elsevier: { status: 'idle', progress: 0, message: '', details: '' },
-        custom: { status: 'idle', progress: 0, message: '', details: '' }
+        custom: { status: 'idle', progress: 0, message: '', details: '' },
+        brave: { status: 'idle', progress: 0, message: '', details: '' },
+        serper: { status: 'idle', progress: 0, message: '', details: '' },
+        jina: { status: 'idle', progress: 0, message: '', details: '' }
     });
 
     useEffect(() => { loadSettings(); }, []);
@@ -383,7 +393,7 @@ export default function SettingsPanel() {
             setLmStudioTest(prev => ({
                 ...prev,
                 progress: 75,
-                message: `Testing model: ${modelId.split('/').pop()}...`
+                message: `Testing model: ${(modelId || '').split('/').pop()}...`
             }));
 
             const testRes = await universalFetch(`${baseUrl}/chat/completions`, {
@@ -407,7 +417,7 @@ export default function SettingsPanel() {
                 status: 'success',
                 progress: 100,
                 message: 'PASSED: LM Studio Connected',
-                details: `Model: ${modelId.split('/').pop()} is ready for use.`
+                details: `Model: ${(modelId || '').split('/').pop()} is ready for use.`
             });
 
             // Auto-save the detected model and update settings
@@ -421,7 +431,7 @@ export default function SettingsPanel() {
 
             if (typeof window !== 'undefined') {
                 localStorage.setItem('biodockify_lm_studio_url', baseUrl);
-                localStorage.setItem('biodockify_lm_studio_model', modelId);
+                localStorage.setItem('biodockify_lm_studio_model', modelId || '');
             }
 
         } catch (e: any) {
@@ -451,7 +461,7 @@ export default function SettingsPanel() {
         }
     };
 
-    const handleTestKey = async (provider: string, key?: string, serviceType: 'llm' | 'elsevier' = 'llm', baseUrl?: string, model?: string) => {
+    const handleTestKey = async (provider: string, key?: string, serviceType: 'llm' | 'elsevier' | 'bohrium' | 'brave' = 'llm', baseUrl?: string, model?: string) => {
         console.log('[DEBUG] handleTestKey called with:', { provider, key: key ? '***' : 'missing', serviceType, baseUrl, model });
 
         if (!key) {
@@ -594,7 +604,9 @@ export default function SettingsPanel() {
             <div className="flex space-x-2 border-b border-slate-800 pb-2 overflow-x-auto scrollbar-hide">
                 <TabButton id="brain" label="AI & Brain" icon={Cpu} />
                 <TabButton id="cloud" label="Cloud APIs" icon={Cloud} />
+                <TabButton id="channels" label="Channels" icon={Globe} />
                 <TabButton id="pharma" label="Pharma & Sources" icon={Database} />
+                <TabButton id="search" label="Search & Knowledge" icon={Search} />
                 <TabButton id="output" label="Output & Reports" icon={FileText} />
                 <TabButton id="system" label="System" icon={Power} />
                 <TabButton id="backup" label="Cloud Backup" icon={Cloud} />
@@ -832,41 +844,16 @@ export default function SettingsPanel() {
                         </div>
                     )}
 
-                    {/* TAB: CLOUD APIS */}
                     {activeTab === 'cloud' && (
                         <div className="space-y-6 animate-in fade-in duration-300">
+                            {/* PREMIUM TIER */}
                             <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
                                 <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
-                                    <Cloud className="w-5 h-5 mr-2 text-sky-400" /> External API Keys
+                                    <Sparkles className="w-5 h-5 mr-2 text-yellow-400" /> Premium AI Providers
                                 </h3>
                                 <div className="grid gap-4">
-                                    {/* Google */}
                                     <CloudKeyBox
-                                        name="Google Gemini"
-                                        icon="G"
-                                        modelValue={settings.ai_provider?.google_model}
-                                        onModelChange={(v: string) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, google_model: v } })}
-                                        value={settings.ai_provider.google_key}
-                                        onChange={(v: string) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, google_key: v } })}
-                                        onTest={() => handleTestKey('google', settings.ai_provider.google_key)}
-                                        testStatus={testStatus.google}
-                                        testProgress={apiTestProgress.google}
-                                    />
-                                    {/* Hugging Face */}
-                                    <CloudKeyBox
-                                        name="Hugging Face Inference"
-                                        icon="🤗"
-                                        modelValue={settings.ai_provider?.huggingface_model}
-                                        onModelChange={(v: string) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, huggingface_model: v } })}
-                                        value={settings.ai_provider.huggingface_key}
-                                        onChange={(v: string) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, huggingface_key: v } })}
-                                        onTest={() => handleTestKey('huggingface', settings.ai_provider.huggingface_key)}
-                                        testStatus={testStatus.huggingface}
-                                        testProgress={apiTestProgress.huggingface}
-                                    />
-                                    {/* OpenRouter */}
-                                    <CloudKeyBox
-                                        name="OpenRouter"
+                                        name="OpenRouter (Claude/o1)"
                                         icon="OR"
                                         modelValue={settings.ai_provider?.openrouter_model}
                                         onModelChange={(v: string) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, openrouter_model: v } })}
@@ -876,104 +863,41 @@ export default function SettingsPanel() {
                                         testStatus={testStatus.openrouter}
                                         testProgress={apiTestProgress.openrouter}
                                     />
-                                    {/* Groq - FREE with high rate limits */}
-                                    <div className="border-t border-slate-800 my-2 pt-4">
-                                        <div className="flex items-center space-x-2 mb-3">
-                                            <span className="text-xs font-bold text-emerald-500 px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20">FREE</span>
-                                            <h4 className="text-sm font-semibold text-white">Groq Cloud (High Speed)</h4>
-                                        </div>
-                                        <p className="text-[10px] text-slate-500 mb-3">Free tier with 30 requests/min. Uses Llama 3.3 70B. Get key at <a href="https://console.groq.com/keys" target="_blank" rel="noreferrer" className="text-teal-400 underline">console.groq.com</a></p>
-                                        <CloudKeyBox
-                                            name="Groq API"
-                                            icon="⚡"
-                                            modelValue={settings.ai_provider?.groq_model}
-                                            onModelChange={(v: string) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, groq_model: v } })}
-                                            modelPlaceholder="llama-3.3-70b-versatile"
-                                            value={settings.ai_provider.groq_key}
-                                            onChange={(v: string) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, groq_key: v } })}
-                                            onTest={() => handleTestKey('groq', settings.ai_provider.groq_key, 'llm', 'https://api.groq.com/openai/v1', settings.ai_provider.groq_model)}
-                                            testStatus={testStatus.groq}
-                                            testProgress={apiTestProgress.groq}
-                                        />
-                                    </div>
-                                    {/* === PAID / CUSTOM API Section (Unified) === */}
-                                    <div className="border-t border-slate-800 my-4 pt-4">
-                                        <div className="flex items-center space-x-2 mb-3">
-                                            <span className="text-xs font-bold text-yellow-500 px-2 py-0.5 rounded bg-yellow-500/10 border border-yellow-500/20">PAID</span>
-                                            <h4 className="text-sm font-semibold text-white">Custom OpenAI-Compatible API</h4>
-                                        </div>
-                                        <div className="space-y-3 p-3 bg-slate-800/50 rounded-lg border border-slate-700/50">
-                                            {/* Provider Dropdown */}
-                                            <div>
-                                                <label className="text-xs text-slate-400 mb-1 block">Provider</label>
-                                                <select
-                                                    className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-sm text-white focus:outline-none focus:border-teal-500/50"
-                                                    value={settings.ai_provider.custom_provider || 'custom'}
-                                                    onChange={(e) => {
-                                                        const provider = e.target.value;
-                                                        const urlMap: Record<string, string> = {
-                                                            'deepseek': 'https://api.deepseek.com/v1',
-                                                            'glm': 'https://open.bigmodel.cn/api/paas/v4',
-                                                            'kimi': 'https://api.moonshot.cn/v1',
-                                                            'openai': 'https://api.openai.com/v1',
-                                                            'groq': 'https://api.groq.com/openai/v1',
-                                                            'custom': ''
-                                                        };
-                                                        setSettings({
-                                                            ...settings,
-                                                            ai_provider: {
-                                                                ...settings.ai_provider,
-                                                                custom_provider: provider,
-                                                                custom_base_url: urlMap[provider] || settings.ai_provider.custom_base_url
-                                                            }
-                                                        });
-                                                    }}
-                                                >
-                                                    <option value="deepseek">🚀 Deepseek (deepseek-chat, deepseek-reasoner)</option>
-                                                    <option value="glm">🇨🇳 GLM / ZhipuAI (glm-4-flash)</option>
-                                                    <option value="kimi">🌙 KIMI / Moonshot (moonshot-v1-8k)</option>
-                                                    <option value="openai">🤖 OpenAI (gpt-4o-mini, gpt-4o)</option>
-                                                    <option value="groq">⚡ Groq (llama-3.3-70b-versatile)</option>
-                                                    <option value="custom">🔧 Custom / Other</option>
-                                                </select>
-                                                <p className="text-xs text-slate-500 mt-1">
-                                                    {settings.ai_provider.custom_provider === 'deepseek' && '💡 DeepSeek offers powerful reasoning models'}
-                                                    {settings.ai_provider.custom_provider === 'glm' && '💡 Chinese AI provider with multilingual support'}
-                                                    {settings.ai_provider.custom_provider === 'kimi' && '💡 Long context support up to 200k tokens'}
-                                                    {settings.ai_provider.custom_provider === 'openai' && '💡 Industry-leading models from OpenAI'}
-                                                    {settings.ai_provider.custom_provider === 'groq' && '💡 Ultra-fast inference speed'}
-                                                    {settings.ai_provider.custom_provider === 'custom' && '💡 Enter your own OpenAI-compatible base URL'}
-                                                    {!settings.ai_provider.custom_provider && '💡 Select a provider to auto-fill base URL'}
-                                                </p>
-                                            </div>
 
-                                            {/* Base URL */}
-                                            <div>
-                                                <label className="text-xs text-slate-400 mb-1 block">Base URL</label>
-                                                <input
-                                                    type="text"
-                                                    placeholder="https://api.deepseek.com/v1"
-                                                    className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-sm text-white focus:outline-none focus:border-teal-500/50"
-                                                    value={settings.ai_provider.custom_base_url || ''}
-                                                    onChange={(e) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, custom_base_url: e.target.value } })}
-                                                    disabled={settings.ai_provider.custom_provider !== 'custom' && settings.ai_provider.custom_provider !== undefined}
-                                                />
-                                                <p className="text-xs text-slate-500 mt-1">Auto-filled for selected provider. Include /v1 for OpenAI-compatible APIs.</p>
-                                            </div>
-
-                                            {/* API Key & Model */}
+                                    {/* Unified Paid/Custom Section moved here for logical flow */}
+                                    <div className="p-4 bg-slate-950 rounded-lg border border-slate-800">
+                                        <div className="flex items-center space-x-2 mb-3">
+                                            <h4 className="text-sm font-semibold text-white">Direct Paid Providers</h4>
+                                        </div>
+                                        <div className="space-y-3">
+                                            <select
+                                                className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-sm text-white"
+                                                value={settings.ai_provider.custom_provider || 'openai'}
+                                                onChange={(e) => {
+                                                    const provider = e.target.value;
+                                                    const urlMap: Record<string, string> = {
+                                                        'deepseek': 'https://api.deepseek.com/v1',
+                                                        'openai': 'https://api.openai.com/v1',
+                                                        'custom': ''
+                                                    };
+                                                    setSettings({
+                                                        ...settings,
+                                                        ai_provider: {
+                                                            ...settings.ai_provider,
+                                                            custom_provider: provider,
+                                                            custom_base_url: urlMap[provider] || settings.ai_provider.custom_base_url
+                                                        }
+                                                    });
+                                                }}
+                                            >
+                                                <option value="openai">OpenAI (GPT-4o)</option>
+                                                <option value="deepseek">DeepSeek (Reasoning focus)</option>
+                                                <option value="custom">Other OpenAI-Compatible</option>
+                                            </select>
                                             <CloudKeyBox
                                                 name="API Key"
                                                 icon="🔑"
                                                 modelValue={settings.ai_provider?.custom_model}
-                                                modelPlaceholder={
-                                                    settings.ai_provider.custom_provider === 'deepseek' ? 'deepseek-chat' :
-                                                        settings.ai_provider.custom_provider === 'glm' ? 'glm-4-flash' :
-                                                            settings.ai_provider.custom_provider === 'kimi' ? 'moonshot-v1-8k' :
-                                                                settings.ai_provider.custom_provider === 'openai' ? 'gpt-4o-mini' :
-                                                                    settings.ai_provider.custom_provider === 'groq' ? 'llama-3.3-70b-versatile' :
-                                                                        'Model ID'
-                                                }
                                                 onModelChange={(v: string) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, custom_model: v } })}
                                                 value={settings.ai_provider.custom_key}
                                                 onChange={(v: string) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, custom_key: v } })}
@@ -985,6 +909,143 @@ export default function SettingsPanel() {
                                     </div>
                                 </div>
                             </div>
+
+                            {/* FREE TIER */}
+                            <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
+                                <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
+                                    <Cpu className="w-5 h-5 mr-2 text-emerald-400" /> Free / High-Rate Tier
+                                </h3>
+                                <div className="grid gap-4">
+                                    <CloudKeyBox
+                                        name="Google Gemini"
+                                        icon="G"
+                                        modelValue={settings.ai_provider?.google_model}
+                                        onModelChange={(v: string) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, google_model: v } })}
+                                        value={settings.ai_provider.google_key}
+                                        onChange={(v: string) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, google_key: v } })}
+                                        onTest={() => handleTestKey('google', settings.ai_provider.google_key)}
+                                        testStatus={testStatus.google}
+                                        testProgress={apiTestProgress.google}
+                                    />
+                                    <CloudKeyBox
+                                        name="Groq Cloud"
+                                        icon="⚡"
+                                        modelValue={settings.ai_provider?.groq_model}
+                                        onModelChange={(v: string) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, groq_model: v } })}
+                                        value={settings.ai_provider.groq_key}
+                                        onChange={(v: string) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, groq_key: v } })}
+                                        onTest={() => handleTestKey('groq', settings.ai_provider.groq_key, 'llm', 'https://api.groq.com/openai/v1', settings.ai_provider.groq_model)}
+                                        testStatus={testStatus.groq}
+                                        testProgress={apiTestProgress.groq}
+                                    />
+                                    <CloudKeyBox
+                                        name="Hugging Face"
+                                        icon="🤗"
+                                        modelValue={settings.ai_provider?.huggingface_model}
+                                        onModelChange={(v: string) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, huggingface_model: v } })}
+                                        value={settings.ai_provider.huggingface_key}
+                                        onChange={(v: string) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, huggingface_key: v } })}
+                                        onTest={() => handleTestKey('huggingface', settings.ai_provider.huggingface_key)}
+                                        testStatus={testStatus.huggingface}
+                                        testProgress={apiTestProgress.huggingface}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* TAB: SEARCH & KNOWLEDGE */}
+                    {activeTab === 'search' && (
+                        <div className="space-y-6 animate-in fade-in duration-300">
+                            <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
+                                <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
+                                    <Globe className="w-5 h-5 mr-2 text-teal-400" /> Web Research Engine
+                                </h3>
+                                <div className="space-y-6">
+                                    <div className="p-4 bg-teal-950/20 border border-teal-500/30 rounded-lg">
+                                        <div className="flex items-center justify-between mb-4">
+                                            <div className="flex items-center space-x-2">
+                                                <span className="text-lg">🦁</span>
+                                                <h4 className="font-bold text-teal-300">Brave Search API</h4>
+                                            </div>
+                                            <a href="https://api.search.brave.com/app/keys" target="_blank" rel="noreferrer" className="text-xs text-teal-400 hover:text-white underline">
+                                                Get Brave API Key
+                                            </a>
+                                        </div>
+                                        <p className="text-xs text-slate-400 mb-4 leading-relaxed">
+                                            Brave Search provides high-quality, privacy-focused web results. Essential for real-time pharma news and non-academic clinical data.
+                                        </p>
+                                        <div className="flex gap-2">
+                                            <input
+                                                type="password"
+                                                value={settings.ai_provider.brave_key || ''}
+                                                onChange={(e) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, brave_key: e.target.value } })}
+                                                placeholder="Enter Brave Search Key"
+                                                className="flex-1 bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-slate-200 focus:border-teal-500/50 outline-none"
+                                            />
+                                            <button
+                                                onClick={() => handleTestKey('brave', settings.ai_provider.brave_key)}
+                                                disabled={testStatus.brave === 'testing'}
+                                                className={`px-6 py-2 rounded text-xs font-bold transition-all ${testStatus.brave === 'success' ? 'bg-emerald-600 text-white' :
+                                                    testStatus.brave === 'error' ? 'bg-red-600 text-white' :
+                                                        'bg-teal-600 hover:bg-teal-500 text-white'
+                                                    }`}
+                                            >
+                                                {testStatus.brave === 'testing' ? 'Testing...' : 'Test Connection'}
+                                            </button>
+                                        </div>
+
+                                        {/* Brave Test Progress */}
+                                        {apiTestProgress.brave?.status !== 'idle' && (
+                                            <div className="mt-3 p-3 bg-slate-950/50 rounded border border-slate-800">
+                                                <div className="flex items-center gap-2 text-xs">
+                                                    {apiTestProgress.brave.status === 'success' ? <CheckCircle className="w-3 h-3 text-emerald-400" /> : <Activity className="w-3 h-3 text-blue-400" />}
+                                                    <span className={apiTestProgress.brave.status === 'error' ? 'text-red-400' : 'text-slate-300'}>
+                                                        {apiTestProgress.brave.message}
+                                                    </span>
+                                                </div>
+                                                {apiTestProgress.brave.details && <p className="text-[10px] text-slate-500 mt-1">{apiTestProgress.brave.details}</p>}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="p-4 bg-slate-950 rounded-lg border border-slate-800 opacity-60">
+                                            <div className="flex items-center space-x-2 mb-2">
+                                                <span className="text-lg">🔍</span>
+                                                <h4 className="text-sm font-semibold text-slate-300">Serper.dev (Fallback)</h4>
+                                            </div>
+                                            <input
+                                                type="password"
+                                                value={settings.ai_provider.serper_key || ''}
+                                                disabled
+                                                className="w-full bg-slate-900 border border-slate-800 rounded px-3 py-2 text-xs text-slate-500"
+                                                placeholder="Coming Soon"
+                                            />
+                                        </div>
+                                        <div className="p-4 bg-slate-950 rounded-lg border border-slate-800 opacity-60">
+                                            <div className="flex items-center space-x-2 mb-2">
+                                                <span className="text-lg">🕷️</span>
+                                                <h4 className="text-sm font-semibold text-slate-300">Jina Reader (Scraping)</h4>
+                                            </div>
+                                            <input
+                                                type="password"
+                                                value={settings.ai_provider.jina_key || ''}
+                                                disabled
+                                                className="w-full bg-slate-900 border border-slate-800 rounded px-3 py-2 text-xs text-slate-500"
+                                                placeholder="Coming Soon"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* TAB: CHANNELS (Telegram, WhatsApp, Discord, Feishu) */}
+                    {activeTab === 'channels' && (
+                        <div className="space-y-6 animate-in fade-in duration-300">
+                            <ChannelsSettingsPanel />
                         </div>
                     )}
 
@@ -1091,6 +1152,52 @@ export default function SettingsPanel() {
                                                 </a>
                                             </div>
                                             <p className="text-[10px] text-slate-500 mt-1">Free API key provides higher rate limits for literature searches.</p>
+                                        </div>
+                                    </div>
+
+                                    {/* Swarm Intelligence */}
+                                    <div className="space-y-4">
+                                        <h4 className="text-sm font-medium text-slate-400 uppercase tracking-wider">Swarm Intelligence</h4>
+                                        <div className="p-3 bg-slate-950 rounded-lg border border-slate-800">
+                                            <div className="flex items-center justify-between mb-2">
+                                                <label className="text-xs font-semibold text-slate-500 block uppercase">Bohrium AI Agent Node</label>
+                                                {/* Status Badge */}
+                                                {apiTestProgress.bohrium?.status === 'success' && (
+                                                    <span className="flex items-center gap-1 text-[10px] text-emerald-400 bg-emerald-950/30 px-1.5 py-0.5 rounded border border-emerald-900">
+                                                        <CheckCircle className="w-3 h-3" /> Connected
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <input
+                                                    type="text"
+                                                    value={settings.ai_provider.bohrium_url || 'http://localhost:7000/mcp'}
+                                                    onChange={(e) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, bohrium_url: e.target.value } })}
+                                                    placeholder="http://localhost:7000/mcp"
+                                                    className="flex-1 bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-slate-300 focus:border-violet-500/50 focus:outline-none font-mono"
+                                                />
+                                                <button
+                                                    onClick={() => handleTestKey('bohrium', 'public-access', 'bohrium', settings.ai_provider.bohrium_url)}
+                                                    disabled={testStatus.bohrium === 'testing'}
+                                                    className={`px-4 py-2 rounded text-xs font-bold transition-colors ${testStatus.bohrium === 'testing'
+                                                        ? 'bg-slate-800 text-slate-400 cursor-wait'
+                                                        : 'bg-slate-800 hover:bg-slate-700 text-slate-300'
+                                                        }`}
+                                                >
+                                                    {testStatus.bohrium === 'testing' ? '...' : 'Test'}
+                                                </button>
+                                            </div>
+                                            {/* Error Message */}
+                                            {apiTestProgress.bohrium?.status === 'error' && (
+                                                <div className="mt-2 p-2 bg-red-950/20 border border-red-900/30 rounded flex items-start gap-2">
+                                                    <AlertCircle className="w-3 h-3 text-red-400 mt-0.5" />
+                                                    <div>
+                                                        <p className="text-[10px] font-bold text-red-400">{apiTestProgress.bohrium.message}</p>
+                                                        <p className="text-[10px] text-red-300/70">{apiTestProgress.bohrium.details}</p>
+                                                    </div>
+                                                </div>
+                                            )}
+                                            <p className="text-[10px] text-slate-500 mt-1">Connects to independent Bohrium agents (MCP) for autonomous literature discovery.</p>
                                         </div>
                                     </div>
                                 </div>

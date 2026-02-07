@@ -173,7 +173,6 @@ DEFAULT_CONFIG = {
 
     # SECTION E: API & AI SETTINGS
     "ai_provider": {
-        "mode": "lm_studio",
         "primary_model": "google",
         "cloud_fallback": True,
         
@@ -191,9 +190,10 @@ DEFAULT_CONFIG = {
         "custom_base_url": "", 
         "custom_model": "gpt-3.5-turbo",
         
-        # Web Research Keys (MiroThinker Integration)
+        # Web Research Keys
         "serper_key": "",  # For Google Search (search.serper.dev)
         "jina_key": "",    # For Content Scraping (r.jina.ai)
+        "brave_key": "",   # For Brave Search API
     },
     
     # NEW: Advanced Hardware Controls

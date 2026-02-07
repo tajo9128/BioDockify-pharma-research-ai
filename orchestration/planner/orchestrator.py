@@ -283,16 +283,20 @@ class ResearchOrchestrator:
         print(f"{'='*60}")
         
         # 1. Mode Enforcement & Intent Check
+        _log(f"Enforcing mode: {mode.upper()}", "thought")
         if mode not in ["search", "synthesize", "write"]:
+            _log(f"Invalid mode {mode}, falling back to synthesize", "warn")
             mode = "synthesize" # Fallback default
             
         # 2. Generate plan using configured AI backend
+        _log(f"Generating research steps using {self.config.primary_model}...", "thought")
         if self.config.use_cloud_api:
             plan_data = self._generate_plan_hybrid(title, mode)
         else:
             plan_data = self._generate_plan_local(title, mode)
         
         # Create ResearchPlan from generated data
+        _log(f"Structural analysis of research goal: {title}", "thought")
         plan = ResearchPlan(
             research_title=title,
             objectives=plan_data.get("objectives", []),
@@ -300,7 +304,7 @@ class ResearchOrchestrator:
             total_estimated_time_minutes=plan_data.get("total_estimated_time")
         )
         
-        print(f"[+] Generated {len(plan.steps)} research steps")
+        _log(f"Plan constructed with {len(plan.steps)} steps and {len(plan.objectives)} objectives.", "thought")
         
         # 4. Citation Lock / Novelty Gate (Logic Rule #2 & #4)
         strictness = self.config.user_persona.get("strictness", "balanced")

@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { api } from '@/lib/api';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import { useAutoSave } from '@/hooks/useAutoSave';
-import { Search, PenTool, Layout, Play, Pause, Square, AlertCircle, FileText, Globe, Cpu, ChevronRight, Maximize2, Beaker, Save, RotateCcw, Database, X, Plus, Settings, Terminal, Network, Share2, Activity, Zap, Link as LinkIcon, WifiOff, Loader2 } from 'lucide-react';
+import { Search, PenTool, Layout, Play, Pause, Square, AlertCircle, FileText, Globe, Cpu, ChevronRight, Maximize2, Beaker, Save, RotateCcw, Database, X, Plus, Settings, Terminal, Network, Share2, Activity, Zap, Link as LinkIcon, WifiOff, Loader2, ShieldCheck } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import ExternalInsightImporter, { ExternalAIInsight } from './ExternalInsightImporter';
 import { DeepResearchView } from './deep-research/DeepResearchView';
@@ -64,6 +64,10 @@ export default function ResearchWorkstation({
     const [showImporter, setShowImporter] = useState(false);
     const [isFocusMode, setIsFocusMode] = useState(false);
 
+    // Reviewer Agent State
+    const [isReviewing, setIsReviewing] = useState(false);
+    const [reviewResult, setReviewResult] = useState<any>(null);
+
     // Auto-Save Integration
     useAutoSave('biodockify_research_goal', goal);
     useAutoSave('biodockify_work_mode', mode);
@@ -75,6 +79,20 @@ export default function ResearchWorkstation({
     const handleImportInsight = (insight: ExternalAIInsight) => {
         setExternalInsights(prev => [...prev, insight]);
         setShowImporter(false);
+    };
+
+    const handleReviewStream = async () => {
+        if (thinkingSteps.length === 0) return;
+        setIsReviewing(true);
+        try {
+            const allText = thinkingSteps.map(s => s.content || s.description || '').join('\n\n');
+            const result = await api.literature.verifyCitations(allText);
+            setReviewResult(result);
+        } catch (e) {
+            console.error("Stream review failed", e);
+        } finally {
+            setIsReviewing(false);
+        }
     };
 
     // --- VIEW: RESULTS MANAGER ---
@@ -300,7 +318,23 @@ export default function ResearchWorkstation({
 
                     <div className="p-4 border-b border-slate-800 bg-slate-950/80 backdrop-blur sticky top-0 z-10 flex justify-between items-center">
                         <h2 className="text-sm font-bold text-slate-300">Reasoning Stream</h2>
-                        <button className="text-xs text-teal-400 hover:underline">Export Logs</button>
+                        <div className="flex items-center gap-2">
+                            {reviewResult && (
+                                <div className={`flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full border ${reviewResult.integrity_score > 80 ? 'bg-green-500/10 border-green-500/30 text-green-400' : 'bg-red-500/10 border-red-500/30 text-red-400'}`}>
+                                    <ShieldCheck className="w-3 h-3" />
+                                    <span>{reviewResult.integrity_score}% Integrity</span>
+                                </div>
+                            )}
+                            <button
+                                onClick={handleReviewStream}
+                                disabled={isReviewing || thinkingSteps.length === 0}
+                                className="text-xs text-teal-400 hover:underline disabled:opacity-50 disabled:no-underline flex items-center gap-1"
+                            >
+                                {isReviewing ? <Loader2 className="w-3 h-3 animate-spin" /> : <ShieldCheck className="w-3 h-3" />}
+                                {isReviewing ? 'Verifying...' : 'Verify Citations'}
+                            </button>
+                            <button className="text-xs text-slate-500 hover:text-slate-300">Export Logs</button>
+                        </div>
                     </div>
 
                     <div className="flex-1 overflow-y-auto p-6 space-y-6 scroll-smooth">

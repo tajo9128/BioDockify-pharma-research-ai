@@ -5,6 +5,7 @@ Handles fetching of scientific literature using Bio.Entrez (public API) with off
 
 import socket
 import time
+import os
 from typing import List, Dict, Optional, Union
 from dataclasses import dataclass
 import logging
@@ -18,6 +19,7 @@ from modules.literature.openalex import OpenAlexScraper
 from modules.literature.europe_pmc import EuropePMCScraper
 from modules.literature.crossref import CrossRefScraper
 from modules.literature.biorxiv import BioRxivScraper
+from modules.literature.bohrium import BohriumConnector
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -69,8 +71,8 @@ rate_limiter = RateLimitHandler(requests_per_second=3)
 @dataclass
 class PubmedScraperConfig:
     """Configuration for the PubMed Scraper."""
-    email: str = "researcher@example.com"  # Required by NCBI
-    api_key: Optional[str] = None  # Optional: Increases rate limit
+    email: str = os.getenv("PUBMED_EMAIL", "researcher@example.com")  # Required by NCBI
+    api_key: Optional[str] = os.getenv("PUBMED_API_KEY")  # Optional: Increases rate limit
     max_results: int = 10
     tool_name: str = "BioDockify"
 
@@ -215,9 +217,10 @@ class LiteratureConfig:
     """Configuration for the Literature Aggregator."""
     sources: List[str] = None # ["pubmed", "europe_pmc", "openalex"]
     include_preprints: bool = False
-    email: str = "researcher@example.com"
+    email: str = os.getenv("PUBMED_EMAIL", "researcher@example.com")
     max_results: int = 15
     tool_name: str = "BioDockify"
+    bohrium_url: Optional[str] = None
 
 class LiteratureAggregator:
     """
@@ -230,7 +233,7 @@ class LiteratureAggregator:
     def __init__(self, config: Optional[LiteratureConfig] = None):
         self.config = config or LiteratureConfig()
         if self.config.sources is None:
-             self.config.sources = ["pubmed", "europe_pmc", "openalex"]
+             self.config.sources = ["pubmed", "europe_pmc", "openalex", "bohrium"]
         
         # Initialize Scrapers
         self.pubmed = PubmedScraper(PubmedScraperConfig(email=self.config.email, max_results=self.config.max_results))
@@ -238,6 +241,7 @@ class LiteratureAggregator:
         self.openalex = OpenAlexScraper(email=self.config.email)
         self.crossref = CrossRefScraper(email=self.config.email)
         self.biorxiv = BioRxivScraper()
+        self.bohrium = BohriumConnector(endpoint=self.config.bohrium_url)
         
     def search(self, query: str) -> List[Dict]:
         """
@@ -325,6 +329,27 @@ class LiteratureAggregator:
         if self.config.include_preprints:
             res = self.biorxiv.search_papers(query, max_results=5)
             self._deduplicate_and_add(results, res, seen_titles)
+            
+        # Priority 4: Agentic Search (Bohrium)
+        if "bohrium" in self.config.sources:
+             try:
+                 # Bohrium returns list of dicts naturally
+                 res = asyncio.run(self.bohrium.search_literature(query, limit=5))
+                 # Normalize keys if needed
+                 normalized_res = []
+                 for item in res:
+                     normalized_res.append({
+                         "title": item.get('title', 'Untitled'),
+                         "abstract": item.get('abstract', '') or item.get('content', '')[:500],
+                         "authors": item.get('authors', []),
+                         "year": item.get('year', '2024'),
+                         "source": "Bohrium Agent",
+                         "url": item.get('url', ''),
+                         "doi": item.get('doi')
+                     })
+                 self._deduplicate_and_add(results, normalized_res, seen_titles)
+             except Exception as e:
+                 logger.warning(f"Bohrium search failed: {e}")
             
         return results
 

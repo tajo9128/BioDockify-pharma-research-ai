@@ -20,29 +20,72 @@ Example Usage:
     llm = YourLLMProvider()
     memory = PersistentMemory('./data/agent_memory')
     planner = PhDPlanner(llm)
-    tool_registry = ToolRegistry()
+Agent Zero Package - BioDockify AI Brain
 
-    # Create agent
-    agent = AgentZero(llm, tool_registry, memory)
+This is the unified AI brain for BioDockify, combining:
+- Agent Zero: Deep reasoning, tool execution, PhD workflows
+- NanoBot: Memory, skills, scheduling, messaging channels
 
-    # Execute goal
-    result = await agent.execute_goal(
-        goal="Conduct literature review",
-        phd_stage="early"
-    )
+Usage:
+    from agent_zero import get_biodockify_ai
+    
+    ai = get_biodockify_ai()
+    await ai.initialize()
+    response = await ai.chat("Research cancer treatment")
 """
 
 __version__ = '2.0.0'
 __author__ = 'BioDockify Team'
 
-from .core import AgentZero, PhDPlanner, PersistentMemory
-from .core.orchestrator import ToolRegistry, Tool, LLMProvider
+from .biodockify_ai import BioDockifyAI, get_biodockify_ai, AI
+
+# Legacy imports for backwards compatibility
+try:
+    from .core.orchestrator import AgentZero
+except ImportError:
+    AgentZero = None
+
+try:
+    from .enhanced import AgentZeroEnhanced
+except ImportError:
+    AgentZeroEnhanced = None
+
+try:
+    from .channels import AgentZeroChannels, get_channels
+except ImportError:
+    AgentZeroChannels = None
+    get_channels = None
+
+try:
+    from .skills import get_browser_scraper, get_email_messenger
+except ImportError:
+    get_browser_scraper = None
+    get_email_messenger = None
+
+# NanoBot Hybrid Integration (retained from original, assuming it's still relevant)
+try:
+    from .nanobot_bridge import HybridAgentBrain, create_hybrid_agent
+except ImportError:
+    HybridAgentBrain = None
+    create_hybrid_agent = None
 
 __all__ = [
-    'AgentZero',
-    'PhDPlanner',
-    'PersistentMemory',
-    'ToolRegistry',
-    'Tool',
-    'LLMProvider',
+    # Main interface
+    "BioDockifyAI",
+    "get_biodockify_ai",
+    "AI",
+    
+    # Legacy
+    "AgentZero",
+    "AgentZeroEnhanced",
+    "AgentZeroChannels",
+    "get_channels",
+    
+    # Skills
+    "get_browser_scraper",
+    "get_email_messenger",
+
+    # NanoBot Hybrid Integration (retained from original)
+    'HybridAgentBrain',
+    'create_hybrid_agent',
 ]
