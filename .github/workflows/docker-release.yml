@@ -7,7 +7,7 @@ on:
 
 env:
   REGISTRY: docker.io
-  IMAGE_NAME: tajo9128/biodockify
+  IMAGE_NAME: tajo9128/biodockify-ai
 
 jobs:
   build-and-push:
@@ -59,7 +59,7 @@ jobs:
           echo ""
           echo "🚀 Installation Instructions:"
           echo "1. Open Docker Desktop"
-          echo "2. Search: tajo9128/biodockify"
+          echo "2. Search: tajo9128/biodockify-ai"
           echo "3. Pull → Run with port 80:50081"
           echo "4. Open: http://localhost:50081"
 
@@ -72,7 +72,7 @@ jobs:
 
             **Via Docker Desktop (Recommended):**
             1. Open Docker Desktop
-            2. Search `tajo9128/biodockify` in the search bar
+            2. Search `tajo9128/biodockify-ai` in the search bar
             3. Click **Pull** to download
             4. Click **Run** with port mapping: `80 → 50081`
             5. Open: http://localhost:50081
