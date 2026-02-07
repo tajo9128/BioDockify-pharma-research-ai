@@ -6,7 +6,7 @@ BioDockify is a specialized, autonomous AI ecosystem designed to manage the enti
 
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![Version](https://img.shields.io/badge/version-2.20.1-green.svg)](https://github.com/tajo9128/BioDockify-pharma-research-ai)
-[![Docker](https://img.shields.io/badge/docker-biodockify%2Fbiodockify-blue.svg)](https://hub.docker.com/r/biodockify/biodockify)
+[![Docker](https://img.shields.io/badge/docker-tajo9128%2Fbiodockify--ai-blue.svg)](https://hub.docker.com/r/tajo9128/biodockify-ai)
 [![Privacy](https://img.shields.io/badge/privacy-Local--First-green.svg)]()
 
 ---
@@ -85,30 +85,51 @@ Ensuring your research meets the highest standards of integrity and compliance:
 
 ---
 
-## 🚀 Quick Start (Docker Desktop)
+## 🚀 Quick Start (Docker)
 
 > **One-Click Installation** - Just like Agent Zero!
 
-### Via Docker Desktop (Recommended)
-1. **Open Docker Desktop**
-2. **Search** `biodockify/biodockify` in the search bar
-3. Click **Pull** to download (~1.5GB)
-4. Click **Run** → Set port mapping: `80 → 50081`
-5. **Open** http://localhost:50081
+### 🐳 Via Docker Desktop (Recommended)
 
-### Via Command Line
+1. **Open Docker Desktop**
+2. **Search** `tajo9128/biodockify-ai` in the search bar
+3. Click **Pull** to download the latest image
+4. Click **Run** → Set port mapping: `80 → 50081`
+5. **Open** [http://localhost:50081](http://localhost:50081)
+6. **Install as Desktop App** → Click the install prompt in browser for PWA!
+
+### 💻 Via Command Line
+
 ```bash
-# Pull the image
-docker pull biodockify/biodockify:latest
+# Pull the latest image (always gets newest version)
+docker pull tajo9128/biodockify-ai:latest
 
 # Run with data persistence
-docker run -d -p 50081:80 -v biodockify-data:/biodockify/data --name biodockify biodockify/biodockify
+docker run -d \
+  --name biodockify \
+  -p 50081:80 \
+  -v biodockify-data:/app/data \
+  --restart unless-stopped \
+  tajo9128/biodockify-ai:latest
 
-# Access the app
-open http://localhost:50081
+# Open in browser
+# Windows: start http://localhost:50081
+# Mac/Linux: open http://localhost:50081
+```
+
+### 🔄 Update to Latest Version
+
+```bash
+# Stop and remove old container
+docker stop biodockify && docker rm biodockify
+
+# Pull latest and run
+docker pull tajo9128/biodockify-ai:latest
+docker run -d --name biodockify -p 50081:80 -v biodockify-data:/app/data --restart unless-stopped tajo9128/biodockify-ai:latest
 ```
 
 ### 📋 Requirements
+
 | Requirement | Minimum | Recommended |
 |:---|:---|:---|
 | **Docker Desktop** | 4.0+ | Latest |
