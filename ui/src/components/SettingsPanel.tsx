@@ -608,7 +608,7 @@ export default function SettingsPanel() {
                 <TabButton id="pharma" label="Pharma & Sources" icon={Database} />
                 <TabButton id="search" label="Search & Knowledge" icon={Search} />
                 <TabButton id="output" label="Output & Reports" icon={FileText} />
-                <TabButton id="system" label="System" icon={Power} />
+
                 <TabButton id="backup" label="Cloud Backup" icon={Cloud} />
                 <TabButton id="persona" label="Persona" icon={BookOpen} />
             </div>
@@ -1294,20 +1294,7 @@ export default function SettingsPanel() {
                         </div>
                     )}
 
-                    {activeTab === 'system' && (
-                        <div className="space-y-6 animate-in fade-in duration-300">
-                            <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
-                                <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
-                                    <Power className="w-5 h-5 mr-2 text-rose-400" /> Lifecycle Management
-                                </h3>
-                                <div className="space-y-4">
-                                    <ToggleSetting label="Auto-Start on Boot" desc="Launch BioDockify automatically when you log in." enabled={settings.system.auto_start} onChange={() => setSettings({ ...settings, system: { ...settings.system, auto_start: !settings.system.auto_start } })} />
-                                    <ToggleSetting label="Minimize to System Tray" desc="Keep agent running in background when window is closed." enabled={settings.system.minimize_to_tray} onChange={() => setSettings({ ...settings, system: { ...settings.system, minimize_to_tray: !settings.system.minimize_to_tray } })} />
-                                    <ToggleSetting label="Battery Saver Mode" desc="Pause research automatically when on battery power." enabled={settings.system.pause_on_battery} onChange={() => setSettings({ ...settings, system: { ...settings.system, pause_on_battery: !settings.system.pause_on_battery } })} />
-                                </div>
-                            </div>
-                        </div>
-                    )}
+
 
                     {activeTab === 'backup' && (
                         <div className="space-y-6 animate-in fade-in duration-300">

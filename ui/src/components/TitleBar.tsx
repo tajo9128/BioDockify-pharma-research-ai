@@ -1,10 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Minus, Square, X, FolderOpen, FileText, Settings, ZoomIn, ZoomOut, Eye, BookOpen, Mail, Activity } from 'lucide-react';
-
-// Check if we're in Tauri environment
-const isTauri = typeof window !== 'undefined' && (window as any).__TAURI__;
+import { FolderOpen, FileText, Settings, ZoomIn, ZoomOut, Eye, BookOpen, Mail, Activity, Upload } from 'lucide-react';
 
 interface MenuItemConfig {
     label?: string;
@@ -16,132 +13,49 @@ interface MenuItemConfig {
 export default function TitleBar() {
     const [openMenu, setOpenMenu] = useState<string | null>(null);
 
-    // Window controls - only work in Tauri, no-op in browser/Docker
-    const handleMinimize = async () => {
-        if (isTauri) {
-            try {
-                const { appWindow } = await import('@tauri-apps/api/window');
-                appWindow.minimize();
-            } catch (e) {
-                console.log('Minimize not available in Docker mode');
-            }
-        }
-    };
+    const handleFileImport = (type: string) => {
+        // Web-based File Import
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.multiple = true;
+        input.accept = type === 'all' ? '.pdf,.doc,.docx,.txt,.md,.ipynb,.csv,.json' :
+            type === 'pdf' ? '.pdf' :
+                type === 'doc' ? '.doc,.docx' :
+                    type === 'text' ? '.txt,.md' :
+                        type === 'notebook' ? '.ipynb' :
+                            type === 'data' ? '.csv,.json' : '*';
+        input.onchange = (e) => {
+            const files = (e.target as HTMLInputElement).files;
+            if (files?.length) {
+                // Dispatch event for other components to handle file loading via standard File API
+                // Note: The original 'import-to-notebook' event might expect paths (Desktop) or File objects (Web).
+                // We should ensure listeners handle File objects. 
+                // However, since we are moving to Docker, likely file content reading happens here or in listener?
+                // The original code passed `Array.from(files).map(f => f.name)` which is just names.
+                // But for web we need the actual File object to read content.
+                // Let's pass the File objects themselves in detail.files if possible, or just dispatch.
 
-    const toggleMaximize = async () => {
-        if (isTauri) {
-            try {
-                const { appWindow } = await import('@tauri-apps/api/window');
-                const isMax = await appWindow.isMaximized();
-                if (isMax) {
-                    appWindow.unmaximize();
-                } else {
-                    appWindow.maximize();
-                }
-            } catch (e) {
-                console.log('Maximize not available in Docker mode');
+                // For now, mirroring previous behavior:
+                // Original web fallback passed: files: Array.from(files).map(f => f.name) ??
+                // Wait, if it only passed names, how did it upload? 
+                // Ah, maybe the listener handles it. 
+                // Let's pass the File List or Array.
+                window.dispatchEvent(new CustomEvent('import-to-notebook', {
+                    detail: { files: Array.from(files), type }
+                }));
             }
-        } else {
-            // Browser fullscreen toggle
-            if (document.fullscreenElement) {
-                document.exitFullscreen?.();
-            } else {
-                document.documentElement.requestFullscreen?.();
-            }
-        }
-    };
-
-    const handleClose = async () => {
-        if (isTauri) {
-            try {
-                const { appWindow } = await import('@tauri-apps/api/window');
-                appWindow.close();
-            } catch (e) {
-                console.log('Close not available in Docker mode');
-            }
-        } else {
-            // In Docker/browser, close tab
-            window.close();
-        }
-    };
-
-    const handleFileImport = async (type: string) => {
-        if (isTauri) {
-            try {
-                const { open } = await import('@tauri-apps/api/dialog');
-                let extensions: string[] = [];
-                let filterName = '';
-
-                switch (type) {
-                    case 'pdf':
-                        extensions = ['pdf'];
-                        filterName = 'PDF Documents';
-                        break;
-                    case 'doc':
-                        extensions = ['doc', 'docx'];
-                        filterName = 'Word Documents';
-                        break;
-                    case 'text':
-                        extensions = ['txt', 'md'];
-                        filterName = 'Text Files';
-                        break;
-                    case 'notebook':
-                        extensions = ['ipynb'];
-                        filterName = 'Jupyter Notebooks';
-                        break;
-                    case 'data':
-                        extensions = ['csv', 'json'];
-                        filterName = 'Data Files';
-                        break;
-                    case 'all':
-                        extensions = ['pdf', 'doc', 'docx', 'txt', 'md', 'ipynb', 'csv', 'json'];
-                        filterName = 'All Supported Files';
-                        break;
-                }
-
-                const selected = await open({
-                    multiple: true,
-                    filters: [{ name: filterName, extensions }]
-                });
-                if (selected) {
-                    console.log(`Importing ${type} files:`, selected);
-                    window.dispatchEvent(new CustomEvent('import-to-notebook', { detail: { files: selected, type } }));
-                }
-            } catch (e) {
-                console.error('File import failed:', e);
-            }
-        } else {
-            // In Docker/browser, use HTML file input
-            const input = document.createElement('input');
-            input.type = 'file';
-            input.multiple = true;
-            input.accept = type === 'all' ? '.pdf,.doc,.docx,.txt,.md,.ipynb,.csv,.json' :
-                type === 'pdf' ? '.pdf' :
-                    type === 'doc' ? '.doc,.docx' :
-                        type === 'text' ? '.txt,.md' :
-                            type === 'notebook' ? '.ipynb' :
-                                type === 'data' ? '.csv,.json' : '*';
-            input.onchange = (e) => {
-                const files = (e.target as HTMLInputElement).files;
-                if (files?.length) {
-                    window.dispatchEvent(new CustomEvent('import-to-notebook', {
-                        detail: { files: Array.from(files).map(f => f.name), type }
-                    }));
-                }
-            };
-            input.click();
-        }
+        };
+        input.click();
     };
 
     const fileMenuItems: MenuItemConfig[] = [
-        { label: 'Import Any File to Notebook', icon: FileText, action: () => handleFileImport('all') },
+        { label: 'Import Any File to Notebook', icon: Upload, action: () => handleFileImport('all') },
         { divider: true, label: 'Import PDF', icon: FileText, action: () => handleFileImport('pdf') },
         { label: 'Import Word Document', icon: FileText, action: () => handleFileImport('doc') },
         { label: 'Import Text/Markdown', icon: FileText, action: () => handleFileImport('text') },
         { label: 'Import Jupyter Notebook', icon: FileText, action: () => handleFileImport('notebook') },
         { label: 'Import Data (CSV/JSON)', icon: FileText, action: () => handleFileImport('data') },
         { divider: true, label: 'Open Settings', icon: Settings, action: () => window.dispatchEvent(new CustomEvent('navigate-to-settings')) },
-        { divider: true, label: 'Exit', action: handleClose },
     ];
 
     const editMenuItems: MenuItemConfig[] = [
@@ -175,7 +89,15 @@ export default function TitleBar() {
                 document.body.style.transform = 'scale(1)';
             }
         },
-        { divider: true, label: 'Toggle Fullscreen', icon: Eye, action: toggleMaximize },
+        {
+            divider: true, label: 'Toggle Fullscreen', icon: Eye, action: () => {
+                if (!document.fullscreenElement) {
+                    document.documentElement.requestFullscreen().catch((e) => console.log(e));
+                } else {
+                    document.exitFullscreen();
+                }
+            }
+        },
     ];
 
     // Helper Component for Menu Item
@@ -228,14 +150,11 @@ export default function TitleBar() {
         );
     };
 
-    // In Docker/browser mode, hide window controls since browser handles them
-    const showWindowControls = isTauri;
-
     return (
         <div className="fixed top-0 left-0 right-0 h-10 bg-slate-950 flex items-center justify-between z-[60] select-none border-b border-white/5 shadow-sm">
             {/* Left: Branding & Menu */}
             <div className="flex items-center px-4 h-full">
-                <span data-tauri-drag-region className="text-teal-500 font-bold text-sm tracking-wide mr-6 pointer-events-none flex items-center gap-2">
+                <span className="text-teal-500 font-bold text-sm tracking-wide mr-6 pointer-events-none flex items-center gap-2">
                     <Activity className="w-4 h-4" />
                     BioDockify
                 </span>
@@ -252,34 +171,10 @@ export default function TitleBar() {
                 </div>
             </div>
 
-            {/* Center: Draggable Area (Tauri only) */}
-            <div data-tauri-drag-region className="flex-1 max-w-xl mx-4 flex items-center justify-center h-full">
-                {/* Empty draggable space */}
+            {/* Right: Just a placeholder or empty */}
+            <div className="flex items-center h-full px-4 text-xs text-slate-600">
+                Docker Edition
             </div>
-
-            {/* Right: Window Controls - Only show in Tauri mode */}
-            {showWindowControls && (
-                <div className="flex items-center h-full pointer-events-auto">
-                    <button
-                        onClick={handleMinimize}
-                        className="w-12 h-full flex items-center justify-center text-slate-400 hover:bg-white/10 hover:text-white transition-colors cursor-pointer"
-                    >
-                        <Minus className="w-4 h-4 pointer-events-none" />
-                    </button>
-                    <button
-                        onClick={toggleMaximize}
-                        className="w-12 h-full flex items-center justify-center text-slate-400 hover:bg-white/10 hover:text-white transition-colors cursor-pointer"
-                    >
-                        <Square className="w-3.5 h-3.5 pointer-events-none" />
-                    </button>
-                    <button
-                        onClick={handleClose}
-                        className="w-12 h-full flex items-center justify-center text-slate-400 hover:bg-red-500 hover:text-white transition-colors cursor-pointer"
-                    >
-                        <X className="w-4 h-4 pointer-events-none" />
-                    </button>
-                </div>
-            )}
         </div>
     );
 }
