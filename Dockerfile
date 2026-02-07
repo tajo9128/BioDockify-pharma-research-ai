@@ -1,5 +1,5 @@
 # =============================================================================
-# BioDockify v2.20.7 - Docker Production Image
+# BioDockify v2.20.8 - Docker Production Image
 # =============================================================================
 # One-Command Install:
 #   docker pull tajo9128/biodockify-ai:latest
@@ -40,7 +40,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     g++ \
     cmake \
     # Graphics/Image processing (for OpenCV, Pillow, DECIMER)
-    libgl1-mesa-glx \
+    libgl1 \
+    libglx-mesa0 \
     libglib2.0-0 \
     libsm6 \
     libxext6 \
@@ -260,7 +261,7 @@ exec python -m http.server 3000 --directory /tmp \n\
 # Main startup script with dependency verification
 RUN echo '#!/bin/bash \n\
 echo "================================================" \n\
-echo "  BioDockify v2.20.7 - Starting..." \n\
+echo "  BioDockify v2.20.8 - Starting..." \n\
 echo "================================================" \n\
 echo "" \n\
 echo "  Access at: http://localhost:50081" \n\
@@ -293,7 +294,7 @@ exec /usr/bin/supervisord -c /etc/supervisor/supervisord.conf \n\
 LABEL maintainer="tajo9128"
 LABEL org.opencontainers.image.title="BioDockify Pharma Research AI"
 LABEL org.opencontainers.image.description="Integrated AI Research Workstation for Pharmaceutical & Life Sciences - All Dependencies Bundled"
-LABEL org.opencontainers.image.version="2.20.7"
+LABEL org.opencontainers.image.version="2.20.8"
 LABEL org.opencontainers.image.source="https://github.com/tajo9128/BioDockify-pharma-research-ai"
 
 # -----------------------------------------------------------------------------

@@ -5,6 +5,10 @@ All notable changes to **BioDockify** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v2.20.8] - 2026-02-07
+### Fixed
+- **Docker:** Fixed build failure by replacing obsolete `libgl1-mesa-glx` with `libgl1` and `libglx-mesa0` for compatibility with Debian Bookworm.
+
 ## [v2.20.7] - 2026-02-07
 ### Fixed
 - **Docker:** Fixed build failure by replacing missing `libatlas-base-dev` with `libopenblas-dev` in the Python slim image.
