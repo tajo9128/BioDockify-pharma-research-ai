@@ -21,7 +21,8 @@ try:
     from lattereview.workflows import ReviewWorkflow
     LATTE_AVAILABLE = True
 except ImportError as e:
-    logger.warning(f"LatteReview not available: {e}")
+    import traceback
+    logger.warning(f"LatteReview not available: {e}\n{traceback.format_exc()}")
     LATTE_AVAILABLE = False
 
 
