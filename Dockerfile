@@ -1,5 +1,5 @@
 # =============================================================================
-# BioDockify v2.20.2 - Docker Production Image
+# BioDockify v2.20.3 - Docker Production Image
 # =============================================================================
 # One-Command Install:
 #   docker pull tajo9128/biodockify-ai:latest
@@ -23,24 +23,51 @@ COPY ui/ ./
 ENV NEXT_TELEMETRY_DISABLED=1
 
 # Build with fallback
-RUN bun run build || (npm install && npm run build) || echo "Frontend build warning - continuing..."
+RUN bun run build || (npm install && npm run build)
 
 # -----------------------------------------------------------------------------
-# Stage 2: Python Backend + Runtime
+# Stage 2: Python Backend + All Dependencies Bundled
 # -----------------------------------------------------------------------------
 FROM python:3.11-slim AS runtime
 
 WORKDIR /app
 
-# Install system dependencies (including curl for healthcheck)
+# Install ALL system dependencies required for the full stack
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    # Build essentials
     build-essential \
+    gcc \
+    g++ \
+    cmake \
+    # Graphics/Image processing (for OpenCV, Pillow, DECIMER)
     libgl1-mesa-glx \
     libglib2.0-0 \
+    libsm6 \
+    libxext6 \
+    libxrender-dev \
+    libgomp1 \
+    # Database drivers
     libpq-dev \
+    # Networking
     curl \
+    wget \
+    # Web servers
     nginx \
     supervisor \
+    # PDF processing (for pdf2image, poppler)
+    poppler-utils \
+    # Video processing (for ffmpeg)
+    ffmpeg \
+    # Git (for some pip packages)
+    git \
+    # Chromium for Playwright
+    chromium \
+    chromium-driver \
+    # Additional libs for scientific computing
+    libhdf5-dev \
+    libblas-dev \
+    liblapack-dev \
+    libatlas-base-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Node.js 20 LTS
@@ -48,15 +75,41 @@ RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
     apt-get install -y nodejs && \
     rm -rf /var/lib/apt/lists/*
 
-# Copy and install Python dependencies
-COPY requirements.txt .
-RUN pip install --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt 2>/dev/null || true
+# Upgrade pip and install build tools
+RUN pip install --upgrade pip setuptools wheel
 
-# Install heavy dependencies with graceful fallback
-RUN pip install --no-cache-dir tensorflow==2.15.0 Pillow>=10.2.0 2>/dev/null || echo "TensorFlow install optional"
-RUN pip install --no-cache-dir decimer>=2.2.0 2>/dev/null || echo "DECIMER install optional"
-RUN pip install --no-cache-dir rdkit>=2023.9.4 2>/dev/null || echo "RDKit install optional"
+# Copy requirements and install ALL Python dependencies
+COPY requirements.txt .
+
+# Install core dependencies FIRST (order matters for compatibility)
+RUN pip install --no-cache-dir \
+    numpy>=1.26.3,<2.0.0 \
+    protobuf>=4.25.3,<5.0.0
+
+# Install TensorFlow (critical for DECIMER/ML)
+RUN pip install --no-cache-dir tensorflow==2.15.0
+
+# Install DECIMER and RDKit (chemistry/molecular dependencies)
+RUN pip install --no-cache-dir decimer>=2.2.0 rdkit>=2023.9.4 || \
+    (pip install --no-cache-dir decimer && pip install --no-cache-dir rdkit)
+
+# Install remaining requirements
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Install Playwright browsers
+RUN pip install --no-cache-dir playwright && \
+    playwright install chromium --with-deps
+
+# Verify critical imports work
+RUN python -c "import tensorflow; print(f'TensorFlow {tensorflow.__version__}')" && \
+    python -c "import numpy; print(f'NumPy {numpy.__version__}')" && \
+    python -c "import fastapi; print('FastAPI OK')" && \
+    python -c "import PIL; print('Pillow OK')" && \
+    echo "=== All critical dependencies verified ==="
+
+# -----------------------------------------------------------------------------
+# Copy Application Code
+# -----------------------------------------------------------------------------
 
 # Copy frontend build artifacts
 COPY --from=frontend-builder /app/ui/.next/standalone /app/ui/ 2>/dev/null || true
@@ -66,7 +119,7 @@ COPY --from=frontend-builder /app/ui/.next /app/ui/.next 2>/dev/null || true
 COPY --from=frontend-builder /app/ui/node_modules /app/ui/node_modules 2>/dev/null || true
 COPY --from=frontend-builder /app/ui/package.json /app/ui/package.json 2>/dev/null || true
 
-# Copy backend application
+# Copy ALL backend application code
 COPY api/ /app/api/
 COPY agent_zero/ /app/agent_zero/
 COPY modules/ /app/modules/
@@ -149,8 +202,8 @@ directory=/app \n\
 autostart=true \n\
 autorestart=true \n\
 priority=20 \n\
-startsecs=5 \n\
-startretries=3 \n\
+startsecs=10 \n\
+startretries=5 \n\
 stdout_logfile=/var/log/biodockify/backend.log \n\
 stderr_logfile=/var/log/biodockify/backend-error.log \n\
 stdout_logfile_maxbytes=50MB \n\
@@ -196,26 +249,35 @@ if [ -d "/app/ui/.next" ]; then \n\
 fi \n\
 \n\
 # Last resort - serve static files \n\
-echo "[Frontend] No Next.js build found, serving static placeholder" \n\
+echo "[Frontend] No Next.js build found, serving placeholder" \n\
 echo "BioDockify is starting..." > /tmp/index.html \n\
 exec python -m http.server 3000 --directory /tmp \n\
 ' > /app/start-frontend.sh && chmod +x /app/start-frontend.sh
 
-# Main startup script
+# Main startup script with dependency verification
 RUN echo '#!/bin/bash \n\
-echo "=========================================" \n\
-echo "  BioDockify v2.20.2 - Starting..." \n\
-echo "=========================================" \n\
+echo "================================================" \n\
+echo "  BioDockify v2.20.3 - Starting..." \n\
+echo "================================================" \n\
 echo "" \n\
 echo "  Access at: http://localhost:50081" \n\
 echo "  (or the port you mapped)" \n\
 echo "" \n\
-echo "=========================================" \n\
+echo "  All dependencies bundled:" \n\
+echo "  - TensorFlow 2.15 (DECIMER/ML)" \n\
+echo "  - Playwright (Stealth Browser)" \n\
+echo "  - FFmpeg (Video Processing)" \n\
+echo "  - Poppler (PDF Processing)" \n\
+echo "" \n\
+echo "================================================" \n\
 \n\
 # Ensure log directory exists \n\
 mkdir -p /var/log/biodockify \n\
 \n\
-# Wait for nginx config to be valid \n\
+# Quick dependency check \n\
+python -c "import tensorflow, numpy, fastapi, PIL; print(\"Dependencies OK\")" || echo "Warning: Some deps may be missing" \n\
+\n\
+# Validate nginx config \n\
 nginx -t 2>/dev/null || echo "Nginx config warning" \n\
 \n\
 # Start supervisor (manages all processes) \n\
@@ -227,8 +289,8 @@ exec /usr/bin/supervisord -c /etc/supervisor/supervisord.conf \n\
 # -----------------------------------------------------------------------------
 LABEL maintainer="tajo9128"
 LABEL org.opencontainers.image.title="BioDockify Pharma Research AI"
-LABEL org.opencontainers.image.description="Integrated AI Research Workstation for Pharmaceutical & Life Sciences"
-LABEL org.opencontainers.image.version="2.20.2"
+LABEL org.opencontainers.image.description="Integrated AI Research Workstation for Pharmaceutical & Life Sciences - All Dependencies Bundled"
+LABEL org.opencontainers.image.version="2.20.3"
 LABEL org.opencontainers.image.source="https://github.com/tajo9128/BioDockify-pharma-research-ai"
 
 # -----------------------------------------------------------------------------
@@ -240,12 +302,13 @@ ENV PYTHONPATH=/app
 ENV NODE_ENV=production
 ENV BIODOCKIFY_DATA=/app/data
 ENV PORT=80
+ENV PLAYWRIGHT_BROWSERS_PATH=/root/.cache/ms-playwright
 
 # Expose HTTP port
 EXPOSE 80
 
-# Health check - wait 60s before first check, then every 30s
-HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+# Health check - wait 90s for heavy deps to load
+HEALTHCHECK --interval=30s --timeout=15s --start-period=90s --retries=5 \
     CMD curl -sf http://localhost/health || exit 1
 
 # Persistent data volume
