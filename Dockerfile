@@ -1,5 +1,5 @@
 # =============================================================================
-# BioDockify v2.20.3 - Docker Production Image
+# BioDockify v2.20.6 - Docker Production Image
 # =============================================================================
 # One-Command Install:
 #   docker pull tajo9128/biodockify-ai:latest
@@ -115,24 +115,24 @@ RUN python -c "import tensorflow; print(f'TensorFlow {tensorflow.__version__}')"
 # -----------------------------------------------------------------------------
 
 # Copy frontend build artifacts
-COPY --from=frontend-builder /app/ui/.next/standalone /app/ui/ 2>/dev/null || true
-COPY --from=frontend-builder /app/ui/.next/static /app/ui/.next/static 2>/dev/null || true
-COPY --from=frontend-builder /app/ui/public /app/ui/public 2>/dev/null || true
-COPY --from=frontend-builder /app/ui/.next /app/ui/.next 2>/dev/null || true
-COPY --from=frontend-builder /app/ui/node_modules /app/ui/node_modules 2>/dev/null || true
-COPY --from=frontend-builder /app/ui/package.json /app/ui/package.json 2>/dev/null || true
+COPY --from=frontend-builder /app/ui/.next/standalone /app/ui/
+COPY --from=frontend-builder /app/ui/.next/static /app/ui/.next/static
+COPY --from=frontend-builder /app/ui/public /app/ui/public
+COPY --from=frontend-builder /app/ui/.next /app/ui/.next
+COPY --from=frontend-builder /app/ui/node_modules /app/ui/node_modules
+COPY --from=frontend-builder /app/ui/package.json /app/ui/package.json
 
 # Copy ALL backend application code
 COPY api/ /app/api/
 COPY agent_zero/ /app/agent_zero/
 COPY modules/ /app/modules/
 COPY orchestration/ /app/orchestration/
-COPY services/ /app/services/ 2>/dev/null || true
-COPY nlp/ /app/nlp/ 2>/dev/null || true
-COPY nanobot/ /app/nanobot/ 2>/dev/null || true
-COPY nanobot_bridge/ /app/nanobot_bridge/ 2>/dev/null || true
+COPY services/ /app/services/
+COPY nlp/ /app/nlp/
+COPY nanobot/ /app/nanobot/
+COPY nanobot_bridge/ /app/nanobot_bridge/
 COPY server.py /app/
-COPY runtime/ /app/runtime/ 2>/dev/null || true
+COPY runtime/ /app/runtime/
 
 # Create data directories
 RUN mkdir -p /app/data /var/log/biodockify /run
@@ -260,7 +260,7 @@ exec python -m http.server 3000 --directory /tmp \n\
 # Main startup script with dependency verification
 RUN echo '#!/bin/bash \n\
 echo "================================================" \n\
-echo "  BioDockify v2.20.3 - Starting..." \n\
+echo "  BioDockify v2.20.6 - Starting..." \n\
 echo "================================================" \n\
 echo "" \n\
 echo "  Access at: http://localhost:50081" \n\
@@ -293,7 +293,7 @@ exec /usr/bin/supervisord -c /etc/supervisor/supervisord.conf \n\
 LABEL maintainer="tajo9128"
 LABEL org.opencontainers.image.title="BioDockify Pharma Research AI"
 LABEL org.opencontainers.image.description="Integrated AI Research Workstation for Pharmaceutical & Life Sciences - All Dependencies Bundled"
-LABEL org.opencontainers.image.version="2.20.3"
+LABEL org.opencontainers.image.version="2.20.6"
 LABEL org.opencontainers.image.source="https://github.com/tajo9128/BioDockify-pharma-research-ai"
 
 # -----------------------------------------------------------------------------
