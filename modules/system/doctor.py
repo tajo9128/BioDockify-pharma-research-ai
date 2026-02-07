@@ -97,6 +97,19 @@ class SystemDoctor:
         else:
             services["surfsense"] = "stopped"
 
+        # 3. Graph Database (Neo4j/Memgraph)
+        graph_db_type = self.config.get("graph_db", {}).get("type", os.getenv("GRAPH_DB_TYPE", "neo4j")).lower()
+        graph_db_port = 7687  # Bolt default for both
+        if self._check_port(graph_db_port):
+            services["graph_db"] = f"running ({graph_db_type})"
+        else:
+            services["graph_db"] = "stopped"
+            self.report["issues"].append({
+                "type": "service",
+                "severity": "medium",
+                "message": f"Graph Database ({graph_db_type}) is not responding on port {graph_db_port}."
+            })
+
         # 3. Reviewer Agent (Citation Logic)
         try:
             importlib.import_module("modules.literature.reviewer")

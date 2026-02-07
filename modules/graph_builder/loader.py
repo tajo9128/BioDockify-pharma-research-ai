@@ -35,16 +35,20 @@ class Neo4jLoader:
     Robust wrapper for Neo4j operations.
     """
     
-    def __init__(self, uri: str = "bolt://localhost:7687", auth: tuple = ("neo4j", "neo4j")):
+    def __init__(self, uri: str = None, auth: tuple = None, db_type: str = None):
         """
         Initialize the loader.
         
         Args:
-            uri: Bolt URI (default: bolt://localhost:7687)
-            auth: Tuple of (username, password) (default: neo4j/neo4j)
+            uri: Bolt URI (default from env or bolt://localhost:7687)
+            auth: Tuple of (username, password) (default from env or neo4j/neo4j)
+            db_type: 'neo4j' or 'memgraph' (default from env or 'neo4j')
         """
-        self.uri = uri
-        self.auth = auth
+        self.uri = uri or os.getenv("GRAPH_DB_URI", "bolt://localhost:7687")
+        user = os.getenv("GRAPH_DB_USER", "neo4j")
+        password = os.getenv("GRAPH_DB_PASSWORD", "biodockify2024")
+        self.auth = auth or (user, password)
+        self.db_type = db_type or os.getenv("GRAPH_DB_TYPE", "neo4j").lower()
         self.driver = None
         self._connected = False
 
@@ -101,14 +105,24 @@ class Neo4jLoader:
             if not self._connected:
                 return
 
-        queries = [
-            "CREATE CONSTRAINT paper_pmid_unique IF NOT EXISTS FOR (p:Paper) REQUIRE p.pmid IS UNIQUE",
-            "CREATE CONSTRAINT compound_name_unique IF NOT EXISTS FOR (c:Compound) REQUIRE c.name IS UNIQUE"
-        ]
+        if self.db_type == "memgraph":
+            queries = [
+                "CREATE CONSTRAINT ON (p:Paper) ASSERT p.pmid IS UNIQUE",
+                "CREATE CONSTRAINT ON (c:Compound) ASSERT c.name IS UNIQUE"
+            ]
+        else:
+            # Neo4j 4.4+ syntax
+            queries = [
+                "CREATE CONSTRAINT paper_pmid_unique IF NOT EXISTS FOR (p:Paper) REQUIRE p.pmid IS UNIQUE",
+                "CREATE CONSTRAINT compound_name_unique IF NOT EXISTS FOR (c:Compound) REQUIRE c.name IS UNIQUE"
+            ]
 
-        logger.info("Ensuring schema constraints...")
+        logger.info(f"Ensuring schema constraints for {self.db_type}...")
         for q in queries:
-            self.execute_query(q)
+            try:
+                self.execute_query(q)
+            except Exception as e:
+                logger.warning(f"Could not create constraint (may already exist): {e}")
 
     def add_paper(self, paper_data: Dict[str, Any]):
         """
