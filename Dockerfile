@@ -1,5 +1,5 @@
 # =============================================================================
-# BioDockify v2.3.2 - Docker Production Image
+# BioDockify v2.3.3 - Docker Production Image
 # =============================================================================
 # One-Command Install:
 #   docker pull tajo9128/biodockify-ai:latest
@@ -240,7 +240,7 @@ exec python -m http.server 3000 --directory /tmp \n\
 # Main startup script with RUNTIME INSTALLATION logic
 RUN echo '#!/bin/bash \n\
 echo "================================================" \n\
-echo "  BioDockify v2.3.2 - Thin Image Startup" \n\
+echo "  BioDockify v2.3.3 - Thin Image Startup" \n\
 echo "================================================" \n\
 echo "" \n\
 echo "  Checking for Heavy Dependencies..." \n\
@@ -280,7 +280,7 @@ exec /usr/bin/supervisord -c /etc/supervisor/supervisord.conf \n\
 LABEL maintainer="tajo9128"
 LABEL org.opencontainers.image.title="BioDockify Pharma Research AI"
 LABEL org.opencontainers.image.description="BioDockify Thin Image - Runtime Installation Enabled"
-LABEL org.opencontainers.image.version="2.3.2"
+LABEL org.opencontainers.image.version="2.3.3"
 LABEL org.opencontainers.image.source="https://github.com/tajo9128/BioDockify-pharma-research-ai"
 
 # -----------------------------------------------------------------------------

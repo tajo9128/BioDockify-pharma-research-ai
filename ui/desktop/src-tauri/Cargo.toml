@@ -1,6 +1,6 @@
 [package]
 name = "biodockify"
-version = "1.0.0"
+version = "2.3.3"
 description = "BioDockify AI - Pharmaceutical Research Platform"
 authors = ["BioDockify Team"]
 license = ""

@@ -1,7 +1,7 @@
 {
   "name": "biodockify-ui",
-  "version": "2.3.2",
-  "description": "BioDockify v2.3.2 🧬 Pharma Research AI: Documentation Fix",
+  "version": "2.3.3",
+  "description": "BioDockify v2.3.3 🧬 Pharma Research AI: Documentation Fix",
   "private": true,
   "scripts": {
     "dev": "next dev -p 3000 2>&1 | tee dev.log",
