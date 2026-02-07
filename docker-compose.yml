@@ -87,7 +87,7 @@ services:
   backend:
     build:
       context: .
-      dockerfile: Dockerfile.backend
+      dockerfile: Dockerfile
     container_name: biodockify-backend
     ports:
       - "8234:8234"
