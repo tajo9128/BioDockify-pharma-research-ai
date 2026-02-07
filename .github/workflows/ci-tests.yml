@@ -32,6 +32,15 @@ jobs:
         else
           echo "Warning: requirements.txt not found in root or api/"
         fi
+        
+        # Install heavy dependencies for integration tests (Playwright, etc.)
+        if [ -f "api/requirements_heavy.txt" ]; then
+          echo "Installing heavy dependencies for testing..."
+          pip install -r api/requirements_heavy.txt
+          pip install playwright
+          playwright install chromium
+        fi
+        
         pip install pytest pytest-asyncio httpx requests psutil fastapi uvicorn neo4j
 
     - name: Start Backend
