@@ -79,7 +79,7 @@ RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
 RUN pip install --upgrade pip setuptools wheel
 
 # Copy requirements and install ALL Python dependencies
-COPY api/requirements.txt /app/requirements.txt
+COPY api/requirements.txt /app/requirements_bundle.txt
 
 # Debug: List files to ensure requirements.txt exists
 RUN ls -la /app
@@ -97,7 +97,7 @@ RUN pip install --no-cache-dir decimer>=2.2.0 rdkit>=2023.9.4 || \
     (pip install --no-cache-dir decimer && pip install --no-cache-dir rdkit)
 
 # Install remaining requirements
-RUN pip install --no-cache-dir -r /app/requirements.txt
+RUN pip install --no-cache-dir -r /app/requirements_bundle.txt
 
 # Install Playwright browsers
 RUN pip install --no-cache-dir playwright && \
