@@ -85,18 +85,36 @@ Ensuring your research meets the highest standards of integrity and compliance:
 
 ---
 
-## 🚀 Deployment Matrix
+## 🚀 Quick Start (Docker Desktop)
 
-### 📋 Prerequisites
-- **Internal Stack**: Docker Desktop, Python 3.10+, Neo4j.
-- **Hardware**: 16GB RAM Min (32GB Rec for Graphs).
-- **GPU**: NVIDIA (8GB+ VRAM) for Private AI (LM Studio).
+> **One-Click Installation** - Just like Agent Zero!
 
-| Path | Command / Method | Best For |
-| :--- | :--- | :--- |
-| **🐳 Local Docker** | `docker-compose up -d` | Personal Workstation |
-| **🛡️ Private AI** | Connect to **LM Studio** (Port 1234) | Maximum Security/Privacy |
-| **☁️ Enterprise VPS**| `docker-compose -f docker-compose.yml up -d` | Research Labs & VPS |
+### Via Docker Desktop (Recommended)
+1. **Open Docker Desktop**
+2. **Search** `biodockify/biodockify` in the search bar
+3. Click **Pull** to download (~1.5GB)
+4. Click **Run** → Set port mapping: `80 → 50081`
+5. **Open** http://localhost:50081
+
+### Via Command Line
+```bash
+# Pull the image
+docker pull biodockify/biodockify:latest
+
+# Run with data persistence
+docker run -d -p 50081:80 -v biodockify-data:/biodockify/data --name biodockify biodockify/biodockify
+
+# Access the app
+open http://localhost:50081
+```
+
+### 📋 Requirements
+| Requirement | Minimum | Recommended |
+|:---|:---|:---|
+| **Docker Desktop** | 4.0+ | Latest |
+| **RAM** | 8GB | 16GB+ |
+| **Disk** | 10GB | 20GB |
+| **GPU** | Optional | NVIDIA 8GB+ (for LM Studio) |
 
 ---
 

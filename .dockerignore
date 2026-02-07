@@ -1,13 +1,97 @@
-Dockerfile
-.dockerignore
-node_modules
-npm-debug.log
-README.md
-.next
+# =============================================================================
+# BioDockify Docker Build - Ignore File
+# =============================================================================
+# Optimized for faster builds and smaller context
+
+# Version Control
 .git
+.gitignore
+.github
+
+# Build Artifacts
+dist/
+build/
+*.egg-info/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Node/Bun
+node_modules/
+.next/
+ui/node_modules/
+ui/.next/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Python Virtual Environments
+.venv/
+.venv311/
+venv/
+env/
+*.venv
+
+# IDE/Editor
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Desktop App (Not needed for Docker)
+desktop/
+installer/
+
+# Tests (Not needed in production)
+tests/
+test_*.py
+*_test.py
+pytest.ini
+
+# Documentation (Not needed in container)
+*.md
+!README.md
+docs/
+
+# Development Files
+*.spec
+*.bak
+*.backup
+*.tmp
+local-*
+server_log.txt
+
+# Data/Output Directories
+data/
+export/
+test_output/
+test_slides_output/
+mock_cloud_storage/
+library_data/
+
+# External Repos (Cloned separately if needed)
+external_repos/
+Prismer_Repo/
+
+# Lock files (recreated during build)
+bun.lock
 package-lock.json
 yarn.lock
 pnpm-lock.yaml
-test
-*.log
-local-*
+
+# Docker files (not needed in context)
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Secrets
+.env
+.env.*
+*.pem
+*.key

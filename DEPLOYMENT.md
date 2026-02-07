@@ -1,38 +1,55 @@
-# BioDockify v2.0.0 - Deployment Package
+# BioDockify v2.20.0 - Deployment Guide
 
 Complete PhD Research Automation Platform with Agent Zero orchestration, 40+ integrated tools, and real-time AI-powered research workflow.
 
-### 🚀 Quick Start (Docker)
-BioDockify runs entirely in Docker containers. This ensures a consistent environment for all researchers and developers.
+---
+
+## 🚀 Quick Start (Docker Desktop)
+
+> **One-Click Installation** - Search and run like Agent Zero!
+
+### Method 1: Docker Desktop GUI (Recommended)
+
+1. **Open Docker Desktop**
+2. **Search** `biodockify/biodockify` in the search bar at the top
+3. **Pull** - Click to download the image (~1.5GB)
+4. **Run** - Click Run and configure:
+   - **Port:** Map container port `80` → host port `50081`
+   - **Volume (optional):** Map `/biodockify/data` for data persistence
+5. **Access** - Open http://localhost:50081
+
+### Method 2: Command Line
+
+```bash
+# Pull the latest image
+docker pull biodockify/biodockify:latest
+
+# Run with data persistence (recommended)
+docker run -d \
+  -p 50081:80 \
+  -v biodockify-data:/biodockify/data \
+  --name biodockify \
+  biodockify/biodockify:latest
+
+# Access the application
+open http://localhost:50081
+```
+
+### Method 3: Docker Compose (Full Stack)
+
+For development or when you need separate services (Neo4j, GROBID, Ollama):
 
 ```bash
 docker-compose up -d
 ```
-The application will be available at:
+
+This starts:
 - **Frontend**: http://localhost:3000
 - **Backend API**: http://localhost:8234
-   ```
-   http://localhost:3000
-   ```
+- **Neo4j Browser**: http://localhost:7474
+- **GROBID**: http://localhost:8070
 
-## 📦 Automated Deployment
-
-Use the provided deployment script for a complete setup:
-
-```bash
-./deployment/deploy.sh
-```
-
-This script will:
-- ✓ Check system prerequisites (Docker, Docker Compose, Bun)
-- ✓ Install project dependencies
-- ✓ Push database schema
-- ✓ Start all Docker services (GROBID, Neo4j, Ollama)
-- ✓ Wait for services to be healthy
-- ✓ Pull Ollama model
-- ✓ Verify all services are accessible
-
-## 🏗️ Architecture
+---
 
 ```
 ┌─────────────────────────────────────────────────────────┐
