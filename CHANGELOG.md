@@ -5,6 +5,13 @@ All notable changes to **BioDockify** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v2.20.6] - 2026-02-07
+### Fixed
+- **Core:** Skill Internalization - All skills (`LatteReview`, `Achademio`, `ScholarCopilot`, `Deep Drive`) are now fully internal to the codebase, removing the need for external submodules or git credentials during Docker build/run.
+- **Dependencies:** Resolved critical dependency conflict between `litellm` and `openai`. Synchronized requirements for Docker/Server environments.
+- **CI:** Fixed CI pipeline by implementing a backend health-check wait before running integration tests.
+- **Stability:** Enhanced `LatteReview` with explicit import error tracebacks for easier debugging in containerized environments.
+
 ## [v2.19.4] - 2026-02-04
 ### Added
 - **First-Run Experience:** "Hit the Ground Running" - Agent Zero now auto-detects LM Studio and immediately configures the backend for use.

@@ -14,7 +14,7 @@ from modules.analyst.analytics_engine import ResearchAnalyst
 from modules.backup import DriveClient, BackupManager
 from modules.literature.reviewer import CitationReviewer
 
-app = FastAPI(title="BioDockify - Pharma Research AI", version="2.19.8")
+app = FastAPI(title="BioDockify - Pharma Research AI", version="2.20.6")
 
 # Register NanoBot Hybrid Agent Routes
 try:
