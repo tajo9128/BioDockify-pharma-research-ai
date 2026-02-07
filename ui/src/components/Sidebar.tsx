@@ -16,11 +16,11 @@ export default function Sidebar({ activeView, onViewChange }: SidebarProps) {
 
   /* New Sidebar Organization */
   const mainNav = [
-    { id: 'home', icon: Home, label: 'Home' },
-    { id: 'research', icon: FlaskConical, label: 'Workstation' }, // Core Research
-    { id: 'writers', icon: PenTool, label: 'Academic Suite' },    // Writing & Publication
-    { id: 'results', icon: FileText, label: 'Results' },
     { id: 'agent-chat', icon: Bot, label: 'Agent Zero Chat' },
+    { id: 'research', icon: FlaskConical, label: 'Nanobot Workstation' },
+    { id: 'home', icon: Home, label: 'Home' },
+    { id: 'writers', icon: PenTool, label: 'Academic Suite' },
+    { id: 'results', icon: FileText, label: 'Results' },
     { id: 'statistics', icon: Calculator, label: 'Statistics' },
     { id: 'journal-check', icon: ShieldCheck, label: 'Journal Authenticity' },
   ];
@@ -64,7 +64,7 @@ export default function Sidebar({ activeView, onViewChange }: SidebarProps) {
 
         {/* Brand Logo */}
         <div className="mb-8 w-10 h-10 relative group cursor-default">
-          <Image src="/logo_small.svg" alt="BioDockify" width={40} height={40} className="w-full h-full drop-shadow-lg group-hover:drop-shadow-[0_0_15px_rgba(0,212,170,0.5)] transition-all" />
+          <Image src="/logo_student.png" alt="BioDockify Student" width={40} height={40} className="w-full h-full drop-shadow-lg group-hover:drop-shadow-[0_0_15px_rgba(0,212,170,0.5)] transition-all rounded-xl" />
         </div>
 
         {/* Main Navigation */}

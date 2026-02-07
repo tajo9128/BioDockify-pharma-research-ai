@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { FlaskConical, PenTool, Brain, Search, Database, Clock, ArrowRight, Zap, Target } from 'lucide-react';
+import { FlaskConical, PenTool, Brain, Search, Database, Clock, ArrowRight, Zap, Target, Bot } from 'lucide-react';
 import api from '@/lib/api';
 
 interface HomeProps {
@@ -68,40 +68,40 @@ export default function HomeDashboard({ onNavigate }: HomeProps) {
 
             <div className="max-w-5xl mx-auto">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-                    {/* Main Action 1 - Research */}
-                    <RestrictedCard id="research" onClick={() => onNavigate('research')}>
+                    {/* Main Action 1 - Agent Zero Chat */}
+                    <RestrictedCard id="agent-chat" onClick={() => onNavigate('agent-chat')}>
                         <div className="absolute top-0 right-0 p-4 opacity-50 group-hover:opacity-100 transition-opacity">
                             <ArrowRight className="w-5 h-5 text-teal-400" />
                         </div>
                         <div className="w-12 h-12 bg-teal-500/10 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                            <FlaskConical className="w-6 h-6 text-teal-400" />
+                            <Bot className="w-6 h-6 text-teal-400" />
                         </div>
-                        <h3 className="text-xl font-bold text-white mb-2">Start Research</h3>
-                        <p className="text-sm text-slate-400">Launch the research workstation to analyze targets and synthesize data.</p>
+                        <h3 className="text-xl font-bold text-white mb-2">Ask Agent Zero</h3>
+                        <p className="text-sm text-slate-400">Your AI research partner. Ask questions, plan experiments, and analyze data.</p>
                     </RestrictedCard>
 
-                    {/* Main Action 2 - Academic */}
-                    <RestrictedCard id="writers" onClick={() => onNavigate('writers')}>
+                    {/* Main Action 2 - Nanobot Workstation */}
+                    <RestrictedCard id="research" onClick={() => onNavigate('research')}>
                         <div className="absolute top-0 right-0 p-4 opacity-50 group-hover:opacity-100 transition-opacity">
                             <ArrowRight className="w-5 h-5 text-indigo-400" />
                         </div>
                         <div className="w-12 h-12 bg-indigo-500/10 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                            <PenTool className="w-6 h-6 text-indigo-400" />
+                            <FlaskConical className="w-6 h-6 text-indigo-400" />
                         </div>
-                        <h3 className="text-xl font-bold text-white mb-2">Academic Suite</h3>
-                        <p className="text-sm text-slate-400">Draft thesis chapters, review papers, and manage citations.</p>
+                        <h3 className="text-xl font-bold text-white mb-2">Nanobot Workstation</h3>
+                        <p className="text-sm text-slate-400">Advanced molecular analysis and simulation tools.</p>
                     </RestrictedCard>
 
-                    {/* Main Action 3 - Deep Research */}
-                    <RestrictedCard id="autonomous" onClick={() => onNavigate('autonomous')}>
+                    {/* Main Action 3 - Academic Suite */}
+                    <RestrictedCard id="writers" onClick={() => onNavigate('writers')}>
                         <div className="absolute top-0 right-0 p-4 opacity-50 group-hover:opacity-100 transition-opacity">
                             <ArrowRight className="w-5 h-5 text-purple-400" />
                         </div>
                         <div className="w-12 h-12 bg-purple-500/10 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                            <Brain className="w-6 h-6 text-purple-400" />
+                            <PenTool className="w-6 h-6 text-purple-400" />
                         </div>
-                        <h3 className="text-xl font-bold text-white mb-2">Deep Research</h3>
-                        <p className="text-sm text-slate-400">Initiate autonomous deep-dive investigations into complex topics.</p>
+                        <h3 className="text-xl font-bold text-white mb-2">Academic Writer</h3>
+                        <p className="text-sm text-slate-400">Draft thesis chapters and review papers with AI assistance.</p>
                     </RestrictedCard>
 
                     {/* Main Action 4 (External) - ALWAYS UNLOCKED */}
