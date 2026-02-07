@@ -1,7 +1,7 @@
 {
   "name": "biodockify-ui",
-  "version": "2.19.8",
-  "description": "BioDockify v2.19.8 🧬Pharma Research AI: User Interface",
+  "version": "2.20.1",
+  "description": "BioDockify v2.20.1 🧬 Pharma Research AI: Docker Edition",
   "private": true,
   "scripts": {
     "dev": "next dev -p 3000 2>&1 | tee dev.log",
