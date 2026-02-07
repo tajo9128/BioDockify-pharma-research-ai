@@ -1319,7 +1319,7 @@ export default function SettingsPanel() {
                                             placeholder="e.g. Dr. Jane Doe"
                                             className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-emerald-500/50"
                                         />
-                                        <p className="text-xs text-slate-500">How should Agent Zero address you?</p>
+                                        <p className="text-xs text-slate-500">How should BioDockify AI address you?</p>
                                     </div>
 
                                     <div className="space-y-2">

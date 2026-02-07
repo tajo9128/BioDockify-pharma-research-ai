@@ -515,9 +515,14 @@ Failed to reach the BioDockify Research Backend.
                                     </div>
                                 )}
 
+                                <h1 className="text-xl font-bold text-white tracking-tight flex items-center">
+                                    <Bot className="w-6 h-6 mr-3 text-teal-400 animate-pulse-soft" />
+                                    BioDockify AI
+                                    <span className="ml-3 text-xs font-mono bg-teal-500/10 text-teal-400 px-2 py-0.5 rounded border border-teal-500/20">v2.0</span>
+                                </h1>
                                 <p className="leading-relaxed whitespace-pre-wrap text-sm">{msg.content}</p>
 
-                                {/* Agent Zero: Action Section */}
+                                {/* BioDockify AI: Action Section */}
                                 {msg.action && (
                                     <div className="mt-3 text-xs bg-indigo-500/10 text-indigo-200 p-2 rounded border border-indigo-500/20 flex items-center gap-2">
                                         <Terminal className="w-3 h-3" />

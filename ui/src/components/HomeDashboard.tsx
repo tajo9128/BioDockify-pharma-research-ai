@@ -76,11 +76,11 @@ export default function HomeDashboard({ onNavigate }: HomeProps) {
                         <div className="w-12 h-12 bg-teal-500/10 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                             <Bot className="w-6 h-6 text-teal-400" />
                         </div>
-                        <h3 className="text-xl font-bold text-white mb-2">Ask Agent Zero</h3>
+                        <h3 className="text-xl font-bold text-white mb-2">BioDockify AI Chat</h3>
                         <p className="text-sm text-slate-400">Your AI research partner. Ask questions, plan experiments, and analyze data.</p>
                     </RestrictedCard>
 
-                    {/* Main Action 2 - Nanobot Workstation */}
+                    {/* Main Action 2 - BioDockify AI Workstation */}
                     <RestrictedCard id="research" onClick={() => onNavigate('research')}>
                         <div className="absolute top-0 right-0 p-4 opacity-50 group-hover:opacity-100 transition-opacity">
                             <ArrowRight className="w-5 h-5 text-indigo-400" />
@@ -88,7 +88,7 @@ export default function HomeDashboard({ onNavigate }: HomeProps) {
                         <div className="w-12 h-12 bg-indigo-500/10 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                             <FlaskConical className="w-6 h-6 text-indigo-400" />
                         </div>
-                        <h3 className="text-xl font-bold text-white mb-2">Nanobot Workstation</h3>
+                        <h3 className="text-xl font-bold text-white mb-2">BioDockify AI Workstation</h3>
                         <p className="text-sm text-slate-400">Advanced molecular analysis and simulation tools.</p>
                     </RestrictedCard>
 
