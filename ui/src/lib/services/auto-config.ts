@@ -1,34 +1,7 @@
 /**
  * Auto-Configuration Service
  * Automatically detects and configures available services (Ollama, GROBID)
- * Works even when the backend API is not running by using Tauri shell commands
  */
-
-// Backend API base URL
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8234';
-
-// Default service URLs
-const DEFAULT_LM_STUDIO_URL = 'http://localhost:1234/v1/models';
-const DEFAULT_GROBID_URL = 'http://localhost:8070';
-
-export interface DetectedServices {
-    lm_studio: boolean;
-    lm_studio_model?: string;
-    backend: boolean;
-    grobid: boolean;
-}
-
-export interface ServiceConfig {
-    lmStudioUrl: string;
-    grobidUrl: string;
-}
-
-/**
- * Check if we're running in Tauri environment
- */
-function isTauri(): boolean {
-    return typeof window !== 'undefined' && '__TAURI__' in window;
-}
 
 /**
  * Check LM Studio availability and detect loaded model

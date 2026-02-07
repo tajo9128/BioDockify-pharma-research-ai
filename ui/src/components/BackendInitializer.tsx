@@ -62,31 +62,11 @@ async function checkLmStudio(): Promise<boolean> {
 
 /**
  * Try to start backend using Tauri shell (only works in Tauri context)
+ * [DEPRECATED] - Docker manages services now.
  */
 async function tryStartBackend(): Promise<boolean> {
-    // Check if we're in Tauri
-    if (typeof window === 'undefined' || !('__TAURI__' in window)) {
-        console.log('[BackendInitializer] Not in Tauri, cannot auto-start backend');
-        return false;
-    }
-
-    try {
-        const { Command } = await import('@tauri-apps/api/shell');
-
-        // Start the backend server via launcher for auto-restart
-        console.log('[BackendInitializer] Attempting to start backend via Tauri (Launcher)...');
-        // We use backend_launcher.py which runs an infinite loop
-        const cmd = new Command('cmd', ['/c', 'start', '/b', '.venv\\Scripts\\python.exe', 'backend_launcher.py']);
-        await cmd.execute();
-
-        // Wait a bit for it to start
-        await new Promise(r => setTimeout(r, 5000));
-
-        return true;
-    } catch (e) {
-        console.error('[BackendInitializer] Failed to start backend:', e);
-        return false;
-    }
+    console.log('[BackendInitializer] Service management is handled by Docker container.');
+    return false;
 }
 
 export const BackendInitializer: React.FC<BackendInitializerProps> = ({

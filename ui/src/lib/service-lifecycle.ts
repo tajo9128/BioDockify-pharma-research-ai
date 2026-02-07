@@ -248,70 +248,13 @@ export class ServiceLifecycleManager {
     }
 
     private async startOllama(): Promise<boolean> {
-        console.log('[Lifecycle] Attempting to start Ollama...');
-
-        if (!this.isTauri()) {
-            console.log('[Lifecycle] Not in Tauri environment, cannot start Ollama');
-            return false;
-        }
-
-        // Retry logic with exponential backoff
-        const MAX_RETRIES = 3;
-        for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-            try {
-                const { Command } = await import('@tauri-apps/api/shell');
-
-                // First, try to kill any existing hung Ollama process
-                if (attempt > 1) {
-                    console.log(`[Lifecycle] Attempt ${attempt}: Killing existing Ollama processes...`);
-                    try {
-                        const killCmd = new Command('cmd', ['/c', 'taskkill', '/f', '/im', 'ollama.exe']);
-                        await killCmd.execute();
-                        await new Promise(r => setTimeout(r, 1000));
-                    } catch {
-                        // Ignore kill errors
-                    }
-                }
-
-                // Start Ollama serve
-                const cmd = new Command('cmd', ['/c', 'start', '/b', 'ollama', 'serve']);
-                await cmd.execute();
-
-                // Wait and verify with increasing delay
-                const waitTime = 2000 + (attempt * 1000);
-                await new Promise(r => setTimeout(r, waitTime));
-
-                const status = await this.checkService('ollama');
-                if (status.running) {
-                    console.log('[Lifecycle] Ollama start successful');
-                    return true;
-                }
-            } catch (e) {
-                console.error(`[Lifecycle] Ollama start attempt ${attempt} failed:`, e);
-            }
-        }
-
-        console.error('[Lifecycle] Failed to start Ollama after all retries');
+        console.log('[Lifecycle] Ollama start not supported in Docker mode (managed by container)');
         return false;
     }
 
     private async startSurfSense(): Promise<boolean> {
-        console.log('[Lifecycle] Attempting to start SurfSense...');
-
-        if (!this.isTauri()) return false;
-
-        try {
-            const { Command } = await import('@tauri-apps/api/shell');
-            // Assuming docker-compose is in path
-            const cmd = new Command('cmd', ['/c', 'docker-compose', '-f', 'modules/surfsense/docker-compose.yml', 'up', '-d']);
-            await cmd.execute();
-
-            await new Promise(r => setTimeout(r, 5000));
-            return (await this.checkService('surfsense')).running;
-        } catch (e) {
-            console.error('[Lifecycle] Failed to start SurfSense:', e);
-            return false;
-        }
+        console.log('[Lifecycle] SurfSense start not supported in Docker mode (managed by container)');
+        return false;
     }
 
 
@@ -427,7 +370,7 @@ export class ServiceLifecycleManager {
     // -------------------------------------------------------------------------
 
     private isTauri(): boolean {
-        return typeof window !== 'undefined' && '__TAURI__' in window;
+        return false;
     }
 
     getServiceStatus(name: string): ServiceStatus | undefined {

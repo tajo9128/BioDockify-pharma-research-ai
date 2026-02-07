@@ -1255,32 +1255,16 @@ export default function SettingsPanel() {
                                                 className="flex-1 bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-slate-300 font-mono text-sm"
                                             />
                                             <button
-                                                onClick={async () => {
-                                                    try {
-                                                        const { open } = await import('@tauri-apps/api/dialog');
-                                                        const selected = await open({ directory: true, multiple: false });
-                                                        if (selected && typeof selected === 'string') {
-                                                            setSettings({ ...settings, output: { ...settings.output, output_dir: selected } });
-                                                        }
-                                                    } catch (e) {
-                                                        console.error("Failed to open dialog", e);
-                                                        alert("Could not open file browser. Are you running in Tauri?");
-                                                    }
+                                                onClick={() => {
+                                                    alert("File browsing is not available in the web version. Please type the path manually.");
                                                 }}
                                                 className="px-4 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-sm border border-slate-600"
                                             >
                                                 Browse
                                             </button>
                                             <button
-                                                onClick={async () => {
-                                                    try {
-                                                        const { Command } = await import('@tauri-apps/api/shell');
-                                                        // Open folder in file explorer
-                                                        await new Command('explorer', settings.output.output_dir).execute();
-                                                    } catch (e) {
-                                                        console.error("Failed to open folder", e);
-                                                        alert("Could not open folder in file explorer.");
-                                                    }
+                                                onClick={() => {
+                                                    alert("File explorer is not available in the web version.");
                                                 }}
                                                 className="px-4 bg-teal-700 hover:bg-teal-600 text-white rounded-lg text-sm border border-teal-600"
                                                 title="Open folder in file explorer"

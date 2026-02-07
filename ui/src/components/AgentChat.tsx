@@ -120,16 +120,8 @@ How can I assist your research today?`,
         setIsStartingServices(true);
 
         // If in Tauri, try to start backend
-        if (typeof window !== 'undefined' && '__TAURI__' in window) {
-            try {
-                const { Command } = await import('@tauri-apps/api/shell');
-                // Use the robust launcher
-                const cmd = new Command('cmd', ['/c', 'start', '/b', '.venv\\Scripts\\python.exe', 'backend_launcher.py']);
-                await cmd.execute();
-            } catch (e) {
-                console.error('Failed to start backend:', e);
-            }
-        }
+        // (Removed for Docker-only build)
+        console.log("Service startup is managed by Docker.");
 
         // Wait and recheck
         await new Promise(r => setTimeout(r, 5000));

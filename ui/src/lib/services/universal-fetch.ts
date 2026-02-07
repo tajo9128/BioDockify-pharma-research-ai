@@ -4,9 +4,11 @@
  * This bypasses CORS issues that affect the Tauri webview.
  */
 
-// Check if we're in Tauri environment
+/**
+ * Universal fetch wrapper for browser environment
+ */
 export function isTauri(): boolean {
-    return typeof window !== 'undefined' && '__TAURI__' in window;
+    return false;
 }
 
 interface FetchOptions {
@@ -24,66 +26,39 @@ interface FetchResult {
 }
 
 /**
- * Universal fetch that works in both Tauri and browser environments
+ * Universal fetch that works in browser environments
  */
 export async function universalFetch(url: string, options: FetchOptions = {}): Promise<FetchResult> {
     const { method = 'GET', headers = {}, body, timeout = 5000 } = options;
 
-    if (isTauri()) {
-        // Use Tauri's HTTP client (bypasses CORS)
-        try {
-            // @ts-ignore - Tauri types may not be available at compile time
-            const { fetch: tauriFetch, Body } = await import('@tauri-apps/api/http');
+    // Standard browser fetch
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
 
-            const payload = body ? (typeof body === 'string' ? JSON.parse(body) : body) : undefined;
-            const requestBody = payload ? Body.json(payload) : undefined;
+    try {
+        const response = await fetch(url, {
+            method,
+            headers: {
+                'Content-Type': 'application/json',
+                ...headers
+            },
+            body: body ? (typeof body === 'string' ? body : JSON.stringify(body)) : undefined,
+            signal: controller.signal
+        });
 
-            const response = await tauriFetch(url, {
-                method,
-                timeout,
-                headers,
-                body: requestBody
-            });
+        clearTimeout(timeoutId);
 
-            return {
-                ok: response.ok,
-                status: response.status,
-                data: response.data,
-                json: async () => response.data
-            };
-        } catch (e: any) {
-            console.error('[UniversalFetch] Tauri fetch failed:', e);
-            throw e;
-        }
-    } else {
-        // Standard browser fetch
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), timeout);
+        const data = await response.json().catch(() => null);
 
-        try {
-            const response = await fetch(url, {
-                method,
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...headers
-                },
-                body: body ? (typeof body === 'string' ? body : JSON.stringify(body)) : undefined,
-                signal: controller.signal
-            });
-
-            clearTimeout(timeoutId);
-
-            const data = await response.json().catch(() => null);
-
-            return {
-                ok: response.ok,
-                status: response.status,
-                data,
-                json: async () => data
-            };
-        } catch (e) {
-            clearTimeout(timeoutId);
-            throw e;
-        }
+        return {
+            ok: response.ok,
+            status: response.status,
+            data,
+            json: async () => data
+        };
+    } catch (e) {
+        clearTimeout(timeoutId);
+        throw e;
     }
 }
+

@@ -1,7 +1,6 @@
 import { cleanHtml, CleanedWebPage } from './html_cleaner';
 
-// Check if we're in Tauri environment
-const isTauri = typeof window !== 'undefined' && (window as any).__TAURI__;
+
 
 // Configuration for HeadlessX
 // TODO: Move these to App Settings in a future update
@@ -12,9 +11,7 @@ const HEADLESSX_CONFIG = {
     enabled: true // Set to false to disable attempts
 };
 
-/**
- * Universal fetch that works in both Tauri and browser environments
- */
+// Universal fetch that works in browser environments
 async function universalHttpFetch(url: string, options: {
     method?: 'GET' | 'POST';
     timeout?: number;
@@ -22,29 +19,6 @@ async function universalHttpFetch(url: string, options: {
     body?: any;
 }): Promise<{ ok: boolean; status: number; data: any }> {
     const { method = 'GET', timeout = 10000, headers = {}, body } = options;
-
-    if (isTauri) {
-        try {
-            // Dynamic import for Tauri
-            const { fetch: tauriFetch, Body } = await import('@tauri-apps/api/http');
-            const requestBody = body ? Body.json(body) : undefined;
-
-            const response = await tauriFetch(url, {
-                method,
-                timeout,
-                headers,
-                body: requestBody
-            });
-
-            return {
-                ok: response.ok,
-                status: response.status,
-                data: response.data
-            };
-        } catch (e) {
-            console.error('[WebFetcher] Tauri fetch failed, using browser fetch:', e);
-        }
-    }
 
     // Browser/Docker fallback
     const controller = new AbortController();
