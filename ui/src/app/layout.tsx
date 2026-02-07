@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "BioDockify v2.0.0 - Pharma Research AI",
-  description: "Open-source Desktop AI platform for pharmaceutical research automation",
+  title: "BioDockify v2.20.0 - Pharma Research AI",
+  description: "The Integrated AI Research Workstation for Pharmaceutical & Life Sciences",
   keywords: ["BioDockify", "Pharma Research", "AI", "Drug Discovery", "PhD Research", "Neo4j", "Literature Review"],
   authors: [{ name: "BioDockify Team" }],
   icons: {
@@ -27,10 +27,16 @@ export const metadata: Metadata = {
     description: "Automate pharmaceutical research with AI-powered literature analysis and drug discovery",
     type: "website",
   },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "BioDockify",
+  },
 }
 
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 import TitleBarLoader from '@/components/TitleBarLoader';
+import PWAInstallPrompt from '@/components/PWAInstallPrompt';
 
 export default function RootLayout({
   children,
@@ -46,8 +52,10 @@ export default function RootLayout({
         <TitleBarLoader />
         {children}
         <Toaster />
+        <PWAInstallPrompt />
       </body>
     </html>
   );
 }
+
 
