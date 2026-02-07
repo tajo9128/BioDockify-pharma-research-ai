@@ -11,8 +11,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
-      with:
-        submodules: recursive
+
+    - name: Fetch External Modules
+      run: |
+        mkdir -p _external
+        git clone --depth 1 https://github.com/taja-kuzman/Achademio.git _external/Achademio
+        git clone --depth 1 https://github.com/PouriaRouzrokh/LatteReview.git _external/LatteReview
+        git clone --depth 1 https://github.com/TIGER-AI-Lab/ScholarCopilot.git _external/ScholarCopilot
 
     - name: Set up Python 3.9
       uses: actions/setup-python@v4
