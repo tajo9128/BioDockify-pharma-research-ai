@@ -79,7 +79,7 @@ RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
 RUN pip install --upgrade pip setuptools wheel
 
 # Copy requirements and install ALL Python dependencies
-COPY requirements.txt .
+COPY api/requirements.txt .
 
 # Install core dependencies FIRST (order matters for compatibility)
 RUN pip install --no-cache-dir \
