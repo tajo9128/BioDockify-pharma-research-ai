@@ -1,0 +1,27 @@
+# ============================================================
+# BioDockify - Heavy AI/ML Dependencies
+# ============================================================
+# These are large packages (>500MB) installed at runtime to keep
+# the Docker image light.
+# ============================================================
+
+# TensorFlow & Deep Learning (The biggest contributors)
+tensorflow==2.15.0
+tensorflow-intel==2.15.0; sys_platform == 'win32'
+transformers>=4.38.0
+sentence-transformers>=2.2.2
+
+# Chemistry & Molecular Analysis
+decimer>=2.2.0
+rdkit>=2023.9.4
+
+# Browser Automation (Requires binary download)
+playwright>=1.41.0
+
+# Vector Database & Embeddings
+chromadb==0.4.22
+faiss-cpu>=1.7.4
+
+# Multimedia Processing
+ffmpeg-python>=0.2.0
+imageio-ffmpeg>=0.4.9

@@ -79,36 +79,18 @@ RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
 # Upgrade pip and install build tools
 RUN pip install --upgrade pip setuptools wheel
 
-# Copy requirements and install ALL Python dependencies
-COPY api/requirements.txt ./requirements_bundle.txt
+# Copy requirements
+COPY api/requirements.txt ./requirements.txt
+COPY api/requirements_heavy.txt ./requirements_heavy.txt
 
-# Debug: List files to ensure requirements.txt exists
-RUN ls -la .
+# Install CORE dependencies (Lightweight build)
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Install core dependencies FIRST (order matters for compatibility)
-RUN pip install --no-cache-dir \
-    "numpy>=1.26.3,<2.0.0" \
-    "protobuf>=4.25.3,<5.0.0"
-
-# Install TensorFlow (critical for DECIMER/ML)
-RUN pip install --no-cache-dir tensorflow==2.15.0
-
-# Install DECIMER and RDKit (chemistry/molecular dependencies)
-RUN pip install --no-cache-dir decimer>=2.2.0 rdkit>=2023.9.4
-
-# Install remaining requirements
-RUN pip install --no-cache-dir -r requirements_bundle.txt
-
-# Install Playwright browsers
-RUN pip install --no-cache-dir playwright && \
-    playwright install chromium --with-deps
-
-# Verify critical imports work
-RUN python -c "import tensorflow; print(f'TensorFlow {tensorflow.__version__}')" && \
+# Verify critical CORE imports work
+RUN python -c "import fastapi; print('FastAPI OK')" && \
     python -c "import numpy; print(f'NumPy {numpy.__version__}')" && \
-    python -c "import fastapi; print('FastAPI OK')" && \
     python -c "import PIL; print('Pillow OK')" && \
-    echo "=== All critical dependencies verified ==="
+    echo "=== Core dependencies verified ==="
 
 # -----------------------------------------------------------------------------
 # Copy Application Code
@@ -175,6 +157,7 @@ RUN rm -f /etc/nginx/sites-enabled/default && \
         access_log off; \
         return 200 "OK"; \
         add_header Content-Type text/plain; \
+        add_header Access-Control-Allow-Origin *; \
     } \
 }' > /etc/nginx/conf.d/biodockify.conf
 
@@ -254,28 +237,35 @@ echo "BioDockify is starting..." > /tmp/index.html \n\
 exec python -m http.server 3000 --directory /tmp \n\
 ' > /app/start-frontend.sh && chmod +x /app/start-frontend.sh
 
-# Main startup script with dependency verification
+# Main startup script with RUNTIME INSTALLATION logic
 RUN echo '#!/bin/bash \n\
 echo "================================================" \n\
-echo "  BioDockify v2.3.1 - Starting..." \n\
+echo "  BioDockify v2.3.2 - Thin Image Startup" \n\
 echo "================================================" \n\
 echo "" \n\
+echo "  Checking for Heavy Dependencies..." \n\
+\n\
+# Check if TensorFlow is installed \n\
+if python -c "import tensorflow" 2>/dev/null; then \n\
+    echo "[OK] TensorFlow detected." \n\
+else \n\
+    echo "[!] TensorFlow not found. Installing Heavy Dependencies (First Run)..." \n\
+    echo "    This may take 5-10 minutes..." \n\
+    pip install --no-cache-dir -r /app/requirements_heavy.txt \n\
+    echo "[OK] Heavy dependencies installed." \n\
+fi \n\
+\n\
+# Check if Playwright browsers are installed \n\
+if [ ! -d "/root/.cache/ms-playwright" ]; then \n\
+    echo "[!] Playwright browsers not found. Installing..." \n\
+    playwright install chromium \n\
+    echo "[OK] Browsers installed." \n\
+fi \n\
+\n\
 echo "  Access at: http://localhost:50081" \n\
-echo "  (or the port you mapped)" \n\
-echo "" \n\
-echo "  All dependencies bundled:" \n\
-echo "  - TensorFlow 2.15 (DECIMER/ML)" \n\
-echo "  - Playwright (Stealth Browser)" \n\
-echo "  - FFmpeg (Video Processing)" \n\
-echo "  - Poppler (PDF Processing)" \n\
-echo "" \n\
-echo "================================================" \n\
 \n\
 # Ensure log directory exists \n\
 mkdir -p /var/log/biodockify \n\
-\n\
-# Quick dependency check \n\
-python -c "import tensorflow, numpy, fastapi, PIL; print(\"Dependencies OK\")" || echo "Warning: Some deps may be missing" \n\
 \n\
 # Validate nginx config \n\
 nginx -t 2>/dev/null || echo "Nginx config warning" \n\
@@ -289,8 +279,8 @@ exec /usr/bin/supervisord -c /etc/supervisor/supervisord.conf \n\
 # -----------------------------------------------------------------------------
 LABEL maintainer="tajo9128"
 LABEL org.opencontainers.image.title="BioDockify Pharma Research AI"
-LABEL org.opencontainers.image.description="Integrated AI Research Workstation for Pharmaceutical & Life Sciences - All Dependencies Bundled"
-LABEL org.opencontainers.image.version="2.3.1"
+LABEL org.opencontainers.image.description="BioDockify Thin Image - Runtime Installation Enabled"
+LABEL org.opencontainers.image.version="2.3.2"
 LABEL org.opencontainers.image.source="https://github.com/tajo9128/BioDockify-pharma-research-ai"
 
 # -----------------------------------------------------------------------------
@@ -308,7 +298,7 @@ ENV PLAYWRIGHT_BROWSERS_PATH=/root/.cache/ms-playwright
 EXPOSE 80
 
 # Health check - wait 90s for heavy deps to load
-HEALTHCHECK --interval=30s --timeout=15s --start-period=90s --retries=5 \
+HEALTHCHECK --interval=30s --timeout=15s --start-period=120s --retries=5 \
     CMD curl -sf http://localhost/health || exit 1
 
 # Persistent data volume
