@@ -1,8 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  output: "export",
-  /* Static export for Tauri desktop app */
+  output: "standalone",
+  /* Standalone output for Docker deployment */
   typescript: {
     ignoreBuildErrors: true,
   },
@@ -13,7 +13,7 @@ const nextConfig: NextConfig = {
   images: {
     unoptimized: true,
   },
-  trailingSlash: true,
+  trailingSlash: false,
 };
 
 export default nextConfig;
