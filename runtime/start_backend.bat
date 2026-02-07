@@ -19,9 +19,15 @@ IF %ERRORLEVEL% NEQ 0 (
 
 :: 3. Install/Update Dependencies
 echo [+] Verifying dependencies...
-pip install -r requirements.txt
+IF EXIST "requirements.txt" (
+    pip install -r requirements.txt
+) ELSE IF EXIST "api\requirements.txt" (
+    pip install -r api\requirements.txt
+) ELSE (
+    echo [WARNING] requirements.txt not found in root or api/. Skipping automated check.
+)
 IF %ERRORLEVEL% NEQ 0 (
-    echo [WARNING] Dependency check failed. Trying to proceed...
+    echo [WARNING] Dependency check failed or some packages missed. Trying to proceed...
 )
 
 :: 4. Start Docker (Optional)

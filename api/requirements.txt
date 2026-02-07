@@ -41,7 +41,7 @@ playwright>=1.41.0
 markdownify>=0.11.6
 beautifulsoup4>=4.12.0
 fake-useragent>=1.5.1
-fake-http-header>=0.4.1
+fake-http-header>=0.3.5
 
 # Discovery Engine
 semanticscholar>=0.6.0

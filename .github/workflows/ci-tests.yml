@@ -24,7 +24,14 @@ jobs:
         pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
         # Install CPU-only TensorFlow where possible (Linux only usually, but good practice)
         pip install tensorflow-cpu==2.15.0 || pip install tensorflow==2.15.0
-        pip install -r requirements.txt
+        # Check root or api directory for requirements
+        if [ -f "requirements.txt" ]; then
+          pip install -r requirements.txt
+        elif [ -f "api/requirements.txt" ]; then
+          pip install -r api/requirements.txt
+        else
+          echo "Warning: requirements.txt not found in root or api/"
+        fi
         pip install pytest pytest-asyncio httpx requests psutil fastapi uvicorn neo4j
 
     - name: Run Backend Tests
