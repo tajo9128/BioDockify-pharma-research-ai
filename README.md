@@ -1,82 +1,105 @@
 # BioDockify v2.20.0 🧬
 
-**The Premier Four-Pillar AI Research workstation for Pharmaceutical & Life Sciences.**
+**The Integrated AI Research Workstation for Pharmaceutical & Life Sciences.**
 
-BioDockify is a specialized, autonomous AI ecosystem built to manage the entire research lifecycle for **PG students, PhD researchers, and pharmaceutical scientists**. It delivers "Pharma-Grade" intelligence by combining deep reasoning, robotic automation, and local-first privacy.
+BioDockify is a specialized, autonomous AI ecosystem designed to manage the entire research lifecycle for **PG students, PhD researchers, and pharmaceutical scientists**. It delivers "Pharma-Grade" intelligence by combining deep reasoning, robotic automation, and local-first privacy.
 
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![Version](https://img.shields.io/badge/version-2.20.0-green.svg)](https://github.com/tajo9128/BioDockify-pharma-research-ai)
 [![Status](https://img.shields.io/badge/status-Production-teal.svg)]()
-[![Platform](https://img.shields.io/badge/platform-Docker-blue.svg)]()
+[![Privacy](https://img.shields.io/badge/privacy-Local--First-green.svg)]()
 
 ---
 
 ## 🏗️ The Four-Pillar Architecture
 
-BioDockify is globally unique in its integration of four core specialized engines:
+BioDockify is built on four core specialized engines that interact to provide research autonomy and privacy:
 
-1.  **🧠 Agent Zero (The Reasoner)**: The central intelligence engine. Handles goal decomposition, research planning, and complex pharmaceutical reasoning.
+1.  **🧠 Agent Zero (The Reasoner)**: The central intelligence engine. Handles goal decomposition, research planning, and complex multi-step orchestration.
 2.  **🤖 NanoBot (The Executor)**: The action layer. Manages tool execution, stealth browsing, and biological hardware (SiLA 2) interaction.
-3.  **📚 SurfSense (The Knowledge Base)**: The deep research layer. autonomously crawls, parses (GROBID), and indexes (Neo4j) the academic corpus.
-4.  **🛡️ LM Studio (The Local Brain)**: The privacy layer. Enables **100% offline, zero-leakage reasoning** using locally-hosted LLMs for sensitive clinical data.
+3.  **📚 SurfSense (The Knowledge Base)**: The deep research layer. Autonomously crawls, parses (GROBID), and indexes scientific literature.
+4.  **🛡️ LM Studio (The Local Brain)**: The privacy layer. Enables **100% offline, zero-leakage reasoning** using locally-hosted models for sensitive data.
 
 ---
 
-## � Deep Pharma & Clinical Suite
+## 🌟 The Elite Skill Suite
 
-Specialized modules for the frontlines of pharmaceutical development and clinical validation:
+Agent Zero is equipped with specialized "Skills" tailored for elite academic and clinical research:
 
-*   **📊 Clinical Statistics (3-Tier)**: Advanced statistical engine supporting **Kaplan-Meier & Cox Regression (Survival Analysis)**, ANOVA, and Power Analysis with professional methodology generation.
+*   **🎓 Achademio**: A specialized pharmaceutical research assistant that understands PhD-level scientific terminology and protocols.
+*   **🏎️ Deep Drive**: An extreme research engine for high-depth investigation into niche pharmaceutical topics.
+*   **🤝 Scholar Copilot**: Real-time collaborative research assistant for managing literature and hypothesis generation.
+*   **🔍 Reviewer Agent**: Simulates a rigorous peer-review process to critique manuscripts, theses, and experimental designs.
+
+---
+
+## 🔬 Deep Pharma & Clinical Suite
+
+Advanced modules for the frontlines of drug development and clinical validation:
+
+*   **📊 Clinical Statistics (3-Tier)**: Advanced statistical engine supporting **Kaplan-Meier & Cox Regression (Survival Analysis)**, ANOVA, and Power Analysis.
 *   **🧪 Molecular Vision**: Image-to-SMILES engine that converts chemical structure photos into machine-readable data.
-*   **🧬 Bio-Intelligence**: Specialized **Bio-NER** for gene/protein extraction, integrated with PubTator and a literary **Hypothesis Engine**.
 *   **🔗 Lab Automation**: Generates **SiLA 2 compliant XML** protocols for liquid-handling robots (Tecan/Hamilton).
+*   **💡 Scientific Method**: AI-assisted **Hypothesis Engine** for experimental design and mechanism-of-action discovery.
 
 ---
 
-## 🎓 Academic Publishing Factory
+## 🎓 The Publication Engine
 
-Automate the "last mile" of scholarly production with specialist tools:
+Automate everything from thesis drafting to journal submission:
 
-*   **📗 Pharma-Thesis Factory**: Targeted templates for **Pharmacology, Pharmaceutics, Chemistry, and Pharm.D** (optimized for B.Pharm, M.Pharm, and PhD levels).
-*   **📝 Systematic Review (LatteReview)**: semi-autonomous screening, scoring, and data abstraction for SLRs and scoping reviews.
-*   **📽️ Multimedia Studio**: Transform research data into professional **PowerPoint Slides**, Video scripts, and **AI Podcasts** for conferences.
+*   **📗 Pharma-Thesis Factory**: Templates for **Pharmacology, Pharmaceutics, Chemistry, and Pharm.D** (Optimized for B.Pharm to PhD).
+*   **📝 Systematic Review (LatteReview)**: Automated screening, scoring, and data abstraction for SLRs and scoping reviews.
+*   **�️ Journal Intelligence**: AI-powered discovery of high-impact journals with impact factor analysis and submission verifiers.
+*   **📽️ Multimedia Studio**: Auto-generate **Academic PowerPoint Slides**, Video presentation scripts, and **AI Podcasts**.
 
 ---
 
-## 🤖 Autonomic Resilience & Connectivity
+## 🕸️ The Knowledge Hub
 
-The system is designed to "Self-Heal" and operate with minimal user intervention:
+Turn fragmented data into structured pharmaceutical intelligence:
+
+*   **🕸️ Graph Builder**: Visualizes complex drug-disease-gene connections using **Neo4j Knowledge Graphs**.
+*   **🧬 Bio-NER Engine**: Entity extraction specialized for proteins, genes, and drugs, integrated with global databases.
+*   **📥 PDF Processor**: High-fidelity parsing of academic papers using **GROBID** to extract tables and citations.
+
+---
+
+## 🤖 Autonomic Resilience & Exploration
+
+The system is designed to "Self-Heal" and bypass research roadblocks:
 
 *   **🩹 Self-Healing**: Automated recovery from tool failures via `RepairableException` analysis and auto-fix generation.
-*   **🕵️ Stealth Research**: Playwright-based "human-like" browser engine for bypassing bot detection on protected academic portals.
-*   **🦁 Omni-Search**: Integrated **Brave Search** for real-time clinical news and **Omni-Tools** for secure local PDF/Image processing.
-*   **� Multi-Channel Delivery**: Automated research alerts via **Email, Telegram, Discord, and WhatsApp**.
+*   **🕵️ Stealth Research**: Playwright-based "human-like" engine for bypassing bot detection on protected academic portals.
+*   **🦁 Omni-Search**: Integrated **Brave Search** for real-time news and **Omni-Tools** for secure local PDF/Image processing.
 
 ---
 
-## � Deployment Matrix
+## 🛡️ Enterprise Governance & Security
+
+Ensuring your research meets the highest standards of integrity and compliance:
+
+*   **📜 Security Audit**: Full GxP-ready audit logging and license validation for institutional research.
+*   **⚖️ Academic Compliance**: Automated checks for plagiarism, citation integrity, and ethical standard alignment.
+*   **🛡️ Multi-Channel Delivery**: Secure delivery of findings via **Email, Telegram, Discord, and WhatsApp**.
+
+---
+
+## 🚀 Deployment Matrix
 
 ### 📋 Prerequisites
-- **RAM**: 16GB Minimum (32GB+ for Knowledge Graphs).
-- **GPU**: NVIDIA (8GB+ VRAM) for Private AI; Cloud APIs supported.
-- **Docker**: Required for full-stack orchestration.
+- **Internal Stack**: Docker Desktop, Python 3.10+, Neo4j.
+- **Hardware**: 16GB RAM Min (32GB Rec for Graphs).
+- **GPU**: NVIDIA (8GB+ VRAM) for Private AI (LM Studio).
 
 | Path | Command / Method | Best For |
 | :--- | :--- | :--- |
-| **🐳 Local Desktop** | `docker-compose up -d` | Personal Workstation / Windows |
-| **🛡️ Private AI** | Connect to **LM Studio** (Port 1234) | Maximum Privacy / Sensitive Data |
-| **☁️ Enterprise VPS** | `docker-compose -f docker-compose.yml up -d` | Large Labs / Shared Instances |
-
-### 🏁 Quick Start
-```bash
-git clone https://github.com/tajo9128/BioDockify-pharma-research-ai.git
-cd BioDockify-pharma-research-ai
-docker-compose up -d
-```
-*Launch your research workstation at `http://localhost:5173`.*
+| **🐳 Local Docker** | `docker-compose up -d` | Personal Workstation |
+| **🛡️ Private AI** | Connect to **LM Studio** (Port 1234) | Maximum Security/Privacy |
+| **☁️ Enterprise VPS**| `docker-compose -f docker-compose.yml up -d` | Research Labs & VPS |
 
 ---
 
 <p align="center">
-  <b>BioDockify</b> - Empowering the next generation of Pharma Scientists 🧬
+  <b>BioDockify</b> - The Future of Pharma Research 🧬
 </p>
