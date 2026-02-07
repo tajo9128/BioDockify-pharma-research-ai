@@ -79,8 +79,8 @@ jobs:
 
             **Via Command Line:**
             ```bash
-            docker pull biodockify/biodockify:${{ github.ref_name }}
-            docker run -d -p 50081:80 -v biodockify-data:/biodockify/data --name biodockify biodockify/biodockify:${{ github.ref_name }}
+            docker pull tajo9128/biodockify-ai:${{ github.ref_name }}
+            docker run -d -p 50081:80 -v biodockify-data:/app/data --name biodockify tajo9128/biodockify-ai:${{ github.ref_name }}
             ```
 
             ## 📋 What's Included

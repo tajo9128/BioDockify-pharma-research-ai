@@ -1,5 +1,5 @@
 # =============================================================================
-# BioDockify v2.3.1 - Docker Production Image
+# BioDockify v2.3.2 - Docker Production Image
 # =============================================================================
 # One-Command Install:
 #   docker pull tajo9128/biodockify-ai:latest
