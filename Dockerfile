@@ -83,14 +83,17 @@ RUN pip install --upgrade pip setuptools wheel
 COPY api/requirements.txt ./requirements.txt
 COPY api/requirements_heavy.txt ./requirements_heavy.txt
 
-# Install CORE dependencies (Lightweight build)
-RUN pip install --no-cache-dir -r requirements.txt
+# Install ALL dependencies (Core + Heavy)
+# Optimization: Combine installs to reduce layers and use --no-cache-dir
+RUN pip install --no-cache-dir -r requirements.txt && \
+    pip install --no-cache-dir -r requirements_heavy.txt && \
+    playwright install --with-deps chromium
 
-# Verify critical CORE imports work
+# Verify imports work
 RUN python -c "import fastapi; print('FastAPI OK')" && \
     python -c "import numpy; print(f'NumPy {numpy.__version__}')" && \
-    python -c "import PIL; print('Pillow OK')" && \
-    echo "=== Core dependencies verified ==="
+    python -c "import tensorflow as tf; print(f'TensorFlow {tf.__version__}')" && \
+    echo "=== All dependencies verified ==="
 
 # -----------------------------------------------------------------------------
 # Copy Application Code
@@ -237,31 +240,13 @@ echo "BioDockify is starting..." > /tmp/index.html \n\
 exec python -m http.server 3000 --directory /tmp \n\
 ' > /app/start-frontend.sh && chmod +x /app/start-frontend.sh
 
-# Main startup script with RUNTIME INSTALLATION logic
+# Main startup script - Instant Start (Baked Dependencies)
 RUN echo '#!/bin/bash \n\
 echo "================================================" \n\
-echo "  BioDockify v2.3.5 - Thin Image Startup" \n\
+echo "  BioDockify v2.3.6 - Production Startup" \n\
 echo "================================================" \n\
 echo "" \n\
-echo "  Checking for Heavy Dependencies..." \n\
-\n\
-# Check if TensorFlow is installed \n\
-if python -c "import tensorflow" 2>/dev/null; then \n\
-    echo "[OK] TensorFlow detected." \n\
-else \n\
-    echo "[!] TensorFlow not found. Installing Heavy Dependencies (First Run)..." \n\
-    echo "    This may take 5-10 minutes..." \n\
-    pip install --no-cache-dir -r /app/requirements_heavy.txt \n\
-    echo "[OK] Heavy dependencies installed." \n\
-fi \n\
-\n\
-# Check if Playwright browsers are installed \n\
-if [ ! -d "/root/.cache/ms-playwright" ]; then \n\
-    echo "[!] Playwright browsers not found. Installing..." \n\
-    playwright install chromium \n\
-    echo "[OK] Browsers installed." \n\
-fi \n\
-\n\
+echo "  All dependencies are pre-installed." \n\
 echo "  Access at: http://localhost:50081" \n\
 \n\
 # Ensure log directory exists \n\
@@ -279,8 +264,8 @@ exec /usr/bin/supervisord -c /etc/supervisor/supervisord.conf \n\
 # -----------------------------------------------------------------------------
 LABEL maintainer="tajo9128"
 LABEL org.opencontainers.image.title="BioDockify Pharma Research AI"
-LABEL org.opencontainers.image.description="BioDockify Thin Image - Runtime Installation Enabled"
-LABEL org.opencontainers.image.version="2.3.5"
+LABEL org.opencontainers.image.description="BioDockify Fully Baked Image - All Dependencies Pre-installed"
+LABEL org.opencontainers.image.version="2.3.6"
 LABEL org.opencontainers.image.source="https://github.com/tajo9128/BioDockify-pharma-research-ai"
 
 # -----------------------------------------------------------------------------
