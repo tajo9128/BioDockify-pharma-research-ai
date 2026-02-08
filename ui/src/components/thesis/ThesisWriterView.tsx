@@ -97,7 +97,7 @@ export const ThesisWriterView: React.FC = () => {
                         <span className="p-2 bg-blue-900/30 rounded-lg text-blue-400"><FileText className="w-6 h-6" /></span>
                         PhD Thesis Compiler
                     </h1>
-                    <p className="text-sm text-slate-400 ml-14">Strict compliance mode active via Agent Zero Validator.</p>
+                    <p className="text-sm text-slate-400 ml-14">Strict compliance mode active via BioDockify AI Validator.</p>
                 </div>
                 <div className="flex gap-2">
                     <Button variant="outline" size="sm" onClick={loadStructure}>Re-Validate All</Button>

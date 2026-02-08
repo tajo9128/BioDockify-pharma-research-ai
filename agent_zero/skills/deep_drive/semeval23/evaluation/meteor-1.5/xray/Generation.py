@@ -10,15 +10,15 @@ gnuplot_cmd = '/usr/bin/gnuplot'
 
 def check_xelatex():
     if not shutil.os.path.exists(xelatex_cmd):
-        print 'Could not find xelatex_cmd \'{0}\''.format(xelatex_cmd)
-        print 'Please install xetex or update path in Generation.py'
+        print('Could not find xelatex_cmd \'{0}\''.format(xelatex_cmd))
+        print('Please install xetex or update path in Generation.py')
         return False
     return True
 
 def check_gnuplot():
     if not shutil.os.path.exists(xelatex_cmd):
-        print 'Could not find gnuplot_cmd \'{0}\''.format(gnuplot_cmd)
-        print 'Please install gnuplot or update path in Generation.py'
+        print('Could not find gnuplot_cmd \'{0}\''.format(gnuplot_cmd))
+        print('Please install gnuplot or update path in Generation.py')
         return False
     return True
 
@@ -62,12 +62,12 @@ def get_font(uni):
 def check_printable(a1, a2=None):
     # Too long
     if len(a1.sen2) > MAX_LEN:
-        print >> sys.stderr, 'Skipping', a1.name, '- too large:', \
+        print(>> sys.stderr, 'Skipping', a1.name, '- too large:', \)
           len(a1.sen2), 'reference words'
         return False
     # Different references?
     if a2 and a1.sen2 != a2.sen2:
-        print >> sys.stderr, 'Skipping', a1.name, \
+        print(>> sys.stderr, 'Skipping', a1.name, \)
           '- different references used'
         return False
     return True
@@ -75,7 +75,7 @@ def check_printable(a1, a2=None):
 def print_align_table(tex_out, a1, a2=None, a_type=ALIGN_METEOR):
     '''LaTeX generation function: use with caution'''
 
-    print >> tex_out, r'%Table start'
+    print(>> tex_out, r'%Table start')
     # Print color declarations
     r = 0.6
     g = 0.6
@@ -91,7 +91,7 @@ def print_align_table(tex_out, a1, a2=None, a_type=ALIGN_METEOR):
             r += step * .5
             g += step * 1.0
             b -= step * .5
-        print >> tex_out, r'\definecolor{{ref{0}}}{{rgb}}{{{1},{2},{3}}}'\
+        print(>> tex_out, r'\definecolor{{ref{0}}}{{rgb}}{{{1},{2},{3}}}'\)
           .format(i, min(1.0, r), min(1.0, g), min(1.0, b))
     # Print table start
     line = r'\noindent\begin{tabular}{|l'
@@ -101,8 +101,8 @@ def print_align_table(tex_out, a1, a2=None, a_type=ALIGN_METEOR):
     if a2:
         line += r'|l'
     line += r'|}'
-    print >> tex_out, line
-    print >> tex_out, r'\hline'
+    print(>> tex_out, line)
+    print(>> tex_out, r'\hline')
     # Print sentence 2
     line = ''
     if a2:
@@ -113,7 +113,7 @@ def print_align_table(tex_out, a1, a2=None, a_type=ALIGN_METEOR):
           w2 + '\hspace{12pt}\end{sideways}'
     if a2:
         line += r'&\rex \rap'
-    print >> tex_out, line + r'\\'
+    print(>> tex_out, line + r'\\')
     # Print each row for sentences a1.sen1, a2.sen1
     max_len = max(len(a1.sen1), len(a2.sen1)) if a2 else len(a1.sen1)
     fill1 = FILL
@@ -121,7 +121,7 @@ def print_align_table(tex_out, a1, a2=None, a_type=ALIGN_METEOR):
         fill1 = FILL_L
         fill2 = FILL_R
     for i in range(max_len):
-        print >> tex_out, r'\hline'
+        print(>> tex_out, r'\hline')
         line = ''
         if i < len(a1.sen1):
             line += r'\ssp '
@@ -145,43 +145,43 @@ def print_align_table(tex_out, a1, a2=None, a_type=ALIGN_METEOR):
                 if a2.sen1_matched[i] != NO_MATCH:
                     line += r'\cellcolor{{ref{0}}}'.format(a2.sen1_matched[i])
                 line += escape(a2.sen1[i]) + r'\ssp '
-        print >> tex_out, line + r'\\'
-    print >> tex_out, r'\hline'
+        print(>> tex_out, line + r'\\')
+    print(>> tex_out, r'\hline')
     # Print table footer
-    print >> tex_out, r'\end{tabular}'
-    print >> tex_out, r''
-    print >> tex_out, r'\vspace{6pt}'
+    print(>> tex_out, r'\end{tabular}')
+    print(>> tex_out, r'')
+    print(>> tex_out, r'\vspace{6pt}')
     # Print alignment information
     if a_type == ALIGN_DEFAULT:
-        print >> tex_out, r'\noindent {0}'.format(a1.name)
+        print(>> tex_out, r'\noindent {0}'.format(a1.name))
     # Compare stats
     elif a_type == ALIGN_METEOR:
-        print >> tex_out, r'\noindent Segment {0}\\\\'.format(escape(a1.name))
+        print(>> tex_out, r'\noindent Segment {0}\\\\'.format(escape(a1.name)))
         if a2:
             p_diff = a2.p - a1.p
             r_diff = a2.r - a1.r
             fr_diff = a2.frag - a1.frag
             sc_diff = a2.score - a1.score
             
-            print >> tex_out, r'\noindent\begin{tabular}{lm{12pt}rm{24pt}rm{24pt}r}'
-            print >> tex_out, r'\hline'
-            print >> tex_out, r'P:&&{0:.3f}&\centering vs&{1:.3f}&\centering :&{{\bf\color{{{2}}}{{{3:.3f}}}}}\\'.format(a1.p, a2.p, 'gb' if p_diff >= 0 else 'rb', p_diff)
-            print >> tex_out, r'R:&&{0:.3f}&\centering vs&{1:.3f}&\centering :&{{\bf\color{{{2}}}{{{3:.3f}}}}}\\'.format(a1.r, a2.r, 'gb' if r_diff >= 0 else 'rb', r_diff)
-            print >> tex_out, r'Frag:&&{0:.3f}&\centering vs&{1:.3f}&\centering :&{{\bf\color{{{2}}}{{{3:.3f}}}}}\\'.format(a1.frag, a2.frag, 'rb' if fr_diff > 0 else 'gb', fr_diff)
-            print >> tex_out, r'Score:&&{0:.3f}&\centering vs&{1:.3f}&\centering :&{{\bf\color{{{2}}}{{{3:.3f}}}}}\\'.format(a1.score, a2.score, 'gb' if sc_diff >= 0 else 'rb', sc_diff)
+            print(>> tex_out, r'\noindent\begin{tabular}{lm{12pt}rm{24pt}rm{24pt}r}')
+            print(>> tex_out, r'\hline')
+            print(>> tex_out, r'P:&&{0:.3f}&\centering vs&{1:.3f}&\centering :&{{\bf\color{{{2}}}{{{3:.3f}}}}}\\'.format(a1.p, a2.p, 'gb' if p_diff >= 0 else 'rb', p_diff))
+            print(>> tex_out, r'R:&&{0:.3f}&\centering vs&{1:.3f}&\centering :&{{\bf\color{{{2}}}{{{3:.3f}}}}}\\'.format(a1.r, a2.r, 'gb' if r_diff >= 0 else 'rb', r_diff))
+            print(>> tex_out, r'Frag:&&{0:.3f}&\centering vs&{1:.3f}&\centering :&{{\bf\color{{{2}}}{{{3:.3f}}}}}\\'.format(a1.frag, a2.frag, 'rb' if fr_diff > 0 else 'gb', fr_diff))
+            print(>> tex_out, r'Score:&&{0:.3f}&\centering vs&{1:.3f}&\centering :&{{\bf\color{{{2}}}{{{3:.3f}}}}}\\'.format(a1.score, a2.score, 'gb' if sc_diff >= 0 else 'rb', sc_diff))
         else:
-            print >> tex_out, r'\noindent\begin{tabular}{lm{12pt}r}'
-            print >> tex_out, r'\hline'
-            print >> tex_out, r'P:&&{0:.3f}\\'.format(a1.p)
-            print >> tex_out, r'R:&&{0:.3f}\\'.format(a1.r)
-            print >> tex_out, r'Frag:&&{0:.3f}\\'.format(a1.frag)
-            print >> tex_out, r'Score:&&{0:.3f}\\'.format(a1.score)
-        print >> tex_out, r'\end{tabular}'
+            print(>> tex_out, r'\noindent\begin{tabular}{lm{12pt}r}')
+            print(>> tex_out, r'\hline')
+            print(>> tex_out, r'P:&&{0:.3f}\\'.format(a1.p))
+            print(>> tex_out, r'R:&&{0:.3f}\\'.format(a1.r))
+            print(>> tex_out, r'Frag:&&{0:.3f}\\'.format(a1.frag))
+            print(>> tex_out, r'Score:&&{0:.3f}\\'.format(a1.score))
+        print(>> tex_out, r'\end{tabular}')
     # End table
-    print >> tex_out, r'%Table end'
-    print >> tex_out, ''
-    print >> tex_out, r'\newpage'
-    print >> tex_out, ''
+    print(>> tex_out, r'%Table end')
+    print(>> tex_out, '')
+    print(>> tex_out, r'\newpage')
+    print(>> tex_out, '')
 
 FILL = {'ex': r'\mex', 'ap': r'\map', 'rm': r'\mrm'}
 
@@ -332,9 +332,9 @@ def write_dat_file(dat_file, data, xlabel='Score', syslabels=None):
         else:
             col_label.append('System-{0}'.format(i + 1))
     dat_out = open(dat_file, 'w')
-    print >>dat_out, '\t'.join(col_label)
+    print(>>dat_out, '\t'.join(col_label))
     for row in zip(ROW_LABEL, zip(*data)):
-        print >>dat_out, row[0] + '\t' + '\t'.join([str(x) for x in row[1]])
+        print(>>dat_out, row[0] + '\t' + '\t'.join([str(x) for x in row[1]]))
     dat_out.close()
 
 def write_plot_hist(work_dir, dat_file, plot_file, eps_file, xlabel='Score', num_data_cols=1):
@@ -343,7 +343,7 @@ def write_plot_hist(work_dir, dat_file, plot_file, eps_file, xlabel='Score', num
     for i in range(num_data_cols - 1):
         col_line += ', \'\' u {0} ti col'.format(i + 3)
     plot_out = open(shutil.os.path.join(work_dir, plot_file), 'w')
-    print >> plot_out, GNUPLOT_HISTOGRAM.format(data=dat_file, eps=eps_file, \
+    print(>> plot_out, GNUPLOT_HISTOGRAM.format(data=dat_file, eps=eps_file, \)
       label=uc_label, columns=col_line)
     plot_out.close()
 

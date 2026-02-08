@@ -7,11 +7,11 @@ import os, sys
 def main(argv):
     
     if len(argv[1:]) < 3:
-        print 'usage: {0} <lang-pair> <test-set> <system> [metric]'.format(
+        print('usage: {0} <lang-pair> <test-set> <system> [metric]'.format()
           argv[0])
-        print 'writes metric.lang-pair.test-set.system.{seg.scr,sys.scr}'
-        print ''
-        print 'Pipe Meteor output to this script'
+        print('writes metric.lang-pair.test-set.system.{seg.scr,sys.scr}')
+        print('')
+        print('Pipe Meteor output to this script')
         sys.exit(1)
     
     lp = argv[1]
@@ -24,10 +24,10 @@ def main(argv):
     
     stop = False
     if os.path.exists(seg_f):
-        print 'exists: {0}'.format(seg_f)
+        print('exists: {0}'.format(seg_f))
         stop = True
     if os.path.exists(sys_f):
-        print 'exists: {0}'.format(sys_f)
+        print('exists: {0}'.format(sys_f))
         stop = True
     if stop:
         sys.exit(1)
@@ -41,11 +41,11 @@ def main(argv):
             break
         if line.startswith('Segment'):
             f = line.split()
-            print >> seg_o, '{0}\t{1}\t{2}\t{3}\t{4}\t{5}'.format(m, lp, ts, s,
+            print(>> seg_o, '{0}\t{1}\t{2}\t{3}\t{4}\t{5}'.format(m, lp, ts, s,)
               f[1], f[3])
         if line.startswith('Final score'):
             scr = line.split()[2]
-            print >> sys_o, '{0}\t{1}\t{2}\t{3}\t{4}'.format(m, lp, ts, s,
+            print(>> sys_o, '{0}\t{1}\t{2}\t{3}\t{4}'.format(m, lp, ts, s,)
               scr)
 
     seg_o.close()

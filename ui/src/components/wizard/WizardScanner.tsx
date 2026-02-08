@@ -2,7 +2,7 @@
  * WizardScanner Component
  * 
  * Displays environment scan results during First-Run Wizard.
- * Follows Agent Zero RULE 3: Read-only, no auto-start/install.
+ * Follows BioDockify AI RULE 3: Read-only, no auto-start/install.
  */
 
 'use client';

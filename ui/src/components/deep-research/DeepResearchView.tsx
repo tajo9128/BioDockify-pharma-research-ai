@@ -85,7 +85,7 @@ export const DeepResearchView: React.FC = () => {
             <div className="text-center space-y-2">
                 <h1 className="text-3xl font-bold tracking-tight">Autonomous Deep Research</h1>
                 <p className="text-muted-foreground">
-                    Agent Zero navigates the web, reads papers, screens, and synthesizes reports.
+                    BioDockify AI navigates the web, reads papers, screens, and synthesizes reports.
                 </p>
             </div>
 

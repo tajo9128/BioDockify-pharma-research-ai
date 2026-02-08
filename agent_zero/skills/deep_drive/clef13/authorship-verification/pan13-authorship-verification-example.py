@@ -74,7 +74,7 @@ if __name__=='__main__':
         elif len(sys.argv) == 4:
             globals()[func](sys.argv[3], sys.stdout, encoding, scores)
         else:
-            print "Invalid number of arguments"
+            print("Invalid number of arguments")
 
     elif scores:
 
@@ -83,7 +83,7 @@ if __name__=='__main__':
         elif len(sys.argv) == 3:
             globals()[func](sys.argv[2], sys.stdout, scores_flg=scores)
         else:
-            print "Invalid number of arguments"  
+            print("Invalid number of arguments"  )
 
     elif encoding:
 
@@ -92,7 +92,7 @@ if __name__=='__main__':
         elif len(sys.argv) == 3:
             globals()[func](sys.argv[2], sys.stdout, encoding)
         else:
-            print "Invalid number of arguments" 
+            print("Invalid number of arguments" )
     
     else:
 
@@ -101,5 +101,5 @@ if __name__=='__main__':
         elif len(sys.argv) == 2:
             globals()[func](sys.argv[1])
         else:
-            print "Invalid number of arguments (" + str( len(sys.argv)-1 ) + ")"
+            print("Invalid number of arguments (" + str( len(sys.argv)-1 ) + ")")
     

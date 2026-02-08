@@ -2,7 +2,7 @@
  * WizardConsent Component
  * 
  * Handles explicit user consent during First-Run Wizard.
- * Follows Agent Zero RULE 4: Non-negotiable user consent.
+ * Follows BioDockify AI RULE 4: Non-negotiable user consent.
  * 
  * If consent not granted:
  * - DO NOT automate

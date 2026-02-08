@@ -35,7 +35,7 @@ def handleCase(case):
 
 import sys
 if len(sys.argv) !=3:
-    print "Number of arguments must be 2: QREL_FILE DETECTION_FILE"
+    print("Number of arguments must be 2: QREL_FILE DETECTION_FILE")
     sys.exit()
 #print 'Number of arguments:', len(sys.argv), 'arguments.'
 
@@ -74,6 +74,6 @@ recall = intersection/float(relevant_documents)
 f1= 2 * ((precision*recall)/(precision+recall))
 #print "Precision = "+ str(intersection/2) + " / "+ str(retrieved_documents/2) + " = %.3f" % precision,
 #print "Recall = "+ str(intersection/2) + " / "+ str(relevant_documents/2) + " = %.3f" % recall,
-print "\tF1 = %.3f" % f1, 
-print "\tPrec. = %.3f" % precision,
-print "\tRec. = %.3f" % recall
+print("\tF1 = %.3f" % f1, )
+print("\tPrec. = %.3f" % precision,)
+print("\tRec. = %.3f" % recall)

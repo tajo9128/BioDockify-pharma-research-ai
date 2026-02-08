@@ -279,7 +279,7 @@ def index_annotations(annotations, xref=TREF):
 def count_files(path):
     """Counts number of files in directory."""
     if not os.path.exists(path):
-        print "Path not accessible:", path
+        print("Path not accessible:", path)
         sys.exit(2)
     xmlfiles = glob.glob(os.path.join(path, '*.xml'))
     xmlfiles.extend(glob.glob(os.path.join(path, os.path.join('*', '*.xml'))))
@@ -288,7 +288,7 @@ def count_files(path):
 def extract_average_execution_time(path):
     """Extracts the execution time from each xml file and averages it."""
     if not os.path.exists(path):
-        print "Path not accessible:", path
+        print("Path not accessible:", path)
         sys.exit(2)
     times = []
     xmlfiles = glob.glob(os.path.join(path, '*.xml'))
@@ -306,7 +306,7 @@ def extract_average_execution_time(path):
 def extract_annotations_from_files(path, tagname):
     """Returns a set of plagiarism annotations from XML files below path."""
     if not os.path.exists(path):
-        print "Path not accessible:", path
+        print("Path not accessible:", path)
         sys.exit(2)
     annotations = set()
     xmlfiles = glob.glob(os.path.join(path, '*.xml'))
@@ -449,7 +449,7 @@ class TestPerfMeasures(unittest.TestCase):
 
 def usage():
     """Prints command line usage manual."""
-    print """\
+    print("""\)
 Usage: perfmeasures.py [options]
 
 Options:
@@ -472,7 +472,7 @@ def parse_options():
                         "det-tag=", "help"]
         opts, _ = getopt.getopt(sys.argv[1:], "p:d:h", long_options)
     except getopt.GetoptError, err:
-        print str(err)
+        print(str(err))
         usage()
         sys.exit(2)
     micro_averaged = False
@@ -495,10 +495,10 @@ def parse_options():
         else:
             assert False, "Unknown option."
     if plag_path == "undefined":
-        print "Plagiarism path undefined. Use option -p or --plag-path."
+        print("Plagiarism path undefined. Use option -p or --plag-path.")
         sys.exit()
     if det_path == "undefined":
-        print "Detections path undefined. Use option -d or --det-path."
+        print("Detections path undefined. Use option -d or --det-path.")
         sys.exit()
     return (micro_averaged, plag_path, plag_tag_name, det_path, det_tag_name)
 
@@ -519,11 +519,11 @@ def main(micro_averaged, plag_path, plag_tag_name, det_path, det_tag_name):
     plag = plagdet_score(rec, prec, gran)
     num_files = count_files(plag_path)
 #    avg_time = extract_average_execution_time(det_path)
-    print 'Plagdet Score', plag
-    print 'Recall', rec
-    print 'Precision', prec
-    print 'Granularity', gran
-    print 'Num Documents', num_files
+    print('Plagdet Score', plag)
+    print('Recall', rec)
+    print('Precision', prec)
+    print('Granularity', gran)
+    print('Num Documents', num_files)
 #    print 'Average Time (s)', avg_time
 
     sys.stderr.write('{"PlagDet":"' + str('%.5f' % plag) + '",');

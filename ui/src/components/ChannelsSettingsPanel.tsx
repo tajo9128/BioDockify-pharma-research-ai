@@ -1,7 +1,7 @@
 /**
  * ChannelsSettingsPanel - Configure Telegram, WhatsApp, Discord
  * 
- * Allows users to connect Agent Zero to messaging platforms.
+ * Allows users to connect BioDockify AI to messaging platforms.
  */
 
 import React, { useState, useEffect } from 'react';
@@ -180,7 +180,7 @@ export default function ChannelsSettingsPanel() {
                     </div>
                     <div>
                         <h2 className="text-xl font-bold text-white">Messaging Channels</h2>
-                        <p className="text-sm text-slate-400">Connect Agent Zero to Telegram, WhatsApp, Discord</p>
+                        <p className="text-sm text-slate-400">Connect BioDockify AI to Telegram, WhatsApp, Discord</p>
                     </div>
                 </div>
 

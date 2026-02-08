@@ -12,7 +12,7 @@ GENRES = ["blogs","reviews","socialmedia","twitter"]
 # Usage
 #
 def usage():
-	print "Usage: python " + sys.argv[0] + " -i <runDir> -t <truthFile> -o <outputFile>"
+ print("Usage: python " + sys.argv[0] + " -i <runDir> -t <truthFile> -o <outputFile>")
 	sys.exit(1)
 #
 ################################################################################
@@ -150,7 +150,7 @@ def main():
 									'"gender":"%0.4f",\n' % results["gender"] + \
 									'"both":"%0.4f"\n' % results["both"] +	'}'
 	
-	print output_string
+ print(output_string)
 	
 	o=open(output_file, "w")
 	o.write(output_string)

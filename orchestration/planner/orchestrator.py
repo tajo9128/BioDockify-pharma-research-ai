@@ -39,6 +39,12 @@ class OrchestratorConfig(BaseModel):
     openrouter_key: Optional[str] = Field(default=None)
     huggingface_key: Optional[str] = Field(default=None)
     glm_key: Optional[str] = Field(default=None) # GLM-4.7
+    
+    # New Providers
+    groq_key: Optional[str] = Field(default=None)
+    deepseek_key: Optional[str] = Field(default=None)
+    anthropic_key: Optional[str] = Field(default=None)
+
     custom_key: Optional[str] = Field(default=None)
     custom_base_url: Optional[str] = Field(default=None)
     custom_model: str = Field(default="gpt-3.5-turbo")

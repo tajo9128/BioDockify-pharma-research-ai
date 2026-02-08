@@ -33,7 +33,7 @@ def main(argv):
     # Parse
     o, a = opt.parse_args()
     if not a:
-        print 'MX: X-Ray your translation output'
+        print('MX: X-Ray your translation output')
         opt.print_help()
         sys.exit(1)
     compare = o.compare
@@ -58,7 +58,7 @@ def main(argv):
     try:
         shutil.os.mkdir(pre_dir)
     except:
-        print >> sys.stderr, 'Dir {0} exists, will overwrite contents'\
+        print(>> sys.stderr, 'Dir {0} exists, will overwrite contents'\)
           .format(pre_dir)
 
     #
@@ -69,7 +69,7 @@ def main(argv):
     if compare:
         # File check
         if len(align_files) < 2:
-            print 'Comparison requires 2 alignment files'
+            print('Comparison requires 2 alignment files')
             sys.exit(1)
         # Out files
         pdf_file = prefix + '-align.pdf'
@@ -86,10 +86,10 @@ def main(argv):
             # Write tex file
             tex_out = open(shutil.os.path.join(pre_dir, tex_file), 'w')
             # Header
-            print >> tex_out, DEC_HEADER1
-            print >> tex_out, get_font(uni)
-            print >> tex_out, DEC_HEADER2
-            print >> tex_out, DOC_HEADER_COMPARE.format(sys1=label_list[0], \
+            print(>> tex_out, DEC_HEADER1)
+            print(>> tex_out, get_font(uni))
+            print(>> tex_out, DEC_HEADER2)
+            print(>> tex_out, DOC_HEADER_COMPARE.format(sys1=label_list[0], \)
               sys2=label_list[1])
             # Print each alignment
             for i in range(len(alignments)):
@@ -101,11 +101,11 @@ def main(argv):
                     continue
                 print_align_table(tex_out, a1, a2)
             # Print footer
-            print >> tex_out, DOC_FOOTER
+            print(>> tex_out, DOC_FOOTER)
             # Close file
             tex_out.close()
             # Compile pdf file
-            print >> sys.stderr, \
+            print(>> sys.stderr, \)
               'Compiling {0} - this may take a few minutes...'.format(pdf_file)
             xelatex(tex_file, pdf_file, work_dir=pre_dir)
     # Write N individual alignment files
@@ -123,10 +123,10 @@ def main(argv):
             # Write tex file
             tex_out = open(shutil.os.path.join(pre_dir, tex_file), 'w')
             # Header
-            print >> tex_out, DEC_HEADER1
-            print >> tex_out, get_font(uni)
-            print >> tex_out, DEC_HEADER2
-            print >> tex_out, DOC_HEADER_SINGLE.format(sysname=label_list[i])
+            print(>> tex_out, DEC_HEADER1)
+            print(>> tex_out, get_font(uni))
+            print(>> tex_out, DEC_HEADER2)
+            print(>> tex_out, DOC_HEADER_SINGLE.format(sysname=label_list[i]))
             # Print each alignment
             for i in range(len(alignments)):
                 a1 = alignments[i]
@@ -136,11 +136,11 @@ def main(argv):
                     continue
                 print_align_table(tex_out, a1)
             # Print footer
-            print >> tex_out, DOC_FOOTER
+            print(>> tex_out, DOC_FOOTER)
             # Close file
             tex_out.close()
             # Compile pdf file
-            print >> sys.stderr, \
+            print(>> sys.stderr, \)
               'Compiling {0} - this may take a few minutes...'.format(pdf_file)
             xelatex(tex_file, pdf_file, work_dir=pre_dir)
 
@@ -192,10 +192,10 @@ def main(argv):
     score_tex = 'score.tex'
     shutil.copyfile(shutil.os.path.join(shutil.os.path.dirname(__file__), \
       'template', 'score.tex'), shutil.os.path.join(pre_dir, score_tex))
-    print >> sys.stderr, \
+    print(>> sys.stderr, \)
               'Compiling {0}...'.format(score_pdf)
     xelatex(score_tex, score_pdf, work_dir=pre_dir)
-    print >> sys.stderr, \
+    print(>> sys.stderr, \)
               'Supporting files written to {0}.'.format(pre_dir)
 
 if __name__ == '__main__' : main(sys.argv)

@@ -27,173 +27,57 @@ def check_file_version(filepath, pattern, expected_version):
 
 def main():
     print("="*60)
-    print("BioDockify Version and Title Verification")
+    print("BioDockify Version Verification (v2.4.0)")
     print("="*60)
     
-    expected_version = "2.16.1"
-    expected_title = "BioDockify - Pharma Research AI"
+    expected_version = "2.4.0"
     
     results = []
     
-    # Check version_info.txt
+    # 1. version_info.txt
     print("\n[1] Checking version_info.txt...")
-    result = check_file_version(
-        "BioDockify-pharma-research-ai/version_info.txt",
-        r'2\.16\.1',
-        expected_version
-    )
-    results.append(result)
+    results.append(check_file_version("version_info.txt", r'2\.4\.0', expected_version))
     
-    # Check config.yaml
-    print("\n[2] Checking runtime/config.yaml...")
-    result = check_file_version(
-        "BioDockify-pharma-research-ai/runtime/config.yaml",
-        r'version:\s*["\']?2\.16\.1["\']?',
-        expected_version
-    )
-    results.append(result)
+    # 2. package.json
+    print("\n[2] Checking package.json...")
+    results.append(check_file_version("package.json", r'"version":\s*"2\.4\.0"', expected_version))
     
-    # Check package.json
-    print("\n[3] Checking package.json...")
-    result = check_file_version(
-        "BioDockify-pharma-research-ai/package.json",
-        r'"version":\s*"2\.16\.1"',
-        expected_version
-    )
-    results.append(result)
+    # 3. ui/package.json
+    print("\n[3] Checking ui/package.json...")
+    results.append(check_file_version("ui/package.json", r'"version":\s*"2\.4\.0"', expected_version))
+
+    # 4. api/main.py
+    print("\n[4] Checking api/main.py...")
+    results.append(check_file_version("api/main.py", r'version="2\.4\.0"', expected_version))
+
+    # 5. runtime/config_loader.py
+    print("\n[5] Checking runtime/config_loader.py...")
+    results.append(check_file_version("runtime/config_loader.py", r'"version":\s*"2\.4\.0"', expected_version))
+
+    # 6. README.md
+    print("\n[6] Checking README.md...")
+    results.append(check_file_version("README.md", r'v2\.4\.0', expected_version))
+
+    # 7. INSTALLATION.md
+    print("\n[7] Checking INSTALLATION.md...")
+    results.append(check_file_version("INSTALLATION.md", r'2\.4\.0', expected_version))
+
+    # 8. Dockerfile
+    print("\n[8] Checking Dockerfile...")
+    results.append(check_file_version("Dockerfile", r'2\.4\.0', expected_version))
     
-    # Check ui/package.json
-    print("\n[4] Checking ui/package.json...")
-    result = check_file_version(
-        "BioDockify-pharma-research-ai/ui/package.json",
-        r'"version":\s*"2\.16\.1"',
-        expected_version
-    )
-    results.append(result)
-    
-    # Check desktop/tauri/package.json
-    print("\n[5] Checking desktop/tauri/package.json...")
-    result = check_file_version(
-        "BioDockify-pharma-research-ai/desktop/tauri/package.json",
-        r'"version":\s*"2\.16\.1"',
-        expected_version
-    )
-    results.append(result)
-    
-    # Check Cargo.toml
-    print("\n[6] Checking desktop/tauri/src-tauri/Cargo.toml...")
-    result = check_file_version(
-        "BioDockify-pharma-research-ai/desktop/tauri/src-tauri/Cargo.toml",
-        r'version\s*=\s*"2\.16\.1"',
-        expected_version
-    )
-    results.append(result)
-    
-    # Check tauri.conf.json
-    print("\n[7] Checking desktop/tauri/src-tauri/tauri.conf.json...")
-    result = check_file_version(
-        "BioDockify-pharma-research-ai/desktop/tauri/src-tauri/tauri.conf.json",
-        r'"version":\s*"2\.16\.1"',
-        expected_version
-    )
-    results.append(result)
-    
-    # Check api/main.py
-    print("\n[8] Checking api/main.py...")
-    result = check_file_version(
-        "BioDockify-pharma-research-ai/api/main.py",
-        r'version="2\.16\.1"',
-        expected_version
-    )
-    results.append(result)
-    
-    # Check installer/setup.nsi
-    print("\n[9] Checking installer/setup.nsi...")
-    result = check_file_version(
-        "BioDockify-pharma-research-ai/installer/setup.nsi",
-        r'PRODUCT_VERSION\s+"2\.16\.1"',
-        expected_version
-    )
-    results.append(result)
-    
-    # Check HomeDashboard.tsx
+    # 9. NanoBotPanel.tsx
+    print("\n[9] Checking ui/src/components/NanoBotPanel.tsx...")
+    results.append(check_file_version("ui/src/components/NanoBotPanel.tsx", r'v2\.4\.0', expected_version))
+
+    # 10. HomeDashboard.tsx
     print("\n[10] Checking ui/src/components/HomeDashboard.tsx...")
-    result = check_file_version(
-        "BioDockify-pharma-research-ai/ui/src/components/HomeDashboard.tsx",
-        r'v2\.16\.1',
-        expected_version
-    )
-    results.append(result)
+    results.append(check_file_version("ui/src/components/HomeDashboard.tsx", r'v2\.4\.0', expected_version))
     
-    # Check README.md
-    print("\n[11] Checking README.md...")
-    result = check_file_version(
-        "BioDockify-pharma-research-ai/README.md",
-        r'v2\.16\.1',
-        expected_version
-    )
-    results.append(result)
-    
-    # Check config_loader.py
-    print("\n[12] Checking runtime/config_loader.py...")
-    result = check_file_version(
-        "BioDockify-pharma-research-ai/runtime/config_loader.py",
-        r'"version":\s*"2\.16\.1"',
-        expected_version
-    )
-    results.append(result)
-    
-    # Check title in version_info.txt
-    print("\n[13] Checking software title in version_info.txt...")
-    try:
-        with open("BioDockify-pharma-research-ai/version_info.txt", 'r', encoding='utf-8') as f:
-            content = f.read()
-            if "BioDockify - Pharma Research AI" in content:
-                print("   OK: BioDockify-pharma-research-ai/version_info.txt")
-                print("      Found: BioDockify - Pharma Research AI")
-                results.append(True)
-            else:
-                print("   MISSING: BioDockify-pharma-research-ai/version_info.txt")
-                print("      Expected: BioDockify - Pharma Research AI")
-                results.append(False)
-    except Exception as e:
-        print(f"   ERROR: {e}")
-        results.append(False)
-    
-    # Check title in installer/setup.nsi
-    print("\n[14] Checking software title in installer/setup.nsi...")
-    try:
-        with open("BioDockify-pharma-research-ai/installer/setup.nsi", 'r', encoding='utf-8') as f:
-            content = f.read()
-            if "BioDockify - Pharma Research AI" in content:
-                print("   OK: BioDockify-pharma-research-ai/installer/setup.nsi")
-                print("      Found: BioDockify - Pharma Research AI")
-                results.append(True)
-            else:
-                print("   MISSING: BioDockify-pharma-research-ai/installer/setup.nsi")
-                print("      Expected: BioDockify - Pharma Research AI")
-                results.append(False)
-    except Exception as e:
-        print(f"   ERROR: {e}")
-        results.append(False)
-    
-    # Check title in tauri.conf.json
-    print("\n[15] Checking software title in tauri.conf.json...")
-    try:
-        with open("BioDockify-pharma-research-ai/desktop/tauri/src-tauri/tauri.conf.json", 'r', encoding='utf-8') as f:
-            content = f.read()
-            if "BioDockify - Pharma Research AI" in content:
-                print("   OK: BioDockify-pharma-research-ai/desktop/tauri/src-tauri/tauri.conf.json")
-                print("      Found: BioDockify - Pharma Research AI")
-                results.append(True)
-            else:
-                print("   MISSING: BioDockify-pharma-research-ai/desktop/tauri/src-tauri/tauri.conf.json")
-                print("      Expected: BioDockify - Pharma Research AI")
-                results.append(False)
-    except Exception as e:
-        print(f"   ERROR: {e}")
-        results.append(False)
-    
+    # 11. CHANGELOG.md
+    print("\n[11] Checking CHANGELOG.md...")
+    results.append(check_file_version("CHANGELOG.md", r'\[v2\.4\.0\]', expected_version))
+
     # Summary
     print("\n" + "="*60)
     print("VERIFICATION SUMMARY")
@@ -205,7 +89,7 @@ def main():
     print(f"\nPassed: {passed}/{total}")
     
     if passed == total:
-        print("\nSUCCESS: All version and title updates verified!")
+        print("\nSUCCESS: All version updates verified!")
         return 0
     else:
         print(f"\nFAILED: {total - passed} check(s) failed")

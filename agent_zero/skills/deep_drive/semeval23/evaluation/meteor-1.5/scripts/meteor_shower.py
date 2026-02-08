@@ -9,8 +9,8 @@ import collections, os, subprocess, sys, threading
 def main(argv):
     
     if len(argv[1:]) < 7:
-        print >> sys.stderr, 'Learn Meteor parameters efficiently with parallel Trainers'
-        print >> sys.stderr, 'Usage: {0} <meteor.jar> <lang> <n-mods> <task> <data_dir> <work_dir> <n-jobs> [other args like -a par.gz, -ch, ...]'.format(argv[0])
+        print(>> sys.stderr, 'Learn Meteor parameters efficiently with parallel Trainers')
+        print(>> sys.stderr, 'Usage: {0} <meteor.jar> <lang> <n-mods> <task> <data_dir> <work_dir> <n-jobs> [other args like -a par.gz, -ch, ...]'.format(argv[0]))
         sys.exit(1)
     
     # Args
@@ -26,7 +26,7 @@ def main(argv):
 
     # Working dir
     if os.path.exists(work_dir):
-        print 'Work dir {0} exists, exiting'.format(work_dir)
+        print('Work dir {0} exists, exiting'.format(work_dir))
         sys.exit(1)
     os.mkdir(work_dir)
     os.mkdir(sb_dir)

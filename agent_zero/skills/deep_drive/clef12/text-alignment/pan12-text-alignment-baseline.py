@@ -175,7 +175,7 @@ class Baseline:
                     else:
                         token = token[1:]
 
-        print(len(detections))
+        print((len(detections)))
 
         return detections
 
@@ -205,5 +205,5 @@ if __name__ == "__main__":
                                 os.path.join(srcdir, src), outdir)
             baseline.process()
     else:
-        print('\n'.join(["Unexpected number of commandline arguments.",
-                         "Usage: ./pan12-plagiarism-text-alignment-example.py {pairs} {src-dir} {susp-dir} {out-dir}"]))
+        print(('\n'.join(["Unexpected number of commandline arguments.",
+                         "Usage: ./pan12-plagiarism-text-alignment-example.py {pairs} {src-dir} {susp-dir} {out-dir}"])))

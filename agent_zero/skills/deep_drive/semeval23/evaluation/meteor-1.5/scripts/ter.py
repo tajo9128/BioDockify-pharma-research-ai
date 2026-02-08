@@ -7,8 +7,8 @@ TERCOM = os.path.join(os.path.dirname(__file__), 'tercom-0.8.0.jar')
 def main(argv):
 
     if len(argv[1:]) < 2:
-        print >> sys.stderr, 'Usage: {0} hyps refs [--no-norm] [--char]'.format(argv[0])
-        print >> sys.stderr, 'Segment scores to stderr, final to stdout'
+        print(>> sys.stderr, 'Usage: {0} hyps refs [--no-norm] [--char]'.format(argv[0]))
+        print(>> sys.stderr, 'Segment scores to stderr, final to stdout')
         sys.exit(1)
 
     norm = '-s' if '--no-norm' in argv[3:] else '-N'
@@ -41,8 +41,8 @@ def main(argv):
         line = t.readline()
         if line.startswith('---'):
             break
-        print >> sys.stderr, line.split()[-1]
-    print t.readline().split()[-1]
+        print(>> sys.stderr, line.split()[-1])
+    print(t.readline().split()[-1])
         
     shutil.rmtree(work)
     
@@ -53,7 +53,7 @@ def mktrans(f, tmp, char=False):
         i += 1
         if char:
             line = ' '.join([ch for ch in line if ch != ' '])
-        print >> o, '{0}  ({1})'.format(line.strip(), i)
+        print(>> o, '{0}  ({1})'.format(line.strip(), i))
     o.close()
     
 if __name__ == '__main__' : main(sys.argv)

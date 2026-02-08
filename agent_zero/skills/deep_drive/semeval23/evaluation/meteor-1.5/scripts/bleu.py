@@ -7,8 +7,8 @@ mteval_pl = os.path.abspath(os.path.join(os.path.dirname(__file__), 'mteval-v13m
 def main(argv):
     
     if len(argv[1:]) < 2:
-        print >> sys.stderr, 'Usage: {0} <hyp> <ref> [--no-norm] [--char]'.format(argv[0])
-        print >> sys.stderr, 'Segment scores to stderr, final to stdout'
+        print(>> sys.stderr, 'Usage: {0} <hyp> <ref> [--no-norm] [--char]'.format(argv[0]))
+        print(>> sys.stderr, 'Segment scores to stderr, final to stdout')
         sys.exit(1)
     
     work = tempfile.mkdtemp(prefix='bleu.')
@@ -35,9 +35,9 @@ def main(argv):
     subprocess.Popen(cmd, stdout=out, stderr=err, cwd=work).wait()
     
     for line in open(os.path.join(work, 'BLEU-seg.scr')):
-        print >> sys.stderr, line.split()[-1]
+        print(>> sys.stderr, line.split()[-1])
         
-    print open(os.path.join(work, 'BLEU-sys.scr')).readline().split()[-1]
+    print(open(os.path.join(work, 'BLEU-sys.scr')).readline().split()[-1])
 
     shutil.rmtree(work)
     
@@ -45,17 +45,17 @@ def sgm(f_in, f_out, f_type, char=False):
     i = open(f_in, 'r')
     o = open(f_out, 'w')
     s = 0
-    print >> o, '<{0} trglang="trg" setid="set" srclang="src">'.format(f_type)
-    print >> o, '<doc docid="doc" sysid="sys">'
+    print(>> o, '<{0} trglang="trg" setid="set" srclang="src">'.format(f_type))
+    print(>> o, '<doc docid="doc" sysid="sys">')
     for line in i:
         # Strip invalid utf-8
         line = line.decode('utf-8', errors='ignore').encode('utf-8')
         s += 1
         if char:
             line = ' '.join([ch for ch in line if ch != ' '])
-        print >> o, '<seg id="{0}"> {1} </seg>'.format(s, line.strip())
-    print >> o, '</doc>'
-    print >> o, '</{0}>'.format(f_type)
+        print(>> o, '<seg id="{0}"> {1} </seg>'.format(s, line.strip()))
+    print(>> o, '</doc>')
+    print(>> o, '</{0}>'.format(f_type))
     i.close()
     o.close()
 

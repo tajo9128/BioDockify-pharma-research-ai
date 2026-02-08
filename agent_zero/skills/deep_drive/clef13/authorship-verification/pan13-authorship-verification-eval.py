@@ -322,7 +322,7 @@ if __name__=='__main__':
             globals()[func](truth_d, sys.argv[4], sys.stdout, encoding, detail)
 
         else:
-            print "Invalid number of arguments"
+            print("Invalid number of arguments")
 
     elif detail:
 
@@ -339,7 +339,7 @@ if __name__=='__main__':
             globals()[func](truth_d, sys.argv[3], sys.stdout, detail=detail)
 
         else:
-            print "Invalid number of arguments"  
+            print("Invalid number of arguments"  )
 
     elif encoding:
 
@@ -356,7 +356,7 @@ if __name__=='__main__':
             globals()[func](truth_d, sys.argv[3], sys.stdout, encoding)
 
         else:
-            print "Invalid number of arguments" 
+            print("Invalid number of arguments" )
     
     else:
 
@@ -373,4 +373,4 @@ if __name__=='__main__':
             globals()[func](truth_d, sys.argv[2])
 
         else:
-            print "Invalid number of arguments (" + str( len(sys.argv)-1 ) + ")"
+            print("Invalid number of arguments (" + str( len(sys.argv)-1 ) + ")")

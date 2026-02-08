@@ -17,7 +17,7 @@ from modules.literature.scraper import LiteratureAggregator, LiteratureConfig
 from modules.literature.synthesis import get_synthesizer
 from dataclasses import asdict
 
-app = FastAPI(title="BioDockify - Pharma Research AI", version="2.3.9")
+app = FastAPI(title="BioDockify - Pharma Research AI", version="2.4.0")
 
 # Register NanoBot Hybrid Agent Routes
 try:
@@ -303,84 +303,32 @@ class AgentRequest(BaseModel):
 @app.post("/api/agent/chat")
 async def agent_chat(request: AgentRequest):
     """
-    Direct Chat Endpoint for Agent Zero - Enhanced with NanoBot capabilities.
-    
-    Features:
-    - Memory context injection (what the agent remembers)
-    - Skills summary (what the agent can do)
-    - PhD research context
+    Direct Chat Endpoint for BioDockify AI (Hybrid Agent).
+    Fully autonomous loop with tools, memory, and research capabilities.
     """
     try:
-        from runtime.config_loader import load_config
+        from agent_zero.biodockify_ai import get_biodockify_ai
         
-        # Get Enhanced Agent Zero with NanoBot features
-        try:
-            from agent_zero.enhanced import get_agent_zero_enhanced
-            enhanced = get_agent_zero_enhanced()
-            # Build enhanced prompt with memory + skills context
-            enhanced_message = enhanced.build_enhanced_prompt(request.message)
-        except ImportError:
-            # Fallback to basic message if NanoBot not available
-            enhanced_message = request.message
-            enhanced = None
+        logger.info(f"BioDockify AI: Processing chat request (len={len(request.message)})")
+        agent = get_biodockify_ai()
         
-        # Check LLM Provider
-        cfg = load_config()
+        # Process chat via the Hybrid Agent Loop
+        # This triggers: Prompt Building -> LLM -> Tool Execution -> Response
+        reply = await agent.process_chat(request.message)
         
-        # Instantiate LLM using Factory
-        from modules.llm.factory import LLMFactory
-        import types
-        
-        ai_config = cfg.get("ai_provider", {})
-        provider_mode = ai_config.get("mode", "auto")
-        
-        # Create a lightweight config object (Namespace) from the dict
-        # This ensures LLMFactory can use dot notation (config.google_key)
-        config_obj = types.SimpleNamespace(**ai_config)
-        
-        # Ensure LM Studio specific attributes exist on the object
-        if not hasattr(config_obj, 'lm_studio_url'):
-            config_obj.lm_studio_url = ai_config.get("lm_studio_url", "http://localhost:1234/v1")
-        if not hasattr(config_obj, 'lm_studio_model'):
-            config_obj.lm_studio_model = ai_config.get("lm_studio_model", "auto")
-
-        # Explicit mapping for "lm_studio" mode if configured in SettingsPanel
-        if provider_mode == "lm_studio":
-            adapter = LLMFactory.get_adapter("lm_studio", config_obj)
-        else:
-            # Fallback/Auto logic for other providers (Google, OpenRouter, etc)
-            # Pass the manufactured object, not the raw dict
-            adapter = LLMFactory.get_adapter(provider_mode, config_obj)
-            
-            # If auto failed and local is preferred/default
-            if not adapter:
-                 adapter = LLMFactory.get_adapter("lm_studio", config_obj)
-            
-        if not adapter:
-             return {
-                "reply": "Agent Zero Configuration Error: No valid AI provider found. Please check Settings.",
-                "provider": "error"
-            }
-
-        # Generate Response using enhanced prompt with context
-        response_text = adapter.generate(enhanced_message)
-        
-        # Save important interactions to memory (optional - based on content)
-        if enhanced and len(response_text) > 100:
-            # Only save substantial responses
-            try:
-                enhanced.save_to_memory(f"User: {request.message[:200]}...\nAgent: {response_text[:500]}...")
-            except Exception:
-                pass  # Memory save is optional
-        
+        # Return format expected by UI
         return {
-            "reply": response_text,
-            "provider": getattr(adapter, 'config_model', 'unknown'),
-            "enhanced": enhanced is not None
+            "reply": reply,
+            "provider": "biodockify-hybrid",
+            "enhanced": True
         }
     except Exception as e:
         logger.error(f"Agent Chat Failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        # Return error as reply so UI shows it in chat bubble instead of crashing
+        return {
+             "reply": f"**System Error:** {str(e)}\n\nPlease check the backend logs or your AI Provider settings.",
+             "provider": "error"
+        }
 
 
 @app.post("/api/v2/agent/goal")

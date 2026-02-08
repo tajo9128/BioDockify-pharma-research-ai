@@ -95,6 +95,8 @@ export interface Settings {
     kimi_model?: string;
     openai_key?: string;
     openai_model?: string;
+    anthropic_key?: string;
+    anthropic_model?: string;
     // Custom/Paid API (OpenAI-compatible)
     custom_provider?: string;
     custom_base_url?: string;
@@ -153,10 +155,14 @@ export interface Settings {
   persona: {
     name?: string;
     email?: string;
+    organization?: string;
+    department?: string;
     role: 'PhD Student' | 'PG Student' | 'Senior Researcher' | 'Industry Scientist';
     strictness: 'exploratory' | 'balanced' | 'conservative';
     introduction: string;
     research_focus: string;
+    bot_name?: string;
+    bot_instructions?: string;
   };
   output: {
     format: 'markdown' | 'pdf' | 'docx' | 'latex';
@@ -263,7 +269,7 @@ export const api = {
 
   // Agent Zero System Diagnosis
   diagnoseLmStudio: () =>
-    apiRequest<{ status: string; repairs_attempted: boolean; message: string }>('/diagnose/lm-studio/start', {
+    apiRequest<{ success: boolean; exe_path?: string; message: string }>('/diagnose/lm-studio/start', {
       method: 'POST'
     }),
 

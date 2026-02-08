@@ -11,7 +11,7 @@ IS_VALID=True
 # Usage
 #
 def usage():
-	print "Usage: python " + sys.argv[0] + " -i <runDir> -t <pairsFile>"
+ print("Usage: python " + sys.argv[0] + " -i <runDir> -t <pairsFile>")
 	sys.exit(1)
 #
 ################################################################################

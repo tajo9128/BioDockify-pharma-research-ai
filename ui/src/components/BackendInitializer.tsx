@@ -171,8 +171,11 @@ export const BackendInitializer: React.FC<BackendInitializerProps> = ({
             <div className="max-w-md w-full space-y-6 text-center">
                 {/* Logo */}
                 <div className="space-y-3">
-                    <div className="inline-flex items-center justify-center p-4 bg-blue-500/10 rounded-full">
-                        <Server size={48} className="text-blue-400" />
+                    <div className="flex justify-center mb-4">
+                        <div className="relative w-16 h-16 rounded-2xl overflow-hidden shadow-lg border border-white/10">
+                            {/* @ts-ignore */}
+                            <img src="/logo.png" alt="BioDockify" className="w-full h-full object-cover" />
+                        </div>
                     </div>
                     <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
                         BioDockify

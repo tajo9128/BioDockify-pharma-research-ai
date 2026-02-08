@@ -19,9 +19,9 @@ adjRelations = ["\\"] # Pertainym
 def main(argv):
 	
 	if len(argv) < 3:
-		print "Build synonym files from WordNet"
-		print "usage:", argv[0], "<wordnetDictDir>", "<outDir>", "[language]"
-		print "example:", os.path.basename(argv[0]), \
+  print("Build synonym files from WordNet")
+  print("usage:", argv[0], "<wordnetDictDir>", "<outDir>", "[language]")
+  print("example:", os.path.basename(argv[0]), \)
 				"/usr/local/WordNet-3.0/dict", "synonyms"
 		sys.exit(1)
 	

@@ -1,7 +1,7 @@
 /**
  * Diagnosis & Repair Dialog
  * 
- * Implements the UI for Agent Zero Self-Repair Workflow.
+ * Implements the UI for BioDockify AI Self-Repair Workflow.
  * Enforces the strict "Ask First" protocol.
  * 
  * Flow:
@@ -213,7 +213,7 @@ export default function DiagnosisDialog({ isOpen, onClose }: DiagnosisDialogProp
                 </div>
                 <div>
                     <h2 className="text-xl font-bold text-white">System Diagnostic</h2>
-                    <p className="text-slate-400">Agent Zero Self-Repair</p>
+                    <p className="text-slate-400">BioDockify AI Self-Repair</p>
                 </div>
             </div>
 

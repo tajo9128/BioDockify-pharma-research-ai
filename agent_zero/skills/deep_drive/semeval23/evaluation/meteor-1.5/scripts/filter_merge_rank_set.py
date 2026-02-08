@@ -12,16 +12,16 @@ import os, re, sys
 def main(argv):
     
     if len(argv[1:]) < 2:
-        print 'usage: {0} <clean-dir> <file1.rank> [file2.rank ...]'.format(argv[0])
-        print 'Rank files should have same basename (src-tgt.rank)'
-        print 'Original test sets identified with ~n'
+        print('usage: {0} <clean-dir> <file1.rank> [file2.rank ...]'.format(argv[0]))
+        print('Rank files should have same basename (src-tgt.rank)')
+        print('Original test sets identified with ~n')
         exit(1)
     
     clean_dir = argv[1]
     r_files = argv[2:]
     
     if clean_dir == os.path.dirname(os.path.abspath(r_files[0])):
-        print 'This is a bad idea.  Please specify a different clean-dir.'
+        print('This is a bad idea.  Please specify a different clean-dir.')
         sys.exit(1)
     
     # Single rank file
@@ -45,7 +45,7 @@ def main(argv):
                 id += 1
                 seg[f[0]] = id
             # Append rank set numbers to system names
-            print >> r_out, '{0}\t{1}\t{2}\t{3}\t{4}'.format(seg[f[0]],
+            print(>> r_out, '{0}\t{1}\t{2}\t{3}\t{4}'.format(seg[f[0]],)
               append_n(f[1], r_n), f[2], append_n(f[3], r_n), f[4])
         r_in.close()
         
@@ -64,10 +64,10 @@ def main(argv):
             for line in sgm_in:
                 r = re.search(u'^<seg id="([0-9]+)">', line, re.I)
                 if not r:
-                    print >> sgm_out, line.strip()
+                    print(>> sgm_out, line.strip())
                     continue
                 if r.group(1) in seg:
-                    print >> sgm_out, re.sub(u'^<seg id="[0-9]+">',
+                    print(>> sgm_out, re.sub(u'^<seg id="[0-9]+">',)
                       '<seg id="{0}">'.format(seg[r.group(1)]), line).strip()
             sgm_in.close()
             sgm_out.close()

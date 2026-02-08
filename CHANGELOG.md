@@ -5,6 +5,16 @@ All notable changes to **BioDockify** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v2.4.0] - 2026-02-08
+### Added
+- **Expert Skills:** Integrated `Deep Drive` (Forensics), `Scholar Copilot` (Writing Assist), and `Summarize` (Native LLM).
+- **Production Readiness:** Added `tests/production_readiness_check.py` for system health verification.
+- **Browser Automation:** Exposed `browse_stealth`, `browse_general`, and `browse_pdf` as first-class tools.
+
+### Changed
+- **Core:** Bumped version to v2.4.0 across the entire stack.
+- **Docker:** Optimized startup scripts and dependency layers.
+
 ## [v2.3.9] - 2026-02-08
 ### Fixed
 - **Settings UI:** Completely reconstructed the `SettingsPanel.tsx` component, resolving deep-seated JSX structural issues and dangling `div` tags.

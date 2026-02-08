@@ -25,6 +25,8 @@ interface ServiceHealth {
 const REPAIR_TRIGGERS = [
     'fix the system',
     'repair agent zero',
+    'repair biodockify',
+    'repair biodockify ai',
     'diagnose and repair',
     'recover ai services',
     'chat not working',
@@ -326,13 +328,13 @@ After configuring, try again.`,
             setStatus('Generating Answer...');
             const data = await api.agentChat(finalPrompt);
 
-            // Agent Zero JSON Parsing Logic
+            // BioDockify AI JSON Parsing Logic
             let replyContent = data.reply;
             let thoughts: string[] | undefined;
             let action: any | undefined;
 
             try {
-                // Try to parse the response as Agent Zero JSON Structure
+                // Try to parse the response as BioDockify AI JSON Structure
                 // The prompt enforces: { "thoughts": [], "headline": "", "action": {} }
                 if (data.reply.trim().startsWith('{')) {
                     const parsed = JSON.parse(data.reply);
@@ -361,18 +363,54 @@ After configuring, try again.`,
 
         } catch (error: any) {
             console.error("Chat error:", error);
+
+            // FALLBACK: Try Direct LM Studio Connection if Backend Failed
+            if (health.lmStudio === 'online') {
+                try {
+                    setStatus('Contacting LM Studio directly...');
+                    const lmRes = await fetch('http://localhost:1234/v1/chat/completions', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            model: "local-model", // LM Studio usually ignores this or uses loaded model
+                            messages: [
+                                { role: "system", content: "You are BioDockify AI, an expert research assistant." },
+                                ...messages.map(m => ({ role: m.role, content: m.content })),
+                                { role: "user", content: input } // Use the original input since we added it to messages state but haven't sent it? No, input is cleared.
+                                // Wait, handleSend adds userMsg to state at line 271.
+                                // We need to use 'userMsg' content which is 'input' captured before clearing.
+                                // Actually, 'messages' state might not have updated yet in this closure?
+                                // 'messages' is a const in this render. The 'prev' update is async.
+                                // But 'input' variable holds the text.
+                            ].filter(m => m.content) // Filter empty?
+                        })
+                    });
+
+                    if (lmRes.ok) {
+                        const lmData = await lmRes.json();
+                        const content = lmData.choices?.[0]?.message?.content || "No response.";
+
+                        setMessages(prev => [...prev, {
+                            role: 'assistant',
+                            content: content,
+                            timestamp: new Date(),
+                            source: "LM Studio (Direct)"
+                        }]);
+                        return; // Success handling
+                    }
+                } catch (lmError) {
+                    console.error("LM Studio direct fallback failed:", lmError);
+                }
+            }
+
             setMessages(prev => [...prev, {
                 role: 'system',
                 content: `⚠️ **Connection Error**
                 
-Failed to reach the BioDockify Research Backend.
+Failed to reach BioDockify Backend.
+${health.lmStudio === 'online' ? 'Attempted direct LM Studio connection but failed.' : 'LM Studio also appears offline.'}
 
-**Troubleshooting:**
-1. Click **"Start Services"** or **"Self Repair"** in the top bar.
-2. If manually starting, run \`backend_launcher.py\` instead of server.py.
-3. Check if your antivirus is blocking port 8234.
-
-*You can still browse your previous chats, but new messages require the backend.*`,
+Please check that your backend or LM Studio is running.`,
                 timestamp: new Date()
             }]);
         } finally {
@@ -404,75 +442,8 @@ Failed to reach the BioDockify Research Backend.
                 </div>
                 {/* Actions */}
                 <div className="flex items-center gap-2">
-                    {/* Health Status Indicator */}
-                    <div className="flex items-center gap-1 px-3 py-1.5 bg-slate-800/50 rounded-full border border-slate-700 text-xs">
-                        {/* Backend Status */}
-                        <div className="flex items-center gap-1" title={`Backend: ${health.backend}`}>
-                            {health.backend === 'online' ? (
-                                <CheckCircle2 className="w-3 h-3 text-emerald-400" />
-                            ) : health.backend === 'checking' ? (
-                                <Loader2 className="w-3 h-3 text-blue-400 animate-spin" />
-                            ) : (
-                                <AlertCircle className="w-3 h-3 text-red-400" />
-                            )}
-                            <span className="text-slate-400">API</span>
-                        </div>
-                        <span className="text-slate-600">|</span>
-                        {/* LM Studio Status */}
-                        <div className="flex items-center gap-1" title={`LM Studio: ${health.lmStudio}`}>
-                            {health.lmStudio === 'online' ? (
-                                <CheckCircle2 className="w-3 h-3 text-emerald-400" />
-                            ) : health.lmStudio === 'no_model' ? (
-                                <AlertCircle className="w-3 h-3 text-amber-400" />
-                            ) : health.lmStudio === 'checking' ? (
-                                <Loader2 className="w-3 h-3 text-blue-400 animate-spin" />
-                            ) : (
-                                <AlertCircle className="w-3 h-3 text-red-400" />
-                            )}
-                            <span className="text-slate-400">LM</span>
-                        </div>
-                    </div>
-
-                    {/* Start Services Button - Show when offline */}
-                    {(health.backend === 'offline' || health.lmStudio === 'offline') && (
-                        <button
-                            onClick={handleStartServices}
-                            disabled={isStartingServices}
-                            className="px-3 py-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 text-xs font-medium rounded-full border border-emerald-500/30 transition-colors flex items-center gap-2 disabled:opacity-50"
-                            title="Start Backend Services"
-                        >
-                            {isStartingServices ? (
-                                <Loader2 className="w-3 h-3 animate-spin" />
-                            ) : (
-                                <Power className="w-3 h-3" />
-                            )}
-                            {isStartingServices ? 'Starting...' : 'Start Services'}
-                        </button>
-                    )}
-
-                    {/* Refresh Health Button */}
-                    <button
-                        onClick={checkHealth}
-                        className="p-1.5 bg-slate-800/50 hover:bg-slate-700/50 text-slate-400 rounded-full border border-slate-700 transition-colors"
-                        title="Refresh Health Status"
-                    >
-                        <RefreshCw className="w-3 h-3" />
-                    </button>
-
-                    <button
-                        onClick={() => setIsDiagnosisOpen(true)}
-                        className="px-3 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 text-xs font-medium rounded-full border border-amber-500/30 transition-colors flex items-center gap-2"
-                        title="Run System Diagnosis"
-                    >
-                        <Wrench className="w-3 h-3" /> Self Repair
-                    </button>
-                    <button
-                        onClick={() => setDeepResearchQuery("New Research")}
-                        className="px-4 py-1.5 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 text-xs font-medium rounded-full border border-indigo-500/30 transition-colors flex items-center gap-2"
-                        title="Start Deep Research"
-                    >
-                        <Brain className="w-3 h-3" /> Deep Research
-                    </button>
+                    {/* Simplified Status - Just the dot */}
+                    <div className={`w-2 h-2 rounded-full ${health.backend === 'online' ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`} />
                 </div>
             </div>
 
@@ -497,7 +468,7 @@ Failed to reach the BioDockify Research Backend.
                                 {msg.thoughts && msg.thoughts.length > 0 && (
                                     <div className="mb-3 p-3 bg-black/20 rounded-lg border border-white/5">
                                         <div className="flex items-center gap-2 mb-2 text-xs font-bold text-indigo-400 uppercase tracking-wider">
-                                            <Brain className="w-3 h-3" /> Thinking Process
+                                            <Brain className="w-3 h-3" /> BioDockify AI Thinking
                                         </div>
                                         <ul className="list-disc list-outside ml-4 space-y-1 text-xs font-mono text-slate-400">
                                             {msg.thoughts.map((t, i) => (

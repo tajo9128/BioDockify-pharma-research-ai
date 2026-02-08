@@ -86,7 +86,7 @@ def main():
     input_run = det_path.split("/")[-2]
 
     prec, rec, fmeasure = case_level_performance(plag_path, det_path, pairs_file, tau_recall, tau_precision)
-    print "%s\t%s\t%0.5f\t%0.5f\t%0.5f" % (user, input_run, prec, rec, fmeasure)
+    print("%s\t%s\t%0.5f\t%0.5f\t%0.5f" % (user, input_run, prec, rec, fmeasure))
 
 
 if __name__ == '__main__':

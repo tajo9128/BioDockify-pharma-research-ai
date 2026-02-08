@@ -1,8 +1,8 @@
 /**
- * NanoBotPanel - Agent Zero Hybrid Interface
+ * BioDockify AI Panel - Unified Interface
  * 
  * Features:
- * - Chat with the hybrid agent
+ * - Chat with BioDockify AI
  * - Spawn background tasks
  * - Schedule recurring research jobs
  * - View memory and skills
@@ -235,8 +235,8 @@ export default function NanoBotPanel() {
                         <Bot className="h-6 w-6 text-white" />
                     </div>
                     <div>
-                        <h2 className="text-xl font-bold">NanoBot Agent</h2>
-                        <p className="text-sm text-gray-500">Hybrid AI Brain v1.0</p>
+                        <h2 className="text-xl font-bold">BioDockify AI</h2>
+                        <p className="text-sm text-gray-500">Research Workstation v2.4.0</p>
                     </div>
                 </div>
                 {status && (
@@ -287,7 +287,7 @@ export default function NanoBotPanel() {
                                     {messages.length === 0 ? (
                                         <div className="text-center text-gray-500 py-8">
                                             <Bot className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                                            <p>Start a conversation with your AI research assistant</p>
+                                            <p>Start a conversation with BioDockify AI</p>
                                         </div>
                                     ) : (
                                         messages.map((msg, idx) => (
@@ -297,8 +297,8 @@ export default function NanoBotPanel() {
                                             >
                                                 <div
                                                     className={`max-w-[80%] rounded-lg p-3 ${msg.role === 'user'
-                                                            ? 'bg-purple-500 text-white'
-                                                            : 'bg-gray-100 dark:bg-gray-800'
+                                                        ? 'bg-purple-500 text-white'
+                                                        : 'bg-gray-100 dark:bg-gray-800'
                                                         }`}
                                                 >
                                                     <p className="whitespace-pre-wrap">{msg.content}</p>
@@ -337,9 +337,9 @@ export default function NanoBotPanel() {
                 <TabsContent value="spawn">
                     <Card>
                         <CardHeader>
-                            <CardTitle>Spawn Background Task</CardTitle>
+                            <CardTitle>Spawn BioDockify AI Task</CardTitle>
                             <CardDescription>
-                                Start a subagent to handle a task in the background
+                                Start a sub-task for BioDockify AI to handle in the background
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">

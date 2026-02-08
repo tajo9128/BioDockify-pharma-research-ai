@@ -21,4 +21,4 @@ while True:
         total += 1
 
 for w in sorted(freq, cmp=lambda x,y: freq[y] - freq[x]):
-    print w, float(freq[w]) / total
+    print(w, float(freq[w]) / total)

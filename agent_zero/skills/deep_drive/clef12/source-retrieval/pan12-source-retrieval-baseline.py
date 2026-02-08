@@ -125,7 +125,7 @@ class Example:
             return results
         except urllib2.HTTPError as e:
             error_message = e.read()
-            print >> sys.stderr, error_message
+            print(>> sys.stderr, error_message)
             sys.exit(1)
 
 
@@ -146,7 +146,7 @@ class Example:
            return download, document_url
         except urllib2.HTTPError as e:
            error_message = e.read()
-           print >> sys.stderr, error_message
+           print(>> sys.stderr, error_message)
            sys.exit(1)
     
     
@@ -154,9 +154,9 @@ class Example:
         """ Checks is a given download is a true positive source document,
             based on the oracle's decision. """
         if download["oracle"] == "source":
-            print "Success: a source has been retrieved."
+            print("Success: a source has been retrieved.")
         else:
-            print "Failure: no source has been retrieved."
+            print("Failure: no source has been retrieved.")
 
 
     def log(self, message):
@@ -181,7 +181,7 @@ if __name__ == "__main__":
         token   = sys.argv[3]
         suspdocs = glob.glob(suspdir + os.sep + 'suspicious-document???.txt')
         for suspdoc in suspdocs:
-            print "Processing " + suspdoc
+            print("Processing " + suspdoc)
             example = Example()
             example.process(suspdoc, outdir, token)
     else:

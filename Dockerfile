@@ -145,6 +145,13 @@ RUN rm -f /etc/nginx/sites-enabled/default && \
         try_files $uri $uri/ =404; \
     } \
     \
+    # Static Assets Root (Logos, Icons) \
+    location ~* ^/(logo|favicon|sw\.js|manifest\.json) { \
+        root /app/public; \
+        expires 7d; \
+        try_files $uri =404; \
+    } \
+    \
     # Main Next.js app \
     location / { \
         proxy_pass http://127.0.0.1:3001; \
@@ -259,7 +266,7 @@ exec python -m http.server 3001 --directory /tmp \n\
 # Main startup script - Instant Start (Baked Dependencies)
 RUN echo '#!/bin/bash \n\
 echo "================================================" \n\
-echo "  BioDockify v2.3.9 - Production Startup" \n\
+echo "  BioDockify v2.4.0 - Production Startup" \n\
 echo "================================================" \n\
 echo "" \n\
 echo "  [ACTION REQUIRED] Open your browser to:" \n\
@@ -285,7 +292,7 @@ exec /usr/bin/supervisord -c /etc/supervisor/supervisord.conf \n\
 LABEL maintainer="tajo9128"
 LABEL org.opencontainers.image.title="BioDockify Pharma Research AI"
 LABEL org.opencontainers.image.description="BioDockify Fully Baked Image - All Dependencies Pre-installed"
-LABEL org.opencontainers.image.version="2.3.9"
+LABEL org.opencontainers.image.version="2.4.0"
 LABEL org.opencontainers.image.source="https://github.com/tajo9128/BioDockify-pharma-research-ai"
 
 # -----------------------------------------------------------------------------

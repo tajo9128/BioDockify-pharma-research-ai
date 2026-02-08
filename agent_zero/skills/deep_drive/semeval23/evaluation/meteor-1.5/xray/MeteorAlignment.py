@@ -33,7 +33,7 @@ class ScoredAlignment(object):
 
         # Line should be 'Alignment...'
         if not line.startswith('Alignment'):
-            print 'Error: alignment does not start with Alignment line'
+            print('Error: alignment does not start with Alignment line')
             return
 
         # Alignment name

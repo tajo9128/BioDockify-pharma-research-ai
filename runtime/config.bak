@@ -78,7 +78,7 @@ execution:
   human_approval_gates: true
 system:
   auto_update: true
-  pause_on_battery: true
+  pause_on_battery: false
   max_cpu_percent: 80
   log_level: INFO
   version: 2.16.4

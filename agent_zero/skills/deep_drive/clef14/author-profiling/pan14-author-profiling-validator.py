@@ -10,7 +10,7 @@ IS_VALID=True
 # Usage
 #
 def usage():
-	print "Usage: python " + sys.argv[0] + " -i <runDir> -t <truthFile>"
+ print("Usage: python " + sys.argv[0] + " -i <runDir> -t <truthFile>")
 	sys.exit(1)
 #
 ################################################################################

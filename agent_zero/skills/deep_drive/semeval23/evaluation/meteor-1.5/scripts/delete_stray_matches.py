@@ -18,16 +18,16 @@ def main(argv):
     # help or min distance
     if len(argv[1:]) > 0:
         if argv[1] in '--help':
-            print 'Delete single matches to improve monotonicity of alignments'
-            print ''
-            print 'usage:', argv[0], 'min_rel_dist', 'min_seg_len', \
+            print('Delete single matches to improve monotonicity of alignments')
+            print('')
+            print('usage:', argv[0], 'min_rel_dist', 'min_seg_len', \)
               'word_list', '<', 'matcher.out', '>', 'matcher.out.mon'
-            print ''
-            print 'min_rel_dist - minimum relative distance for deletion' + \
+            print('')
+            print('min_rel_dist - minimum relative distance for deletion' + \)
               '(default = X)'
-            print 'min_seg_len  - minimum segment length (reference) to' + \
+            print('min_seg_len  - minimum segment length (reference) to' + \)
               'consider (default = X)'
-            print 'word_list    - file of words, one per line, to consider' + \
+            print('word_list    - file of words, one per line, to consider' + \)
               'for deletion (default = all words)'
             sys.exit()
         else:
@@ -52,17 +52,17 @@ def main(argv):
         if not line:
             break
         if not line.startswith('Alignment'):
-            print 'Error: file does not start with Alignment line'
-            print 'Please use exact output of Matcher'
+            print('Error: file does not start with Alignment line')
+            print('Please use exact output of Matcher')
             sys.exit(1)   
-        print line,
+        print(line,)
         sen1 = sys.stdin.readline()
         words1 = sen1.split()
-        print sen1,
+        print(sen1,)
         sen2 = sys.stdin.readline()
         words2 = sen2.split()
-        print sen2,
-        print sys.stdin.readline(),
+        print(sen2,)
+        print(sys.stdin.readline(),)
         # Read matches
         match_words2 = []
         match_words1 = []
@@ -124,9 +124,9 @@ def main(argv):
 
         # Write new match lines
         for i in range(len(mods)):
-            print '{0}:{1}\t\t\t{2}:{3}\t\t\t{4}\t\t{5}'.format( \
+            print('{0}:{1}\t\t\t{2}:{3}\t\t\t{4}\t\t{5}'.format( \)
               match_start2[i], match_len2[i], match_start1[i], match_len1[i], \
               mods[i], scores[i])
-        print ''
+        print('')
 
 if __name__ == '__main__' : main(sys.argv)

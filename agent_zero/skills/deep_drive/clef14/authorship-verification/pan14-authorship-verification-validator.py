@@ -8,7 +8,7 @@ IS_VALID=True
 # Usage
 #
 def usage():
-	print "Usage: python " + sys.argv[0] + " -i <answersFile> -t <truthFile>"
+ print("Usage: python " + sys.argv[0] + " -i <answersFile> -t <truthFile>")
 	sys.exit(1)
 #
 ################################################################################

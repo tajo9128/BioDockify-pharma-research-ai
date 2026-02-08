@@ -280,7 +280,7 @@ def index_annotations(annotations, xref=TREF):
 def count_files(path):
     """Counts number of files in directory."""
     if not os.path.exists(path):
-        print "Path not accessible:", path
+        print("Path not accessible:", path)
         sys.exit(2)
     xmlfiles = glob.glob(os.path.join(path, '*.xml'))
     xmlfiles.extend(glob.glob(os.path.join(path, os.path.join('*', '*.xml'))))
@@ -289,7 +289,7 @@ def count_files(path):
 def extract_average_execution_time(path):
     """Extracts the execution time from each xml file and averages it."""
     if not os.path.exists(path):
-        print "Path not accessible:", path
+        print("Path not accessible:", path)
         sys.exit(2)
     times = []
     xmlfiles = glob.glob(os.path.join(path, '*.xml'))
@@ -307,7 +307,7 @@ def extract_average_execution_time(path):
 def extract_annotations_from_files(path, tagname):
     """Returns a set of plagiarism annotations from XML files below path."""
     if not os.path.exists(path):
-        print "Path not accessible:", path
+        print("Path not accessible:", path)
         sys.exit(2)
     annotations = set()
     xmlfiles = glob.glob(os.path.join(path, '*.xml'))
@@ -450,7 +450,7 @@ class TestPerfMeasures(unittest.TestCase):
 
 def usage():
     """Prints command line usage manual."""
-    print """\
+    print("""\)
 Usage: pan14-text-alignment-eval.py [options]
 
 Options:
@@ -474,7 +474,7 @@ def parse_options():
                         "det-tag=", "output-file=", "help"]
         opts, _ = getopt.getopt(sys.argv[1:], "t:i:o:h", long_options)
     except getopt.GetoptError, err:
-        print str(err)
+        print(str(err))
         usage()
         sys.exit(2)
     micro_averaged = False
@@ -500,13 +500,13 @@ def parse_options():
         else:
             assert False, "Unknown option."
     if plag_path == "undefined":
-        print "Truth directory undefined. Use option -t or --truth-dir."
+        print("Truth directory undefined. Use option -t or --truth-dir.")
         sys.exit()
     if det_path == "undefined":
-        print "Input directory undefined. Use option -i or --input-dir."
+        print("Input directory undefined. Use option -i or --input-dir.")
         sys.exit()
     if output_filename == "undefined":
-        print "Output file  undefined. Use option -o or --outputfile."
+        print("Output file  undefined. Use option -o or --outputfile.")
         sys.exit()        
     return (micro_averaged, plag_path, plag_tag_name, det_path, det_tag_name, output_filename)
 
@@ -549,7 +549,7 @@ def main(micro_averaged, plag_path, plag_tag_name, det_path, det_tag_name, outpu
                   '"granularity":"%0.5f",\n' % gran + \
                   '"documents":"%d"\n' % num_files + '}'
   
-    print output_string
+    print(output_string)
   
     o=open(output_filename, "w")
     o.write(output_string)

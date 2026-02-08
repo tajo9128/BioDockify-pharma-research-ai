@@ -7,6 +7,7 @@ from abc import ABC, abstractmethod
 from typing import Dict, Any, Optional
 import requests
 import json
+import litellm
 
 class BaseLLMAdapter(ABC):
     """Abstract base class for LLM providers."""
@@ -57,7 +58,6 @@ class OpenRouterAdapter(BaseLLMAdapter):
                 headers={
                     "Authorization": f"Bearer {self.api_key}",
                     "Content-Type": "application/json"
-                    # Add HTTP-Referer or X-Title if requested by OpenRouter best practices
                 }, 
                 timeout=30
             )
@@ -153,7 +153,37 @@ class CustomAdapter(BaseLLMAdapter):
         except Exception as e:
             raise ValueError(f"Custom API Error: {e}")
 
-import litellm
+class AnthropicAdapter(BaseLLMAdapter):
+    """Adapter for Anthropic API."""
+    
+    def __init__(self, api_key: str, model: str = "claude-3-opus-20240229"):
+        self.api_key = api_key
+        self.model = model
+        self.url = "https://api.anthropic.com/v1/messages"
+
+    def generate(self, prompt: str, **kwargs) -> str:
+        payload = {
+            "model": self.model,
+            "max_tokens": kwargs.get("max_tokens", 4096),
+            "messages": [{"role": "user", "content": prompt}]
+        }
+        
+        try:
+            resp = requests.post(
+                self.url, 
+                json=payload, 
+                headers={
+                    "x-api-key": self.api_key,
+                    "anthropic-version": "2023-06-01",
+                    "Content-Type": "application/json"
+                }, 
+                timeout=60
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            return data["content"][0]["text"]
+        except Exception as e:
+            raise ValueError(f"Anthropic API Error: {e}")
 
 class LMStudioAdapter(BaseLLMAdapter):
     """
@@ -520,4 +550,3 @@ class OllamaAdapter(BaseLLMAdapter):
             )
         else:
             return f"[Ollama Error] {error}. Please check Ollama logs or use a cloud API."
-

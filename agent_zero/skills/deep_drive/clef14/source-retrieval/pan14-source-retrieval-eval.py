@@ -11,7 +11,7 @@ import json
 
 
 def usage():
-    print "\nUsage: " +  sys.argv[0] +  "<inputDir> <outputFile> <token>"
+    print("\nUsage: " +  sys.argv[0] +  "<inputDir> <outputFile> <token>")
     sys.exit(0)
 
 def path2ids(path):
@@ -48,7 +48,7 @@ def evaluate(token, path):
         return results
     except urllib2.URLError as e:
         error_message = e.read()
-        print >> sys.stderr, error_message
+        print(>> sys.stderr, error_message)
         sys.exit(1)
 
 # Main
@@ -79,7 +79,7 @@ if __name__ == "__main__":
                   '"details":"http://webis15.medien.uni-weimar.de/pan-logs/pan-evaluation-%s.json"\n' % token + '}'
                   
 
-        print output_string
+        print(output_string)
   
         o=open(output_filename, "w")
         o.write(output_string)
@@ -100,7 +100,7 @@ if __name__ == "__main__":
 
 
     else:
-        print "Unexpected number of command line arguments."
+        print("Unexpected number of command line arguments.")
         usage()
 
 

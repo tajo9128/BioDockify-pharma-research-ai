@@ -2,7 +2,7 @@
  * SystemModeDisplay Component
  * 
  * Shows the current system mode (LIMITED or FULL).
- * Follows Agent Zero RULE 6: Never pretend full functionality.
+ * Follows BioDockify AI RULE 6: Never pretend full functionality.
  */
 
 'use client';

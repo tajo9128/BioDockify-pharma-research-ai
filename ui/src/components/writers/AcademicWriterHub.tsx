@@ -39,7 +39,7 @@ export const AcademicWriterHub: React.FC<AcademicWriterHubProps> = ({ onSelectMo
                 <h1 className="text-4xl font-bold text-white mb-4 tracking-tight">Academic Writer Suite</h1>
                 <p className="text-slate-400 text-lg leading-relaxed">
                     Select a high-compliance writing engine aligned with international standards (Scopus/SCI/PubMed).
-                    Agent Zero will act as your strict methodological co-author.
+                    BioDockify AI will act as your strict methodological co-author.
                 </p>
             </header>
 

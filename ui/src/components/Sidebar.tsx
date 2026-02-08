@@ -64,7 +64,7 @@ export default function Sidebar({ activeView, onViewChange }: SidebarProps) {
 
         {/* Brand Logo */}
         <div className="mb-8 w-10 h-10 relative group cursor-default">
-          <Image src="/logo_student.png" alt="BioDockify Student" width={40} height={40} className="w-full h-full drop-shadow-lg group-hover:drop-shadow-[0_0_15px_rgba(0,212,170,0.5)] transition-all rounded-xl" />
+          <Image src="/logo.png" alt="BioDockify" width={40} height={40} className="w-full h-full drop-shadow-lg group-hover:drop-shadow-[0_0_15px_rgba(0,212,170,0.5)] transition-all rounded-xl" />
         </div>
 
         {/* Main Navigation */}

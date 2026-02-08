@@ -1,7 +1,7 @@
 /**
  * BioDockify AI Introduction Module
  * 
- * Contains the comprehensive self-introduction text for Agent Zero.
+ * Contains the comprehensive self-introduction text for BioDockify AI.
  * This introduction is displayed when a user first interacts with the chat.
  */
 

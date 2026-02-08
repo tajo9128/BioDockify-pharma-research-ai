@@ -9,7 +9,7 @@ parse = int
 
 if len(argv) > 1:
     if argv[1].startswith('-h'):
-        print 'usage: agg [-f] FILE'
+        print('usage: agg [-f] FILE')
         exit()
     if argv[1] == '-f':
         parse = float
@@ -28,12 +28,12 @@ while True:
     if agg == None:
         agg = [0] * len(f)
     if len(f) != len(agg):
-        print 'error: number of columns not constant'
+        print('error: number of columns not constant')
         exit(1)
     for i in range(len(agg)):
         agg[i] += parse(f[i])
 
 if agg:
-    print ' '.join([str(x) for x in agg])
+    print(' '.join([str(x) for x in agg]))
 
 stdin.close()

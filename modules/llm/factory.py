@@ -1,4 +1,3 @@
-from typing import Optional
 from modules.llm.adapters import (
     BaseLLMAdapter, 
     GoogleGeminiAdapter, 
@@ -6,8 +5,11 @@ from modules.llm.adapters import (
     HuggingFaceAdapter, 
     CustomAdapter,
     ZhipuAdapter,
-    LMStudioAdapter
+    LMStudioAdapter,
+    OllamaAdapter,
+    AnthropicAdapter
 )
+from typing import Optional
 
 class LLMFactory:
     """Factory to create LLM Adapters based on configuration."""
@@ -18,7 +20,7 @@ class LLMFactory:
         Returns the appropriate adapter instance.
         
         Args:
-            provider: 'google', 'openrouter', 'huggingface', 'custom', 'zhipu', 'lm_studio'
+            provider: 'google', 'openrouter', 'huggingface', 'custom', 'zhipu', 'lm_studio', 'anthropic', 'groq', 'deepseek', 'ollama'
             config: OrchestratorConfig object with keys
             
         Returns:
@@ -44,7 +46,22 @@ class LLMFactory:
         elif provider == "zhipu":
              if not config.glm_key: return None
              return ZhipuAdapter(config.glm_key)
-            
+             
+        elif provider == "anthropic":
+             if not config.anthropic_key: return None
+             return AnthropicAdapter(config.anthropic_key)
+             
+        elif provider == "groq":
+             if not config.groq_key: return None
+             return CustomAdapter(config.groq_key, "https://api.groq.com/openai/v1", "llama3-70b-8192")
+
+        elif provider == "deepseek":
+             if not config.deepseek_key: return None
+             return CustomAdapter(config.deepseek_key, "https://api.deepseek.com", "deepseek-chat")
+             
+        elif provider == "ollama":
+             return OllamaAdapter(config.ollama_host or "http://localhost:11434", config.ollama_model or "llama2")
+
         elif provider == "lm_studio":
             # Use dedicated LM Studio adapter
             lm_studio_url = getattr(config, 'lm_studio_url', 'http://localhost:1234/v1/models')
