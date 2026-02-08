@@ -60,8 +60,8 @@ jobs:
           echo "🚀 Installation Instructions:"
           echo "1. Open Docker Desktop"
           echo "2. Search: tajo9128/biodockify-ai"
-          echo "3. Pull → Run with port 80:50081"
-          echo "4. Open: http://localhost:50081"
+          echo "3. Pull → Run with port 3000:3000"
+          echo "4. Open: http://localhost:3000"
 
       - name: Create Release Notes
         if: startsWith(github.ref, 'refs/tags/')
@@ -74,13 +74,13 @@ jobs:
             1. Open Docker Desktop
             2. Search `tajo9128/biodockify-ai` in the search bar
             3. Click **Pull** to download
-            4. Click **Run** with port mapping: `80 → 50081`
-            5. Open: http://localhost:50081
+            4. Click **Run** with port mapping: `3000 → 3000`
+            5. Open: http://localhost:3000
 
             **Via Command Line:**
             ```bash
             docker pull tajo9128/biodockify-ai:${{ github.ref_name }}
-            docker run -d -p 50081:80 -v biodockify-data:/app/data --name biodockify tajo9128/biodockify-ai:${{ github.ref_name }}
+            docker run -d -p 3000:3000 -v biodockify-data:/app/data --name biodockify tajo9128/biodockify-ai:${{ github.ref_name }}
             ```
 
             ## 📋 What's Included

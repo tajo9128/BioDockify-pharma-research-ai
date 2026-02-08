@@ -24,8 +24,7 @@ def main():
         "Pip": "pip",
         "Docker": "docker",
         "Node.js": "node",
-        "NPM": "npm",
-        "Tauri": "cargo-tauri" # Or similar check
+        "NPM": "npm"
     }
     
     print("\n[Tool Availability]")
