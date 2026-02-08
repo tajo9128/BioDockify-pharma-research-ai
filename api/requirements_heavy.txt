@@ -10,6 +10,8 @@ tensorflow==2.15.0
 tensorflow-intel==2.15.0; sys_platform == 'win32'
 transformers>=4.38.0
 sentence-transformers>=2.2.2
+torch>=2.2.0 --index-url https://download.pytorch.org/whl/cpu
+torchvision>=0.17.0 --index-url https://download.pytorch.org/whl/cpu
 
 # Chemistry & Molecular Analysis
 decimer>=2.2.0

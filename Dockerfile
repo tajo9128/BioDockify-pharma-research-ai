@@ -246,8 +246,10 @@ echo "================================================" \n\
 echo "  BioDockify v2.3.6 - Production Startup" \n\
 echo "================================================" \n\
 echo "" \n\
-echo "  All dependencies are pre-installed." \n\
-echo "  Access at: http://localhost:50081" \n\
+echo "  [ACTION REQUIRED] Open your browser to:" \n\
+echo "  👉  http://localhost:50081" \n\
+echo "" \n\
+echo "================================================" \n\
 \n\
 # Ensure log directory exists \n\
 mkdir -p /var/log/biodockify \n\
@@ -265,7 +267,7 @@ exec /usr/bin/supervisord -c /etc/supervisor/supervisord.conf \n\
 LABEL maintainer="tajo9128"
 LABEL org.opencontainers.image.title="BioDockify Pharma Research AI"
 LABEL org.opencontainers.image.description="BioDockify Fully Baked Image - All Dependencies Pre-installed"
-LABEL org.opencontainers.image.version="2.3.6"
+LABEL org.opencontainers.image.version="2.3.7"
 LABEL org.opencontainers.image.source="https://github.com/tajo9128/BioDockify-pharma-research-ai"
 
 # -----------------------------------------------------------------------------
