@@ -17,6 +17,7 @@ nest-asyncio>=1.6.0
 google-genai>=1.15.0
 tokencost>=0.1.17
 ollama>=0.4.4
+neo4j>=5.14.0
 
 # NanoBot Agent Framework
 loguru>=0.7.0

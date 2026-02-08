@@ -1,11 +1,11 @@
-# BioDockify v2.20.6 🧬
+# BioDockify v2.3.8 🧬
 
 **The Integrated AI Research Workstation for Pharmaceutical & Life Sciences.**
 
 BioDockify is a specialized, autonomous AI ecosystem designed to manage the entire research lifecycle for **PG students, PhD researchers, and pharmaceutical scientists**. It delivers "Pharma-Grade" intelligence by combining deep reasoning, robotic automation, and local-first privacy.
 
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-2.20.6-green.svg)](https://github.com/tajo9128/BioDockify-pharma-research-ai)
+[![Version](https://img.shields.io/badge/version-2.3.8-green.svg)](https://github.com/tajo9128/BioDockify-pharma-research-ai)
 [![Docker](https://img.shields.io/badge/docker-tajo9128%2Fbiodockify--ai-blue.svg)](https://hub.docker.com/r/tajo9128/biodockify-ai)
 [![Privacy](https://img.shields.io/badge/privacy-Local--First-green.svg)]()
 
@@ -85,7 +85,7 @@ Ensuring your research meets the highest standards of integrity and compliance:
 
 ---
 
-## 🚀 Quick Start (Docker)
+## 🚀 Quick Start (Docker - v2.3.8)
 
 > **One-Click Installation** - Just like Agent Zero!
 
@@ -94,28 +94,31 @@ Ensuring your research meets the highest standards of integrity and compliance:
 1. **Open Docker Desktop**
 2. **Search** `tajo9128/biodockify-ai` in the search bar
 3. Click **Pull** to download the latest image
-4. Click **Run** → Set port mapping: `80 → 50081`
-5. **Open** [http://localhost:50081](http://localhost:50081)
+4. Click **Run** → Set port mapping: `3000 → 3000` (Map host port 3000 to container port 3000)
+5. **Open** [http://localhost:3000](http://localhost:3000)
 6. **Install as Desktop App** → Click the install prompt in browser for PWA!
 
-### 💻 Via Command Line
+### 💻 Via Command Line (One-Click)
 
-```bash
-# Pull the latest image (always gets newest version)
-docker pull tajo9128/biodockify-ai:latest
+The standard `docker run` command is complex. We provide robust scripts to handle port mapping and data persistence for you.
 
-# Run with data persistence
-docker run -d \
-  --name biodockify \
-  -p 50081:80 \
-  -v biodockify-data:/app/data \
-  --restart unless-stopped \
-  tajo9128/biodockify-ai:latest
-
-# Open in browser
-# Windows: start http://localhost:50081
-# Mac/Linux: open http://localhost:50081
+**Windows:**
+```powershell
+.\run.bat
 ```
+
+**Linux / Mac:**
+```bash
+chmod +x run.sh
+./run.sh
+```
+
+These scripts will:
+1. Check if Docker is running.
+2. Stop/Remove any old container.
+3. Start the ecosystem (App + DB + PDF Parser) using `docker-compose`.
+    *   **Note:** This setup uses **LM Studio** on your host machine (port 1234).
+4. Open your browser automatically to `http://localhost:3000`.
 
 ### 🔄 Update to Latest Version
 
@@ -125,7 +128,7 @@ docker stop biodockify && docker rm biodockify
 
 # Pull latest and run
 docker pull tajo9128/biodockify-ai:latest
-docker run -d --name biodockify -p 50081:80 -v biodockify-data:/app/data --restart unless-stopped tajo9128/biodockify-ai:latest
+docker run -d --name biodockify -p 3000:3000 -v biodockify-data:/app/data --restart unless-stopped tajo9128/biodockify-ai:latest
 ```
 
 ### 📋 Requirements

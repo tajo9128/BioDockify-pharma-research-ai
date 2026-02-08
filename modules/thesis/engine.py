@@ -4,6 +4,7 @@ Orchestrates the writing process, enforcing branch-specific focus and strict val
 Agent Zero handles all AI content generation - this module manages structure and contextual mapping.
 """
 import logging
+import asyncio
 from typing import Dict, Any, Optional, Callable, List
 
 from modules.thesis.structure import (
@@ -111,6 +112,53 @@ class ThesisEngine:
             logger.warning(f"Context retrieval failed: {e}")
         
         return context
+
+    async def _generate_with_agent(
+        self,
+        template: ChapterTemplate,
+        topic: str,
+        branch: PharmaBranch,
+        degree: DegreeType,
+        profile: Dict,
+        context: Dict[str, Any],
+        agent_generate: Callable[[str, str, Dict], str]
+    ) -> str:
+        """
+        Internal generation logic using a provided Agent Zero callback.
+        """
+        content = [f"# {template.title}\n"]
+        if branch != PharmaBranch.GENERAL:
+            content.append(f"> **Specialization**: {branch.value} ({degree.value})\n")
+        
+        for section in template.sections:
+            # Prepare section specific context for Agent Zero
+            section_context = {
+                "topic": topic,
+                "section_title": section.title,
+                "section_description": section.description,
+                "branch": branch.value,
+                "degree": degree.value,
+                "global_rules": template.global_rules,
+                "context_excerpts": context.get("section_contexts", {}).get(section.title, []),
+                "word_limit": section.word_limit
+            }
+            
+            # Agent Zero generates content
+            try:
+                # Check if callback is a coroutine
+                if asyncio.iscoroutinefunction(agent_generate):
+                    section_content = await agent_generate(topic, section.title, section_context)
+                else:
+                    section_content = agent_generate(topic, section.title, section_context)
+            except Exception as e:
+                logger.error(f"Agent generation failed for section {section.title}: {e}")
+                section_content = f"*[Generation Failed: {e}]*"
+            
+            content.append(f"## {section.title}")
+            content.append(section_content if section_content else f"*{section.description}*")
+            content.append("")
+        
+        return "\n".join(content)
 
     async def _generate_with_callback(
         self,

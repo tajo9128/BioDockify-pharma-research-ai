@@ -13,8 +13,11 @@ from orchestration.executor import ResearchExecutor
 from modules.analyst.analytics_engine import ResearchAnalyst
 from modules.backup import DriveClient, BackupManager
 from modules.literature.reviewer import CitationReviewer
+from modules.literature.scraper import LiteratureAggregator, LiteratureConfig
+from modules.literature.synthesis import get_synthesizer
+from dataclasses import asdict
 
-app = FastAPI(title="BioDockify - Pharma Research AI", version="2.3.7")
+app = FastAPI(title="BioDockify - Pharma Research AI", version="2.3.8")
 
 # Register NanoBot Hybrid Agent Routes
 try:
@@ -39,6 +42,14 @@ try:
 except ImportError as e:
     import logging
     logging.getLogger("biodockify_api").warning(f"Channels routes not loaded: {e}")
+
+# Register Research Orchestration Routes (Status, WebSocket)
+try:
+    from api.routers.research import router as research_router
+    app.include_router(research_router, prefix="/api/research", tags=["Research"])
+except ImportError as e:
+    import logging
+    logging.getLogger("biodockify_api").warning(f"Research routes not loaded: {e}")
 
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -797,6 +808,91 @@ class ExportRequest(BaseModel):
     affiliation: str
     abstract: str
     content_markdown: str
+
+# -----------------------------------------------------------------------------
+# LITERATURE DISCOVERY & SYNTHESIS ENDPOINTS
+# -----------------------------------------------------------------------------
+
+class LitSearchRequest(BaseModel):
+    query: str
+    limit: int = 15
+    sources: Optional[List[str]] = None
+
+class LitSynthesizeRequest(BaseModel):
+    topic: str
+    papers: List[Dict[str, Any]]
+
+@app.post("/api/literature/search")
+async def search_literature_endpoint(req: LitSearchRequest):
+    """
+    Search for scientific literature across multiple sources.
+    """
+    try:
+        config = LiteratureConfig(
+            sources=req.sources,
+            max_results=req.limit
+        )
+        aggregator = LiteratureAggregator(config)
+        # Using loop.run_in_executor because search might be blocking (PubMed sync part)
+        loop = asyncio.get_event_loop()
+        results = await loop.run_in_executor(None, aggregator.search, req.query)
+        return {"papers": results}
+    except Exception as e:
+        logger.error(f"Literature search failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/literature/synthesize")
+async def synthesize_literature_endpoint(req: LitSynthesizeRequest):
+    """
+    Synthesize a literature review from a list of papers.
+    """
+    try:
+        from modules.literature.discovery import Paper as DiscoveryPaper
+        
+        # Convert dicts to Paper objects
+        papers = []
+        for p in req.papers:
+            papers.append(DiscoveryPaper(
+                title=p.get("title", "Unknown"),
+                url=p.get("url", p.get("full_text_url", "")),
+                source=p.get("source", "Unknown"),
+                authors=p.get("authors", []),
+                abstract=p.get("abstract", ""),
+                year=int(p.get("year", 0)) if str(p.get("year", "0")).isdigit() else 0,
+                doi=p.get("doi")
+            ))
+            
+        synthesizer = get_synthesizer()
+        
+        # Set agent callback if needed (using current agent logic)
+        async def agent_callback(prompt: str) -> str:
+            # Re-use agent_chat internal logic or similar
+            # For now, let's just use the factory directly
+            from modules.llm.factory import LLMFactory
+            from runtime.config_loader import load_config
+            import types
+            
+            cfg = load_config()
+            ai_cfg = cfg.get("ai_provider", {})
+            provider_mode = ai_cfg.get("mode", "auto")
+            config_obj = types.SimpleNamespace(**ai_cfg)
+            
+            adapter = LLMFactory.get_adapter(provider_mode, config_obj)
+            if not adapter:
+                 adapter = LLMFactory.get_adapter("lm_studio", config_obj)
+            
+            if not adapter:
+                return "AI provider not available for synthesis."
+            
+            return await asyncio.to_thread(adapter.generate, prompt)
+
+        synthesizer.set_agent_callback(agent_callback)
+        review = await synthesizer.generate_review(req.topic, papers)
+        
+        return {"review": review}
+    except Exception as e:
+        logger.error(f"Literature synthesis failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/publication/export/latex")
 def export_to_latex(req: ExportRequest):

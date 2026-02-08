@@ -10,6 +10,7 @@ import socket
 import asyncio
 import logging
 import subprocess
+import aiohttp
 from pathlib import Path
 from typing import Dict, Any, Optional, List
 from dataclasses import dataclass, field
@@ -142,32 +143,29 @@ class ConnectionDoctor:
     async def check_internet(self, max_retries: int = 3) -> CheckResult:
         """
         Check internet connectivity with multiple endpoints and retries.
-        
-        Uses socket-based connection test for speed (no HTTP overhead).
+        Uses non-blocking asyncio connections.
         """
         for attempt in range(max_retries):
             for host, port in self.CONNECTIVITY_ENDPOINTS:
                 try:
-                    # Quick socket connection test
-                    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                    sock.settimeout(3)
-                    result = sock.connect_ex((host, port))
-                    sock.close()
+                    # Non-blocking connection test
+                    reader, writer = await asyncio.wait_for(
+                        asyncio.open_connection(host, port),
+                        timeout=3.0
+                    )
+                    writer.close()
+                    await writer.wait_closed()
                     
-                    if result == 0:
-                        return CheckResult(
-                            name="Internet Connectivity",
-                            status=CheckStatus.SUCCESS,
-                            message=f"Connected via {host}",
-                            details={"endpoint": host, "attempt": attempt + 1}
-                        )
-                except socket.gaierror:
-                    continue
+                    return CheckResult(
+                        name="Internet Connectivity",
+                        status=CheckStatus.SUCCESS,
+                        message=f"Connected via {host}",
+                        details={"endpoint": host, "attempt": attempt + 1}
+                    )
                 except Exception as e:
                     logger.debug(f"Connection to {host} failed: {e}")
                     continue
             
-            # Wait before retry (exponential backoff)
             if attempt < max_retries - 1:
                 await asyncio.sleep(2 ** attempt)
         
@@ -251,17 +249,11 @@ class ConnectionDoctor:
         """
         Internal method to detect running LM Studio instance.
         """
-        try:
-            import aiohttp
-        except ImportError:
-            # Fallback to requests if aiohttp not available
-            return await self._detect_lm_studio_sync()
-        
         async with aiohttp.ClientSession() as session:
             for port in self.LM_STUDIO_PORTS:
                 url = f"http://localhost:{port}/v1/models"
                 try:
-                    async with session.get(url, timeout=aiohttp.ClientTimeout(total=10)) as response:
+                    async with session.get(url, timeout=aiohttp.ClientTimeout(total=5)) as response:
                         if response.status == 200:
                             data = await response.json()
                             models = data.get("data", [])
@@ -295,56 +287,14 @@ class ConnectionDoctor:
         return CheckResult(
             name="LM Studio",
             status=CheckStatus.ERROR,
-            message="Not detected on any port",
+            message="Not detected (CORS might be disabled or app is closed)",
             can_auto_repair=True,
-            repair_action="Please start LM Studio and load a model"
+            repair_action="Start LM Studio, load model, and ENSURE 'Enable CORS' is ON"
         )
     
     async def _detect_lm_studio_sync(self) -> CheckResult:
-        """
-        Synchronous fallback for LM Studio detection using requests.
-        """
-        import requests
-        
-        for port in self.LM_STUDIO_PORTS:
-            url = f"http://localhost:{port}/v1/models"
-            try:
-                response = requests.get(url, timeout=10)
-                if response.status_code == 200:
-                    data = response.json()
-                    models = data.get("data", [])
-                    
-                    if models:
-                        model_id = models[0].get("id", "unknown")
-                        return CheckResult(
-                            name="LM Studio",
-                            status=CheckStatus.SUCCESS,
-                            message=f"Connected on port {port}",
-                            details={
-                                "url": f"http://localhost:{port}/v1",
-                                "port": port,
-                                "model": model_id
-                            }
-                        )
-                    else:
-                        return CheckResult(
-                            name="LM Studio",
-                            status=CheckStatus.WARNING,
-                            message=f"Running on port {port} but no model loaded",
-                            details={"url": f"http://localhost:{port}/v1", "port": port},
-                            repair_action="Please load a model in LM Studio"
-                        )
-            except Exception as e:
-                logger.debug(f"Port {port} check failed: {e}")
-                continue
-        
-        return CheckResult(
-            name="LM Studio",
-            status=CheckStatus.ERROR,
-            message="Not detected on any port",
-            can_auto_repair=True,
-            repair_action="Please start LM Studio and load a model"
-        )
+        """Deprecated: Use async version."""
+        return await self._detect_lm_studio()
     
     def find_lm_studio_executable(self) -> Optional[str]:
         """
@@ -500,92 +450,89 @@ class ConnectionDoctor:
     async def _validate_google_key(self, key: str) -> tuple[bool, str]:
         """Validate Google Gemini API key."""
         try:
-            import requests
-            response = requests.get(
-                "https://generativelanguage.googleapis.com/v1/models",
-                params={"key": key},
-                timeout=10
-            )
-            if response.status_code == 200:
-                return True, ""
-            elif response.status_code == 400:
-                return False, "Invalid key format"
-            elif response.status_code == 403:
-                return False, "Key expired or disabled"
-            else:
-                return False, f"HTTP {response.status_code}"
+            import aiohttp
+            async with aiohttp.ClientSession() as session:
+                url = "https://generativelanguage.googleapis.com/v1/models"
+                async with session.get(url, params={"key": key}, timeout=10) as response:
+                    if response.status == 200:
+                        return True, ""
+                    elif response.status == 400:
+                        return False, "Invalid key format"
+                    elif response.status == 403:
+                        return False, "Key expired or disabled"
+                    else:
+                        return False, f"HTTP {response.status}"
         except Exception as e:
             return False, str(e)
     
     async def _validate_openrouter_key(self, key: str) -> tuple[bool, str]:
         """Validate OpenRouter API key."""
         try:
-            import requests
-            response = requests.get(
-                "https://openrouter.ai/api/v1/models",
-                headers={"Authorization": f"Bearer {key}"},
-                timeout=10
-            )
-            if response.status_code == 200:
-                return True, ""
-            elif response.status_code == 401:
-                return False, "Invalid or expired key"
-            else:
-                return False, f"HTTP {response.status_code}"
+            import aiohttp
+            async with aiohttp.ClientSession() as session:
+                url = "https://openrouter.ai/api/v1/models"
+                headers = {"Authorization": f"Bearer {key}"}
+                async with session.get(url, headers=headers, timeout=10) as response:
+                    if response.status == 200:
+                        return True, ""
+                    elif response.status == 401:
+                        return False, "Invalid or expired key"
+                    else:
+                        return False, f"HTTP {response.status}"
         except Exception as e:
             return False, str(e)
     
     async def _validate_huggingface_key(self, key: str) -> tuple[bool, str]:
         """Validate HuggingFace API key."""
         try:
-            import requests
-            response = requests.get(
-                "https://huggingface.co/api/whoami",
-                headers={"Authorization": f"Bearer {key}"},
-                timeout=10
-            )
-            if response.status_code == 200:
-                return True, ""
-            elif response.status_code == 401:
-                return False, "Invalid token"
-            else:
-                return False, f"HTTP {response.status_code}"
+            import aiohttp
+            async with aiohttp.ClientSession() as session:
+                url = "https://huggingface.co/api/whoami"
+                headers = {"Authorization": f"Bearer {key}"}
+                async with session.get(url, headers=headers, timeout=10) as response:
+                    if response.status == 200:
+                        return True, ""
+                    elif response.status == 401:
+                        return False, "Invalid token"
+                    else:
+                        return False, f"HTTP {response.status}"
         except Exception as e:
             return False, str(e)
     
     async def check_backend(self) -> CheckResult:
         """
-        Verify FastAPI backend is responding.
+        Verify FastAPI backend is responding using non-blocking aiohttp.
         """
         backend_url = self.config.get("backend_url", "http://localhost:8234")
         
         try:
-            import requests
-            response = requests.get(f"{backend_url}/api/health", timeout=5)
-            
-            if response.status_code == 200:
-                return CheckResult(
-                    name="Backend API",
-                    status=CheckStatus.SUCCESS,
-                    message="Backend is running",
-                    details={"url": backend_url}
-                )
-            else:
+            import aiohttp
+            async with aiohttp.ClientSession() as session:
+                async with session.get(f"{backend_url}/api/health", timeout=5) as response:
+                    if response.status == 200:
+                        return CheckResult(
+                            name="Backend API",
+                            status=CheckStatus.SUCCESS,
+                            message="Backend is running",
+                            details={"url": backend_url}
+                        )
+                    else:
+                        return CheckResult(
+                            name="Backend API",
+                            status=CheckStatus.WARNING,
+                            message=f"Backend returned {response.status}",
+                            details={"url": backend_url, "status_code": response.status}
+                        )
+        except Exception as e:
+            # Check if it looks like it's not running
+            if "Connection refused" in str(e) or "Cannot connect to host" in str(e):
                 return CheckResult(
                     name="Backend API",
                     status=CheckStatus.WARNING,
-                    message=f"Backend returned {response.status_code}",
-                    details={"url": backend_url, "status_code": response.status_code}
+                    message="Backend not running (starting up...)",
+                    details={"url": backend_url},
+                    repair_action="Backend will start automatically with the app"
                 )
-        except requests.exceptions.ConnectionError:
-            return CheckResult(
-                name="Backend API",
-                status=CheckStatus.WARNING,
-                message="Backend not running (this is normal during first-run)",
-                details={"url": backend_url},
-                repair_action="Backend will start automatically with the app"
-            )
-        except Exception as e:
             return CheckResult(
                 name="Backend API",
                 status=CheckStatus.ERROR,

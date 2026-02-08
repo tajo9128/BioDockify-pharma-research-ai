@@ -3,8 +3,8 @@
 # =============================================================================
 # One-Command Install:
 #   docker pull tajo9128/biodockify-ai:latest
-#   docker run -d -p 50081:80 --name biodockify tajo9128/biodockify-ai
-#   Open: http://localhost:50081
+#   docker run -d -p 31234:31234 --name biodockify tajo9128/biodockify-ai
+#   Open: http://localhost:31234
 # =============================================================================
 
 # -----------------------------------------------------------------------------
@@ -101,9 +101,9 @@ RUN python -c "import fastapi; print('FastAPI OK')" && \
 
 # Copy frontend build artifacts
 COPY --from=frontend-builder /app/ui/.next/standalone/ /app/
-COPY --from=frontend-builder /app/ui/.next/static/ /app/ui/.next/static/
-COPY --from=frontend-builder /app/ui/public/ /app/ui/public/
-COPY --from=frontend-builder /app/ui/package.json /app/ui/package.json
+COPY --from=frontend-builder /app/ui/.next/static/ /app/.next/static/
+COPY --from=frontend-builder /app/ui/public/ /app/public/
+COPY --from=frontend-builder /app/ui/package.json /app/package.json
 
 # Copy ALL backend application code
 COPY api/ /app/api/
@@ -125,13 +125,29 @@ RUN mkdir -p /app/data /var/log/biodockify /run
 # -----------------------------------------------------------------------------
 RUN rm -f /etc/nginx/sites-enabled/default && \
     echo 'server { \
-    listen 80; \
+    listen 3000; \
     server_name _; \
     client_max_body_size 100M; \
     \
-    # Frontend (Next.js) \
+    # Next.js static files - CRITICAL FIX \
+    location /_next/static/ { \
+        alias /app/.next/static/; \
+        expires 1y; \
+        access_log off; \
+        add_header Cache-Control "public, max-age=31536000, immutable"; \
+        try_files $uri $uri/ =404; \
+    } \
+    \
+    # Public assets fallback \
+    location /public/ { \
+        alias /app/public/; \
+        expires 7d; \
+        try_files $uri $uri/ =404; \
+    } \
+    \
+    # Main Next.js app \
     location / { \
-        proxy_pass http://127.0.0.1:3000; \
+        proxy_pass http://127.0.0.1:3001; \
         proxy_http_version 1.1; \
         proxy_set_header Upgrade $http_upgrade; \
         proxy_set_header Connection "upgrade"; \
@@ -209,7 +225,7 @@ stdout_logfile=/var/log/biodockify/frontend.log \n\
 stderr_logfile=/var/log/biodockify/frontend-error.log \n\
 stdout_logfile_maxbytes=50MB \n\
 stderr_logfile_maxbytes=50MB \n\
-environment=PORT="3000",HOSTNAME="0.0.0.0",NODE_ENV="production" \n\
+environment=PORT="3001",HOSTNAME="0.0.0.0",NODE_ENV="production" \n\
 ' > /etc/supervisor/conf.d/biodockify.conf
 
 # -----------------------------------------------------------------------------
@@ -231,24 +247,26 @@ fi \n\
 # Fallback to npx next start (if build dir exists but server.js failed) \n\
 if [ -d "/app/ui/.next" ]; then \n\
     echo "[Frontend] Using npx next start" \n\
-    cd /app/ui && exec npx next start -p 3000 -H 0.0.0.0 \n\
+    cd /app/ui && exec npx next start -p 3001 -H 0.0.0.0 \n\
 fi \n\
 \n\
 # Last resort - serve static files \n\
 echo "[Frontend] No Next.js build found, serving placeholder" \n\
 echo "BioDockify is starting..." > /tmp/index.html \n\
-exec python -m http.server 3000 --directory /tmp \n\
+exec python -m http.server 3001 --directory /tmp \n\
 ' > /app/start-frontend.sh && chmod +x /app/start-frontend.sh
 
 # Main startup script - Instant Start (Baked Dependencies)
 RUN echo '#!/bin/bash \n\
 echo "================================================" \n\
-echo "  BioDockify v2.3.6 - Production Startup" \n\
+echo "  BioDockify v2.3.8 - Production Startup" \n\
 echo "================================================" \n\
 echo "" \n\
 echo "  [ACTION REQUIRED] Open your browser to:" \n\
-echo "  👉  http://localhost:50081" \n\
+echo "  👉  http://localhost:3000" \n\
 echo "" \n\
+echo "  Ensure you are using the correct port mapping:" \n\
+echo "  docker run -p 3000:3000 ..." \n\
 echo "================================================" \n\
 \n\
 # Ensure log directory exists \n\
@@ -267,7 +285,7 @@ exec /usr/bin/supervisord -c /etc/supervisor/supervisord.conf \n\
 LABEL maintainer="tajo9128"
 LABEL org.opencontainers.image.title="BioDockify Pharma Research AI"
 LABEL org.opencontainers.image.description="BioDockify Fully Baked Image - All Dependencies Pre-installed"
-LABEL org.opencontainers.image.version="2.3.7"
+LABEL org.opencontainers.image.version="2.3.8"
 LABEL org.opencontainers.image.source="https://github.com/tajo9128/BioDockify-pharma-research-ai"
 
 # -----------------------------------------------------------------------------
@@ -278,15 +296,15 @@ ENV PYTHONUNBUFFERED=1
 ENV PYTHONPATH=/app
 ENV NODE_ENV=production
 ENV BIODOCKIFY_DATA=/app/data
-ENV PORT=80
+ENV PORT=3000
 ENV PLAYWRIGHT_BROWSERS_PATH=/root/.cache/ms-playwright
 
 # Expose HTTP port
-EXPOSE 80
+EXPOSE 3000
 
 # Health check - wait 90s for heavy deps to load
 HEALTHCHECK --interval=30s --timeout=15s --start-period=120s --retries=5 \
-    CMD curl -sf http://localhost/health || exit 1
+    CMD curl -sf http://localhost:3000/health || exit 1
 
 # Persistent data volume
 VOLUME ["/app/data"]

@@ -5,6 +5,18 @@ All notable changes to **BioDockify** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v2.3.8] - 2026-02-08
+### Fixed
+- **Thesis Engine:** Fixed critical bug where `_generate_with_agent` was missing, preventing agent-based chapter generation.
+- **API:** Resolved missing `research_router` inclusion in `api/main.py`, enabling real-time status WebSockets for researchers.
+- **Diagnostics:** Fixed critical deadlock in `ConnectionDoctor` where synchronous network checks caused the backend to hang during initialization.
+- **Docker:** Fixed Nginx routing to properly serve Next.js static files (`/_next/static/`), resolving 404 errors on initialization.
+- **Pharma AI:** Improved error handling in synthesis modules.
+
+### Added
+- **Literature Review:** New dedicated API endpoints for multi-source literature search (`/api/literature/search`) and automated synthesis (`/api/literature/synthesize`).
+- **Orchestration:** Integrated `ReviewSynthesizer` with Agent Zero callbacks for high-fidelity research generation.
+
 ## [v2.3.1] - 2026-02-07
 ### Added
 - **Major Release**: Version jump to v2.3.1.
