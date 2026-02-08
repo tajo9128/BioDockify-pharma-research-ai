@@ -17,7 +17,7 @@ from modules.literature.scraper import LiteratureAggregator, LiteratureConfig
 from modules.literature.synthesis import get_synthesizer
 from dataclasses import asdict
 
-app = FastAPI(title="BioDockify - Pharma Research AI", version="2.3.8")
+app = FastAPI(title="BioDockify - Pharma Research AI", version="2.3.9")
 
 # Register NanoBot Hybrid Agent Routes
 try:

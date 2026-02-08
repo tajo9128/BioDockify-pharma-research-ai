@@ -35,7 +35,6 @@ export const metadata: Metadata = {
 }
 
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
-import TitleBarLoader from '@/components/TitleBarLoader';
 import PWAInstallPrompt from '@/components/PWAInstallPrompt';
 
 export default function RootLayout({
@@ -46,10 +45,9 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground pt-10`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
       >
         <ServiceWorkerRegister />
-        <TitleBarLoader />
         {children}
         <Toaster />
         <PWAInstallPrompt />

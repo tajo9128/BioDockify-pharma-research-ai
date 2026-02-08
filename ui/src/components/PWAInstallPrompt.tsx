@@ -85,7 +85,7 @@ export default function PWAInstallPrompt() {
                             Install BioDockify
                         </h3>
                         <p className="text-xs text-emerald-200/80 mt-1">
-                            Add to desktop for quick access. Works offline!
+                            Pin this Research Workstation for quick access. Works offline!
                         </p>
                         <div className="flex items-center gap-2 mt-3">
                             <Button

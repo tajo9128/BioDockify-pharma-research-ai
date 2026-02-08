@@ -5,6 +5,16 @@ All notable changes to **BioDockify** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v2.3.9] - 2026-02-08
+### Fixed
+- **Settings UI:** Completely reconstructed the `SettingsPanel.tsx` component, resolving deep-seated JSX structural issues and dangling `div` tags.
+- **Types:** Resolved TypeScript errors related to `activeTab` type overlaps and state management in the Settings UI.
+
+### Added
+- **System Internals:** New configuration section for backend **Log Level** and **Auto-Update Agent** (Docker image pulling).
+- **NanoBot Features:** Integrated dedicated toggles for Headless Mode and Stealth Mode in settings.
+- **Orchestration:** Added Human Approval Gates toggle to prevent critical agent actions without user consent.
+
 ## [v2.3.8] - 2026-02-08
 ### Fixed
 - **Thesis Engine:** Fixed critical bug where `_generate_with_agent` was missing, preventing agent-based chapter generation.

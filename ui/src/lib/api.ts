@@ -52,6 +52,14 @@ export interface Settings {
     self_correction: boolean;
     max_retries: number;
     failure_policy: 'ask_user' | 'auto_retry' | 'abort';
+    max_runtime_minutes?: number; // V2: Execution Limit
+    use_knowledge_graph?: boolean; // V2: Neo4j Integration
+    human_approval_gates?: boolean; // V2: Safety/Consent Switch
+  };
+  nanobot?: {
+    headless_browser: boolean;
+    stealth_mode: boolean;
+    browser_timeout: number;
   };
   literature: {
     sources: string[];
@@ -59,6 +67,7 @@ export interface Settings {
     enable_preprints: boolean;
     year_range: number;
     novelty_strictness: 'low' | 'medium' | 'high';
+    grobid_url?: string; // V2: GROBID Analysis
   };
   ai_provider: {
     mode: 'auto' | 'lm_studio' | 'z-ai';
@@ -156,11 +165,10 @@ export interface Settings {
     output_dir: string;
   };
   system: {
-    auto_start: boolean;
-    minimize_to_tray: boolean;
-    pause_on_battery: boolean;
     max_cpu_percent: number;
     internet_research?: boolean; // Agent Zero V2
+    auto_update?: boolean;
+    log_level?: 'DEBUG' | 'INFO' | 'WARNING' | 'ERROR';
   };
 }
 

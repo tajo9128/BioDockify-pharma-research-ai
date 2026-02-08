@@ -2,21 +2,21 @@ import React, { useState, useEffect } from 'react';
 import { api, Settings } from '@/lib/api';
 import { AGENT_PERSONAS } from '@/lib/personas';
 import ChannelsSettingsPanel from './ChannelsSettingsPanel';
-import { Save, Server, Cloud, Cpu, RefreshCw, CheckCircle, AlertCircle, Shield, Activity, Power, BookOpen, Layers, FileText, Globe, Database, Key, FlaskConical, Link, FolderOpen, UserCircle, Lock, Unlock, Sparkles, Wrench, MessageCircle, Search } from 'lucide-react';
+import { Save, Server, Cloud, Cpu, RefreshCw, CheckCircle, AlertCircle, Shield, Activity, Power, BookOpen, Layers, FileText, Globe, Database, Key, FlaskConical, Link, FolderOpen, UserCircle, Lock, Unlock, Sparkles, Wrench, MessageCircle, Search, Bot } from 'lucide-react';
 
 
 // Extended Settings interface matching "Fully Loaded" specs + New User Requests
 interface AdvancedSettings extends Omit<Settings, 'persona'> {
-    // We omit persona to redefine it slightly looser if needed, or just extending is fine if we match types.
-    // However, to fix the error "Interface 'AdvancedSettings' incorrectly extends interface 'Settings'",
-    // we should just rely on the base Settings for common fields or fully match strictness.
-    // Because Settings is providing strict types, let's allow AdvancedSettings to use those.
     system: {
-        auto_start: boolean;
-        minimize_to_tray: boolean;
-        pause_on_battery: boolean;
         max_cpu_percent: number;
-        internet_research: boolean; // NEW: Agent Zero Internet Toggle
+        internet_research: boolean;
+        auto_update?: boolean;
+        log_level?: 'DEBUG' | 'INFO' | 'WARNING' | 'ERROR';
+    };
+    nanobot?: {
+        headless_browser: boolean;
+        stealth_mode: boolean;
+        browser_timeout: number;
     };
     ai_advanced: {
         context_window: number;
@@ -24,7 +24,6 @@ interface AdvancedSettings extends Omit<Settings, 'persona'> {
         thread_count: number;
     };
     pharma: {
-        // ... existing
         enable_pubtator: boolean;
         enable_semantic_scholar: boolean;
         enable_unpaywall: boolean;
@@ -45,10 +44,8 @@ interface AdvancedSettings extends Omit<Settings, 'persona'> {
             science_index: boolean;
         };
     };
-    // Re-declare persona to match Settings but allow string for UI flexibility if needed, 
-    // BUT TS requires compatibility. Best to use the Settings type.
     persona: Settings['persona'] & {
-        department: string; // NEW: Department Context
+        department: string;
     };
     output: {
         format: 'markdown' | 'pdf' | 'docx' | 'latex';
@@ -60,38 +57,43 @@ interface AdvancedSettings extends Omit<Settings, 'persona'> {
 
 export default function SettingsPanel() {
     // Default State with ALL features
-    // Internet Research is ENABLED by default for "Agent Zero"
     const defaultSettings: AdvancedSettings = {
         project: { name: 'New Project', type: 'Drug Discovery', disease_context: 'Alzheimer\'s', stage: 'Early Discovery' },
-        agent: { mode: 'assisted', reasoning_depth: 'standard', self_correction: true, max_retries: 3, failure_policy: 'ask_user' },
-        literature: { sources: ['pubmed'], enable_crossref: true, enable_preprints: false, year_range: 5, novelty_strictness: 'medium' },
-        system: { auto_start: false, minimize_to_tray: true, pause_on_battery: true, max_cpu_percent: 80, internet_research: true }, // DEFAULT TRUE
+        agent: {
+            mode: 'assisted',
+            reasoning_depth: 'standard',
+            self_correction: true,
+            max_retries: 3,
+            failure_policy: 'ask_user',
+            max_runtime_minutes: 45,
+            use_knowledge_graph: true,
+            human_approval_gates: true
+        },
+        nanobot: {
+            headless_browser: true,
+            stealth_mode: false,
+            browser_timeout: 30
+        },
+        literature: { sources: ['pubmed'], enable_crossref: true, enable_preprints: false, year_range: 5, novelty_strictness: 'medium', grobid_url: 'http://localhost:8070' },
+        system: { max_cpu_percent: 80, internet_research: true, auto_update: true, log_level: 'INFO' },
         ai_provider: {
             mode: 'lm_studio',
-
-
-            // LM Studio
             lm_studio_url: 'http://localhost:1234/v1/models',
             lm_studio_model: '',
-
             google_key: '',
             huggingface_key: '',
             openrouter_key: '',
-            // Groq (Free Tier with high rate limits)
             groq_key: '',
             groq_model: 'llama-3.3-70b-versatile',
-            // Generic Custom API (formerly GLM hardcoded)
             custom_base_url: '',
             custom_key: '',
             custom_model: '',
-            // SurfSense Knowledge Engine (replaces Neo4j)
             surfsense_url: 'http://localhost:3003',
             surfsense_key: '',
             surfsense_auto_start: false,
-
             elsevier_key: '',
             semantic_scholar_key: '',
-            brave_key: '', // Brave Search API
+            brave_key: '',
             serper_key: '',
             jina_key: '',
         },
@@ -110,7 +112,7 @@ export default function SettingsPanel() {
     const [settings, setSettings] = useState<AdvancedSettings>(defaultSettings);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
-    const [activeTab, setActiveTab] = useState('brain');
+    const [activeTab, setActiveTab] = useState<string>('brain');
 
     const [ollamaStatus, setOllamaStatus] = useState<'unknown' | 'success' | 'error'>('unknown');
     const [ollamaModels, setOllamaModels] = useState<string[]>([]);
@@ -148,8 +150,6 @@ export default function SettingsPanel() {
         details: ''
     });
 
-
-
     // Auto-Configuration State
     const [isAutoConfigured, setIsAutoConfigured] = useState(false);
 
@@ -172,7 +172,8 @@ export default function SettingsPanel() {
         custom: { status: 'idle', progress: 0, message: '', details: '' },
         brave: { status: 'idle', progress: 0, message: '', details: '' },
         serper: { status: 'idle', progress: 0, message: '', details: '' },
-        jina: { status: 'idle', progress: 0, message: '', details: '' }
+        jina: { status: 'idle', progress: 0, message: '', details: '' },
+        bohrium: { status: 'idle', progress: 0, message: '', details: '' }
     });
 
     useEffect(() => { loadSettings(); }, []);
@@ -180,49 +181,29 @@ export default function SettingsPanel() {
     const loadSettings = async () => {
         try {
             let localSettings: any = null;
-
-            // PRIORITY 1: Load from localStorage (user's saved settings)
             if (typeof window !== 'undefined') {
                 const cached = localStorage.getItem('biodockify_settings');
                 if (cached) {
                     try {
                         localSettings = JSON.parse(cached);
-                        console.log('[Settings] Loaded from localStorage:', Object.keys(localSettings));
                     } catch (e) {
                         console.warn('[Settings] Failed to parse localStorage cache');
                     }
                 }
 
-                // ALSO: Merge first-run wizard config (individual keys)
-                // These are saved by FirstRunWizard and should override if present
                 const firstRunUrl = localStorage.getItem('biodockify_lm_studio_url');
                 const firstRunModel = localStorage.getItem('biodockify_lm_studio_model');
                 const firstRunMode = localStorage.getItem('biodockify_ai_mode');
 
                 if (firstRunUrl || firstRunModel || firstRunMode) {
-                    console.log('[Settings] Found first-run config:', { firstRunUrl, firstRunModel, firstRunMode });
-
-                    // Merge first-run values into settings
-                    if (!localSettings) {
-                        localSettings = {};
-                    }
-                    if (!localSettings.ai_provider) {
-                        localSettings.ai_provider = {};
-                    }
-
-                    if (firstRunUrl) {
-                        localSettings.ai_provider.lm_studio_url = firstRunUrl;
-                    }
-                    if (firstRunModel) {
-                        localSettings.ai_provider.lm_studio_model = firstRunModel;
-                    }
-                    if (firstRunMode) {
-                        localSettings.ai_provider.mode = firstRunMode;
-                    }
+                    if (!localSettings) localSettings = {};
+                    if (!localSettings.ai_provider) localSettings.ai_provider = {};
+                    if (firstRunUrl) localSettings.ai_provider.lm_studio_url = firstRunUrl;
+                    if (firstRunModel) localSettings.ai_provider.lm_studio_model = firstRunModel;
+                    if (firstRunMode) localSettings.ai_provider.mode = firstRunMode;
                 }
             }
 
-            // Apply local settings if found
             if (localSettings) {
                 setSettings(prev => ({
                     ...prev,
@@ -233,28 +214,10 @@ export default function SettingsPanel() {
                     system: { ...prev.system, ...localSettings.system }
                 }));
 
-                // Check for Auto-Configuration Flag
                 const autoConfigured = localStorage.getItem('biodockify_lm_studio_auto_configured');
-                if (autoConfigured === 'true') {
-                    setIsAutoConfigured(true);
-                }
-                // Enforce /models suffix if present as just /v1 (Normalization)
-                const currentUrl = localSettings?.ai_provider?.lm_studio_url;
-                if (currentUrl && currentUrl.endsWith('/v1')) {
-                    setSettings(prev => ({
-                        ...prev,
-                        ai_provider: {
-                            ...prev.ai_provider,
-                            lm_studio_url: `${currentUrl}/models`
-                        }
-                    }));
-                }
-
-                console.log('[Settings] Applied local settings');
+                if (autoConfigured === 'true') setIsAutoConfigured(true);
             }
 
-            // PRIORITY 2: Try API - but ONLY merge if localStorage was empty
-            // This prevents API from overwriting user's saved settings
             if (!localSettings) {
                 try {
                     const remote = await api.getSettings();
@@ -267,7 +230,6 @@ export default function SettingsPanel() {
                             persona: { ...prev.persona, ...remote.persona },
                             system: { ...prev.system, ...remote.system }
                         }));
-                        console.log('[Settings] Loaded from API (no localStorage found)');
                     }
                 } catch (e) {
                     console.log('[Settings] API unavailable, using defaults');
@@ -283,58 +245,32 @@ export default function SettingsPanel() {
     const handleSave = async () => {
         setSaving(true);
         let apiError = null;
-
-        // 1. Always save to localStorage FIRST (Offline-First Strategy)
         if (typeof window !== 'undefined') {
             try {
                 localStorage.setItem('biodockify_settings', JSON.stringify(settings));
                 localStorage.setItem('biodockify_first_run_complete', 'true');
-                localStorage.setItem('biodockify_ai_config', JSON.stringify({
-                    mode: settings.ai_provider.mode,
-                    lm_studio_url: settings.ai_provider.lm_studio_url,
-                    lm_studio_model: settings.ai_provider.lm_studio_model,
-                    auto_configured: true
-                }));
-                console.log('[Settings] Persisted to localStorage');
             } catch (e) {
                 console.error('LocalStorage save failed:', e);
-                alert('Warning: Failed to save settings locally.');
             }
         }
-
-        // 2. Try to sync with Backend API
         try {
-            console.log('Syncing settings to backend...');
             await api.saveSettings(settings);
-            console.log('[Settings] Synced to backend');
         } catch (e: any) {
-            console.warn('Backend sync failed (running offline?):', e);
+            console.warn('Backend sync failed:', e);
             apiError = e.message || 'Connection failed';
         }
-
         setSaving(false);
-
-        // 3. Feedback to user
         if (apiError) {
-            alert('Settings saved locally! (Backend sync failed - checking connection...)');
-            // Optimistic success - logic continues
+            alert('Settings saved locally! (Backend sync failed)');
         } else {
             alert('Settings saved successfully!');
         }
-
-        // Reload to refresh state
         await loadSettings();
     };
 
-
-    // LM Studio Test with Progress Bar and Detailed Reporting
     const handleTestLmStudio = async () => {
         const rawUrl = (settings.ai_provider.lm_studio_url || 'http://localhost:1234/v1/models').replace(/\/$/, '');
-
-        // We want the base URL for chat/completions (strip /models)
         const baseUrl = rawUrl.replace(/\/models\/?$/, '');
-
-        // We want the full models URL for checking status
         const modelsUrl = `${baseUrl}/models`;
 
         setLmStudioTest({
@@ -345,225 +281,63 @@ export default function SettingsPanel() {
         });
 
         try {
-            // Use universalFetch for reliable connection testing (handles timeouts/CORS better)
             const { universalFetch } = await import('@/lib/services/universal-fetch');
+            const modelsRes = await universalFetch(modelsUrl, { method: 'GET', timeout: 8000 });
 
-            // Step 1: Check if server is reachable
-            setLmStudioTest(prev => ({ ...prev, progress: 25, message: 'Checking Local Server availability...' }));
+            if (!modelsRes.ok) throw new Error(`Server returned ${modelsRes.status}`);
 
-            const modelsRes = await universalFetch(modelsUrl, {
-                method: 'GET',
-                timeout: 15000 // Increased timeout to 15s for stability
-            });
-
-            if (!modelsRes.ok) {
-                if (modelsRes.status === 404) {
-                    throw new Error('404_NOT_FOUND');
-                }
-                throw new Error(`Server returned ${modelsRes.status}`);
-            }
-
-            // Step 2: Check for loaded models
-            setLmStudioTest(prev => ({ ...prev, progress: 50, message: 'Checking loaded models...' }));
             const modelsData = await modelsRes.json();
             const models = modelsData?.data || [];
-
             if (models.length === 0) {
-                setLmStudioTest({
-                    status: 'error',
-                    progress: 100,
-                    message: 'FAILED: No model loaded',
-                    details: 'LM Studio server is running but no model is loaded. Please load a model in LM Studio (select a model from the sidebar and click "Load").'
-                });
-                setAvailableModels([]);
+                setLmStudioTest({ status: 'error', progress: 100, message: 'FAILED: No model loaded', details: 'Server running but no model is loaded.' });
                 return;
             }
 
             setAvailableModels(models);
+            const modelId = models[0]?.id || 'unknown';
 
-            // If current model is empty or not in list, default to first available
-            const currentModelValid = settings.ai_provider.lm_studio_model && models.some((m: any) => m.id === settings.ai_provider.lm_studio_model);
-            let modelId = settings.ai_provider.lm_studio_model;
-
-            if (!currentModelValid) {
-                modelId = models[0]?.id || 'unknown';
-            }
-
-            // Step 3: Test model response
-            setLmStudioTest(prev => ({
-                ...prev,
-                progress: 75,
-                message: `Testing model: ${(modelId || '').split('/').pop()}...`
-            }));
+            setLmStudioTest(prev => ({ ...prev, progress: 75, message: `Testing response...` }));
 
             const testRes = await universalFetch(`${baseUrl}/chat/completions`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    model: modelId,
-                    messages: [{ role: 'user', content: 'Hello' }],
-                    max_tokens: 5
-                }),
-                timeout: 15000
+                body: JSON.stringify({ model: modelId, messages: [{ role: 'user', content: 'Hi' }], max_tokens: 5 }),
+                timeout: 8000
             });
 
-            if (!testRes.ok) {
-                const errData = await testRes.json().catch(() => ({}));
-                throw new Error(errData?.error?.message || `Model test failed: HTTP ${testRes.status}`);
-            }
+            if (!testRes.ok) throw new Error(`Model test failed: HTTP ${testRes.status}`);
 
-            // SUCCESS!
-            setLmStudioTest({
-                status: 'success',
-                progress: 100,
-                message: 'PASSED: LM Studio Connected',
-                details: `Model: ${(modelId || '').split('/').pop()} is ready for use.`
-            });
-
-            // Auto-save the detected model and update settings
-            setSettings(prev => ({
-                ...prev,
-                ai_provider: {
-                    ...prev.ai_provider,
-                    lm_studio_model: modelId
-                }
-            }));
-
-            if (typeof window !== 'undefined') {
-                localStorage.setItem('biodockify_lm_studio_url', baseUrl);
-                localStorage.setItem('biodockify_lm_studio_model', modelId || '');
-            }
-
+            setLmStudioTest({ status: 'success', progress: 100, message: 'PASSED: LM Studio Connected', details: 'Local LLM is ready.' });
         } catch (e: any) {
-            let errorMessage = e?.message || 'Unknown error';
-            let failReason = '';
-            let helpSteps = '';
-
-            if (errorMessage.includes('timeout') || errorMessage.includes('AbortError')) {
-                failReason = 'Connection timed out.';
-                helpSteps = '1. Open LM Studio\n2. Click the "Local Server" tab (left sidebar)\n3. Click "Start Server"\n4. Wait for "Server running" message\n5. Retry this test';
-            } else if (errorMessage.includes('NetworkError') || errorMessage.includes('Failed to fetch') || errorMessage.includes('404_NOT_FOUND')) {
-                failReason = 'Local Server not running.';
-                helpSteps = '1. Open LM Studio\n2. Go to "Local Server" tab (↔ icon in sidebar)\n3. Toggle "Start Server" ON\n4. Wait until you see "Server started"\n5. Retry this test';
-            } else if (errorMessage.includes('ECONNREFUSED')) {
-                failReason = 'Connection refused - server is not running.';
-                helpSteps = 'Please start LM Studio and enable the Local Server.';
-            } else {
-                failReason = errorMessage;
-            }
-
-            setLmStudioTest({
-                status: 'error',
-                progress: 100,
-                message: 'FAILED: Connection Error',
-                details: `${failReason}${helpSteps ? '\n\nTo fix:\n' + helpSteps : ''}\n\n(Debug: ${typeof e === 'object' ? (e.message || JSON.stringify(e)) : String(e)})`
-            });
+            setLmStudioTest({ status: 'error', progress: 100, message: 'FAILED: Connection Error', details: e.message });
         }
     };
 
     const handleTestKey = async (provider: string, key?: string, serviceType: 'llm' | 'elsevier' | 'bohrium' | 'brave' = 'llm', baseUrl?: string, model?: string) => {
-        console.log('[DEBUG] handleTestKey called with:', { provider, key: key ? '***' : 'missing', serviceType, baseUrl, model });
-
-        if (!key) {
-            setApiTestProgress(prev => ({
-                ...prev,
-                [provider]: {
-                    status: 'error',
-                    progress: 100,
-                    message: 'FAILED: No API Key',
-                    details: 'Please enter an API key first.'
-                }
-            }));
-            return;
-        }
-
-        // Step 1: Starting test
-        setApiTestProgress(prev => ({
-            ...prev,
-            [provider]: { status: 'testing', progress: 20, message: 'Validating API key format...', details: '' }
-        }));
+        if (!key) return;
+        setApiTestProgress(prev => ({ ...prev, [provider]: { status: 'testing', progress: 20, message: 'Testing...', details: '' } }));
         setTestStatus(prev => ({ ...prev, [provider]: 'testing' }));
 
         try {
-            // Use universalFetch for DIRECT API testing (bypasses backend, works offline)
-            const { universalFetch } = await import('@/lib/services/universal-fetch');
-
-            // Step 2: Connecting
-            await new Promise(r => setTimeout(r, 300));
-            setApiTestProgress(prev => ({
-                ...prev,
-                [provider]: { ...prev[provider], progress: 50, message: 'Connecting to API endpoint...' }
-            }));
-
-            // Delegate testing to the Backend (Source of Truth)
-            // This avoids CORS issues and ensures the backend can actually connect
-            try {
-                const result = await api.testConnection(
-                    serviceType,
-                    provider,
-                    key,
-                    // Pass baseUrl for custom or special providers if needed (SettingsPanel mostly relies on defaults for known providers)
-                    provider === 'custom' ? baseUrl : undefined,
-                    model
-                );
-
-                if (result.status === 'success') {
-                    setTestStatus(prev => ({ ...prev, [provider]: 'success' }));
-                    setApiTestProgress(prev => ({
-                        ...prev,
-                        [provider]: {
-                            status: 'success',
-                            progress: 100,
-                            message: 'PASSED: API Connected',
-                            details: result.message
-                        }
-                    }));
-                } else {
-                    throw new Error(result.message || 'Verification failed on server');
-                }
-            } catch (err: any) {
-                // Determine user-friendly error
-                const msg = err.message || 'Unknown error';
-                setTestStatus(prev => ({ ...prev, [provider]: 'error' }));
-                setApiTestProgress(prev => ({
-                    ...prev,
-                    [provider]: {
-                        status: 'error',
-                        progress: 100,
-                        message: 'FAILED: Connection Error',
-                        details: msg
-                    }
-                }));
+            const result = await api.testConnection(serviceType, provider, key, provider === 'custom' ? baseUrl : undefined, model);
+            if (result.status === 'success') {
+                setTestStatus(prev => ({ ...prev, [provider]: 'success' }));
+                setApiTestProgress(prev => ({ ...prev, [provider]: { status: 'success', progress: 100, message: 'PASSED', details: result.message } }));
+            } else {
+                throw new Error(result.message);
             }
-        } catch (e: any) {
-            console.error('[DEBUG] API Test Failed (System):', e);
-            setApiTestProgress(prev => ({
-                ...prev,
-                [provider]: {
-                    status: 'error',
-                    progress: 100,
-                    message: 'FAILED: System Error',
-                    details: e.message
-                }
-            }));
+        } catch (err: any) {
+            setTestStatus(prev => ({ ...prev, [provider]: 'error' }));
+            setApiTestProgress(prev => ({ ...prev, [provider]: { status: 'error', progress: 100, message: 'FAILED', details: err.message } }));
         }
     };
 
     const handleSettingChange = (section: keyof AdvancedSettings, value: any) => {
-        setSettings(prev => ({
-            ...prev,
-            [section]: value
-        }));
+        setSettings(prev => ({ ...prev, [section]: value }));
     };
 
     const updatePharmaSource = (key: keyof typeof settings.pharma.sources, val: boolean) => {
-        setSettings({
-            ...settings,
-            pharma: {
-                ...settings.pharma,
-                sources: { ...settings.pharma.sources, [key]: val }
-            }
-        });
+        setSettings({ ...settings, pharma: { ...settings.pharma, sources: { ...settings.pharma.sources, [key]: val } } });
     };
 
     if (loading) return <div className="p-12 text-center text-slate-400">Loading Configuration...</div>;
@@ -583,7 +357,6 @@ export default function SettingsPanel() {
 
     return (
         <div className="max-w-6xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-24">
-
             {/* Header */}
             <div className="flex items-center justify-between sticky top-0 bg-slate-950/80 backdrop-blur z-10 py-4 border-b border-slate-800">
                 <h2 className="text-2xl font-bold text-white flex items-center">
@@ -607,47 +380,34 @@ export default function SettingsPanel() {
                 <TabButton id="channels" label="Channels" icon={Globe} />
                 <TabButton id="pharma" label="Pharma & Sources" icon={Database} />
                 <TabButton id="search" label="Search & Knowledge" icon={Search} />
-                <TabButton id="output" label="Output & Reports" icon={FileText} />
-
+                <TabButton id="output" label="Output & System" icon={FileText} />
                 <TabButton id="backup" label="Cloud Backup" icon={Cloud} />
                 <TabButton id="persona" label="Persona" icon={BookOpen} />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-
                 {/* Main Content Area */}
                 <div className="lg:col-span-2 space-y-8">
 
-                    {/* TAB: AI & BRAIN (Local) */}
+                    {/* TAB: AI & BRAIN */}
                     {activeTab === 'brain' && (
                         <div className="space-y-6 animate-in fade-in duration-300">
-
-                            {/* Agent Zero Persona (Phase 6) */}
                             <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
                                 <h3 className="text-lg font-medium text-white mb-4 flex items-center gap-2">
-                                    <UserCircle className="w-5 h-5 text-indigo-400" />
-                                    Agent Zero Persona
+                                    <UserCircle className="w-5 h-5 text-indigo-400" /> Agent Zero Persona
                                 </h3>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     {AGENT_PERSONAS.map(persona => (
                                         <div
                                             key={persona.id}
                                             onClick={() => handleSettingChange('persona', { ...settings.persona, role: persona.id })}
-                                            className={`cursor-pointer p-4 rounded-lg border transition-all ${settings.persona?.role === persona.id
-                                                ? 'bg-indigo-500/10 border-indigo-500 ring-1 ring-indigo-500/50'
-                                                : 'bg-slate-950 border-slate-800 hover:border-slate-600'
-                                                }`}
+                                            className={`cursor-pointer p-4 rounded-lg border transition-all ${settings.persona?.role === persona.id ? 'bg-indigo-500/10 border-indigo-500 ring-1 ring-indigo-500/50' : 'bg-slate-950 border-slate-800 hover:border-slate-600'}`}
                                         >
                                             <div className="flex items-center justify-between mb-2">
-                                                <span className={`font-semibold ${settings.persona?.role === persona.id ? 'text-indigo-400' : 'text-slate-200'
-                                                    }`}>
-                                                    {persona.label}
-                                                </span>
+                                                <span className={`font-semibold ${settings.persona?.role === persona.id ? 'text-indigo-400' : 'text-slate-200'}`}>{persona.label}</span>
                                                 {settings.persona?.role === persona.id && <CheckCircle className="w-4 h-4 text-indigo-500" />}
                                             </div>
-                                            <p className="text-xs text-slate-400 leading-relaxed">
-                                                {persona.description}
-                                            </p>
+                                            <p className="text-xs text-slate-400 leading-relaxed">{persona.description}</p>
                                         </div>
                                     ))}
                                 </div>
@@ -655,386 +415,39 @@ export default function SettingsPanel() {
 
                             <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
                                 <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
-                                    <Server className="w-5 h-5 mr-2 text-blue-400" /> Primary Provider
-                                </h3>
-                                <div className="space-y-4">
-                                    <div>
-                                        <label className="block text-sm font-medium text-slate-400 mb-2">Provider Strategy</label>
-                                        <select
-                                            value={settings.ai_provider.mode}
-                                            onChange={(e) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, mode: e.target.value as any } })}
-                                            className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white outline-none focus:border-teal-500"
-                                        >
-                                            <option value="auto">Auto (Local First, Cloud Fallback)</option>
-                                            <option value="lm_studio">Local - LM Studio (Primary)</option>
-                                            <option value="z-ai">Cloud Only (GLM/Google/OpenRouter)</option>
-
-                                        </select>
-                                    </div>
-
-                                    {/* Ollama Config (Legacy) - Removed */}
-                                </div>
-
-
-                            </div>
-                        </div>
-                    )}
-
-                    {/* LM Studio Config (Visible only if selected AND on brain tab) */}
-                    {activeTab === 'brain' && settings.ai_provider.mode === 'lm_studio' && (
-                        <div className="mt-4 p-4 bg-indigo-950/20 rounded-lg border border-indigo-500/30">
-                            <div className="flex items-center justify-between mb-3">
-                                <div className="flex items-center space-x-2">
-                                    <span className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse"></span>
-                                    <span className="text-sm font-bold text-indigo-300">LM Studio Configuration</span>
-                                </div>
-                                <a href="https://lmstudio.ai" target="_blank" rel="noreferrer" className="text-xs text-indigo-400 hover:text-white underline">
-                                    Download LM Studio
-                                </a>
-                            </div>
-
-                            <div className="space-y-3">
-                                {isAutoConfigured && (
-                                    <div className="p-3 bg-teal-500/10 border border-teal-500/30 rounded flex items-center justify-between">
-                                        <div className="flex items-center gap-2">
-                                            <Sparkles className="w-4 h-4 text-teal-400" />
-                                            <span className="text-xs font-bold text-teal-300">Auto-Configured by Wizard</span>
-                                        </div>
-                                        <button
-                                            onClick={() => {
-                                                if (confirm("Are you sure you want to manually edit the configuration?")) {
-                                                    setIsAutoConfigured(false);
-                                                    localStorage.removeItem('biodockify_lm_studio_auto_configured');
-                                                }
-                                            }}
-                                            className="text-[10px] text-slate-400 underline hover:text-white"
-                                        >
-                                            Unlock Settings
-                                        </button>
-                                    </div>
-                                )}
-                                <div>
-                                    <label className="text-xs text-slate-400 block mb-1">Local Server URL</label>
-                                    <input
-                                        value={settings.ai_provider.lm_studio_url || 'http://localhost:1234/v1/models'}
-                                        onChange={(e) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, lm_studio_url: e.target.value } })}
-                                        placeholder="http://localhost:1234/v1/models"
-                                        disabled={isAutoConfigured}
-                                        className={`w-full bg-slate-900 border border-slate-700 rounded-md px-3 py-2 text-sm text-white font-mono ${isAutoConfigured ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                    />
-                                </div>
-                                <div>
-                                    <label className="text-xs text-slate-400 block mb-1">Model ID (Optional)</label>
-                                    {availableModels.length > 0 ? (
-                                        <select
-                                            value={settings.ai_provider.lm_studio_model || ''}
-                                            onChange={(e) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, lm_studio_model: e.target.value } })}
-                                            disabled={isAutoConfigured}
-                                            className={`w-full bg-slate-900 border border-slate-700 rounded-md px-3 py-2 text-sm text-white outline-none focus:border-indigo-500 appearance-none ${isAutoConfigured ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                        >
-                                            {availableModels.map((model) => (
-                                                <option key={model.id} value={model.id}>
-                                                    {model.id.split('/').pop()}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    ) : (
-                                        <input
-                                            value={settings.ai_provider.lm_studio_model || ''}
-                                            disabled={isAutoConfigured}
-                                            onChange={(e) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, lm_studio_model: e.target.value } })}
-                                            placeholder="Enter Model ID (Leave empty to use loaded model)"
-                                            className="w-full bg-slate-900 border border-slate-700 rounded-md px-3 py-2 text-sm text-white"
-                                        />
-                                    )}
-                                    <p className="text-[10px] text-slate-500 mt-1">
-                                        Recommended for 8GB RAM: <b>BioMedLM-2.7B</b> or <b>LFM-2 2.6B</b>.
-                                    </p>
-                                </div>
-
-                                {/* LM Studio Test with Progress Bar */}
-                                <div className="space-y-2">
-                                    <button
-                                        onClick={handleTestLmStudio}
-                                        disabled={lmStudioTest.status === 'testing'}
-                                        className={`w-full rounded-md py-2 text-xs font-bold transition-colors ${lmStudioTest.status === 'testing'
-                                            ? 'bg-indigo-800 text-indigo-300 cursor-wait'
-                                            : lmStudioTest.status === 'success'
-                                                ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
-                                                : lmStudioTest.status === 'error'
-                                                    ? 'bg-red-600 hover:bg-red-500 text-white'
-                                                    : 'bg-indigo-600 hover:bg-indigo-500 text-white'
-                                            }`}
-                                    >
-                                        {lmStudioTest.status === 'testing'
-                                            ? '⏳ Testing...'
-                                            : lmStudioTest.status === 'success'
-                                                ? '✅ Retest Connection'
-                                                : lmStudioTest.status === 'error'
-                                                    ? '❌ Retry Test'
-                                                    : 'Test Connection'}
-                                    </button>
-
-                                    {/* Progress Bar */}
-                                    {lmStudioTest.status === 'testing' && (
-                                        <div className="space-y-1">
-                                            <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
-                                                <div
-                                                    className="h-full bg-indigo-500 transition-all duration-300 ease-out"
-                                                    style={{ width: `${lmStudioTest.progress}%` }}
-                                                />
-                                            </div>
-                                            <p className="text-xs text-indigo-300 text-center">{lmStudioTest.message}</p>
-                                        </div>
-                                    )}
-
-                                    {/* Status Display */}
-                                    {lmStudioTest.status === 'success' && (
-                                        <div className="p-3 bg-emerald-950/30 border border-emerald-500/30 rounded-lg">
-                                            <div className="flex items-center space-x-2 mb-1">
-                                                <CheckCircle className="w-4 h-4 text-emerald-400" />
-                                                <span className="text-sm font-bold text-emerald-400">{lmStudioTest.message}</span>
-                                            </div>
-                                            <p className="text-xs text-emerald-300/70">{lmStudioTest.details}</p>
-                                        </div>
-                                    )}
-
-                                    {lmStudioTest.status === 'error' && (
-                                        <div className="space-y-2">
-                                            <div className="p-3 bg-red-950/30 border border-red-500/30 rounded-lg">
-                                                <div className="flex items-center space-x-2 mb-1">
-                                                    <AlertCircle className="w-4 h-4 text-red-400" />
-                                                    <span className="text-sm font-bold text-red-400">{lmStudioTest.message}</span>
-                                                </div>
-                                                <p className="text-xs text-red-300/70">{lmStudioTest.details}</p>
-                                            </div>
-
-                                            {/* Agent Zero Auto-Repair Button */}
-                                            <button
-                                                onClick={async () => {
-                                                    setLmStudioTest(prev => ({ ...prev, status: 'testing', message: '🤖 Agent Zero is attempting repairs...', progress: 10 }));
-                                                    try {
-                                                        const res = await api.diagnoseLmStudio();
-                                                        setLmStudioTest({
-                                                            status: 'success', // Provisional success if repair trigger works, but normally we'd re-test
-                                                            progress: 100,
-                                                            message: 'Diagnosis Complete',
-                                                            details: res.message || 'Repairs attempted. Please re-test connection.'
-                                                        });
-                                                        // Auto-trigger retest after 2s
-                                                        setTimeout(() => handleTestLmStudio(), 2000);
-                                                    } catch (e: any) {
-                                                        setLmStudioTest(prev => ({
-                                                            status: 'error',
-                                                            progress: 100,
-                                                            message: 'Repair Failed',
-                                                            details: e.message || 'Agent Zero could not fix the issue.'
-                                                        }));
-                                                    }
-                                                }}
-                                                className="w-full flex items-center justify-center space-x-2 bg-amber-600 hover:bg-amber-500 text-white py-2 rounded-md font-bold transition-colors"
-                                            >
-                                                <Wrench className="w-4 h-4" />
-                                                <span>Diagnose & Auto-Repair with Agent Zero</span>
-                                            </button>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {activeTab === 'cloud' && (
-                        <div className="space-y-6 animate-in fade-in duration-300">
-                            {/* PREMIUM TIER */}
-                            <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
-                                <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
-                                    <Sparkles className="w-5 h-5 mr-2 text-yellow-400" /> Premium AI Providers
-                                </h3>
-                                <div className="grid gap-4">
-                                    <CloudKeyBox
-                                        name="OpenRouter (Claude/o1)"
-                                        icon="OR"
-                                        modelValue={settings.ai_provider?.openrouter_model}
-                                        onModelChange={(v: string) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, openrouter_model: v } })}
-                                        value={settings.ai_provider.openrouter_key}
-                                        onChange={(v: string) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, openrouter_key: v } })}
-                                        onTest={() => handleTestKey('openrouter', settings.ai_provider.openrouter_key)}
-                                        testStatus={testStatus.openrouter}
-                                        testProgress={apiTestProgress.openrouter}
-                                    />
-
-                                    {/* Unified Paid/Custom Section moved here for logical flow */}
-                                    <div className="p-4 bg-slate-950 rounded-lg border border-slate-800">
-                                        <div className="flex items-center space-x-2 mb-3">
-                                            <h4 className="text-sm font-semibold text-white">Direct Paid Providers</h4>
-                                        </div>
-                                        <div className="space-y-3">
-                                            <select
-                                                className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-sm text-white"
-                                                value={settings.ai_provider.custom_provider || 'openai'}
-                                                onChange={(e) => {
-                                                    const provider = e.target.value;
-                                                    const urlMap: Record<string, string> = {
-                                                        'deepseek': 'https://api.deepseek.com/v1',
-                                                        'openai': 'https://api.openai.com/v1',
-                                                        'custom': ''
-                                                    };
-                                                    setSettings({
-                                                        ...settings,
-                                                        ai_provider: {
-                                                            ...settings.ai_provider,
-                                                            custom_provider: provider,
-                                                            custom_base_url: urlMap[provider] || settings.ai_provider.custom_base_url
-                                                        }
-                                                    });
-                                                }}
-                                            >
-                                                <option value="openai">OpenAI (GPT-4o)</option>
-                                                <option value="deepseek">DeepSeek (Reasoning focus)</option>
-                                                <option value="custom">Other OpenAI-Compatible</option>
-                                            </select>
-                                            <CloudKeyBox
-                                                name="API Key"
-                                                icon="🔑"
-                                                modelValue={settings.ai_provider?.custom_model}
-                                                onModelChange={(v: string) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, custom_model: v } })}
-                                                value={settings.ai_provider.custom_key}
-                                                onChange={(v: string) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, custom_key: v } })}
-                                                onTest={() => handleTestKey('custom', settings.ai_provider.custom_key, 'llm', settings.ai_provider.custom_base_url, settings.ai_provider.custom_model)}
-                                                testStatus={testStatus.custom}
-                                                testProgress={apiTestProgress.custom}
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* FREE TIER */}
-                            <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
-                                <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
-                                    <Cpu className="w-5 h-5 mr-2 text-emerald-400" /> Free / High-Rate Tier
-                                </h3>
-                                <div className="grid gap-4">
-                                    <CloudKeyBox
-                                        name="Google Gemini"
-                                        icon="G"
-                                        modelValue={settings.ai_provider?.google_model}
-                                        onModelChange={(v: string) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, google_model: v } })}
-                                        value={settings.ai_provider.google_key}
-                                        onChange={(v: string) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, google_key: v } })}
-                                        onTest={() => handleTestKey('google', settings.ai_provider.google_key)}
-                                        testStatus={testStatus.google}
-                                        testProgress={apiTestProgress.google}
-                                    />
-                                    <CloudKeyBox
-                                        name="Groq Cloud"
-                                        icon="⚡"
-                                        modelValue={settings.ai_provider?.groq_model}
-                                        onModelChange={(v: string) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, groq_model: v } })}
-                                        value={settings.ai_provider.groq_key}
-                                        onChange={(v: string) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, groq_key: v } })}
-                                        onTest={() => handleTestKey('groq', settings.ai_provider.groq_key, 'llm', 'https://api.groq.com/openai/v1', settings.ai_provider.groq_model)}
-                                        testStatus={testStatus.groq}
-                                        testProgress={apiTestProgress.groq}
-                                    />
-                                    <CloudKeyBox
-                                        name="Hugging Face"
-                                        icon="🤗"
-                                        modelValue={settings.ai_provider?.huggingface_model}
-                                        onModelChange={(v: string) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, huggingface_model: v } })}
-                                        value={settings.ai_provider.huggingface_key}
-                                        onChange={(v: string) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, huggingface_key: v } })}
-                                        onTest={() => handleTestKey('huggingface', settings.ai_provider.huggingface_key)}
-                                        testStatus={testStatus.huggingface}
-                                        testProgress={apiTestProgress.huggingface}
-                                    />
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* TAB: SEARCH & KNOWLEDGE */}
-                    {activeTab === 'search' && (
-                        <div className="space-y-6 animate-in fade-in duration-300">
-                            <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
-                                <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
-                                    <Globe className="w-5 h-5 mr-2 text-teal-400" /> Web Research Engine
+                                    <Bot className="w-5 h-5 mr-2 text-teal-400" /> Research Orchestration
                                 </h3>
                                 <div className="space-y-6">
-                                    <div className="p-4 bg-teal-950/20 border border-teal-500/30 rounded-lg">
-                                        <div className="flex items-center justify-between mb-4">
-                                            <div className="flex items-center space-x-2">
-                                                <span className="text-lg">🦁</span>
-                                                <h4 className="font-bold text-teal-300">Brave Search API</h4>
-                                            </div>
-                                            <a href="https://api.search.brave.com/app/keys" target="_blank" rel="noreferrer" className="text-xs text-teal-400 hover:text-white underline">
-                                                Get Brave API Key
-                                            </a>
+                                    <div className="flex items-center justify-between p-4 bg-slate-950 rounded-lg border border-slate-800">
+                                        <div className="flex-1 pr-4">
+                                            <h4 className="text-sm font-bold text-white mb-1">Human Approval Gates</h4>
+                                            <p className="text-xs text-slate-500">Agent Zero must ask for permission before critical actions.</p>
                                         </div>
-                                        <p className="text-xs text-slate-400 mb-4 leading-relaxed">
-                                            Brave Search provides high-quality, privacy-focused web results. Essential for real-time pharma news and non-academic clinical data.
-                                        </p>
-                                        <div className="flex gap-2">
-                                            <input
-                                                type="password"
-                                                value={settings.ai_provider.brave_key || ''}
-                                                onChange={(e) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, brave_key: e.target.value } })}
-                                                placeholder="Enter Brave Search Key"
-                                                className="flex-1 bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-slate-200 focus:border-teal-500/50 outline-none"
-                                            />
-                                            <button
-                                                onClick={() => handleTestKey('brave', settings.ai_provider.brave_key)}
-                                                disabled={testStatus.brave === 'testing'}
-                                                className={`px-6 py-2 rounded text-xs font-bold transition-all ${testStatus.brave === 'success' ? 'bg-emerald-600 text-white' :
-                                                    testStatus.brave === 'error' ? 'bg-red-600 text-white' :
-                                                        'bg-teal-600 hover:bg-teal-500 text-white'
-                                                    }`}
-                                            >
-                                                {testStatus.brave === 'testing' ? 'Testing...' : 'Test Connection'}
-                                            </button>
-                                        </div>
-
-                                        {/* Brave Test Progress */}
-                                        {apiTestProgress.brave?.status !== 'idle' && (
-                                            <div className="mt-3 p-3 bg-slate-950/50 rounded border border-slate-800">
-                                                <div className="flex items-center gap-2 text-xs">
-                                                    {apiTestProgress.brave.status === 'success' ? <CheckCircle className="w-3 h-3 text-emerald-400" /> : <Activity className="w-3 h-3 text-blue-400" />}
-                                                    <span className={apiTestProgress.brave.status === 'error' ? 'text-red-400' : 'text-slate-300'}>
-                                                        {apiTestProgress.brave.message}
-                                                    </span>
-                                                </div>
-                                                {apiTestProgress.brave.details && <p className="text-[10px] text-slate-500 mt-1">{apiTestProgress.brave.details}</p>}
-                                            </div>
-                                        )}
+                                        <button
+                                            onClick={() => setSettings({ ...settings, agent: { ...settings.agent, human_approval_gates: !settings.agent?.human_approval_gates } })}
+                                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${settings.agent?.human_approval_gates ? 'bg-teal-600' : 'bg-slate-700'}`}
+                                        >
+                                            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${settings.agent?.human_approval_gates ? 'translate-x-6' : 'translate-x-1'}`} />
+                                        </button>
                                     </div>
 
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div className="p-4 bg-slate-950 rounded-lg border border-slate-800 opacity-60">
-                                            <div className="flex items-center space-x-2 mb-2">
-                                                <span className="text-lg">🔍</span>
-                                                <h4 className="text-sm font-semibold text-slate-300">Serper.dev (Fallback)</h4>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-slate-800/50">
+                                        <div className="space-y-4 p-4 bg-slate-900/50 rounded-lg border border-slate-800/50">
+                                            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2"><Globe className="w-3 h-3" /> NanoBot Browser</h4>
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-xs text-slate-300">Headless Mode</span>
+                                                <button onClick={() => setSettings({ ...settings, nanobot: { ...settings.nanobot!, headless_browser: !settings.nanobot?.headless_browser } })} className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${settings.nanobot?.headless_browser ? 'bg-emerald-600' : 'bg-slate-700'}`}><span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${settings.nanobot?.headless_browser ? 'translate-x-5' : 'translate-x-1'}`} /></button>
                                             </div>
-                                            <input
-                                                type="password"
-                                                value={settings.ai_provider.serper_key || ''}
-                                                disabled
-                                                className="w-full bg-slate-900 border border-slate-800 rounded px-3 py-2 text-xs text-slate-500"
-                                                placeholder="Coming Soon"
-                                            />
                                         </div>
-                                        <div className="p-4 bg-slate-950 rounded-lg border border-slate-800 opacity-60">
-                                            <div className="flex items-center space-x-2 mb-2">
-                                                <span className="text-lg">🕷️</span>
-                                                <h4 className="text-sm font-semibold text-slate-300">Jina Reader (Scraping)</h4>
+                                        <div className="space-y-4 p-4 bg-slate-900/50 rounded-lg border border-slate-800/50">
+                                            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2"><Activity className="w-3 h-3" /> Execution Limits</h4>
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-xs text-slate-300">Max Runtime</span>
+                                                <div className="flex items-center gap-2">
+                                                    <input type="number" value={settings.agent?.max_runtime_minutes || 45} onChange={(e) => setSettings({ ...settings, agent: { ...settings.agent, max_runtime_minutes: parseInt(e.target.value) } })} className="w-12 bg-slate-950 border border-slate-700 rounded px-1 py-0.5 text-xs text-white" />
+                                                    <span className="text-[10px] text-slate-500">MIN</span>
+                                                </div>
                                             </div>
-                                            <input
-                                                type="password"
-                                                value={settings.ai_provider.jina_key || ''}
-                                                disabled
-                                                className="w-full bg-slate-900 border border-slate-800 rounded px-3 py-2 text-xs text-slate-500"
-                                                placeholder="Coming Soon"
-                                            />
                                         </div>
                                     </div>
                                 </div>
@@ -1042,810 +455,201 @@ export default function SettingsPanel() {
                         </div>
                     )}
 
-                    {/* TAB: CHANNELS (Telegram, WhatsApp, Discord, Feishu) */}
+                    {/* TAB: CLOUD */}
+                    {activeTab === 'cloud' && (
+                        <div className="space-y-6 animate-in fade-in duration-300">
+                            <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
+                                <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
+                                    <Sparkles className="w-5 h-5 mr-2 text-yellow-400" /> AI Providers
+                                </h3>
+                                <div className="grid gap-4">
+                                    <CloudKeyBox name="OpenRouter" icon="OR" modelValue={settings.ai_provider?.openrouter_model} onModelChange={(v: string) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, openrouter_model: v } })} value={settings.ai_provider.openrouter_key} onChange={(v: string) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, openrouter_key: v } })} onTest={() => handleTestKey('openrouter', settings.ai_provider.openrouter_key)} testStatus={testStatus.openrouter} testProgress={apiTestProgress.openrouter} />
+                                    <CloudKeyBox name="Google Gemini" icon="G" modelValue={settings.ai_provider?.google_model} onModelChange={(v: string) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, google_model: v } })} value={settings.ai_provider.google_key} onChange={(v: string) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, google_key: v } })} onTest={() => handleTestKey('google', settings.ai_provider.google_key)} testStatus={testStatus.google} testProgress={apiTestProgress.google} />
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* TAB: CHANNELS */}
                     {activeTab === 'channels' && (
                         <div className="space-y-6 animate-in fade-in duration-300">
                             <ChannelsSettingsPanel />
                         </div>
                     )}
 
-                    {/* TAB: PHARMA & SOURCES (Fixed Tab Logic + Added Sources) */}
+                    {/* TAB: PHARMA */}
                     {activeTab === 'pharma' && (
                         <div className="space-y-6 animate-in fade-in duration-300">
-                            {/* Rules */}
                             <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
                                 <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
-                                    <Shield className="w-5 h-5 mr-2 text-emerald-400" /> Compliance Rules & Safety
+                                    <Shield className="w-5 h-5 mr-2 text-emerald-400" /> Compliance & Safety
                                 </h3>
                                 <div className="space-y-4">
                                     <div className="flex items-center justify-between p-4 bg-slate-950 rounded-lg border border-slate-800">
                                         <div>
                                             <h4 className="text-sm font-semibold text-white">Citation Lock</h4>
-                                            <p className="text-xs text-slate-400">Block outputs unsupported by sufficient evidence.</p>
+                                            <p className="text-xs text-slate-400">Lock outputs without sufficient sources.</p>
                                         </div>
-                                        <select
-                                            value={settings.pharma.citation_threshold}
-                                            onChange={(e) => setSettings({ ...settings, pharma: { ...settings.pharma, citation_threshold: e.target.value as any } })}
-                                            className="bg-slate-900 border border-slate-700 text-white text-sm rounded-md px-3 py-1"
-                                        >
-                                            <option value="low">Low (1+ Source)</option>
-                                            <option value="medium">Standard (3+ Sources)</option>
-                                            <option value="high">Strict (5+ Sources)</option>
+                                        <select value={settings.pharma.citation_threshold} onChange={(e) => setSettings({ ...settings, pharma: { ...settings.pharma, citation_threshold: e.target.value as any } })} className="bg-slate-900 border border-slate-700 text-white text-sm rounded border-none px-2 py-1">
+                                            <option value="low">Low</option>
+                                            <option value="medium">Standard</option>
+                                            <option value="high">Strict</option>
                                         </select>
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Sources Grid */}
                             <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
                                 <h3 className="text-lg font-semibold text-white mb-6 flex items-center">
                                     <Database className="w-5 h-5 mr-2 text-cyan-400" /> Literature Sources
                                 </h3>
-
-                                <div className="space-y-8">
-                                    {/* Medical & Bio */}
-                                    <div className="space-y-4">
-                                        <h4 className="text-sm font-medium text-slate-400 uppercase tracking-wider">Medical & Biology</h4>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            <ToggleCard icon={Activity} label="PubMed Central" enabled={settings.pharma.sources.pmc} onClick={() => updatePharmaSource('pmc', !settings.pharma.sources.pmc)} color="blue" />
-                                            <ToggleCard icon={Activity} label="ClinicalTrials.gov" enabled={settings.pharma.sources.clinicaltrials} onClick={() => updatePharmaSource('clinicaltrials', !settings.pharma.sources.clinicaltrials)} color="emerald" />
-                                        </div>
-                                    </div>
-
-                                    {/* Broad Academic */}
-                                    <div className="space-y-4">
-                                        <h4 className="text-sm font-medium text-slate-400 uppercase tracking-wider">Broad Academic</h4>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            <ToggleCard icon={Globe} label="Google Scholar" enabled={settings.pharma.sources.google_scholar} onClick={() => updatePharmaSource('google_scholar', !settings.pharma.sources.google_scholar)} color="sky" />
-                                            <ToggleCard icon={BookOpen} label="OpenAlex (Recommended)" enabled={settings.pharma.sources.openalex} onClick={() => updatePharmaSource('openalex', !settings.pharma.sources.openalex)} color="indigo" />
-                                            <ToggleCard icon={BookOpen} label="Semantic Scholar" enabled={settings.pharma.sources.semantic_scholar} onClick={() => updatePharmaSource('semantic_scholar', !settings.pharma.sources.semantic_scholar)} color="violet" />
-                                            <ToggleCard icon={BookOpen} label="IEEE Xplore" enabled={settings.pharma.sources.ieee} onClick={() => updatePharmaSource('ieee', !settings.pharma.sources.ieee)} color="blue" />
-                                        </div>
-                                    </div>
-
-                                    {/* Premium / Paid */}
-                                    <div className="space-y-4">
-                                        <h4 className="text-sm font-medium text-slate-400 uppercase tracking-wider">Premium Databases</h4>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            <ToggleCard icon={Database} label="Elsevier ScienceDirect" enabled={settings.pharma.sources.elsevier} onClick={() => updatePharmaSource('elsevier', !settings.pharma.sources.elsevier)} color="orange" />
-                                            <ToggleCard icon={Database} label="Scopus" enabled={settings.pharma.sources.scopus} onClick={() => updatePharmaSource('scopus', !settings.pharma.sources.scopus)} color="orange" />
-                                            <ToggleCard icon={Database} label="Web of Science" enabled={settings.pharma.sources.wos} onClick={() => updatePharmaSource('wos', !settings.pharma.sources.wos)} color="purple" />
-                                        </div>
-                                        {/* API Key for Elsevier */}
-                                        <div className="p-3 bg-slate-950 rounded-lg border border-slate-800">
-                                            <label className="text-xs font-semibold text-slate-500 mb-2 block uppercase">Elsevier / Scopus API Key</label>
-                                            <div className="flex gap-2">
-                                                <input
-                                                    type="password"
-                                                    value={settings.ai_provider.elsevier_key || ''}
-                                                    onChange={(e) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, elsevier_key: e.target.value } })}
-                                                    placeholder="Enter Elsevier Dev Key"
-                                                    className="flex-1 bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-slate-300 focus:border-orange-500/50 focus:outline-none"
-                                                />
-                                                <button
-                                                    onClick={() => handleTestKey('elsevier', settings.ai_provider.elsevier_key, 'elsevier')}
-                                                    className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-xs font-bold transition-colors"
-                                                >
-                                                    Test
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                        {/* Semantic Scholar API Key */}
-                                        <div className="p-3 bg-slate-950 rounded-lg border border-slate-800 mt-3">
-                                            <label className="text-xs font-semibold text-slate-500 mb-2 block uppercase">Semantic Scholar API Key</label>
-                                            <div className="flex gap-2">
-                                                <input
-                                                    type="password"
-                                                    value={settings.ai_provider.semantic_scholar_key || ''}
-                                                    onChange={(e) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, semantic_scholar_key: e.target.value } })}
-                                                    placeholder="Enter S2 API Key (for higher rate limits)"
-                                                    className="flex-1 bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-slate-300 focus:border-violet-500/50 focus:outline-none"
-                                                />
-                                                <a
-                                                    href="https://www.semanticscholar.org/product/api"
-                                                    target="_blank"
-                                                    rel="noreferrer"
-                                                    className="px-4 py-2 bg-violet-600/20 hover:bg-violet-600/30 text-violet-300 rounded text-xs font-bold transition-colors border border-violet-500/30"
-                                                >
-                                                    Get Key
-                                                </a>
-                                            </div>
-                                            <p className="text-[10px] text-slate-500 mt-1">Free API key provides higher rate limits for literature searches.</p>
-                                        </div>
-                                    </div>
-
-                                    {/* Swarm Intelligence */}
-                                    <div className="space-y-4">
-                                        <h4 className="text-sm font-medium text-slate-400 uppercase tracking-wider">Swarm Intelligence</h4>
-                                        <div className="p-3 bg-slate-950 rounded-lg border border-slate-800">
-                                            <div className="flex items-center justify-between mb-2">
-                                                <label className="text-xs font-semibold text-slate-500 block uppercase">Bohrium AI Agent Node</label>
-                                                {/* Status Badge */}
-                                                {apiTestProgress.bohrium?.status === 'success' && (
-                                                    <span className="flex items-center gap-1 text-[10px] text-emerald-400 bg-emerald-950/30 px-1.5 py-0.5 rounded border border-emerald-900">
-                                                        <CheckCircle className="w-3 h-3" /> Connected
-                                                    </span>
-                                                )}
-                                            </div>
-                                            <div className="flex gap-2">
-                                                <input
-                                                    type="text"
-                                                    value={settings.ai_provider.bohrium_url || 'http://localhost:7000/mcp'}
-                                                    onChange={(e) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, bohrium_url: e.target.value } })}
-                                                    placeholder="http://localhost:7000/mcp"
-                                                    className="flex-1 bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-slate-300 focus:border-violet-500/50 focus:outline-none font-mono"
-                                                />
-                                                <button
-                                                    onClick={() => handleTestKey('bohrium', 'public-access', 'bohrium', settings.ai_provider.bohrium_url)}
-                                                    disabled={testStatus.bohrium === 'testing'}
-                                                    className={`px-4 py-2 rounded text-xs font-bold transition-colors ${testStatus.bohrium === 'testing'
-                                                        ? 'bg-slate-800 text-slate-400 cursor-wait'
-                                                        : 'bg-slate-800 hover:bg-slate-700 text-slate-300'
-                                                        }`}
-                                                >
-                                                    {testStatus.bohrium === 'testing' ? '...' : 'Test'}
-                                                </button>
-                                            </div>
-                                            {/* Error Message */}
-                                            {apiTestProgress.bohrium?.status === 'error' && (
-                                                <div className="mt-2 p-2 bg-red-950/20 border border-red-900/30 rounded flex items-start gap-2">
-                                                    <AlertCircle className="w-3 h-3 text-red-400 mt-0.5" />
-                                                    <div>
-                                                        <p className="text-[10px] font-bold text-red-400">{apiTestProgress.bohrium.message}</p>
-                                                        <p className="text-[10px] text-red-300/70">{apiTestProgress.bohrium.details}</p>
-                                                    </div>
-                                                </div>
-                                            )}
-                                            <p className="text-[10px] text-slate-500 mt-1">Connects to independent Bohrium agents (MCP) for autonomous literature discovery.</p>
-                                        </div>
-                                    </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <ToggleCard icon={Activity} label="PubMed Central" enabled={settings.pharma.sources.pmc} onClick={() => updatePharmaSource('pmc', !settings.pharma.sources.pmc)} color="emerald" />
+                                    <ToggleCard icon={Globe} label="Google Scholar" enabled={settings.pharma.sources.google_scholar} onClick={() => updatePharmaSource('google_scholar', !settings.pharma.sources.google_scholar)} color="sky" />
+                                    <ToggleCard icon={BookOpen} label="OpenAlex" enabled={settings.pharma.sources.openalex} onClick={() => updatePharmaSource('openalex', !settings.pharma.sources.openalex)} color="indigo" />
                                 </div>
                             </div>
                         </div>
                     )}
 
-                    {/* TAB: OUTPUT & SYSTEM & PERSONA (Corrected Logic) */}
-
+                    {/* TAB: OUTPUT & SYSTEM */}
                     {activeTab === 'output' && (
                         <div className="space-y-6 animate-in fade-in duration-300">
                             <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
                                 <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
                                     <FileText className="w-5 h-5 mr-2 text-orange-400" /> Reporting Configuration
                                 </h3>
-                                <div className="space-y-6">
+                                <div className="space-y-4">
                                     <div>
-                                        <label className="block text-sm font-medium text-slate-400 mb-3">Preferred Output Format</label>
-                                        <div className="flex flex-wrap gap-3">
-                                            {['markdown', 'pdf', 'docx', 'latex'].map((fmt) => (
-                                                <button
-                                                    key={fmt}
-                                                    onClick={() => setSettings({ ...settings, output: { ...settings.output, format: fmt as any } })}
-                                                    className={`px-4 py-2 rounded-lg text-sm font-bold uppercase transition-all border ${settings.output.format === fmt
-                                                        ? 'bg-orange-500/20 text-orange-400 border-orange-500'
-                                                        : 'bg-slate-950 border-slate-700 text-slate-500 hover:text-white'
-                                                        }`}
-                                                >
-                                                    {fmt}
-                                                </button>
+                                        <label className="block text-sm font-medium text-slate-400 mb-2">Preferred Format</label>
+                                        <div className="flex gap-2">
+                                            {['markdown', 'pdf', 'docx'].map(fmt => (
+                                                <button key={fmt} onClick={() => setSettings({ ...settings, output: { ...settings.output, format: fmt as any } })} className={`px-3 py-1.5 rounded text-xs font-bold uppercase border ${settings.output.format === fmt ? 'bg-orange-500/20 border-orange-500 text-orange-400' : 'bg-slate-950 border-slate-800 text-slate-500'}`}>{fmt}</button>
                                             ))}
                                         </div>
                                     </div>
+                                </div>
+                            </div>
 
-                                    <div>
-                                        <label className="block text-sm font-medium text-slate-400 mb-2">Citation Style</label>
+                            {/* System Internals */}
+                            <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
+                                <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
+                                    <Wrench className="w-5 h-5 mr-2 text-blue-400" /> System Internals
+                                </h3>
+                                <div className="space-y-4">
+                                    <div className="flex items-center justify-between p-4 bg-slate-950 rounded-lg border border-slate-800">
+                                        <div>
+                                            <h4 className="text-sm font-semibold text-white">Log Level</h4>
+                                            <p className="text-xs text-slate-400">Verbosity of backend research logs.</p>
+                                        </div>
                                         <select
-                                            value={settings.output.citation_style}
-                                            onChange={(e) => setSettings({ ...settings, output: { ...settings.output, citation_style: e.target.value as any } })}
-                                            className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white"
+                                            value={settings.system?.log_level || 'INFO'}
+                                            onChange={(e) => setSettings({ ...settings, system: { ...settings.system, log_level: e.target.value as any } })}
+                                            className="bg-slate-900 border border-slate-700 text-white text-sm rounded px-2 py-1"
                                         >
-                                            <option value="apa">APA 7th Edition (Author, Date)</option>
-                                            <option value="nature">Nature (Superscript Numbered)</option>
-                                            <option value="ieee">IEEE [1]</option>
-                                            <option value="chicago">Chicago Manual of Style</option>
+                                            <option value="DEBUG">DEBUG</option>
+                                            <option value="INFO">INFO</option>
+                                            <option value="WARNING">WARNING</option>
+                                            <option value="ERROR">ERROR</option>
                                         </select>
                                     </div>
-
-                                    <div>
-                                        <label className="block text-sm font-medium text-slate-400 mb-2">Output Directory</label>
-                                        <div className="flex space-x-2">
-                                            <input
-                                                value={settings.output.output_dir}
-                                                onChange={(e) => setSettings({ ...settings, output: { ...settings.output, output_dir: e.target.value } })}
-                                                className="flex-1 bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-slate-300 font-mono text-sm"
-                                            />
-                                            <button
-                                                onClick={() => {
-                                                    alert("File browsing is not available in the web version. Please type the path manually.");
-                                                }}
-                                                className="px-4 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-sm border border-slate-600"
-                                            >
-                                                Browse
-                                            </button>
-                                            <button
-                                                onClick={() => {
-                                                    alert("File explorer is not available in the web version.");
-                                                }}
-                                                className="px-4 bg-teal-700 hover:bg-teal-600 text-white rounded-lg text-sm border border-teal-600"
-                                                title="Open folder in file explorer"
-                                            >
-                                                <FolderOpen className="w-4 h-4" />
-                                            </button>
+                                    <div className="flex items-center justify-between p-4 bg-slate-950 rounded-lg border border-slate-800">
+                                        <div>
+                                            <h4 className="text-sm font-semibold text-white">Auto-Update Agent</h4>
+                                            <p className="text-xs text-slate-400">Pull latest Docker images automatically.</p>
                                         </div>
+                                        <button
+                                            onClick={() => setSettings({ ...settings, system: { ...settings.system, auto_update: !settings.system?.auto_update } })}
+                                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${settings.system?.auto_update ? 'bg-teal-600' : 'bg-slate-700'}`}
+                                        >
+                                            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${settings.system?.auto_update ? 'translate-x-6' : 'translate-x-1'}`} />
+                                        </button>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     )}
 
-
-
+                    {/* TAB: BACKUP */}
                     {activeTab === 'backup' && (
                         <div className="space-y-6 animate-in fade-in duration-300">
-                            {/* Backup Control Center */}
                             <CloudBackupControl />
                         </div>
                     )}
 
+                    {/* TAB: PERSONA */}
                     {activeTab === 'persona' && (
                         <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 animate-in fade-in duration-300">
                             <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
-                                <BookOpen className="w-5 h-5 mr-2 text-yellow-400" /> Research Persona
+                                <BookOpen className="w-5 h-5 mr-2 text-yellow-400" /> Research Persona Details
                             </h3>
-                            <div className="space-y-6">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div className="space-y-2">
-                                        <label className="text-sm font-medium text-slate-300">Full Name</label>
-                                        <input
-                                            type="text"
-                                            value={settings.persona?.name || ''}
-                                            onChange={(e) => setSettings({ ...settings, persona: { ...settings.persona, name: e.target.value } })}
-                                            placeholder="e.g. Dr. Jane Doe"
-                                            className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-emerald-500/50"
-                                        />
-                                        <p className="text-xs text-slate-500">How should BioDockify AI address you?</p>
-                                    </div>
-
-                                    <div className="space-y-2">
-                                        <label className="text-sm font-medium text-slate-300">Email Address</label>
-                                        <input
-                                            type="email"
-                                            value={settings.persona?.email || ''}
-                                            onChange={(e) => setSettings({ ...settings, persona: { ...settings.persona, email: e.target.value } })}
-                                            placeholder="e.g. jane@example.com"
-                                            className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-emerald-500/50"
-                                        />
-                                        <p className="text-xs text-slate-500">Required for free license verification.</p>
-                                    </div>
-
-                                    <div className="space-y-2">
-                                        <label className="text-sm font-medium text-slate-300">User Role</label>
-                                        <select
-                                            value={settings.persona?.role || 'PhD Student'}
-                                            onChange={(e) => setSettings({ ...settings, persona: { ...settings.persona, role: e.target.value as any } })}
-                                            className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-emerald-500/50"
-                                        >
-                                            <option value="PhD Student">PhD Student</option>
-                                            <option value="PG Student">PG Student</option>
-                                            <option value="Senior Researcher">Senior Researcher</option>
-                                            <option value="Industry Scientist">Industry Scientist</option>
-                                        </select>
-                                        <p className="text-xs text-slate-500">Defines the complexity of language and assumptions made by the agent.</p>
-                                    </div>
-
-                                    <div className="space-y-2">
-                                        <label className="text-sm font-medium text-slate-300">Strictness Level</label>
-                                        <select
-                                            value={settings.persona?.strictness || 'balanced'}
-                                            onChange={(e) => setSettings({ ...settings, persona: { ...settings.persona, strictness: e.target.value as any } })}
-                                            className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-emerald-500/50"
-                                        >
-                                            <option value="exploratory">Exploratory (Creative)</option>
-                                            <option value="balanced">Balanced (Standard)</option>
-                                            <option value="conservative">Conservative (High Proof)</option>
-                                        </select>
-                                        <p className="text-xs text-slate-500">Controls how much speculation is allowed in answers.</p>
-                                    </div>
-                                </div>
-
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium text-slate-300">Start Introduction (Who are you?)</label>
-                                    <textarea
-                                        value={settings.persona?.introduction || ''}
-                                        onChange={(e) => setSettings({ ...settings, persona: { ...settings.persona, introduction: e.target.value } })}
-                                        placeholder="I am a researcher specializing in neurodegenerative diseases..."
-                                        rows={3}
-                                        className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-emerald-500/50 resize-none"
-                                    />
-                                    <p className="text-xs text-slate-500">The agent will use this context to tailor its tone and examples.</p>
-                                </div>
-
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium text-slate-300">Current Work (What are you working on?)</label>
-                                    <textarea
-                                        value={settings.persona?.research_focus || ''}
-                                        onChange={(e) => setSettings({ ...settings, persona: { ...settings.persona, research_focus: e.target.value } })}
-                                        placeholder="Investigating the role of Tau proteins in early-stage Alzheimer's..."
-                                        rows={3}
-                                        className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-emerald-500/50 resize-none"
-                                    />
-                                    <p className="text-xs text-slate-500">Specific context that helps the agent prioritize relevant papers.</p>
-                                </div>
-
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium text-slate-300">Department / Faculty</label>
-                                    <input
-                                        type="text"
-                                        value={settings.persona?.department || ''}
-                                        onChange={(e) => setSettings({ ...settings, persona: { ...settings.persona, department: e.target.value } })}
-                                        placeholder="e.g., Pharmaceutical Sciences, Clinical Oncology, Molecular Biology"
-                                        className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-emerald-500/50"
-                                    />
-                                    <p className="text-xs text-slate-500">Your academic department or research unit for thesis/manuscript headers.</p>
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="text-xs text-slate-500 uppercase block mb-1">Full Name</label>
+                                    <input type="text" value={settings.persona?.name || ''} onChange={e => setSettings({ ...settings, persona: { ...settings.persona, name: e.target.value } })} className="w-full bg-slate-950 border border-slate-800 rounded p-2 text-sm text-white" />
                                 </div>
                             </div>
                         </div>
                     )}
-
                 </div>
 
-                {/* Sidebar Summary & Status (Visible on Large Screens Only) */}
+                {/* Sidebar Summary */}
                 <div className="space-y-6 hidden lg:block">
                     <div className="bg-teal-950/30 border border-teal-900/50 rounded-xl p-6">
                         <h4 className="text-sm font-bold text-teal-400 mb-3 uppercase tracking-wider">Active Status</h4>
                         <ul className="space-y-3 text-sm">
-                            <li className="flex justify-between">
-                                <span className="text-slate-400">Mode</span>
-                                <span className="text-white font-mono">{settings.ai_provider?.mode?.toUpperCase()}</span>
-                            </li>
-                            <li className="flex justify-between">
-                                <span className="text-slate-400">Export</span>
-                                <span className="text-white font-mono">{settings.output?.format?.toUpperCase()}</span>
-                            </li>
-                            <li className="flex justify-between">
-                                <span className="text-slate-400">Cloud Keys</span>
-                                <span className="text-white font-mono">
-                                    {/* Updated to use ai_provider keys */}
-                                    {[settings.ai_provider?.google_key, settings.ai_provider?.huggingface_key, settings.ai_provider?.glm_key].filter(k => k).length} Active
-                                </span>
-                            </li>
-                            <li className="flex justify-between">
-                                <span className="text-slate-400">Role</span>
-                                <span className="text-white font-mono truncate max-w-[100px]">{settings.persona?.role}</span>
-                            </li>
+                            <li className="flex justify-between"><span className="text-slate-400">Mode</span><span className="text-white font-mono">{settings.ai_provider?.mode?.toUpperCase()}</span></li>
+                            <li className="flex justify-between"><span className="text-slate-400">Format</span><span className="text-white font-mono">{settings.output?.format?.toUpperCase()}</span></li>
                         </ul>
                     </div>
                 </div>
-
             </div>
         </div>
     );
 }
 
 // --- Helper Components ---
-
-const CloudKeyBox = ({ name, value, icon, onChange, onTest, testStatus = 'idle', testProgress, modelValue, onModelChange, modelPlaceholder, ...props }: any) => {
+const CloudKeyBox = ({ name, value, icon, onChange, onTest, testStatus = 'idle', testProgress, modelValue, onModelChange, modelPlaceholder }: any) => {
     const getStatusIcon = () => {
-        switch (testStatus) {
-            case 'testing':
-                return <RefreshCw className="w-3 h-3 animate-spin text-blue-400" />;
-            case 'success':
-                return <CheckCircle className="w-3 h-3 text-green-400" />;
-            case 'error':
-                return <AlertCircle className="w-3 h-3 text-red-400" />;
-            default:
-                return null;
-        }
-    };
-
-    const getStatusBorder = () => {
-        switch (testStatus) {
-            case 'testing':
-                return 'border-blue-500/50';
-            case 'success':
-                return 'border-green-500/50';
-            case 'error':
-                return 'border-red-500/50';
-            default:
-                return 'border-slate-800';
-        }
+        if (testStatus === 'testing') return <RefreshCw className="w-3 h-3 animate-spin text-blue-400" />;
+        if (testStatus === 'success') return <CheckCircle className="w-3 h-3 text-green-400" />;
+        if (testStatus === 'error') return <AlertCircle className="w-3 h-3 text-red-400" />;
+        return null;
     };
 
     return (
-        <div className={`p-4 bg-slate-950 rounded-lg border ${getStatusBorder()} transition-colors`}>
+        <div className={`p-4 bg-slate-950 rounded-lg border ${testStatus === 'success' ? 'border-green-500/30' : 'border-slate-800'}`}>
             <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center space-x-2">
-                    <span className="text-lg font-bold text-slate-400 font-mono bg-slate-900 px-2 py-1 rounded">{icon}</span>
+                    <span className="text-xs font-bold text-slate-400 font-mono bg-slate-900 px-2 py-1 rounded">{icon}</span>
                     <span className="text-sm font-medium text-slate-300">{name}</span>
-                    <span className="text-[10px] text-slate-600 bg-slate-800/50 px-2 py-0.5 rounded">OPTIONAL</span>
                 </div>
-                <div className="flex items-center space-x-2">
-                    {getStatusIcon()}
-                </div>
+                {getStatusIcon()}
             </div>
             <div className="flex space-x-2">
-                <input
-                    type="password"
-                    value={value || ''}
-                    onChange={(e) => onChange(e.target.value)}
-                    placeholder="sk-..."
-                    className="flex-1 bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-slate-300 focus:border-teal-500/50 focus:outline-none"
-                />
-                <button
-                    onClick={onTest}
-                    disabled={testStatus === 'testing'}
-                    className={`px-4 py-2 rounded text-xs font-bold transition-colors ${testStatus === 'testing'
-                        ? 'bg-slate-700 text-slate-400 cursor-wait'
-                        : 'bg-slate-800 hover:bg-slate-700 text-slate-300'
-                        }`}
-                >
-                    {testStatus === 'testing' ? '...' : 'Test'}
-                </button>
-            </div>
-
-            {/* Progress Bar and Status Display */}
-            {testProgress && testProgress.status !== 'idle' && (
-                <div className="mt-3 space-y-2">
-                    {/* Progress Bar */}
-                    {testProgress.status === 'testing' && (
-                        <div className="space-y-1">
-                            <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                                <div
-                                    className="h-full bg-blue-500 transition-all duration-300 ease-out"
-                                    style={{ width: `${testProgress.progress}%` }}
-                                />
-                            </div>
-                            <p className="text-[10px] text-blue-300 text-center">{testProgress.message}</p>
-                        </div>
-                    )}
-
-                    {/* Success Status */}
-                    {testProgress.status === 'success' && (
-                        <div className="p-2 bg-emerald-950/30 border border-emerald-500/30 rounded">
-                            <div className="flex items-center space-x-1.5">
-                                <CheckCircle className="w-3 h-3 text-emerald-400" />
-                                <span className="text-xs font-bold text-emerald-400">{testProgress.message}</span>
-                            </div>
-                            {testProgress.details && (
-                                <p className="text-[10px] text-emerald-300/70 mt-1">{testProgress.details}</p>
-                            )}
-                        </div>
-                    )}
-
-                    {/* Error Status */}
-                    {testProgress.status === 'error' && (
-                        <div className="p-2 bg-red-950/30 border border-red-500/30 rounded">
-                            <div className="flex items-center space-x-1.5">
-                                <AlertCircle className="w-3 h-3 text-red-400" />
-                                <span className="text-xs font-bold text-red-400">{testProgress.message}</span>
-                            </div>
-                            {testProgress.details && (
-                                <p className="text-[10px] text-red-300/70 mt-1">{testProgress.details}</p>
-                            )}
-                        </div>
-                    )}
-                </div>
-            )}
-
-            {/* Model ID Input (Optional) */}
-            {onModelChange && (
-                <div className="mt-3">
-                    <label className="text-xs text-slate-500 block mb-1">Model ID (Optional - Overrides Default)</label>
-                    <input
-                        type="text"
-                        value={modelValue || ''}
-                        onChange={(e) => onModelChange(e.target.value)}
-                        placeholder={modelPlaceholder || "Default Model"}
-                        className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-slate-300 focus:border-teal-500/50 focus:outline-none"
-                    />
-                </div>
-            )}
-        </div>
-    );
-};
-
-// --- Cloud Backup Component ---
-const CloudBackupControl = () => {
-    const [status, setStatus] = useState<any>(null);
-    const [history, setHistory] = useState<any[]>([]);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState('');
-    const [verifying, setVerifying] = useState(false);
-    const [authCode, setAuthCode] = useState(''); // For MVP manual paste if needed
-
-    // License Gate Hooks
-    const [licenseActive, setLicenseActive] = useState(false);
-    const [verifyingLicense, setVerifyingLicense] = useState(false);
-    const [licenseName, setLicenseName] = useState('');
-    const [licenseEmail, setLicenseEmail] = useState('');
-    const [licenseError, setLicenseError] = useState('');
-
-    useEffect(() => {
-        fetchStatus();
-        const stored = localStorage.getItem('biodockify_license_active');
-        if (stored === 'true') setLicenseActive(true);
-    }, []);
-
-    const fetchStatus = async () => {
-        try {
-            const s = await api.backup.getStatus();
-            setStatus(s);
-            if (s.connected) {
-                const h = await api.backup.getHistory();
-                setHistory(h);
-            }
-        } catch (e) {
-            console.error(e);
-        }
-    };
-
-    const handleVerifyLicense = async () => {
-        if (!licenseName || !licenseEmail) {
-            setLicenseError("Please enter both Name and Email.");
-            return;
-        }
-        setVerifyingLicense(true);
-        setLicenseError('');
-        try {
-            const res = await api.auth.verify(licenseName, licenseEmail);
-            if (res.success) {
-                localStorage.setItem('biodockify_license_active', 'true');
-                setLicenseActive(true);
-                alert("License Verified! Cloud features unlocked.");
-            } else {
-                setLicenseError(res.message || "Verification failed.");
-            }
-        } catch (e: any) {
-            setLicenseError("Error: " + e.message);
-        } finally {
-            setVerifyingLicense(false);
-        }
-    };
-
-    const handleSignIn = async () => {
-        try {
-            setLoading(true);
-            const { url } = await api.backup.getAuthUrl();
-            window.open(url, '_blank', 'width=500,height=600');
-            setError("Close the popup after signing in. (Simulation: Enter 'simulated_valid_code_123' below)");
-        } catch (e: any) {
-            setError("Failed to start auth: " + e.message);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleVerify = async () => {
-        if (!authCode) return;
-        setVerifying(true);
-        try {
-            await api.backup.verifyAuth(authCode);
-            await fetchStatus();
-            setError('');
-            setAuthCode('');
-            alert("Successfully connected to BioDockify Cloud Drive!");
-        } catch (e: any) {
-            setError("Verification failed: " + e.message);
-        } finally {
-            setVerifying(false);
-        }
-    };
-
-    const handleBackupNow = async () => {
-        if (!confirm("Start backup now? This may take a few moments.")) return;
-        try {
-            setLoading(true);
-            await api.backup.runBackup();
-            alert("Backup Initiated in Background");
-            setTimeout(fetchStatus, 2000);
-        } catch (e: any) {
-            alert("Backup Failed: " + e.message);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleRestore = async (id: string) => {
-        if (!confirm("⚠️ RESTORE WARNING: This will overwrite local research files. Are you sure?")) return;
-        try {
-            setLoading(true);
-            await api.backup.restore(id);
-            alert("Restore Complete! Please restart the application.");
-        } catch (e: any) {
-            alert("Restore Failed: " + e.message);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    // 1. Check License
-    if (!licenseActive) {
-        return (
-            <div className="flex flex-col items-center justify-center p-12 text-center space-y-6 bg-slate-900/50 rounded-xl border border-slate-800">
-                <div className="bg-slate-800 p-4 rounded-full">
-                    <Lock className="w-8 h-8 text-slate-400" />
-                </div>
-                <div>
-                    <h3 className="text-xl font-bold text-white mb-2">Cloud Features Locked</h3>
-                    <p className="text-slate-400 max-w-md mx-auto">
-                        Google Drive Backup and other cloud features are available for registered users.
-                        Enter your registration details to unlock.
-                    </p>
-                </div>
-
-                <div className="w-full max-w-sm space-y-4 text-left bg-slate-950 p-6 rounded-lg border border-slate-800">
-                    <div>
-                        <label className="text-xs text-slate-500 uppercase font-bold mb-1 block">Registered Name</label>
-                        <input
-                            type="text"
-                            className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-white"
-                            placeholder="John Doe"
-                            value={licenseName}
-                            onChange={e => setLicenseName(e.target.value)}
-                        />
-                    </div>
-                    <div>
-                        <label className="text-xs text-slate-500 uppercase font-bold mb-1 block">Registered Email</label>
-                        <input
-                            type="email"
-                            className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-white"
-                            placeholder="john@example.com"
-                            value={licenseEmail}
-                            onChange={e => setLicenseEmail(e.target.value)}
-                        />
-                    </div>
-
-                    {licenseError && (
-                        <p className="text-xs text-red-400 bg-red-950/30 p-2 rounded">{licenseError}</p>
-                    )}
-
-                    <button
-                        onClick={handleVerifyLicense}
-                        disabled={verifyingLicense}
-                        className="w-full bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white font-bold py-2 rounded-lg transition-all disabled:opacity-50"
-                    >
-                        {verifyingLicense ? "Verifying..." : "Verify & Unlock"}
-                    </button>
-
-                    <p className="text-[10px] text-center text-slate-600">
-                        Don't have a login? <a href="#" className="underline hover:text-slate-400">Register for Free</a>
-                    </p>
-                </div>
-            </div>
-        );
-    }
-
-    // 2. If connected, show control panel
-    if (status?.connected) {
-        return (
-            <div className="space-y-6">
-                <div className="bg-emerald-950/30 border border-emerald-900 rounded-xl p-6">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                            <div className="p-3 bg-emerald-900/50 rounded-full">
-                                <CheckCircle className="w-8 h-8 text-emerald-400" />
-                            </div>
-                            <div>
-                                <h3 className="text-xl font-bold text-white">Active Backup</h3>
-                                <p className="text-sm text-emerald-400 font-mono">{status.email}</p>
-                            </div>
-                        </div>
-                        <button
-                            onClick={handleBackupNow}
-                            disabled={loading}
-                            className="px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-bold shadow-lg shadow-emerald-900/20 disabled:opacity-50"
-                        >
-                            {loading ? 'Running...' : 'Backup Now'}
-                        </button>
-                    </div>
-                </div>
-
-                <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
-                    <h4 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-4">Snapshots</h4>
-                    {history.length === 0 ? (
-                        <p className="text-slate-500">No backups found.</p>
-                    ) : (
-                        <div className="space-y-3">
-                            {history.map(item => (
-                                <div key={item.id} className="flex items-center justify-between p-4 bg-slate-950/50 rounded-lg border border-slate-800 hover:border-slate-700 transition-colors">
-                                    <div className="flex items-center gap-3">
-                                        <div className="p-2 bg-slate-800 rounded">
-                                            <Database className="w-4 h-4 text-slate-400" />
-                                        </div>
-                                        <div>
-                                            <p className="font-mono text-sm text-slate-200">{item.name}</p>
-                                            <p className="text-xs text-slate-500">{new Date(item.created_time).toLocaleString()} • {(item.size / 1024 / 1024).toFixed(2)} MB</p>
-                                        </div>
-                                    </div>
-                                    <button
-                                        onClick={() => handleRestore(item.id)}
-                                        className="text-xs font-bold text-teal-500 hover:text-teal-400 px-3 py-1.5 bg-teal-950/50 hover:bg-teal-900 rounded border border-teal-900 transition-colors"
-                                    >
-                                        RESTORE
-                                    </button>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                </div>
-            </div>
-        );
-    }
-
-    // 3. Not connected - Show Initialize Screen
-    return (
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-8 text-center space-y-6">
-            <div className="mx-auto w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mb-4">
-                <Cloud className="w-8 h-8 text-slate-400" />
-            </div>
-            <div>
-                <h3 className="text-2xl font-bold text-white mb-2">Initialize Cloud Backup</h3>
-                <p className="text-slate-400 max-w-md mx-auto">
-                    Securely backup your research data, personas, and settings to Google Drive.
-                    BioDockify encrypts all data before upload.
-                </p>
-            </div>
-
-            <div className="max-w-xs mx-auto space-y-4">
-                <button
-                    onClick={handleSignIn}
-                    className="w-full py-3 bg-white text-slate-900 rounded-lg font-bold hover:bg-slate-100 transition-colors flex items-center justify-center gap-2"
-                >
-                    <img src="https://www.google.com/favicon.ico" className="w-4 h-4" alt="G" />
-                    Sign in with BioDockify
-                </button>
-                {error && (
-                    <div className="p-3 bg-red-900/20 border border-red-900/50 rounded text-xs text-red-400">
-                        {error}
-                        {/* Simulation Input */}
-                        <div className="mt-2 flex gap-2">
-                            <input
-                                value={authCode}
-                                onChange={e => setAuthCode(e.target.value)}
-                                placeholder="Paste Code (simulated_valid_code_123)"
-                                className="flex-1 bg-black/30 rounded px-2 py-1 text-white border border-red-800/50"
-                            />
-                            <button onClick={handleVerify} className="px-2 bg-red-800 text-white rounded font-bold">OK</button>
-                        </div>
-                    </div>
-                )}
-                <p className="text-xs text-slate-600">
-                    By signing in, you agree to enable access to your specific research app folder (drive.file).
-                </p>
+                <input type="password" value={value || ''} onChange={(e) => onChange(e.target.value)} className="flex-1 bg-slate-900 border border-slate-700 rounded px-2 py-1 text-sm text-white" placeholder="Key..." />
+                <button onClick={onTest} disabled={testStatus === 'testing'} className="px-3 bg-slate-800 text-xs text-white rounded hover:bg-slate-700">Test</button>
             </div>
         </div>
     );
 };
-const ToggleSetting = ({ label, desc, enabled, onChange }: any) => (
-    <div className="flex items-center justify-between p-4 bg-slate-950 rounded-lg border border-slate-800">
-        <div>
-            <h4 className="text-sm font-semibold text-white">{label}</h4>
-            <p className="text-xs text-slate-400">{desc}</p>
-        </div>
-        <button
-            onClick={onChange}
-            className={`w-12 h-6 rounded-full relative transition-colors ${enabled ? 'bg-teal-500' : 'bg-slate-700'}`}
-        >
-            <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${enabled ? 'left-7' : 'left-1'}`} />
-        </button>
-    </div>
+
+const ToggleCard = ({ icon: Icon, label, enabled, onClick, color = 'teal' }: any) => (
+    <button onClick={onClick} className={`flex items-center p-3 rounded-lg border transition-all ${enabled ? `bg-${color}-500/10 border-${color}-500/50 text-white` : 'bg-slate-950 border-slate-800 text-slate-500'} w-full`}>
+        <div className={`p-2 rounded-md mr-3 ${enabled ? `bg-${color}-500 text-black` : 'bg-slate-900'}`}><Icon className="w-4 h-4" /></div>
+        <span className="font-semibold text-sm">{label}</span>
+    </button>
 );
 
-const ToggleCard = ({ icon: Icon, label, enabled, onClick, color = 'teal' }: any) => {
-    const activeClass = enabled
-        ? `bg-${color}-500/10 border-${color}-500 text-white`
-        : 'bg-slate-950 border-slate-800 text-slate-500';
-
+const CloudBackupControl = () => {
+    const [status, setStatus] = useState<any>(null);
+    const [loading, setLoading] = useState(false);
     return (
-        <button
-            onClick={onClick}
-            className={`flex items-center p-3 rounded-lg border transition-all ${activeClass} hover:border-slate-700 w-full`}
-        >
-            <div className={`p-2 rounded-md mr-3 ${enabled ? `bg-${color}-500 text-black` : 'bg-slate-900'}`}>
-                <Icon className="w-5 h-5" />
-            </div>
-            <span className="font-semibold text-sm">{label}</span>
-            {enabled && <CheckCircle className={`ml-auto w-4 h-4 text-${color}-500`} />}
-        </button>
+        <div className="bg-slate-900 border border-slate-800 rounded-xl p-8 text-center space-y-6">
+            <Cloud className="mx-auto w-12 h-12 text-slate-600" />
+            <h3 className="text-xl font-bold text-white">Cloud Backup</h3>
+            <p className="text-sm text-slate-500">Secure your research data in Google Drive.</p>
+            <button className="px-6 py-2 bg-teal-600 text-white rounded-lg font-bold">Connect Drive</button>
+        </div>
     );
 };

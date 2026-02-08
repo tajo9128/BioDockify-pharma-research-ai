@@ -1,6 +1,6 @@
 # Installation Guide (Docker Edition)
 
-**BioDockify v2.3.8** is now a pure Docker-based application. This ensures maximum consistency across environments and simplifies the deployment of its heavy pharmaceutical research engines.
+**BioDockify v2.3.9** is now a pure Docker-based application. This ensures maximum consistency across environments and simplifies the deployment of its heavy pharmaceutical research engines.
 
 ## System Requirements
 
@@ -42,7 +42,7 @@ docker run -d -p 3000:3000 --name biodockify -v biodockify-data:/app/data --rest
 
 ### CSS 404 or Style Issues
 *   **Cause:** Nginx routing conflict or outdated image.
-*   **Fix:** Ensure you pulled the latest version (`v2.3.8+`) which includes the Nginx static routing fixes.
+*   **Fix:** Ensure you pulled the latest version (`v2.3.9+`) which includes the Nginx static routing fixes.
 
 ### "Backend Connection Failed"
 *   **Cause:** Port conflict on port 3000.

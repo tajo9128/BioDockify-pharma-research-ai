@@ -62,7 +62,7 @@ export default function HomeDashboard({ onNavigate }: HomeProps) {
             {/* Hero Section */}
             <div className="max-w-5xl mx-auto mb-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <h1 className="text-4xl font-bold text-white mb-2">Welcome Back, {userName}</h1>
-                <p className="text-slate-400 text-lg">BioDockify v2.19.8 is ready. What shall we discover today?</p>
+                <p className="text-slate-400 text-lg">BioDockify v2.3.9 Research Workstation. What shall we discover today?</p>
 
             </div>
 

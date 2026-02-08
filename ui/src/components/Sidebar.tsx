@@ -60,7 +60,7 @@ export default function Sidebar({ activeView, onViewChange }: SidebarProps) {
 
   return (
     <>
-      <aside className="fixed left-0 top-10 bottom-0 z-40 flex flex-col w-20 glass-panel border-r border-white/5 shadow-2xl items-center py-6 backdrop-blur-xl bg-slate-950/80">
+      <aside className="fixed left-0 top-0 bottom-0 z-40 flex flex-col w-20 glass-panel border-r border-white/5 shadow-2xl items-center py-6 backdrop-blur-xl bg-slate-950/80">
 
         {/* Brand Logo */}
         <div className="mb-8 w-10 h-10 relative group cursor-default">

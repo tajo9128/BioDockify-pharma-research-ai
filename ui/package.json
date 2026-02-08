@@ -1,6 +1,6 @@
 {
   "name": "biodockify-ui",
-  "version": "2.3.8",
+  "version": "2.3.9",
   "description": "BioDockify v2.3.8 🧬 Pharma Research AI: Fully Baked Docker Image",
   "private": true,
   "scripts": {
