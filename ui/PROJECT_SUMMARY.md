@@ -1,7 +1,7 @@
 # BioDockify AI - Pharmaceutical Research Platform
 
 ## Overview
-A comprehensive pharmaceutical research desktop application built with Next.js 15, featuring AI-powered literature analysis, knowledge graph construction, and lab protocol generation.
+A comprehensive pharmaceutical research workstation built with Next.js 15 and Docker, featuring AI-powered literature analysis, knowledge graph construction, and lab protocol generation.
 
 ## Technology Stack
 

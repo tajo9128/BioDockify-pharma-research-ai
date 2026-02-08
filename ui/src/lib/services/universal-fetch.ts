@@ -1,7 +1,6 @@
 /**
  * Cross-Platform Fetch Wrapper
- * Uses Tauri's HTTP client when in desktop app, browser fetch otherwise.
- * This bypasses CORS issues that affect the Tauri webview.
+ * Browser-standard fetch wrapper for the BioDockify Research Workstation.
  */
 
 /**

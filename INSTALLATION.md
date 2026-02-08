@@ -1,64 +1,53 @@
-# Installation Guide
+# Installation Guide (Docker Edition)
 
-**BioDockify** is designed as a desktop application for Windows 10 and Windows 11. It utilizes a "Sidecar" architecture where the lightweight interface manages a robust local AI backend running in Docker containers.
+**BioDockify v2.3.8** is now a pure Docker-based application. This ensures maximum consistency across environments and simplifies the deployment of its heavy pharmaceutical research engines.
 
 ## System Requirements
 
-*   **Operating System:** Windows 10 (Build 19044+) or Windows 11 (x64)
+*   **Operating System:** Windows 10/11, Linux (Ubuntu/Debian recommended), or macOS (Intel/M-series)
 *   **Processor:** Intel Core i5 / AMD Ryzen 5 or better (AVX support required)
 *   **RAM:** 16 GB minimum (32 GB recommended for large knowledge graphs)
-*   **Disk Space:** 10 GB free space (for Docker images and database)
-*   **Software:** Docker Desktop (Required)
+*   **Disk Space:** 20 GB free space (for Docker images and database)
+*   **Software:** Docker Desktop (Windows/Mac) or Docker Engine (Linux)
 
 ---
 
 ## Step-by-Step Installation
 
 ### 1. Prerequisites (Docker)
-BioDockify relies on **Docker Desktop** to run its heavy AI models (TensorFlow/BioBERT) in a consistent, isolated environment.
+BioDockify relies on **Docker** to run its specialized AI models (BioBERT, GROBID, etc.) in a consistent environment.
 
-1.  Download **Docker Desktop for Windows** from [docker.com](https://www.docker.com/products/docker-desktop/).
-2.  Install Docker and **Restart your computer**.
-3.  Ensure Docker is running (look for the whale icon in your system tray).
+1.  Download and install **Docker Desktop** from [docker.com](https://www.docker.com/).
+2.  Ensure Docker is running and healthy.
 
-### 2. Install BioDockify
-1.  Go to the [GitHub Releases Page](https://github.com/tajo9128/BioDockify-pharma-research-ai/releases).
-2.  Download the latest installer: `BioDockify_Professional_Setup_v2.0.exe`.
-3.  Double-click to run.
-4.  **Permissions:** The installer will request Administrator privileges to install into `Program Files` and create shortcuts.
-5.  **Components:** Ensure "Main App" and "Desktop Shortcut" are selected.
-6.  Click **Install**.
+### 2. Launch BioDockify
+Since BioDockify is a pure Docker application, you can start it with a single command:
 
-### 3. First Launch
-1.  Double-click the **BioDockify AI** icon on your desktop.
-2.  The application will launch.
-3.  **Backend Initialization:** On the first run, the app may take 1-2 minutes to initialize the local Neo4j database and load the NLP models. Please be patient.
+```bash
+docker pull tajo9128/biodockify-ai:latest
+docker run -d -p 3000:3000 --name biodockify -v biodockify-data:/app/data --restart unless-stopped tajo9128/biodockify-ai:latest
+```
+
+### 3. Access the Workstation
+1.  Open your browser to: **[http://localhost:3000](http://localhost:3000)**.
+2.  The application will initialize its local databases and load AI models on the first run.
 
 ---
 
 ## Troubleshooting
 
-### "Docker not found" Error
-*   **Cause:** Docker Desktop is not running or not installed.
-*   **Fix:** Launch Docker Desktop from your Start Menu. Wait for the initialization to complete, then restart BioDockify.
+### "Read timed out" during Initialization
+*   **Cause:** Heavy AI dependencies are loading (especially on the first run).
+*   **Fix:** Wait another 60-90 seconds and refresh. The system is designed to self-heal once the backend is ready.
 
-### Installer "Silently Fails"
-*   **Cause:** Using an older installer version (pre-v2.0.37) without Admin rights.
-*   **Fix:** Ensure you are using **v2.0.37+**. If the issue persists, right-click the installer and select "Run as Administrator".
-
-### "Smart App Control" Blocked by Windows
-*   **Cause:** Windows 11 Smart App Control blocks unsigned applications from unknown publishers.
-*   **Fix:** 
-    1.  **Right-click** the downloaded `.exe` file.
-    2.  Select **Properties**.
-    3.  In the **General** tab, check the **Unblock** box under the "Security" section.
-    4.  Click **Apply** and then **OK**.
-    5.  Run the installer again.
+### CSS 404 or Style Issues
+*   **Cause:** Nginx routing conflict or outdated image.
+*   **Fix:** Ensure you pulled the latest version (`v2.3.8+`) which includes the Nginx static routing fixes.
 
 ### "Backend Connection Failed"
-*   **Cause:** Port conflict (usually port 8000 or 7687).
-*   **Fix:** Ensure no other services (like other Graph DBs or Python web servers) are using ports 8000, 7474, or 7687.
+*   **Cause:** Port conflict on port 3000.
+*   **Fix:** Ensure no other services are using port 3000. You can map a different host port if needed: `-p 5000:3000`.
 
 ---
 **Need Help?**
-Open an issue on particular [GitHub Issues](https://github.com/tajo9128/BioDockify-pharma-research-ai/issues).
+Open an issue on the [GitHub repository](https://github.com/tajo9128/BioDockify-pharma-research-ai/issues).
