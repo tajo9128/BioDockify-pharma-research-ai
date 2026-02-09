@@ -85,7 +85,7 @@ Ensuring your research meets the highest standards of integrity and compliance:
 
 ---
 
-## 🚀 Quick Start (Docker - v2.4.1)
+## 🚀 Quick Start (Docker - v2.4.2)
 
 > **One-Click Installation** - Just like Agent Zero!
 

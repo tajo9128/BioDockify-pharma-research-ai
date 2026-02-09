@@ -1,109 +1,140 @@
-"""Memory system for persistent agent memory."""
+"""
+Persistent Memory - Long-term research retention system.
+Ported from Agent Zero original core.
+"""
 
+import json
+from datetime import datetime, timedelta
 from pathlib import Path
-from datetime import datetime
+from typing import Dict, List, Optional, Any
+import logging
 
-from nanobot.utils.helpers import ensure_dir, today_date
+from nanobot.utils.helpers import ensure_dir
 
+logger = logging.getLogger(__name__)
 
-class MemoryStore:
+class PersistentMemory:
     """
-    Memory system for the agent.
-    
-    Supports daily notes (memory/YYYY-MM-DD.md) and long-term memory (MEMORY.md).
+    Persistent memory system for Agent Zero.
+    Supports short-term session memory and long-term disk retrieval.
     """
-    
-    def __init__(self, workspace: Path):
+
+    def __init__(
+        self, 
+        workspace: Path, 
+        max_long_term: int = 1000,
+        max_short_term: int = 50
+    ):
         self.workspace = workspace
         self.memory_dir = ensure_dir(workspace / "memory")
-        self.memory_file = self.memory_dir / "MEMORY.md"
-    
-    def get_today_file(self) -> Path:
-        """Get path to today's memory file."""
-        return self.memory_dir / f"{today_date()}.md"
-    
-    def read_today(self) -> str:
-        """Read today's memory notes."""
-        today_file = self.get_today_file()
-        if today_file.exists():
-            return today_file.read_text(encoding="utf-8")
-        return ""
-    
-    def append_today(self, content: str) -> None:
-        """Append content to today's memory notes."""
-        today_file = self.get_today_file()
+        self.long_term_file = self.memory_dir / "long_term.json"
         
-        if today_file.exists():
-            existing = today_file.read_text(encoding="utf-8")
-            content = existing + "\n" + content
-        else:
-            # Add header for new day
-            header = f"# {today_date()}\n\n"
-            content = header + content
+        self.max_long_term = max_long_term
+        self.max_short_term = max_short_term
         
-        today_file.write_text(content, encoding="utf-8")
-    
-    def read_long_term(self) -> str:
-        """Read long-term memory (MEMORY.md)."""
-        if self.memory_file.exists():
-            return self.memory_file.read_text(encoding="utf-8")
-        return ""
-    
-    def write_long_term(self, content: str) -> None:
-        """Write to long-term memory (MEMORY.md)."""
-        self.memory_file.write_text(content, encoding="utf-8")
-    
-    def get_recent_memories(self, days: int = 7) -> str:
-        """
-        Get memories from the last N days.
+        self.short_term: List[Dict] = []
+        self.long_term: List[Dict] = []
         
-        Args:
-            days: Number of days to look back.
+        self._load_long_term()
+
+    async def store(
+        self, 
+        entry: Dict, 
+        phd_stage: str = "unknown",
+        goal: str = ""
+    ) -> str:
+        """Store a memory entry."""
+        timestamp = datetime.now().isoformat()
         
-        Returns:
-            Combined memory content.
-        """
-        from datetime import timedelta
+        memory_item = {
+            "timestamp": timestamp,
+            "phd_stage": phd_stage,
+            "goal": goal,
+            **entry
+        }
         
-        memories = []
-        today = datetime.now().date()
-        
-        for i in range(days):
-            date = today - timedelta(days=i)
-            date_str = date.strftime("%Y-%m-%d")
-            file_path = self.memory_dir / f"{date_str}.md"
+        # Add to short-term
+        self.short_term.append(memory_item)
+        if len(self.short_term) > self.max_short_term:
+            self.short_term.pop(0)
             
-            if file_path.exists():
-                content = file_path.read_text(encoding="utf-8")
-                memories.append(content)
+        # Add to long-term
+        self.long_term.append(memory_item)
+        if len(self.long_term) > self.max_long_term:
+            self.long_term.pop(0)
+            
+        self._save_long_term()
+        return timestamp
+
+    def recall(self, query: str, limit: int = 5, phd_stage: Optional[str] = None) -> List[Dict]:
+        """Recall relevant memories using simple keyword matching."""
+        results = []
+        query_words = set(query.lower().split())
         
-        return "\n\n---\n\n".join(memories)
-    
-    def list_memory_files(self) -> list[Path]:
-        """List all memory files sorted by date (newest first)."""
-        if not self.memory_dir.exists():
-            return []
+        for item in reversed(self.long_term):
+            if phd_stage and item.get("phd_stage") != phd_stage:
+                continue
+                
+            match_score = 0
+            item_str = json.dumps(item).lower()
+            for word in query_words:
+                if word in item_str:
+                    match_score += 1
+            
+            if match_score > 0:
+                results.append((item, match_score))
+                
+        results.sort(key=lambda x: x[1], reverse=True)
+        return [r[0] for r in results[:limit]]
+
+    def get_context(self, phd_stage: str, max_memories: int = 10) -> str:
+        """Get formatted context for prompts."""
+        relevant = [
+            m for m in self.long_term 
+            if m.get("phd_stage") == phd_stage
+        ][-max_memories:]
         
-        files = list(self.memory_dir.glob("????-??-??.md"))
-        return sorted(files, reverse=True)
-    
+        if not relevant:
+            return "No previous research context for this stage."
+            
+        context_parts = []
+        for m in reversed(relevant):
+            context_parts.append(
+                f"[{m.get('timestamp')}] {m.get('phd_stage').upper()}: {m.get('goal')}\n"
+                f"Result: {str(m.get('result', 'No result'))[:200]}..."
+            )
+            
+        return "\n\n".join(context_parts)
+
+    def _load_long_term(self):
+        if self.long_term_file.exists():
+            try:
+                self.long_term = json.loads(self.long_term_file.read_text(encoding="utf-8"))
+            except Exception as e:
+                logger.error(f"Failed to load long-term memory: {e}")
+                self.long_term = []
+
+    def _save_long_term(self):
+        try:
+            self.long_term_file.write_text(
+                json.dumps(self.long_term, indent=2), 
+                encoding="utf-8"
+            )
+        except Exception as e:
+            logger.error(f"Failed to save long-term memory: {e}")
+
+    # Compatibility methods for NanoBot bridge
+    def append_today(self, content: str) -> None:
+        """Legacy support for daily notes."""
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        self.long_term.append({
+            "timestamp": timestamp,
+            "type": "note",
+            "content": content,
+            "phd_stage": "general"
+        })
+        self._save_long_term()
+
     def get_memory_context(self) -> str:
-        """
-        Get memory context for the agent.
-        
-        Returns:
-            Formatted memory context including long-term and recent memories.
-        """
-        parts = []
-        
-        # Long-term memory
-        long_term = self.read_long_term()
-        if long_term:
-            parts.append("## Long-term Memory\n" + long_term)
-        
-        # Today's notes
-        today = self.read_today()
-        if today:
-            parts.append("## Today's Notes\n" + today)
-        
-        return "\n\n".join(parts) if parts else ""
+        """Legacy support for context building."""
+        return self.get_context("general", max_memories=5)

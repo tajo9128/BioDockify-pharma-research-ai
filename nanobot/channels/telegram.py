@@ -12,15 +12,20 @@ from nanobot.bus.queue import MessageBus
 from nanobot.channels.base import BaseChannel
 from nanobot.config.schema import TelegramConfig
 
+MAX_ATTACHMENT_BYTES = 20 * 1024 * 1024  # 20MB
+MAX_TOTAL_MEDIA_SIZE = 500 * 1024 * 1024  # 500MB total
+
+
+import html
 
 def _markdown_to_telegram_html(text: str) -> str:
     """
-    Convert markdown to Telegram-safe HTML.
+    Convert markdown to Telegram-safe HTML with strict escaping.
     """
     if not text:
         return ""
     
-    # 1. Extract and protect code blocks (preserve content from other processing)
+    # 1. Extract and protect code blocks
     code_blocks: list[str] = []
     def save_code_block(m: re.Match) -> str:
         code_blocks.append(m.group(1))
@@ -36,41 +41,26 @@ def _markdown_to_telegram_html(text: str) -> str:
     
     text = re.sub(r'`([^`]+)`', save_inline_code, text)
     
-    # 3. Headers # Title -> just the title text
-    text = re.sub(r'^#{1,6}\s+(.+)$', r'\1', text, flags=re.MULTILINE)
+    # 3. Escape ALL HTML special characters first (Core Security)
+    text = html.escape(text)
     
-    # 4. Blockquotes > text -> just the text (before HTML escaping)
-    text = re.sub(r'^>\s*(.*)$', r'\1', text, flags=re.MULTILINE)
-    
-    # 5. Escape HTML special characters
-    text = text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-    
-    # 6. Links [text](url) - must be before bold/italic to handle nested cases
+    # 4. Restore protected markers and apply formatting (already escaped content)
+    # Headers, bold, italic, etc. using regex on ESCAPED text
+    text = re.sub(r'^#{1,6}\s+(.+)$', r'<b>\1</b>', text, flags=re.MULTILINE)
     text = re.sub(r'\[([^\]]+)\]\(([^)]+)\)', r'<a href="\2">\1</a>', text)
-    
-    # 7. Bold **text** or __text__
     text = re.sub(r'\*\*(.+?)\*\*', r'<b>\1</b>', text)
     text = re.sub(r'__(.+?)__', r'<b>\1</b>', text)
-    
-    # 8. Italic _text_ (avoid matching inside words like some_var_name)
     text = re.sub(r'(?<![a-zA-Z0-9])_([^_]+)_(?![a-zA-Z0-9])', r'<i>\1</i>', text)
-    
-    # 9. Strikethrough ~~text~~
     text = re.sub(r'~~(.+?)~~', r'<s>\1</s>', text)
     
-    # 10. Bullet lists - item -> • item
-    text = re.sub(r'^[-*]\s+', '• ', text, flags=re.MULTILINE)
-    
-    # 11. Restore inline code with HTML tags
+    # 5. Restore inline code
     for i, code in enumerate(inline_codes):
-        # Escape HTML in code content
-        escaped = code.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+        escaped = html.escape(code)
         text = text.replace(f"\x00IC{i}\x00", f"<code>{escaped}</code>")
     
-    # 12. Restore code blocks with HTML tags
+    # 6. Restore code blocks
     for i, code in enumerate(code_blocks):
-        # Escape HTML in code content
-        escaped = code.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+        escaped = html.escape(code)
         text = text.replace(f"\x00CB{i}\x00", f"<pre><code>{escaped}</code></pre>")
     
     return text
@@ -91,6 +81,12 @@ class TelegramChannel(BaseChannel):
         self.groq_api_key = groq_api_key
         self._app: Application | None = None
         self._chat_ids: dict[str, int] = {}  # Map sender_id to chat_id for replies
+        self._MAX_CHAT_IDS = 1000
+        self._total_media_size = 0
+        
+        # Groq key validation
+        if self.groq_api_key and not (self.groq_api_key.startswith("gsk_") or len(self.groq_api_key) > 30):
+            logger.warning("Provided Groq API key format appears unusual (expected gsk_...)")
     
     async def start(self) -> None:
         """Start the Telegram bot with long polling."""
@@ -205,8 +201,13 @@ class TelegramChannel(BaseChannel):
         if user.username:
             sender_id = f"{sender_id}|{user.username}"
         
-        # Store chat_id for replies
+        # Store chat_id for replies (with cleanup to prevent leak)
         self._chat_ids[sender_id] = chat_id
+        if len(self._chat_ids) > self._MAX_CHAT_IDS:
+            # Remove oldest entries
+            oldest_keys = list(self._chat_ids.keys())[:200]
+            for k in oldest_keys:
+                self._chat_ids.pop(k, None)
         
         # Build content from text and/or media
         content_parts = []
@@ -237,17 +238,27 @@ class TelegramChannel(BaseChannel):
         
         # Download media if present
         if media_file and self._app:
+            # Optimization: If it's audio/voice but we have no Groq key, 
+            # we might skip download if the goal is only transcription.
+            # However, for now we download to allow agent to "see" the file.
             try:
+                # Check total size limit
+                if self._total_media_size + media_file.file_size > MAX_TOTAL_MEDIA_SIZE:
+                    logger.warning("Total media size limit reached")
+                    content_parts.append(f"[{media_type}: total size limit exceeded]")
+                    return
+
                 file = await self._app.bot.get_file(media_file.file_id)
                 ext = self._get_extension(media_type, getattr(media_file, 'mime_type', None))
                 
-                # Save to workspace/media/
-                from pathlib import Path
-                media_dir = Path.home() / ".nanobot" / "media"
-                media_dir.mkdir(parents=True, exist_ok=True)
+                # Path Sanitization: prevent traversal by using .name
+                safe_file_id = Path(media_file.file_id).name[:32]
+                file_path = media_dir / f"{safe_file_id}{ext}"
                 
-                file_path = media_dir / f"{media_file.file_id[:16]}{ext}"
-                await file.download_to_drive(str(file_path))
+                # Download with timeout
+                await asyncio.wait_for(file.download_to_drive(str(file_path)), timeout=60)
+                
+                self._total_media_size += media_file.file_size
                 
                 media_paths.append(str(file_path))
                 

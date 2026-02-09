@@ -11,12 +11,15 @@ from nanobot.bus.events import InboundMessage, OutboundMessage
 from nanobot.bus.queue import MessageBus
 from nanobot.providers.base import LLMProvider
 from nanobot.agent.context import ContextBuilder
+from nanobot.agent.brain import Brain
 from nanobot.agent.tools.registry import ToolRegistry
 from nanobot.agent.tools.filesystem import ReadFileTool, WriteFileTool, EditFileTool, ListDirTool
 from nanobot.agent.tools.shell import ExecTool
 from nanobot.agent.tools.web import WebSearchTool, WebFetchTool
 from nanobot.agent.tools.message import MessageTool
 from nanobot.agent.tools.spawn import SpawnTool
+from nanobot.agent.memory import PersistentMemory
+from nanobot.agent.skills import SkillsLoader
 from nanobot.agent.tools.cron import CronTool
 from nanobot.agent.subagent import SubagentManager
 from nanobot.session.manager import SessionManager
@@ -51,6 +54,8 @@ class AgentLoop:
         self.bus = bus
         self.provider = provider
         self.workspace = workspace
+        self.memory = PersistentMemory(workspace)
+        self.skills = SkillsLoader(workspace)
         self.model = model or provider.get_default_model()
         self.max_iterations = max_iterations
         self.brave_api_key = brave_api_key
@@ -59,6 +64,7 @@ class AgentLoop:
         self.restrict_to_workspace = restrict_to_workspace
         
         self.context = ContextBuilder(workspace)
+        self.brain = Brain(workspace, provider, model=self.model, max_iterations=max_iterations)
         self.sessions = SessionManager(workspace)
         self.tools = ToolRegistry()
         self.subagents = SubagentManager(
@@ -173,62 +179,78 @@ class AgentLoop:
         if isinstance(cron_tool, CronTool):
             cron_tool.set_context(msg.channel, msg.chat_id)
         
-        # Build initial messages (use get_history for LLM-formatted messages)
+        # Reset brain for new goal
+        self.brain.reset()
+        
+        # Build initial messages
         messages = self.context.build_messages(
             history=session.get_history(),
             current_message=msg.content,
             media=msg.media if msg.media else None,
             channel=msg.channel,
             chat_id=msg.chat_id,
+            working_memory=self.brain.working_memory
         )
         
-        # Agent loop
+        # Agent Cognitive Loop
         iteration = 0
         final_content = None
         
         while iteration < self.max_iterations:
             iteration += 1
             
-            # Call LLM
-            response = await self.provider.chat(
-                messages=messages,
+            # Use Brain to decide next step
+            response_content, tool_calls, is_complete = await self.brain.process_goal(
+                goal=msg.content,
+                history=messages[1:], # Exclude system prompt (handled by Brain)
                 tools=self.tools.get_definitions(),
-                model=self.model
+                project_metadata=getattr(msg, "project_metadata", None)
             )
             
             # Handle tool calls
-            if response.has_tool_calls:
-                # Add assistant message with tool calls
+            if tool_calls:
+                # Add assistant message with tool calls to history
                 tool_call_dicts = [
                     {
                         "id": tc.id,
                         "type": "function",
                         "function": {
                             "name": tc.name,
-                            "arguments": json.dumps(tc.arguments)  # Must be JSON string
+                            "arguments": json.dumps(tc.arguments)
                         }
                     }
-                    for tc in response.tool_calls
+                    for tc in tool_calls
                 ]
                 messages = self.context.add_assistant_message(
-                    messages, response.content, tool_call_dicts
+                    messages, response_content, tool_call_dicts
                 )
                 
-                # Execute tools
-                for tool_call in response.tool_calls:
-                    args_str = json.dumps(tool_call.arguments)
-                    logger.debug(f"Executing tool: {tool_call.name} with arguments: {args_str}")
+                # Execute tools and update brain with facts
+                for tool_call in tool_calls:
+                    logger.debug(f"Executing tool: {tool_call.name}")
                     result = await self.tools.execute(tool_call.name, tool_call.arguments)
+                    
+                    # Update Working Memory with facts if result looks like a fact
+                    if len(result) < 500: # Simple heuristic
+                        self.brain.add_fact(f"Direct result from {tool_call.name}: {result}")
+                    
+                    # Store in persistent memory
+                    await self.brain.store_result(
+                        task={"task": tool_call.name, "params": tool_call.arguments},
+                        result=result,
+                        goal=msg.content
+                    )
+                    
                     messages = self.context.add_tool_result(
                         messages, tool_call.id, tool_call.name, result
                     )
-            else:
-                # No tool calls, we're done
-                final_content = response.content
+            
+            if is_complete or not tool_calls:
+                final_content = response_content
                 break
         
         if final_content is None:
-            final_content = "I've completed processing but have no response to give."
+            final_content = "I've completed my reasoning but don't have a specific response."
         
         # Save to session
         session.add_message("user", msg.content)

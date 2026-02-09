@@ -32,6 +32,9 @@ class DiscordChannel(BaseChannel):
         self._heartbeat_task: asyncio.Task | None = None
         self._typing_tasks: dict[str, asyncio.Task] = {}
         self._http: httpx.AsyncClient | None = None
+        self._last_heartbeat_ack = 0.0
+        self._heartbeat_interval = 45.0
+        self._rate_limits: dict[str, float] = {}  # chat_id -> reset_time
 
     async def start(self) -> None:
         """Start the Discord gateway connection."""
@@ -90,11 +93,21 @@ class DiscordChannel(BaseChannel):
         try:
             for attempt in range(3):
                 try:
-                    response = await self._http.post(url, headers=headers, json=payload)
+                    # Check per-channel rate limit
+                    now = asyncio.get_event_loop().time()
+                    if msg.chat_id in self._rate_limits:
+                        wait_time = self._rate_limits[msg.chat_id] - now
+                        if wait_time > 0:
+                            logger.info(f"Local rate limit for {msg.chat_id}, waiting {wait_time:.1f}s")
+                            await asyncio.sleep(wait_time)
+
+                    response = await self._http.post(url, headers=headers, json=payload, timeout=10.0)
                     if response.status_code == 429:
                         data = response.json()
                         retry_after = float(data.get("retry_after", 1.0))
-                        logger.warning(f"Discord rate limited, retrying in {retry_after}s")
+                        # Update local rate limit
+                        self._rate_limits[msg.chat_id] = asyncio.get_event_loop().time() + retry_after
+                        logger.warning(f"Discord rate limited for {msg.chat_id}, retrying in {retry_after}s")
                         await asyncio.sleep(retry_after)
                         continue
                     response.raise_for_status()
@@ -130,8 +143,12 @@ class DiscordChannel(BaseChannel):
             if op == 10:
                 # HELLO: start heartbeat and identify
                 interval_ms = payload.get("heartbeat_interval", 45000)
-                await self._start_heartbeat(interval_ms / 1000)
+                self._heartbeat_interval = interval_ms / 1000
+                await self._start_heartbeat(self._heartbeat_interval)
                 await self._identify()
+            elif op == 11:
+                # HEARTBEAT_ACK
+                self._last_heartbeat_ack = asyncio.get_event_loop().time()
             elif op == 0 and event_type == "READY":
                 logger.info("Discord gateway READY")
             elif op == 0 and event_type == "MESSAGE_CREATE":
@@ -140,6 +157,9 @@ class DiscordChannel(BaseChannel):
                 # RECONNECT: exit loop to reconnect
                 logger.info("Discord gateway requested reconnect")
                 break
+            elif op == 1:
+                # Discord requested a heartbeat
+                await self._ws.send(json.dumps({"op": 1, "d": self._seq}))
             elif op == 9:
                 # INVALID_SESSION: reconnect
                 logger.warning("Discord gateway invalid session")
@@ -170,12 +190,19 @@ class DiscordChannel(BaseChannel):
             self._heartbeat_task.cancel()
 
         async def heartbeat_loop() -> None:
+            self._last_heartbeat_ack = asyncio.get_event_loop().time()
             while self._running and self._ws:
+                # Check for zombie connection (no ACK for 2 intervals)
+                if asyncio.get_event_loop().time() - self._last_heartbeat_ack > (interval_s * 2.5):
+                    logger.error("Discord gateway heartbeat timeout - no ACK received")
+                    await self._ws.close()
+                    break
+                
                 payload = {"op": 1, "d": self._seq}
                 try:
                     await self._ws.send(json.dumps(payload))
                 except Exception as e:
-                    logger.warning(f"Discord heartbeat failed: {e}")
+                    logger.warning(f"Discord heartbeat send failed: {e}")
                     break
                 await asyncio.sleep(interval_s)
 
@@ -213,7 +240,7 @@ class DiscordChannel(BaseChannel):
             try:
                 media_dir.mkdir(parents=True, exist_ok=True)
                 file_path = media_dir / f"{attachment.get('id', 'file')}_{filename.replace('/', '_')}"
-                resp = await self._http.get(url)
+                resp = await self._http.get(url, timeout=60.0)
                 resp.raise_for_status()
                 file_path.write_bytes(resp.content)
                 media_paths.append(str(file_path))
@@ -247,7 +274,7 @@ class DiscordChannel(BaseChannel):
             headers = {"Authorization": f"Bot {self.config.token}"}
             while self._running:
                 try:
-                    await self._http.post(url, headers=headers)
+                    await self._http.post(url, headers=headers, timeout=5.0)
                 except Exception:
                     pass
                 await asyncio.sleep(8)

@@ -6,7 +6,7 @@ import platform
 from pathlib import Path
 from typing import Any
 
-from nanobot.agent.memory import MemoryStore
+from nanobot.agent.memory import PersistentMemory
 from nanobot.agent.skills import SkillsLoader
 
 
@@ -22,15 +22,16 @@ class ContextBuilder:
     
     def __init__(self, workspace: Path):
         self.workspace = workspace
-        self.memory = MemoryStore(workspace)
+        self.memory = PersistentMemory(workspace)
         self.skills = SkillsLoader(workspace)
     
-    def build_system_prompt(self, skill_names: list[str] | None = None) -> str:
+    def build_system_prompt(self, skill_names: list[str] | None = None, working_memory: Any = None) -> str:
         """
-        Build the system prompt from bootstrap files, memory, and skills.
+        Build the system prompt from bootstrap files, memory, skills, and working memory.
         
         Args:
             skill_names: Optional list of skills to include.
+            working_memory: Optional WorkingMemory object to provide reasoning context.
         
         Returns:
             Complete system prompt.
@@ -39,6 +40,10 @@ class ContextBuilder:
         
         # Core identity
         parts.append(self._get_identity())
+        
+        # Working Memory (Brain state)
+        if working_memory:
+            parts.append(f"# Internal Working Memory\n\n{working_memory.format_for_prompt()}")
         
         # Bootstrap files
         bootstrap = self._load_bootstrap_files()
@@ -133,6 +138,7 @@ IMPORTANT:
         media: list[str] | None = None,
         channel: str | None = None,
         chat_id: str | None = None,
+        working_memory: Any = None,
     ) -> list[dict[str, Any]]:
         """
         Build the complete message list for an LLM call.
@@ -142,8 +148,9 @@ IMPORTANT:
             current_message: The new user message.
             skill_names: Optional skills to include.
             media: Optional list of local file paths for images/media.
-            channel: Current channel (telegram, feishu, etc.).
+            channel: Current channel (telegram, whatsapp, etc.).
             chat_id: Current chat/user ID.
+            working_memory: Optional WorkingMemory object.
 
         Returns:
             List of messages including system prompt.
@@ -151,7 +158,7 @@ IMPORTANT:
         messages = []
 
         # System prompt
-        system_prompt = self.build_system_prompt(skill_names)
+        system_prompt = self.build_system_prompt(skill_names, working_memory)
         if channel and chat_id:
             system_prompt += f"\n\n## Current Session\nChannel: {channel}\nChat ID: {chat_id}"
         messages.append({"role": "system", "content": system_prompt})

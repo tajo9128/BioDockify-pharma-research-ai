@@ -19,7 +19,7 @@ from modules.literature.synthesis import get_synthesizer
 from modules.system.auth_manager import auth_manager
 from dataclasses import asdict
 
-app = FastAPI(title="BioDockify - Pharma Research AI", version="2.4.1")
+app = FastAPI(title="BioDockify - Pharma Research AI", version="2.4.2")
 
 # Register NanoBot Hybrid Agent Routes
 try:
@@ -1766,6 +1766,7 @@ async def surfsense_search(request: SurfSenseSearchRequest):
 # -----------------------------------------------------------------------------
 
 # Agent Zero Constitution & Roles
+
 AGENT_ZERO_CONSTITUTION = """
 ## IDENTITY
 You are Agent Zero, the central intelligence of BioDockify - a pharmaceutical research platform.

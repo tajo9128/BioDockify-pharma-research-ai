@@ -40,7 +40,11 @@ class WhatsAppChannel(BaseChannel):
         
         while self._running:
             try:
-                async with websockets.connect(bridge_url) as ws:
+                headers = {
+                    "X-Auth-Token": self.config.auth_token,
+                    "X-Channel": "nanobot"
+                }
+                async with websockets.connect(bridge_url, extra_headers=headers, open_timeout=30) as ws:
                     self._ws = ws
                     self._connected = True
                     logger.info("Connected to WhatsApp bridge")
