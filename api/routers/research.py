@@ -152,13 +152,28 @@ class TasksWrapper:
     
     def __setitem__(self, task_id: str, value):
         store = get_task_store()
+        # Ensure task exists
         if store.get_task(task_id) is None:
+            # Create with title if available
             store.create_task(task_id, value.title if hasattr(value, 'title') else "")
+            
+        # Update all fields from the value object
+        updates = {}
+        if hasattr(value, 'status'): updates['status'] = value.status
+        if hasattr(value, 'progress'): updates['progress'] = value.progress
+        if hasattr(value, 'result'): updates['result'] = value.result
+        if hasattr(value, 'logs'): updates['logs'] = value.logs
+        if hasattr(value, 'created_at'): updates['created_at'] = value.created_at
+        
+        if updates:
+            store.update_task(task_id, **updates)
     
     def __contains__(self, task_id: str) -> bool:
         return get_task_store().get_task(task_id) is not None
     
     def values(self):
+        # This might fail if store returns dicts that don't match TaskStatus exactly
+        # forcing loose construction or just returning dicts if model allows
         return [TaskStatus(**t) for t in get_task_store().list_tasks()]
 
 class TaskStatusProxy:
@@ -166,6 +181,14 @@ class TaskStatusProxy:
     def __init__(self, task_id: str, task_data: dict):
         self._task_id = task_id
         self._data = task_data
+        
+    @property
+    def task_id(self):
+        return self._task_id
+
+    @property
+    def created_at(self):
+        return self._data.get("created_at", "")
     
     @property
     def status(self):
@@ -199,7 +222,10 @@ class TaskStatusProxy:
         self._data["result"] = value
     
     def dict(self):
-        return self._data
+        # Merge task_id into the data for dict representation
+        d = self._data.copy()
+        d['task_id'] = self._task_id
+        return d
 
 class TaskLogsProxy(list):
     """Proxy for task logs that persists changes."""

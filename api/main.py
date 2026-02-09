@@ -1,6 +1,7 @@
 from fastapi import FastAPI, BackgroundTasks, HTTPException
 from dotenv import load_dotenv
 import os
+import time
 
 load_dotenv() # Load environment variables from .env
 
@@ -15,9 +16,10 @@ from modules.backup import DriveClient, BackupManager
 from modules.literature.reviewer import CitationReviewer
 from modules.literature.scraper import LiteratureAggregator, LiteratureConfig
 from modules.literature.synthesis import get_synthesizer
+from modules.system.auth_manager import auth_manager
 from dataclasses import asdict
 
-app = FastAPI(title="BioDockify - Pharma Research AI", version="2.4.0")
+app = FastAPI(title="BioDockify - Pharma Research AI", version="2.4.1")
 
 # Register NanoBot Hybrid Agent Routes
 try:
@@ -71,8 +73,88 @@ app.add_middleware(
     allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
+    allow_headers=["Content-Type", "Authorization", "X-Requested-With", "X-CSRF-Token"],
 )
+
+# -----------------------------------------------------------------------------
+# Security Headers & CSRF Protection Middleware
+# -----------------------------------------------------------------------------
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    # CSRF Check for state-changing methods
+    if request.method in ["POST", "PUT", "DELETE", "PATCH"]:
+        origin = request.headers.get("Origin")
+        referer = request.headers.get("Referer")
+        
+        # Simple Origin/Referer check against allowed origins
+        is_valid_origin = any(o in (origin or "") for o in allowed_origins)
+        is_valid_referer = any(o in (referer or "") for o in allowed_origins)
+        
+        if not (is_valid_origin or is_valid_referer):
+            # If it's a browser request (has origin/referer) but from wrong source
+            if origin or referer:
+                return JSONResponse(
+                    status_code=403,
+                    content={"detail": "CSRF verification failed: Invalid origin or referer"}
+                )
+
+    response = await call_next(request)
+    
+    # Essential Security Headers
+    response.headers["Content-Security-Policy"] = (
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval'; "
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+        "font-src 'self' https://fonts.gstatic.com; "
+        "img-src 'self' data: https:; "
+        "connect-src 'self' ws: wss: http://localhost:8234 https://*.google.com;"
+    )
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    
+    return response
+
+# -----------------------------------------------------------------------------
+# Rate Limiting & DoS Protection
+# -----------------------------------------------------------------------------
+REQUESTS_PER_MINUTE = 600
+ip_request_counts = {}
+
+@app.middleware("http")
+async def rate_limit_middleware(request: Request, call_next):
+    client_ip = request.client.host
+    current_time = int(time.time() / 60)
+    
+    key = f"{client_ip}:{current_time}"
+    ip_request_counts[key] = ip_request_counts.get(key, 0) + 1
+    
+    if ip_request_counts[key] > REQUESTS_PER_MINUTE:
+        return JSONResponse(
+            status_code=429,
+            content={"detail": "Too many requests. Please try again later."}
+        )
+        
+    # Periodic cleanup (crude)
+    if len(ip_request_counts) > 10000:
+        ip_request_counts.clear()
+        
+    return await call_next(request)
+
+# Max Request Size Limit (10MB)
+MAX_SIZE = 10 * 1024 * 1024
+@app.middleware("http")
+async def limit_request_size(request: Request, call_next):
+    if request.method in ["POST", "PUT", "PATCH"]:
+        content_length = request.headers.get("Content-Length")
+        if content_length and int(content_length) > MAX_SIZE:
+            return JSONResponse(
+                status_code=413,
+                content={"detail": "Request body too large"}
+            )
+    return await call_next(request)
 
 # -----------------------------------------------------------------------------
 # Global Error Handling & Resilience
@@ -185,9 +267,6 @@ async def startup_event():
     import threading
     threading.Thread(target=background_init, daemon=True).start()
     logger.info("Background initialization thread started.")
-
-    # 4. Start Background Monitoring Loop
-    asyncio.create_task(background_monitor())
 
     # 4. Check for high memory usage warning
     mem_status = psutil.virtual_memory()
@@ -1122,6 +1201,74 @@ async def background_monitor():
             logger.error(f"Monitor Error: {e}")
             await asyncio.sleep(60) # Prevent tight loop on error
 
+@app.on_event("startup")
+async def startup_event():
+    """
+    Service Stability: Model Loading & Pre-warming.
+    """
+    logger.info("Initializing BioDockify Backend...")
+    
+    # 1. Background Initialization (Models + Services)
+    def background_init():
+        """Runs heavy startup tasks without blocking API availability."""
+        # A. Wait for server bind
+        time.sleep(2) 
+        
+        # B. Warm up Embedding Model
+        try:
+            logger.info("Probe: Pre-loading Embedding Model...")
+            from modules.rag.vector_store import get_vector_store
+            vs = get_vector_store()
+            if vs.model is None:
+                 vs._load_dependencies()
+            if vs.model:
+                 vs.model.encode(["warmup"])
+            logger.info("Probe: Embedding Model Ready.")
+        except Exception as e:
+            logger.warning(f"Probe: Model warmup failed: {e}")
+
+        # C. Start Background Services (Ollama/SurfSense)
+        try:
+            from runtime.config_loader import load_config
+            from runtime.service_manager import get_service_manager
+            
+            config = load_config()
+            if config.get("system", {}).get("auto_start_services", True):
+                logger.info("Probe: Auto-starting services...")
+                svc_mgr = get_service_manager(config)
+                
+                # Ollama
+                if config.get("ai_provider", {}).get("mode") in ["auto", "ollama"]:
+                     try:
+                         if hasattr(svc_mgr, 'start_ollama'):
+                             svc_mgr.start_ollama()
+                         else:
+                             # Fallback/Mock if method missing
+                             logger.info("Probe: start_ollama not implemented in ServiceManager (skipping)")
+                     except Exception as e:
+                         logger.warning(f"Probe: Ollama start failed: {e}")
+                
+                # SurfSense
+                try:
+                    svc_mgr.start_surfsense()
+                except Exception as e:
+                    logger.warning(f"Probe: SurfSense start failed: {e}")
+                    
+        except Exception as e:
+            logger.error(f"Probe: Service init failed: {e}")
+
+    import threading
+    threading.Thread(target=background_init, daemon=True).start()
+    logger.info("Background initialization thread started.")
+
+    # 4. Start Background Monitoring Loop
+    asyncio.create_task(background_monitor())
+
+    # 4. Check for high memory usage warning
+    mem_status = psutil.virtual_memory()
+    if mem_status.percent > 90:
+        logger.warning(f"High Memory Usage on Startup: {mem_status.percent}%")
+
 @app.middleware("http")
 async def resource_monitor_middleware(request: Request, call_next):
     """
@@ -1457,7 +1604,7 @@ async def start_research(request: ResearchRequest, background_tasks: BackgroundT
         "task_id": task_id,
         "title": research_title, 
         "status": "pending",
-        "created_at": str(uuid.uuid1().time) # timestamp proxy
+        "created_at": str(int(time.time() * 1000)) # timestamp proxy
     }
     task_manager.save_task(task_id, initial_state)
     
@@ -1509,9 +1656,11 @@ def get_settings():
 @app.post("/api/settings")
 def update_settings(settings: Dict[str, Any]):
     """Save new application configuration."""
-    if save_config(settings):
+    from runtime.config_loader import save_config_detailed
+    success, message = save_config_detailed(settings)
+    if success:
         return {"status": "success", "message": "Settings saved"}
-    raise HTTPException(status_code=500, detail="Failed to save settings")
+    raise HTTPException(status_code=500, detail=f"Failed to save settings: {message}")
 
 @app.post("/api/settings/reset")
 def reset_settings():
@@ -2126,7 +2275,7 @@ Provide a well-structured answer based on the context above. If the context does
             key = provider_config['huggingface_key']
             url = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.1"
             headers = {"Authorization": f"Bearer {key}"}
-            payload = {"inputs": f"<s>[INST] {system_prompt}\n\n{prompt} [/INST]"}
+            payload = {"inputs": f"<s>[INST] {system_prompt}\n\n{enhanced_prompt} [/INST]"}
             
             resp = req.post(url, json=payload, headers=headers, timeout=60)
             if resp.status_code == 200:
@@ -2262,6 +2411,7 @@ async def upload_document(file: UploadFile = File(...)):
     # For now, we rely on ingestion pipeline to fail if invalid, but we ensure safe temp write.
     
     # Save to temp file
+    tmp_path = None
     try:
         with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
             shutil.copyfileobj(file.file, tmp)
@@ -2309,11 +2459,7 @@ def check_neo4j_endpoint(request: Neo4jCheckRequest):
 class LinkRequest(BaseModel):
     url: str
 
-@app.post("/api/rag/link")
-async def ingest_link(request: LinkRequest):
-    """Ingest content from a URL (e.g., Google NotebookLM Share Link)."""
-    from modules.rag.web_scraper import scrape_url
-    
+    tmp_path = None
     try:
         text = scrape_url(request.url)
         if not text:

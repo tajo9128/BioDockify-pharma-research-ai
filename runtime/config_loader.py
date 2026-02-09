@@ -233,7 +233,7 @@ DEFAULT_CONFIG = {
         "pause_on_battery": True,
         "max_cpu_percent": 80,
         "log_level": "INFO",
-        "version": "2.4.0"
+        "version": "2.4.1"
     }
 }
 
@@ -320,13 +320,19 @@ class ConfigLoader:
 
 
     def save_config(self, new_config: Dict[str, Any]) -> bool:
-        """Save new configuration to disk."""
+        """Save new configuration to disk (Legacy Wrapper)."""
+        success, _ = self.save_config_detailed(new_config)
+        return success
+
+    def save_config_detailed(self, new_config: Dict[str, Any]) -> (bool, str):
+        """Save new configuration to disk with detailed error reporting."""
         print(f"[*] Saving configuration to: {CONFIG_PATH}")
         try:
             # 1. Validate
-            if not self._validate_config(new_config):
-                print("[!] Config validation failed. Aborting save.")
-                return False
+            is_valid, error_msg = self._validate_config(new_config)
+            if not is_valid:
+                print(f"[!] Config validation failed: {error_msg}")
+                return False, error_msg
 
             # 2. Backup existing
             self.backup_config()
@@ -334,10 +340,10 @@ class ConfigLoader:
             # 3. Encrypt sensitive values before saving to Disk
             secure_config = security_manager.process_config(new_config, 'encrypt')
             self._save_to_disk(secure_config)
-            return True
+            return True, "Settings saved successfully"
         except Exception as e:
             print(f"[!] Failed to save config: {e}")
-            return False
+            return False, str(e)
 
     def reset_to_defaults(self) -> Dict[str, Any]:
         """Reset configuration to factory defaults."""
@@ -417,27 +423,31 @@ class ConfigLoader:
             
         return config
 
-    def _validate_config(self, config: Dict) -> bool:
+    def _validate_config(self, config: Dict) -> (bool, str):
         """
         Basic Schema Validation.
-        Returns True if valid, False otherwise.
+        Returns (True, "OK") if valid, (False, "Error Message") otherwise.
         """
         required_sections = ["project", "agent", "ai_provider", "system"]
         for section in required_sections:
             if section not in config:
-                print(f"[!] Missing section: {section}")
-                return False
+                msg = f"Missing required section: {section}"
+                print(f"[!] {msg}")
+                return False, msg
                 
         # Validate critical numeric ranges
         try:
             ctx = config.get("ai_advanced", {}).get("context_window", 8192)
-            if not isinstance(ctx, int) or ctx < 1024:
-                print("[!] Invalid context_window")
-                return False
-        except:
-             return False
+            # Ensure it's an integer and within reasonable bounds
+            if not isinstance(ctx, int) and not str(ctx).isdigit():
+                 return False, f"Invalid context_window: {ctx} is not a number"
+            
+            if int(ctx) < 1024:
+                return False, f"Invalid context_window: {ctx} must be >= 1024"
+        except Exception as e:
+             return False, f"Validation Logic Error: {e}"
              
-        return True
+        return True, "OK"
 
 # Singleton instance
 _loader = ConfigLoader()
@@ -447,6 +457,9 @@ def load_config() -> Dict[str, Any]:
 
 def save_config(config: Dict[str, Any]) -> bool:
     return _loader.save_config(config)
+
+def save_config_detailed(config: Dict[str, Any]) -> (bool, str):
+    return _loader.save_config_detailed(config)
 
 def reset_config() -> Dict[str, Any]:
     return _loader.reset_to_defaults()

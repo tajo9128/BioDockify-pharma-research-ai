@@ -54,7 +54,7 @@ export default function AgentStatusPanel({
 
         const wsUrl = `${apiBaseUrl.replace('http', 'ws')}/api/research/ws/agent-thinking`;
         let ws: WebSocket | null = null;
-        let reconnectTimeout: NodeJS.Timeout;
+        let reconnectTimeout: NodeJS.Timeout | null = null;
 
         const connect = () => {
             ws = new WebSocket(wsUrl);
@@ -108,8 +108,18 @@ export default function AgentStatusPanel({
         connect();
 
         return () => {
-            ws?.close();
-            clearTimeout(reconnectTimeout);
+            if (ws) {
+                ws.onopen = null;
+                ws.onmessage = null;
+                ws.onclose = null;
+                ws.onerror = null;
+                ws.close();
+                ws = null;
+            }
+            if (reconnectTimeout) {
+                clearTimeout(reconnectTimeout);
+                reconnectTimeout = null;
+            }
         };
     }, [useWebSocket, apiBaseUrl, onComplete]);
 

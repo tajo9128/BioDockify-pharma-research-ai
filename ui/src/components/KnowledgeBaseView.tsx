@@ -341,7 +341,7 @@ export default function KnowledgeBaseView() {
                             </div>
                         ) : (
                             <div className="space-y-2">
-                                {files.map((file) => (
+                                {files.slice(0, 100).map((file) => (
                                     <div
                                         key={file.id}
                                         className="flex items-center justify-between p-4 bg-slate-800/50 hover:bg-slate-800 rounded-lg border border-slate-700/50 transition-colors group"
@@ -375,6 +375,11 @@ export default function KnowledgeBaseView() {
                                         </button>
                                     </div>
                                 ))}
+                                {files.length > 100 && (
+                                    <div className="text-center py-4 text-xs text-slate-500">
+                                        Showing 100 of {files.length} documents. Search to find specific files.
+                                    </div>
+                                )}
                             </div>
                         )}
                     </>

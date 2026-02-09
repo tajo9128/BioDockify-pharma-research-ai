@@ -2,60 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { api, Settings } from '@/lib/api';
 import { AGENT_PERSONAS } from '@/lib/personas';
 import ChannelsSettingsPanel from './ChannelsSettingsPanel';
+import { useToast } from '@/hooks/use-toast';
 import { Save, Server, Cloud, Cpu, RefreshCw, CheckCircle, AlertCircle, Shield, Activity, Power, BookOpen, Layers, FileText, Globe, Database, Key, FlaskConical, Link, FolderOpen, UserCircle, Lock, Unlock, Sparkles, Wrench, MessageCircle, Search, Bot } from 'lucide-react';
 
 
 // Extended Settings interface matching "Fully Loaded" specs + New User Requests
-interface AdvancedSettings extends Omit<Settings, 'persona'> {
-    system: {
-        max_cpu_percent: number;
-        internet_research: boolean;
-        auto_update?: boolean;
-        log_level?: 'DEBUG' | 'INFO' | 'WARNING' | 'ERROR';
-    };
-    nanobot?: {
-        headless_browser: boolean;
-        stealth_mode: boolean;
-        browser_timeout: number;
-    };
-    ai_advanced: {
-        context_window: number;
-        gpu_layers: number;
-        thread_count: number;
-    };
-    pharma: {
-        enable_pubtator: boolean;
-        enable_semantic_scholar: boolean;
-        enable_unpaywall: boolean;
-        citation_threshold: 'low' | 'medium' | 'high';
-        sources: {
-            pubmed: boolean;
-            pmc: boolean;
-            biorxiv: boolean;
-            chemrxiv: boolean;
-            clinicaltrials: boolean;
-            google_scholar: boolean;
-            openalex: boolean;
-            semantic_scholar: boolean;
-            ieee: boolean;
-            elsevier: boolean;
-            scopus: boolean;
-            wos: boolean;
-            science_index: boolean;
-        };
-    };
-    persona: Settings['persona'] & {
-        department: string;
-    };
-    output: {
-        format: 'markdown' | 'pdf' | 'docx' | 'latex';
-        citation_style: 'apa' | 'nature' | 'ieee' | 'chicago';
-        include_disclosure: boolean;
-        output_dir: string;
-    };
-}
+// Use Settings from api.ts directly or extend if necessary
+type AdvancedSettings = Settings;
 
 export default function SettingsPanel() {
+    const { toast } = useToast();
     // Default State with ALL features
     const defaultSettings: AdvancedSettings = {
         project: { name: 'New Project', type: 'Drug Discovery', disease_context: 'Alzheimer\'s', stage: 'Early Discovery' },
@@ -148,7 +104,8 @@ export default function SettingsPanel() {
         custom: 'idle',
         brave: 'idle',
         serper: 'idle',
-        jina: 'idle'
+        jina: 'idle',
+        bohrium: 'idle'
     });
 
     // LM Studio Test State with Progress
@@ -228,8 +185,10 @@ export default function SettingsPanel() {
                     system: { ...prev.system, ...localSettings.system }
                 }));
 
-                const autoConfigured = localStorage.getItem('biodockify_lm_studio_auto_configured');
-                if (autoConfigured === 'true') setIsAutoConfigured(true);
+                if (typeof window !== 'undefined') {
+                    const autoConfigured = localStorage.getItem('biodockify_lm_studio_auto_configured');
+                    if (autoConfigured === 'true') setIsAutoConfigured(true);
+                }
             }
 
             if (!localSettings) {
@@ -247,6 +206,11 @@ export default function SettingsPanel() {
                     }
                 } catch (e) {
                     console.log('[Settings] API unavailable, using defaults');
+                    toast({
+                        title: "Offline Mode",
+                        description: "Could not reach backend. Using local settings.",
+                        variant: "destructive"
+                    });
                 }
             }
         } catch (e) {
@@ -275,9 +239,16 @@ export default function SettingsPanel() {
         }
         setSaving(false);
         if (apiError) {
-            alert('Settings saved locally! (Backend sync failed)');
+            toast({
+                title: "Partial Save",
+                description: `Settings saved locally, but backend sync failed: ${apiError}`,
+                variant: "destructive"
+            });
         } else {
-            alert('Settings saved successfully!');
+            toast({
+                title: "Success",
+                description: "All settings saved and synchronized.",
+            });
         }
         await loadSettings();
     };
@@ -356,20 +327,23 @@ export default function SettingsPanel() {
 
     const handleTestKey = async (provider: string, key?: string, serviceType: 'llm' | 'elsevier' | 'bohrium' | 'brave' = 'llm', baseUrl?: string, model?: string) => {
         if (!key) return;
-        setApiTestProgress(prev => ({ ...prev, [provider]: { status: 'testing', progress: 20, message: 'Testing...', details: '' } }));
-        setTestStatus(prev => ({ ...prev, [provider]: 'testing' }));
+        // Consolidate state updates to prevent race conditions
+        const updateProgress = (updates: any) => {
+            setApiTestProgress(prev => ({ ...prev, [provider]: { ...prev[provider], ...updates } }));
+            if (updates.status) setTestStatus(prev => ({ ...prev, [provider]: updates.status }));
+        };
+
+        updateProgress({ status: 'testing', progress: 20, message: 'Testing...', details: '' });
 
         try {
             const result = await api.testConnection(serviceType, provider, key, provider === 'custom' ? baseUrl : undefined, model);
             if (result.status === 'success') {
-                setTestStatus(prev => ({ ...prev, [provider]: 'success' }));
-                setApiTestProgress(prev => ({ ...prev, [provider]: { status: 'success', progress: 100, message: 'PASSED', details: result.message } }));
+                updateProgress({ status: 'success', progress: 100, message: 'PASSED', details: result.message });
             } else {
                 throw new Error(result.message);
             }
         } catch (err: any) {
-            setTestStatus(prev => ({ ...prev, [provider]: 'error' }));
-            setApiTestProgress(prev => ({ ...prev, [provider]: { status: 'error', progress: 100, message: 'FAILED', details: err.message } }));
+            updateProgress({ status: 'error', progress: 100, message: 'FAILED', details: err.message });
         }
     };
 
@@ -378,7 +352,17 @@ export default function SettingsPanel() {
     };
 
     const updatePharmaSource = (key: keyof typeof settings.pharma.sources, val: boolean) => {
-        setSettings({ ...settings, pharma: { ...settings.pharma, sources: { ...settings.pharma.sources, [key]: val } } });
+        // Safe nested update with null checks
+        setSettings(prev => ({
+            ...prev,
+            pharma: {
+                ...prev.pharma,
+                sources: {
+                    ...(prev.pharma?.sources || {}),
+                    [key]: val
+                }
+            }
+        }));
     };
 
     if (loading) return <div className="p-12 text-center text-slate-400">Loading Configuration...</div>;
@@ -617,6 +601,7 @@ export default function SettingsPanel() {
                                         modelValue={settings.ai_provider?.huggingface_model}
                                         onModelChange={(v: string) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, huggingface_model: v } })}
                                         modelPlaceholder="meta-llama/Meta-Llama-3-8B-Instruct"
+                                        predefinedModels={['meta-llama/Meta-Llama-3-8B-Instruct', 'mistralai/Mistral-7B-Instruct-v0.3', 'microsoft/Phi-3-mini-4k-instruct']}
                                     />
                                 </div>
                             </div>
@@ -683,6 +668,7 @@ export default function SettingsPanel() {
                                         testDetails={apiTestProgress['openrouter']?.details}
                                         modelValue={settings.ai_provider?.openrouter_model}
                                         onModelChange={(v: string) => setSettings({ ...settings, ai_provider: { ...settings.ai_provider, openrouter_model: v } })}
+                                        predefinedModels={['openai/gpt-4o', 'anthropic/claude-3.5-sonnet', 'google/gemini-pro-1.5', 'meta-llama/llama-3-70b-instruct']}
                                     />
                                     <CloudKeyBox
                                         name="GLM 4"
@@ -1099,7 +1085,7 @@ const CloudKeyBox = ({ name, value, icon, onChange, onTest, testStatus = 'idle',
                 </div>
                 <div className="flex items-center gap-2">
                     {getStatusIcon()}
-                    {(showBaseUrl || predefinedModels.length > 0) && (
+                    {showBaseUrl && (
                         <button onClick={() => setIsExpanded(!isExpanded)} className="text-xs text-slate-500 hover:text-slate-300">
                             {isExpanded ? 'Simple' : 'Advanced'}
                         </button>
@@ -1122,6 +1108,46 @@ const CloudKeyBox = ({ name, value, icon, onChange, onTest, testStatus = 'idle',
                 >
                     Test
                 </button>
+            </div>
+
+            {/* Model Selection - ALWAYS VISIBLE */}
+            <div className="mt-4">
+                {predefinedModels.length > 0 ? (
+                    <div>
+                        <label className="text-[10px] uppercase text-slate-500 font-bold mb-1 block">Model ID</label>
+                        <div className="flex gap-2">
+                            <select
+                                value={modelValue || ''}
+                                onChange={(e) => onModelChange(e.target.value)}
+                                className="flex-1 bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-white"
+                            >
+                                <option value="">Select a Model...</option>
+                                {predefinedModels.map((m: string) => (
+                                    <option key={m} value={m}>{m}</option>
+                                ))}
+                            </select>
+                            {/* Allow custom input even with predefined models */}
+                            <input
+                                type="text"
+                                value={modelValue || ''}
+                                onChange={(e) => onModelChange(e.target.value)}
+                                className="flex-1 bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-white placeholder-slate-600"
+                                placeholder="Or type custom..."
+                            />
+                        </div>
+                    </div>
+                ) : (
+                    <div>
+                        <label className="text-[10px] uppercase text-slate-500 font-bold mb-1 block">Model ID</label>
+                        <input
+                            type="text"
+                            value={modelValue || ''}
+                            onChange={(e) => onModelChange(e.target.value)}
+                            className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-white placeholder-slate-600"
+                            placeholder={modelPlaceholder || "e.g. gpt-4o"}
+                        />
+                    </div>
+                )}
             </div>
 
             {/* Progress Bar & Status Message */}
@@ -1148,57 +1174,19 @@ const CloudKeyBox = ({ name, value, icon, onChange, onTest, testStatus = 'idle',
                 </div>
             )}
 
-            {/* Advanced Options */}
-            {isExpanded && (
+            {/* Advanced Options (Base URL) */}
+            {isExpanded && showBaseUrl && (
                 <div className="space-y-2 mt-2 pt-2 border-t border-slate-800/50 animate-in fade-in slide-in-from-top-1">
-                    {predefinedModels.length > 0 ? (
-                        <div>
-                            <label className="text-[10px] uppercase text-slate-500 font-bold mb-1 block">Model ID</label>
-                            <div className="flex gap-2">
-                                <select
-                                    value={modelValue || ''}
-                                    onChange={(e) => onModelChange(e.target.value)}
-                                    className="flex-1 bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-white"
-                                >
-                                    <option value="">Select a Model...</option>
-                                    {predefinedModels.map((m: string) => (
-                                        <option key={m} value={m}>{m}</option>
-                                    ))}
-                                </select>
-                                <input
-                                    type="text"
-                                    value={modelValue || ''}
-                                    onChange={(e) => onModelChange(e.target.value)}
-                                    className="flex-1 bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-white placeholder-slate-600"
-                                    placeholder="Or type custom model ID..."
-                                />
-                            </div>
-                        </div>
-                    ) : (
-                        <div>
-                            <label className="text-[10px] uppercase text-slate-500 font-bold mb-1 block">Model ID</label>
-                            <input
-                                type="text"
-                                value={modelValue || ''}
-                                onChange={(e) => onModelChange(e.target.value)}
-                                className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-white placeholder-slate-600"
-                                placeholder={modelPlaceholder || "e.g. gpt-4o"}
-                            />
-                        </div>
-                    )}
-
-                    {showBaseUrl && (
-                        <div>
-                            <label className="text-[10px] uppercase text-slate-500 font-bold mb-1 block">Base URL (Legacy/Proxy)</label>
-                            <input
-                                type="text"
-                                value={baseUrlValue || ''}
-                                onChange={(e) => onBaseUrlChange(e.target.value)}
-                                className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-white placeholder-slate-600"
-                                placeholder="https://api.openai.com/v1"
-                            />
-                        </div>
-                    )}
+                    <div>
+                        <label className="text-[10px] uppercase text-slate-500 font-bold mb-1 block">Base URL (Legacy/Proxy)</label>
+                        <input
+                            type="text"
+                            value={baseUrlValue || ''}
+                            onChange={(e) => onBaseUrlChange(e.target.value)}
+                            className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-white placeholder-slate-600"
+                            placeholder="https://api.openai.com/v1"
+                        />
+                    </div>
                 </div>
             )}
         </div>

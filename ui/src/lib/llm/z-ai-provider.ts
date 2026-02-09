@@ -50,13 +50,16 @@ export class ZAIProvider implements LLMProvider {
    * Complete a single prompt
    */
   async complete(prompt: string, options: CompleteOptions = {}): Promise<string> {
+    let timerId: any;
+    let chatTimerId: any;
     try {
       const zai = await Promise.race([
         ZAI.create(),
         new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Timeout')), this.timeout)
+          timerId = setTimeout(() => reject(new Error('Timeout')), this.timeout)
         )
-      ]) as Promise<any>;
+      ]) as any;
+      if (timerId) clearTimeout(timerId);
 
       const completion = await Promise.race([
         zai.chat.completions.create({
@@ -73,9 +76,10 @@ export class ZAIProvider implements LLMProvider {
           thinking: { type: 'disabled' }
         }),
         new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Timeout')), this.timeout)
+          chatTimerId = setTimeout(() => reject(new Error('Timeout')), this.timeout)
         )
-      ]) as Promise<any>;
+      ]) as any;
+      if (chatTimerId) clearTimeout(chatTimerId);
 
       const response = completion.choices[0]?.message?.content;
 
@@ -90,6 +94,9 @@ export class ZAIProvider implements LLMProvider {
       }
       if (error instanceof LLMError) throw error;
       throw new LLMError(`Failed to complete: ${error}`, this.name);
+    } finally {
+      if (timerId) clearTimeout(timerId);
+      if (chatTimerId) clearTimeout(chatTimerId);
     }
   }
 
@@ -97,20 +104,23 @@ export class ZAIProvider implements LLMProvider {
    * Complete a chat conversation
    */
   async chat(messages: Message[], options: ChatOptions = {}): Promise<string> {
+    let timerId: any;
+    let chatTimerId: any;
     try {
       const zai = await Promise.race([
         ZAI.create(),
         new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Timeout')), this.timeout)
+          timerId = setTimeout(() => reject(new Error('Timeout')), this.timeout)
         )
-      ]) as Promise<any>;
+      ]) as any;
+      if (timerId) clearTimeout(timerId);
 
       // Add system prompt if provided
       const apiMessages = options.systemPrompt
         ? [
-            { role: 'assistant' as const, content: options.systemPrompt },
-            ...messages
-          ]
+          { role: 'assistant' as const, content: options.systemPrompt },
+          ...messages
+        ]
         : messages;
 
       const completion = await Promise.race([
@@ -119,9 +129,10 @@ export class ZAIProvider implements LLMProvider {
           thinking: { type: 'disabled' }
         }),
         new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Timeout')), this.timeout)
+          chatTimerId = setTimeout(() => reject(new Error('Timeout')), this.timeout)
         )
-      ]) as Promise<any>;
+      ]) as any;
+      if (chatTimerId) clearTimeout(chatTimerId);
 
       const response = completion.choices[0]?.message?.content;
 
@@ -136,6 +147,9 @@ export class ZAIProvider implements LLMProvider {
       }
       if (error instanceof LLMError) throw error;
       throw new LLMError(`Failed to chat: ${error}`, this.name);
+    } finally {
+      if (timerId) clearTimeout(timerId);
+      if (chatTimerId) clearTimeout(chatTimerId);
     }
   }
 

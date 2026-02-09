@@ -16,9 +16,9 @@ export default function Sidebar({ activeView, onViewChange }: SidebarProps) {
 
   /* New Sidebar Organization */
   const mainNav = [
+    { id: 'home', icon: Home, label: 'Home' },
     { id: 'agent-chat', icon: Bot, label: 'BioDockify AI Chat' },
     { id: 'research', icon: FlaskConical, label: 'BioDockify AI Workstation' },
-    { id: 'home', icon: Home, label: 'Home' },
     { id: 'writers', icon: PenTool, label: 'Academic Suite' },
     { id: 'results', icon: FileText, label: 'Results' },
     { id: 'statistics', icon: Calculator, label: 'Statistics' },

@@ -83,16 +83,19 @@ class AgentZeroEnhanced:
         parts = []
         
         # System preamble
+        # System preamble
         parts.append("""You are Agent Zero, the AI brain of BioDockify - a PhD-level pharmaceutical research assistant.
 
 You have access to the following capabilities through your tools:
+- System Administration (Read/Write Files, Execute Commands)
 - Literature search (PubMed, Google Scholar)
 - Paper analysis and summarization
 - Knowledge graph navigation
 - Statistical analysis
 - Thesis generation
 
-Respond helpfully, accurately, and concisely. Use scientific terminology when appropriate.""")
+Respond helpfully, accurately, and concisely. Use scientific terminology when appropriate.
+If asked to fix a system issue (like a config file), USE YOUR TOOLS to fix it.""")
         
         # Memory context
         if self.memory:

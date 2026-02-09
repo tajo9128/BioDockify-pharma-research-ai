@@ -7,10 +7,15 @@ import logging
 
 logger = logging.getLogger("biodockify_api")
 
+import os
+
 # SECURITY WARNING: Ideally this should be an environment variable.
 # For this hotfix/robust offline mode, we are embedding a default fallback key.
 # Change this string to rotate keys (will invalidate old codes).
-EMERGENCY_SECRET_KEY = "BIODOCKIFY_PHARMA_RESEARCH_OFFLINE_ACCESS_KEY_V1"
+EMERGENCY_SECRET_KEY = os.environ.get(
+    "BIODOCKIFY_EMERGENCY_SECRET", 
+    "BIODOCKIFY_PHARMA_RESEARCH_OFFLINE_ACCESS_KEY_V1"
+)
 
 def validate_emergency_token(email: str, token: str) -> bool:
     """

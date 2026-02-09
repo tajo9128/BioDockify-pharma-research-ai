@@ -18,6 +18,10 @@ from dataclasses import dataclass, field
 
 from loguru import logger
 
+# Robust path resolution
+BASE_DIR = Path(__file__).parent.parent
+DEFAULT_CONFIG_PATH = BASE_DIR / "config" / "channels.json"
+
 
 @dataclass
 class TelegramConfig:
@@ -71,7 +75,9 @@ class AgentZeroChannels:
     
     _instance = None
     
-    def __init__(self, config_path: str = "./config/channels.json"):
+    def __init__(self, config_path: str = None):
+        if config_path is None:
+            config_path = str(DEFAULT_CONFIG_PATH)
         self.config_path = Path(config_path)
         self.config: ChannelsConfig = ChannelsConfig()
         self._channel_manager = None

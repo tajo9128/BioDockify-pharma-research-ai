@@ -7,7 +7,7 @@
 
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { getSystemController, SystemController } from '@/lib/system-controller';
 import {
     getServiceLifecycleManager,
@@ -57,8 +57,10 @@ export function useAgentZero(): UseAgentZeroResult {
 
     const controller = getSystemController();
     const lifecycleManager = getServiceLifecycleManager();
+    const isMounted = useRef(true);
 
     const initialize = useCallback(async () => {
+        if (!isMounted.current) return;
         setState(prev => ({ ...prev, loading: true }));
 
         try {
@@ -73,6 +75,8 @@ export function useAgentZero(): UseAgentZeroResult {
 
                 // Try to self-configure with available AI
                 const result = await initializeAgentZeroWithAI();
+
+                if (!isMounted.current) return;
 
                 if (result.ready && result.provider) {
                     // Successfully self-configured!
@@ -108,10 +112,14 @@ export function useAgentZero(): UseAgentZeroResult {
 
             // Already configured - just initialize services
             const providers = await detectAIProviders();
+            if (!isMounted.current) return;
+
             const bestProvider = providers.length > 0 ? providers[0] : null;
 
             // Check services
             await lifecycleManager.checkAllServices();
+            if (!isMounted.current) return;
+
             const services = lifecycleManager.getAllStatuses();
 
             // Check for LM Studio (priority 1 provider)
@@ -129,6 +137,8 @@ export function useAgentZero(): UseAgentZeroResult {
             } catch {
                 hasInternet = false;
             }
+
+            if (!isMounted.current) return;
 
             // FULL MODE = LM Studio + Internet
             const systemMode = (hasLmStudio && hasInternet) ? 'FULL' : 'LIMITED';
@@ -149,30 +159,18 @@ export function useAgentZero(): UseAgentZeroResult {
                 localStorage.setItem('biodockify_internet_available', hasInternet ? 'true' : 'false');
             }
 
-            console.log('[useAgentZero] Initialized at FULL POTENTIAL:', {
-                mode: systemMode,
-                hasLmStudio,
-                hasInternet,
-                provider: bestProvider?.name,
-                features: systemMode === 'FULL' ? 'ALL ACTIVE' : 'LIMITED'
-            });
-
             // Start health monitoring
             lifecycleManager.startHealthMonitoring();
 
-            console.log('[useAgentZero] Initialized:', {
-                mode: systemMode,
-                provider: bestProvider?.name,
-                services: services.map(s => `${s.name}: ${s.running ? '✓' : '✗'}`)
-            });
-
         } catch (e: any) {
             console.error('[useAgentZero] Initialization failed:', e);
-            setState(prev => ({
-                ...prev,
-                loading: false,
-                error: e.message
-            }));
+            if (isMounted.current) {
+                setState(prev => ({
+                    ...prev,
+                    loading: false,
+                    error: e.message
+                }));
+            }
         }
     }, [controller, lifecycleManager]);
 
@@ -180,11 +178,13 @@ export function useAgentZero(): UseAgentZeroResult {
         await lifecycleManager.checkAllServices();
         const providers = await detectAIProviders();
 
-        setState(prev => ({
-            ...prev,
-            services: lifecycleManager.getAllStatuses(),
-            aiProvider: providers.length > 0 ? providers[0] : null
-        }));
+        if (isMounted.current) {
+            setState(prev => ({
+                ...prev,
+                services: lifecycleManager.getAllStatuses(),
+                aiProvider: providers.length > 0 ? providers[0] : null
+            }));
+        }
     }, [lifecycleManager]);
 
     const configureAutoStart = useCallback((config: Partial<LifecycleConfig>) => {
@@ -195,7 +195,7 @@ export function useAgentZero(): UseAgentZeroResult {
         console.log('[useAgentZero] Reconfiguring...');
         const result = await selfConfigure();
 
-        if (result.success && result.provider) {
+        if (isMounted.current && result.success && result.provider) {
             setState(prev => ({
                 ...prev,
                 aiProvider: result.provider,
@@ -207,17 +207,21 @@ export function useAgentZero(): UseAgentZeroResult {
 
     // Initialize on mount
     useEffect(() => {
+        isMounted.current = true;
         initialize();
 
         // Subscribe to service updates
         const unsubscribe = lifecycleManager.subscribe((serviceMap) => {
-            setState(prev => ({
-                ...prev,
-                services: Array.from(serviceMap.values())
-            }));
+            if (isMounted.current) {
+                setState(prev => ({
+                    ...prev,
+                    services: Array.from(serviceMap.values())
+                }));
+            }
         });
 
         return () => {
+            isMounted.current = false;
             unsubscribe();
             lifecycleManager.stopHealthMonitoring();
         };

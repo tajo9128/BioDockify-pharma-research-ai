@@ -113,6 +113,15 @@ class ExecTool(Tool):
         cmd = command.strip()
         lower = cmd.lower()
 
+        # 1. Check for command chaining and subshells (High risk)
+        dangerous_operators = [";", "&&", "||", "|", "`", "$(", ">", ">>"]
+        for op in dangerous_operators:
+            if op in cmd:
+                # We allow some piping if it's common patterns, but be very cautious
+                if op == "|" and any(x in lower for x in ["grep", "head", "tail", "wc", "cat"]):
+                    continue
+                return f"Error: Command blocked by safety guard (dangerous operator detected: {op})"
+
         for pattern in self.deny_patterns:
             if re.search(pattern, lower):
                 return "Error: Command blocked by safety guard (dangerous pattern detected)"
@@ -127,15 +136,17 @@ class ExecTool(Tool):
 
             cwd_path = Path(cwd).resolve()
 
-            win_paths = re.findall(r"[A-Za-z]:\\[^\\\"']+", cmd)
-            posix_paths = re.findall(r"/[^\s\"']+", cmd)
+            # More robust path detection
+            win_paths = re.findall(r"[A-Za-z]:\\[^\\\"'\s]+", cmd)
+            posix_paths = re.findall(r"/(?:[^/\s\"']+/)*[^/\s\"']*", cmd)
 
             for raw in win_paths + posix_paths:
                 try:
                     p = Path(raw).resolve()
+                    if p.exists():
+                        if cwd_path not in p.parents and p != cwd_path:
+                            return "Error: Command blocked by safety guard (path outside working dir)"
                 except Exception:
                     continue
-                if cwd_path not in p.parents and p != cwd_path:
-                    return "Error: Command blocked by safety guard (path outside working dir)"
 
         return None

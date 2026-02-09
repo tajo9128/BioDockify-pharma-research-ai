@@ -75,8 +75,8 @@ export default function StatisticsView() {
                             key={t}
                             onClick={() => setTier(t)}
                             className={`px-4 py-2 rounded-md text-sm font-medium transition-all flex items-center gap-2 ${tier === t
-                                    ? 'bg-cyan-900/50 text-cyan-200 border border-cyan-700/50'
-                                    : 'text-slate-400 hover:text-white hover:bg-white/5'
+                                ? 'bg-cyan-900/50 text-cyan-200 border border-cyan-700/50'
+                                : 'text-slate-400 hover:text-white hover:bg-white/5'
                                 }`}
                         >
                             {getTierIcon(t)}
@@ -103,13 +103,30 @@ export default function StatisticsView() {
                         <label className="text-xs text-slate-500 uppercase tracking-wider font-semibold mb-2 block">Study Design</label>
                         <select
                             value={design}
-                            onChange={e => setDesign(e.target.value)}
+                            onChange={(e: any) => setDesign(e.target.value)}
                             className="w-full bg-slate-950 border border-slate-800 rounded p-2 text-white focus:ring-1 focus:ring-cyan-500 outline-none"
                         >
+                            {/* BASIC TIER */}
                             <option value="descriptive">Descriptive Statistics</option>
                             <option value="two_group">Two Group Comparison (T-Test)</option>
-                            <option value="anova">Multi Group (ANOVA)</option>
-                            <option value="correlation">Correlation</option>
+
+                            {/* ANALYTICAL TIER */}
+                            {(tier === 'analytical' || tier === 'advanced') && (
+                                <>
+                                    <option value="anova">Multi Group (ANOVA)</option>
+                                    <option value="correlation">Correlation Analysis</option>
+                                    <option value="regression">Linear Regression</option>
+                                </>
+                            )}
+
+                            {/* ADVANCED TIER */}
+                            {tier === 'advanced' && (
+                                <>
+                                    <option value="survival">Survival Analysis (Kaplan-Meier)</option>
+                                    <option value="pca">Principal Component Analysis (PCA)</option>
+                                    <option value="bayesian">Bayesian Inference</option>
+                                </>
+                            )}
                         </select>
                     </div>
 
@@ -210,6 +227,6 @@ export default function StatisticsView() {
                     )}
                 </div>
             </div>
-        </div>
+        </div >
     );
 }

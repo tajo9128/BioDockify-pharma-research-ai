@@ -15,6 +15,7 @@ import {
     Eye,
     EyeOff
 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 interface ChannelConfig {
     enabled: boolean;
@@ -34,6 +35,7 @@ interface ChannelsStatus {
 const API_BASE = 'http://localhost:8234';
 
 export default function ChannelsSettingsPanel() {
+    const { toast } = useToast();
     const [status, setStatus] = useState<ChannelsStatus | null>(null);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -89,10 +91,10 @@ export default function ChannelsSettingsPanel() {
                     allowed_users: []
                 })
             });
-            alert('Telegram configuration saved!');
+            toast({ title: "Telegram Saved", description: "Configuration updated successfully." });
             fetchStatus();
         } catch (e) {
-            alert('Failed to save Telegram configuration');
+            toast({ title: "Failed", description: "Could not save Telegram config.", variant: "destructive" });
         } finally {
             setSaving(false);
         }
@@ -111,10 +113,10 @@ export default function ChannelsSettingsPanel() {
                     verify_token: whatsappVerifyToken
                 })
             });
-            alert('WhatsApp configuration saved!');
+            toast({ title: "WhatsApp Saved", description: "Configuration updated successfully." });
             fetchStatus();
         } catch (e) {
-            alert('Failed to save WhatsApp configuration');
+            toast({ title: "Failed", description: "Could not save WhatsApp config.", variant: "destructive" });
         } finally {
             setSaving(false);
         }
@@ -132,10 +134,10 @@ export default function ChannelsSettingsPanel() {
                     allowed_guilds: []
                 })
             });
-            alert('Discord configuration saved!');
+            toast({ title: "Discord Saved", description: "Configuration updated successfully." });
             fetchStatus();
         } catch (e) {
-            alert('Failed to save Discord configuration');
+            toast({ title: "Failed", description: "Could not save Discord config.", variant: "destructive" });
         } finally {
             setSaving(false);
         }
@@ -144,10 +146,10 @@ export default function ChannelsSettingsPanel() {
     const handleStartChannels = async () => {
         try {
             await fetch(`${API_BASE}/api/channels/start`, { method: 'POST' });
-            alert('Channels starting...');
+            toast({ title: "Starting", description: "Messaing channels are booting up..." });
             setTimeout(fetchStatus, 2000);
         } catch (e) {
-            alert('Failed to start channels');
+            toast({ title: "Bootstrap Failed", description: "Check backend connection.", variant: "destructive" });
         }
     };
 

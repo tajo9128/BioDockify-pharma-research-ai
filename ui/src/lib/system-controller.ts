@@ -170,26 +170,40 @@ export class SystemController {
             this.state,
             async (config) => {
                 try {
-                    // Save to localStorage
+                    // Save ONLY non-sensitive state to localStorage
                     if (typeof window !== 'undefined') {
-                        localStorage.setItem('biodockify_config', JSON.stringify(config));
+                        const publicConfig = {
+                            first_run: false,
+                            wizard_mode: false,
+                            mode: config.services?.lm_studio_running ? 'FULL' : 'LIMITED'
+                        };
+                        localStorage.setItem('biodockify_public_state', JSON.stringify(publicConfig));
+
+                        // Clear the legacy potentially insecure config
+                        localStorage.removeItem('biodockify_config');
                     }
 
-                    // Also try to save to backend
+                    // Save full (sensitive) config to backend (Essential)
                     try {
                         const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8234';
-                        await fetch(`${API_BASE}/api/settings`, {
+                        const response = await fetch(`${API_BASE}/api/settings`, {
                             method: 'PUT',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify(config)
                         });
-                    } catch {
-                        // Backend save is optional
-                        console.log('[SystemController] Backend save skipped');
+
+                        if (!response.ok) {
+                            console.error('[SystemController] Backend save failed with status:', response.status);
+                            return false;
+                        }
+                    } catch (e) {
+                        console.error('[SystemController] Backend connection error during save:', e);
+                        return false; // Fail if we can't save to backend
                     }
 
                     return true;
-                } catch {
+                } catch (e) {
+                    console.error('[SystemController] Commit error:', e);
                     return false;
                 }
             }

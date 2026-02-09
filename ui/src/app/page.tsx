@@ -127,9 +127,9 @@ export default function PharmaceuticalResearchApp() {
           // Update Task State
           setCurrentTask(prev => prev ? { ...prev, status: status.status, progress: status.progress } : null);
 
-          // Update Thinking Steps (Logs)
+          // Update Thinking Steps (Logs) - capped at last 100 to prevent state growth
           if (status.logs && status.logs.length > 0) {
-            const steps = status.logs.map((log: string, idx: number) => {
+            const steps = status.logs.slice(-100).map((log: string, idx: number) => {
               let type = 'info';
               let content = log;
               if (log.toLowerCase().includes('thought') || log.includes('Thinking')) type = 'thought';
@@ -149,6 +149,9 @@ export default function PharmaceuticalResearchApp() {
           }
         } catch (e) {
           console.error("Polling error", e);
+          clearInterval(interval);
+          setIsExecuting(false);
+          setError("Connection lost during research task.");
         }
       }, 2000);
 

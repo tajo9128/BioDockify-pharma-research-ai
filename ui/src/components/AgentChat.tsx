@@ -163,7 +163,11 @@ How can I assist your research today?`,
                 providerConfig.custom_key ||
                 providerConfig.glm_key ||
                 providerConfig.groq_key ||
-                providerConfig.openai_key
+                providerConfig.openai_key ||
+                providerConfig.deepseek_key ||
+                providerConfig.anthropic_key ||
+                providerConfig.kimi_key ||
+                providerConfig.elsevier_key
             );
 
             // If no cloud provider, suggest adding one for full potential
@@ -352,14 +356,17 @@ After configuring, try again.`,
                 console.log("Response was not JSON, using raw text", e);
             }
 
-            setMessages(prev => [...prev, {
-                role: 'assistant',
-                content: replyContent,
-                thoughts: thoughts,
-                action: action,
-                timestamp: new Date(),
-                source: sourceUrl ? `Source: ${sourceUrl}` : undefined
-            }]);
+            setMessages(prev => {
+                const updated: Message[] = [...prev, {
+                    role: 'assistant' as const,
+                    content: replyContent,
+                    thoughts: thoughts,
+                    action: action,
+                    timestamp: new Date(),
+                    source: sourceUrl ? `Source: ${sourceUrl}` : undefined
+                }];
+                return updated.slice(-100);
+            });
 
         } catch (error: any) {
             console.error("Chat error:", error);
@@ -398,8 +405,13 @@ After configuring, try again.`,
                         }]);
                         return; // Success handling
                     }
-                } catch (lmError) {
+                } catch (lmError: any) {
                     console.error("LM Studio direct fallback failed:", lmError);
+                    setMessages(prev => [...prev, {
+                        role: 'system',
+                        content: `⚠️ **Fallback Failed**\n\nLM Studio direct connection attempted but failed: ${lmError.message}`,
+                        timestamp: new Date()
+                    }]);
                 }
             }
 

@@ -5,6 +5,14 @@ All notable changes to **BioDockify** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v2.4.1] - 2026-02-09
+### Fixed
+- **Integrity:** Resolved critical SQLite connection leaks in `task_store.py` using context managers.
+- **Resource Management:** Fixed memory leaks in `ZAIProvider` and `ServiceLifecycleManager` by ensuring timeouts are cleared.
+- **API Resilience:** Added 60s timeout and non-JSON error handling to the frontend API client.
+- **Logic:** Fixed undefined `prompt` variable in HuggingFace provider and initialized `tmp_path` for RAG uploads.
+- **WebSocket:** Fixed reconnection leaks in `AgentStatusPanel.tsx`.
+
 ## [v2.4.0] - 2026-02-08
 ### Added
 - **Expert Skills:** Integrated `Deep Drive` (Forensics), `Scholar Copilot` (Writing Assist), and `Summarize` (Native LLM).

@@ -352,6 +352,12 @@ export class ServiceLifecycleManager {
         }
     }
 
+    dispose(): void {
+        this.stopHealthMonitoring();
+        this.listeners.clear();
+        console.log('[Lifecycle] Service Lifecycle Manager disposed');
+    }
+
     // -------------------------------------------------------------------------
     // Event Subscription
     // -------------------------------------------------------------------------

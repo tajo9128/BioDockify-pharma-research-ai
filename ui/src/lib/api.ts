@@ -202,20 +202,41 @@ async function apiRequest<T>(
 ): Promise<T> {
   const url = `${API_BASE}${endpoint}`;
 
-  const response = await fetch(url, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options?.headers,
-    },
-  });
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), 60000); // 60s timeout
 
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ message: 'Unknown error' }));
-    throw new Error(error.message || 'API request failed');
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+      headers: {
+        'Content-Type': 'application/json',
+        ...options?.headers,
+      },
+    });
+
+    clearTimeout(id);
+
+    if (!response.ok) {
+      let message = 'API request failed';
+      try {
+        const error = await response.json();
+        message = error.message || error.detail || message;
+      } catch {
+        // Fallback for non-JSON or missing message
+      }
+      throw new Error(message);
+    }
+
+    return response.json();
+  } catch (error: any) {
+    if (error.name === 'AbortError') {
+      throw new Error('Request timed out after 60 seconds');
+    }
+    throw error;
+  } finally {
+    clearTimeout(id);
   }
-
-  return response.json();
 }
 
 export const api = {

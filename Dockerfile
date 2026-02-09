@@ -1,5 +1,5 @@
 # =============================================================================
-# BioDockify v2.3.5 - Docker Production Image
+# BioDockify v2.4.1 - Docker Production Image
 # =============================================================================
 # One-Command Install:
 #   docker pull tajo9128/biodockify-ai:latest
@@ -266,7 +266,7 @@ exec python -m http.server 3001 --directory /tmp \n\
 # Main startup script - Instant Start (Baked Dependencies)
 RUN echo '#!/bin/bash \n\
 echo "================================================" \n\
-echo "  BioDockify v2.4.0 - Production Startup" \n\
+echo "  BioDockify v2.4.1 - Production Startup" \n\
 echo "================================================" \n\
 echo "" \n\
 echo "  [ACTION REQUIRED] Open your browser to:" \n\
@@ -292,7 +292,7 @@ exec /usr/bin/supervisord -c /etc/supervisor/supervisord.conf \n\
 LABEL maintainer="tajo9128"
 LABEL org.opencontainers.image.title="BioDockify Pharma Research AI"
 LABEL org.opencontainers.image.description="BioDockify Fully Baked Image - All Dependencies Pre-installed"
-LABEL org.opencontainers.image.version="2.4.0"
+LABEL org.opencontainers.image.version="2.4.1"
 LABEL org.opencontainers.image.source="https://github.com/tajo9128/BioDockify-pharma-research-ai"
 
 # -----------------------------------------------------------------------------
