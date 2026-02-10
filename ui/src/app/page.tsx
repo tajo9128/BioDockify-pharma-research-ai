@@ -120,14 +120,14 @@ export default function PharmaceuticalResearchApp() {
       // 2. Poll Status
       const interval = setInterval(async () => {
         try {
-          const status = await api.getStatus(taskId);
+          const taskStatus = await api.getStatus(taskId);
 
           // Update Task State
-          setCurrentTask(prev => prev ? { ...prev, status: status.status, progress: status.progress } : null);
+          setCurrentTask((prev: any) => prev ? { ...prev, status: taskStatus.status, progress: taskStatus.progress } : null);
 
           // Update Thinking Steps (Logs) - capped at last 100 to prevent state growth
-          if (status.logs && status.logs.length > 0) {
-            const steps = status.logs.slice(-100).map((log: string, idx: number) => {
+          if (taskStatus.logs && taskStatus.logs.length > 0) {
+            const steps = taskStatus.logs.slice(-100).map((log: string, idx: number) => {
               let type = 'info';
               let content = log;
               if (log.toLowerCase().includes('thought') || log.includes('Thinking')) type = 'thought';
@@ -140,10 +140,10 @@ export default function PharmaceuticalResearchApp() {
           }
 
           // Check Completion
-          if (status.status === 'completed' || status.status === 'failed') {
+          if (taskStatus.status === 'completed' || taskStatus.status === 'failed') {
             clearInterval(interval);
             setIsExecuting(false);
-            if (status.status === 'failed') setError("Research task failed check logs.");
+            if (taskStatus.status === 'failed') setError("Research task failed check logs.");
           }
         } catch (e) {
           console.error("Polling error", e);
