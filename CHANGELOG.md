@@ -5,6 +5,11 @@ All notable changes to **BioDockify** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v2.4.5] - 2026-02-10
+### Fixed
+- **Docker Build Recovery**: Resolved `Unknown lockfile version` error by removing corrupt lockfiles and updating the build process.
+- **Dependency Stability**: Hardened UI dependency installation by allowing fresh lockfile generation during build.
+
 ## [v2.4.4] - 2026-02-10
 ### Added
 - **Enhanced Project System**: Implemented `ProjectPlanner`, `DeviceStateManager`, and `MultiTaskScheduler` for complex research orchestration.

@@ -1,2 +1,1 @@
-2.4.4
-BioDockify - Pharma Research AI
+2.4.5
