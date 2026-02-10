@@ -5,6 +5,11 @@ All notable changes to **BioDockify** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v2.4.7] - 2026-02-10
+### Fixed
+- Build-blocking ESLint errors (unescaped entities, require imports)
+- Version sync across all project files
+
 ## [v2.4.6] - 2026-02-10
 ### Added
 - **Stability and Performance**: Continued optimization of the Docker build process and dependency management.
