@@ -4,11 +4,11 @@ const nextConfig: NextConfig = {
   output: "standalone",
   /* Standalone output for Docker deployment */
   typescript: {
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: false,
   },
-  reactStrictMode: false,
+  reactStrictMode: true,
   eslint: {
-    ignoreDuringBuilds: true,
+    ignoreDuringBuilds: false,
   },
   images: {
     unoptimized: true,

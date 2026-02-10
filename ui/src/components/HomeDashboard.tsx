@@ -1,6 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { FlaskConical, PenTool, Brain, Search, Database, Clock, ArrowRight, Zap, Target, Bot } from 'lucide-react';
-import api from '@/lib/api';
+import api, { Project, EnhancedSystemStatus } from '@/lib/api';
+import {
+    FlaskConical, PenTool, Brain, Search,
+    Database, Clock, ArrowRight, Zap,
+    Target, Bot, Loader2, CheckCircle,
+    AlertCircle, Activity
+} from 'lucide-react';
 
 interface HomeProps {
     onNavigate: (view: string) => void;
@@ -9,38 +14,41 @@ interface HomeProps {
 export default function HomeDashboard({ onNavigate }: HomeProps) {
     const [userName, setUserName] = useState<string>('Researcher');
     const [loading, setLoading] = useState(true);
-    const [licenseActive, setLicenseActive] = useState<boolean>(false);
+    const [projects, setProjects] = useState<Project[]>([]);
+    const [systemStatus, setSystemStatus] = useState<EnhancedSystemStatus | null>(null);
 
     useEffect(() => {
-        const fetchSettings = async () => {
+        const fetchData = async () => {
             try {
-                // Check License First
-                const isLicenseActive = localStorage.getItem('biodockify_license_active') === 'true';
-                setLicenseActive(isLicenseActive);
-
-                if (!isLicenseActive) {
-                    setLoading(false);
-                    return; // Don't fetch settings if locked
-                }
-
-                // Try to get cached name first for speed
+                // Try to get cached name first
                 const localName = localStorage.getItem('biodockify_user_name');
                 if (localName) setUserName(localName);
 
-                const settings = await api.getSettings();
-                if (settings && settings.persona && settings.persona.name) {
+                // Parallel fetch
+                const [settings, projectList, sysStatus] = await Promise.all([
+                    api.getSettings().catch(() => null),
+                    api.projects.list().catch(() => []),
+                    api.projects.getSystemStatus().catch(() => null)
+                ]);
+
+                if (settings?.persona?.name) {
                     setUserName(settings.persona.name);
-                    // Cache it
                     localStorage.setItem('biodockify_user_name', settings.persona.name);
                 }
+
+                setProjects(projectList || []);
+                setSystemStatus(sysStatus);
+
             } catch (e) {
-                console.error('Failed to load user settings:', e);
+                console.error('Dashboard data fetch failed:', e);
             } finally {
                 setLoading(false);
             }
         };
 
-        fetchSettings();
+        fetchData();
+        const poll = setInterval(fetchData, 30000); // Poll every 30s
+        return () => clearInterval(poll);
     }, []);
 
     const RestrictedCard = ({ onClick, children, id }: { onClick: () => void, children: React.ReactNode, id: string }) => {
@@ -124,36 +132,71 @@ export default function HomeDashboard({ onNavigate }: HomeProps) {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="p-6 bg-slate-900/50 border border-slate-800 rounded-2xl">
                         <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
-                            <Zap className="w-5 h-5 mr-2 text-amber-400" /> System Status
+                            <Zap className="w-5 h-5 mr-2 text-amber-400" /> System Health
                         </h3>
                         <div className="space-y-3">
                             <div className="flex items-center justify-between text-sm p-3 bg-slate-950 rounded-lg border border-slate-800">
-                                <span className="text-slate-300">Local AI Engine</span>
-                                <span className="text-emerald-400 flex items-center text-xs font-mono bg-emerald-400/10 px-2 py-1 rounded">
-                                    <span className="w-2 h-2 bg-emerald-400 rounded-full mr-2 animate-pulse" />
-                                    ONLINE
+                                <span className="text-slate-300">Project Scheduler</span>
+                                <span className={`${systemStatus?.status === 'online' ? 'text-emerald-400' : 'text-amber-400'
+                                    } flex items-center text-xs font-mono bg-slate-900 px-2 py-1 rounded`}>
+                                    <span className={`w-2 h-2 ${systemStatus?.status === 'online' ? 'bg-emerald-400' : 'bg-amber-400'
+                                        } rounded-full mr-2 ${systemStatus?.status === 'online' ? 'animate-pulse' : ''}`} />
+                                    {systemStatus?.status?.toUpperCase() || 'UNKNOWN'}
                                 </span>
                             </div>
-                            <div className="flex items-center justify-between text-sm p-3 bg-slate-950 rounded-lg border border-slate-800">
-                                <span className="text-slate-300">Document Processor</span>
-                                <span className="text-emerald-400 flex items-center text-xs font-mono bg-emerald-400/10 px-2 py-1 rounded">
-                                    <span className="w-2 h-2 bg-emerald-400 rounded-full mr-2" />
-                                    READY
-                                </span>
+                            <div className="grid grid-cols-2 gap-2 mt-4">
+                                <div className="p-2 bg-slate-950 rounded-lg border border-slate-800/50 text-center">
+                                    <div className="text-xs text-slate-500 uppercase">Active Devices</div>
+                                    <div className="text-lg font-bold text-white">{systemStatus?.device_count || 0}</div>
+                                </div>
+                                <div className="p-2 bg-slate-950 rounded-lg border border-slate-800/50 text-center">
+                                    <div className="text-xs text-slate-500 uppercase">Task Queue</div>
+                                    <div className="text-lg font-bold text-white">{systemStatus?.queue_size || 0}</div>
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    <div className="p-6 bg-slate-900/50 border border-slate-800 rounded-2xl">
+                    <div className="p-6 bg-slate-900/50 border border-slate-800 rounded-2xl flex flex-col">
                         <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
-                            <Clock className="w-5 h-5 mr-2 text-sky-400" /> Recent Activity
+                            <Clock className="w-5 h-5 mr-2 text-sky-400" /> Active Projects
                         </h3>
-                        <div className="text-center py-8">
-                            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-slate-800 mb-3">
-                                <Search className="w-5 h-5 text-slate-500" />
-                            </div>
-                            <p className="text-slate-400 text-sm">No recent activity found.</p>
-                            <button onClick={() => onNavigate('research')} className="mt-2 text-sky-400 hover:text-sky-300 text-sm font-medium">Start a new project</button>
+
+                        <div className="flex-1 space-y-3 overflow-y-auto max-h-[220px] pr-2 custom-scrollbar">
+                            {projects.length > 0 ? (
+                                projects.map((p) => (
+                                    <div key={p.id} className="p-3 bg-slate-950 rounded-xl border border-slate-800 hover:border-slate-700 transition-colors">
+                                        <div className="flex justify-between items-start mb-2">
+                                            <div className="font-medium text-white text-sm truncate pr-2">{p.title}</div>
+                                            <div className={`text-[10px] px-1.5 py-0.5 rounded border ${p.status === 'executing' ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-400' :
+                                                p.status === 'completed' ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' :
+                                                    'bg-slate-800 border-slate-700 text-slate-400'
+                                                }`}>
+                                                {p.status.toUpperCase()}
+                                            </div>
+                                        </div>
+                                        <div className="w-full h-1 bg-slate-800 rounded-full overflow-hidden">
+                                            <div
+                                                className={`h-full transition-all duration-500 ${p.status === 'failed' ? 'bg-red-500' : 'bg-teal-500'
+                                                    }`}
+                                                style={{ width: `${p.progress}%` }}
+                                            />
+                                        </div>
+                                        <div className="flex justify-between mt-1.5 text-[10px] text-slate-500 italic">
+                                            <span>{p.type}</span>
+                                            <span>{p.progress}% complete</span>
+                                        </div>
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="text-center py-8">
+                                    <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-slate-800 mb-3">
+                                        <Search className="w-5 h-5 text-slate-500" />
+                                    </div>
+                                    <p className="text-slate-400 text-sm">No active projects.</p>
+                                    <button onClick={() => onNavigate('research')} className="mt-2 text-sky-400 hover:text-sky-300 text-sm font-medium">Create your first project</button>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>

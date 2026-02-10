@@ -93,9 +93,7 @@ export function throttle<T extends (...args: any[]) => any>(
  * @returns Random ID string
  */
 export function generateId(length: number = 8): string {
-  return Math.random()
-    .toString(36)
-    .substring(2, 2 + length);
+  return crypto.randomUUID().replace(/-/g, '').substring(0, length);
 }
 
 /**

@@ -36,7 +36,24 @@ export const apiService = {
 
     // Health check
     healthCheck: async () => {
-        return api.get('/health');
+        return api.get('/api/health');
+    },
+
+    // Enhanced Project System (Phase 11)
+    getEnhancedProjects: async () => {
+        return api.get('/api/enhanced/projects');
+    },
+
+    getEnhancedProjectStatus: async (projectId) => {
+        return api.get(`/api/enhanced/project/${projectId}`);
+    },
+
+    getEnhancedSystemStatus: async () => {
+        return api.get('/api/enhanced/system/status');
+    },
+
+    createEnhancedProject: async (title, type, context = '') => {
+        return api.post(`/api/enhanced/project?project_title=${encodeURIComponent(title)}&project_type=${encodeURIComponent(type)}&additional_context=${encodeURIComponent(context)}`);
     }
 };
 

@@ -62,18 +62,41 @@ export default function ConnectivityHealer({ onComplete, onSkip }: ConnectivityH
 
     const runDiagnosis = async () => {
         addLog('Starting connectivity diagnosis...');
-        // Set all to checking
         setChecks(prev => prev.map(c => ({ ...c, status: 'checking' as const, message: 'Checking...' })));
 
-        // Skip backend check entirely - go straight to client checks
+        try {
+            // Priority 1: Backend-driven diagnosis
+            const res = await fetch('/api/diagnose/connectivity', {
+                signal: AbortSignal.timeout(10000)
+            });
+
+            if (res.ok) {
+                const report = await res.json();
+                addLog(`Backend report: ${report.status}`);
+
+                setChecks(report.checks);
+                setOverallStatus(report.status);
+                setCanProceed(report.can_proceed);
+
+                if (report.status === 'healthy') {
+                    addLog('All systems healthy via backend');
+                } else {
+                    addLog(`Systems ${report.status}. Issues: ${report.repair_actions.join(', ')}`);
+                }
+                return;
+            }
+        } catch (e) {
+            addLog('Backend diagnosis unavailable, falling back to client-side checks');
+        }
+
+        // Fallback: Client-side checks (mostly for internet/LM local)
         await runClientSideChecks();
     };
 
     const runClientSideChecks = async () => {
-        // Simplified client-side checks when backend is down
         const newChecks: ConnectionCheck[] = [];
 
-        // 1. Internet check (simple fetch to known endpoints)
+        // 1. Internet check
         try {
             addLog('Checking internet...');
             await fetch('https://www.google.com/favicon.ico', {
@@ -95,161 +118,102 @@ export default function ConnectivityHealer({ onComplete, onSkip }: ConnectivityH
         }
 
         // 2. LM Studio check
-        addLog('Checking LM Studio...');
-        const lmPorts = [1234, 1235, 8080, 5000, 8000];
+        addLog('Checking LM Studio local probe...');
+        const lmPorts = [1234, 1235, 8080];
         let lmFound = false;
         let lmDetails: Record<string, any> = {};
 
         for (const port of lmPorts) {
             try {
                 const res = await fetch(`http://localhost:${port}/v1/models`, {
-                    signal: AbortSignal.timeout(5000)
+                    signal: AbortSignal.timeout(3000)
                 });
                 if (res.ok) {
                     const data = await res.json();
                     if (data.data?.length > 0) {
                         lmFound = true;
-                        lmDetails = {
-                            port,
-                            model: data.data[0]?.id,
-                            url: `http://localhost:${port}/v1`
-                        };
+                        lmDetails = { port, model: data.data[0]?.id };
                         break;
                     }
                 }
-            } catch {
-                // Continue to next port
-            }
+            } catch { /* Continue */ }
         }
 
         if (lmFound) {
             newChecks.push({
                 name: 'LM Studio',
                 status: 'success',
-                message: `Connected on port ${lmDetails.port}`,
+                message: `Connected (Port ${lmDetails.port})`,
                 details: lmDetails
             });
         } else {
             newChecks.push({
                 name: 'LM Studio',
                 status: 'warning',
-                message: 'Not detected on any port',
+                message: 'Not detected locally',
                 can_auto_repair: true,
                 repair_action: 'Start LM Studio and Enable CORS'
             });
         }
 
-        // API Keys removed - users configure in Settings later
-
-        // 3. Backend check - REMOVED
-        // We do not check backend here to prevent blocking. It's assumed to be handled by the main app later.
-
         setChecks(newChecks);
-
-        // Determine overall status
         const hasError = newChecks.some(c => c.status === 'error');
         const hasWarning = newChecks.some(c => c.status === 'warning');
 
-        if (hasError) {
-            setOverallStatus('offline');
-            setCanProceed(false);
-        } else if (hasWarning) {
-            setOverallStatus('degraded');
-            setCanProceed(true);
-        } else {
-            setOverallStatus('healthy');
-            setCanProceed(true);
-        }
-
-        addLog('Client-side diagnosis complete');
+        setOverallStatus(hasError ? 'offline' : hasWarning ? 'degraded' : 'healthy');
+        setCanProceed(!hasError);
+        addLog('Client-side fallback diagnosis complete');
     };
 
     const handleStartLmStudio = async () => {
         setIsStartingLmStudio(true);
-        addLog('Attempting to start LM Studio...');
+        addLog('Requesting backend to start LM Studio...');
 
         try {
             const res = await fetch('/api/diagnose/lm-studio/start', {
                 method: 'POST',
-                signal: AbortSignal.timeout(10000)
+                signal: AbortSignal.timeout(15000)
             });
 
             const result = await res.json();
 
             if (result.success) {
-                addLog('LM Studio started! Waiting for initialization...');
+                addLog('LM Studio start signal acknowledged');
 
-                // Update check status
+                // Update specific check status
                 setChecks(prev => prev.map(c =>
-                    c.name === 'LM Studio'
-                        ? { ...c, status: 'checking' as const, message: 'Starting...' }
-                        : c
+                    c.name === 'LM Studio' ? { ...c, status: 'checking', message: 'Starting...' } : c
                 ));
 
-                // Wait and retry detection
-                for (let i = 1; i <= 6; i++) {
-                    addLog(`Waiting for LM Studio... (${i * 5}s)`);
+                // Wait and verify
+                for (let i = 1; i <= 8; i++) {
+                    addLog(`Verifying LM Studio... (${i * 5}s)`);
                     await new Promise(r => setTimeout(r, 5000));
 
-                    // Check if LM Studio is now available
-                    const ports = [1234, 1235, 8080];
-                    for (const port of ports) {
-                        try {
-                            const checkRes = await fetch(`http://localhost:${port}/v1/models`, {
-                                signal: AbortSignal.timeout(3000)
-                            });
-                            if (checkRes.ok) {
-                                const data = await checkRes.json();
-                                if (data.data?.length > 0) {
-                                    addLog(`LM Studio ready on port ${port}!`);
-                                    setChecks(prev => prev.map(c =>
-                                        c.name === 'LM Studio'
-                                            ? {
-                                                ...c,
-                                                status: 'success' as const,
-                                                message: `Connected on port ${port}`,
-                                                details: { port, model: data.data[0]?.id }
-                                            }
-                                            : c
-                                    ));
-                                    setIsStartingLmStudio(false);
-                                    return;
-                                }
-                            }
-                        } catch {
-                            // Continue
-                        }
+                    const lmRes = await fetch('http://localhost:1234/v1/models').catch(() => null);
+                    if (lmRes && lmRes.ok) {
+                        addLog('LM Studio responded!');
+                        await runDiagnosis(); // Refresh everything
+                        setIsStartingLmStudio(false);
+                        return;
                     }
                 }
 
-                // Timeout - LM Studio running but no model
-                addLog('LM Studio started but no model loaded');
-                setChecks(prev => prev.map(c =>
-                    c.name === 'LM Studio'
-                        ? {
-                            ...c,
-                            status: 'warning' as const,
-                            message: 'Started - please load a model',
-                            repair_action: 'Load model & Enable CORS'
-                        }
-                        : c
-                ));
+                addLog('Start signal sent, but LM Studio is taking too long to respond.');
             } else {
-                addLog(`Failed: ${result.message}`);
-                setChecks(prev => prev.map(c =>
-                    c.name === 'LM Studio'
-                        ? { ...c, status: 'error' as const, message: result.message }
-                        : c
-                ));
+                addLog(`Repair failed: ${result.message}`);
+                // If it failed to start, offer manual download link
+                if (result.message?.includes('not found')) {
+                    window.open('https://lmstudio.ai', '_blank');
+                }
             }
         } catch (error) {
-            addLog('Could not contact backend to start LM Studio');
-
-            // Try opening LM Studio link
+            addLog('Could not reach backend for repair');
             window.open('https://lmstudio.ai', '_blank');
         }
 
         setIsStartingLmStudio(false);
+        await runDiagnosis();
     };
 
     const handleRetry = async () => {

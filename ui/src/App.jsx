@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-route
 import apiService from './api';
 import ResearchDashboard from './components/ResearchDashboard';
 import BackendInitializer from './components/BackendInitializer';
+import FirstRunWizard from './components/FirstRunWizard';
 import { Microscope, ArrowRight, Play } from 'lucide-react';
 
 const LandingPage = () => {
@@ -92,8 +93,18 @@ const LandingPage = () => {
 };
 
 const App = () => {
+    const [showWizard, setShowWizard] = useState(() => {
+        return localStorage.getItem('biodockify_first_run_complete') !== 'true';
+    });
+
+    const handleWizardComplete = (settings) => {
+        console.log('Setup complete with settings:', settings);
+        setShowWizard(false);
+    };
+
     return (
         <BackendInitializer>
+            {showWizard && <FirstRunWizard onComplete={handleWizardComplete} />}
             <Router>
                 <Routes>
                     <Route path="/" element={<LandingPage />} />

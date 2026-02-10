@@ -100,6 +100,14 @@ export const BackendInitializer: React.FC<BackendInitializerProps> = ({
                 lmStudio: lmStudioRunning ? 'running' : 'not_configured',
                 message: 'All services ready!'
             });
+
+            // Check if First-Run is needed
+            const firstRunDone = localStorage.getItem('biodockify_first_run_complete') === 'true';
+            if (!firstRunDone) {
+                console.log('[BackendInitializer] First-run setup required.');
+                // We'll let the App component handle showing the wizard based on this state
+            }
+
             setIsReady(true);
             return;
         }

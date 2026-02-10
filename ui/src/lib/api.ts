@@ -29,6 +29,25 @@ export interface ResearchResults {
   summary: string;
 }
 
+export interface Project {
+  id: string;
+  title: string;
+  type: 'research' | 'lab_experiment' | 'clinical_trial';
+  status: 'pending' | 'planning' | 'executing' | 'completed' | 'failed';
+  progress: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface EnhancedSystemStatus {
+  status: 'online' | 'degraded' | 'offline';
+  scheduler_mode: string;
+  active_projects: number;
+  total_projects: number;
+  device_count: number;
+  queue_size: number;
+}
+
 export interface ProtocolRequest {
   taskId: string;
   type: 'liquid-handler' | 'crystallization' | 'assay';
@@ -553,6 +572,23 @@ export const api = {
         method: 'POST',
         body: JSON.stringify({ name, email })
       })
+  },
+
+  // Enhanced Project System (Phase 11)
+  projects: {
+    list: (type?: string) =>
+      apiRequest<Project[]>(`/enhanced/projects${type ? `?project_type=${type}` : ''}`),
+
+    create: (title: string, type: string, context?: string) =>
+      apiRequest<Project>(`/enhanced/project?project_title=${encodeURIComponent(title)}&project_type=${encodeURIComponent(type)}${context ? `&additional_context=${encodeURIComponent(context)}` : ''}`, {
+        method: 'POST'
+      }),
+
+    getStatus: (projectId: string) =>
+      apiRequest<Project>(`/enhanced/project/${projectId}`),
+
+    getSystemStatus: () =>
+      apiRequest<EnhancedSystemStatus>('/enhanced/system/status')
   }
 };
 
