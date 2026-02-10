@@ -241,7 +241,7 @@ export const BackendInitializer: React.FC<BackendInitializerProps> = ({
                             Manual Start Instructions:
                         </p>
                         <code className="block text-xs text-slate-300 bg-slate-950 p-2 rounded">
-                            cd "BioDockify- Pharma Research AI"<br />
+                            cd &quot;BioDockify- Pharma Research AI&quot;<br />
                             .venv\Scripts\python.exe server.py
                         </code>
                     </div>

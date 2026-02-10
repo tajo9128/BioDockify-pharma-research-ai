@@ -222,13 +222,14 @@ module.exports = {
   },
 
   // Plugins
+  /* eslint-disable @typescript-eslint/no-require-imports */
   plugins: [
     // Typography plugin for prose styling
     require('@tailwindcss/typography'),
-    
+
     // Forms plugin for better form styling
     require('@tailwindcss/forms'),
-    
+
     // Custom plugin for component utilities
     function ({ addComponents, theme }) {
       addComponents({

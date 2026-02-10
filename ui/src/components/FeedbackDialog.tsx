@@ -58,7 +58,7 @@ export default function FeedbackDialog({ isOpen, onClose }: FeedbackDialogProps)
                                 <Send className="w-8 h-8 text-teal-400" />
                             </div>
                             <h4 className="text-xl font-bold text-white">Message Sent!</h4>
-                            <p className="text-slate-400">Thank you for your feedback. We'll get back to you shortly.</p>
+                            <p className="text-slate-400">Thank you for your feedback. We&apos;ll get back to you shortly.</p>
                         </div>
                     ) : (
                         <form onSubmit={handleSubmit} className="space-y-4">

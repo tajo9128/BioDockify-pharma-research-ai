@@ -283,7 +283,7 @@ export const ThesisWriterView: React.FC = () => {
                                                             </div>
                                                         </div>
                                                     ) : (
-                                                        <p className="text-sm text-slate-500 italic">No verification performed on this draft yet. Click "Verify Integrity" to audit citations.</p>
+                                                        <p className="text-sm text-slate-500 italic">No verification performed on this draft yet. Click &quot;Verify Integrity&quot; to audit citations.</p>
                                                     )}
                                                 </div>
                                             </ScrollArea>

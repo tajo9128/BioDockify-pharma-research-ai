@@ -145,7 +145,7 @@ export default function CompliancePanel({ text, onComplianceChange }: Compliance
 
                 <div className="mt-4 p-3 bg-slate-950 rounded border border-slate-800 flex items-center justify-between">
                     <span className="text-xs text-slate-500 italic">
-                        disclosure: "AI tools were used for drafting assistance..."
+                        disclosure: &quot;AI tools were used for drafting assistance...&quot;
                     </span>
                     <button
                         onClick={() => navigator.clipboard.writeText("AI tools were used for literature organization and drafting assistance. All content was reviewed, edited, and validated by the author.")}

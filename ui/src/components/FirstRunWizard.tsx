@@ -141,8 +141,8 @@ export default function FirstRunWizard({ onComplete }: StartupProps) {
                                                 type="button"
                                                 onClick={() => setPersona(prev => ({ ...prev, role }))}
                                                 className={`px-4 py-2 rounded-lg border text-sm font-medium transition-all ${persona.role === role
-                                                        ? 'bg-teal-500/10 border-teal-500 text-teal-400'
-                                                        : 'bg-slate-950 border-slate-800 text-slate-500 hover:border-slate-700'
+                                                    ? 'bg-teal-500/10 border-teal-500 text-teal-400'
+                                                    : 'bg-slate-950 border-slate-800 text-slate-500 hover:border-slate-700'
                                                     }`}
                                             >
                                                 {role}
@@ -170,7 +170,7 @@ export default function FirstRunWizard({ onComplete }: StartupProps) {
                                     <FolderPlus className="w-6 h-6 text-purple-400" />
                                 </div>
                                 <h2 className="text-2xl font-bold text-white">First Project</h2>
-                                <p className="text-slate-400 text-sm mt-1">Let's create your first workspace to get started.</p>
+                                <p className="text-slate-400 text-sm mt-1">Let&apos;s create your first workspace to get started.</p>
                             </div>
 
                             <form onSubmit={handleProjectSubmit} className="space-y-4">
@@ -207,8 +207,8 @@ export default function FirstRunWizard({ onComplete }: StartupProps) {
                                                 type="button"
                                                 onClick={() => setProject(prev => ({ ...prev, type: t.id }))}
                                                 className={`p-3 rounded-xl border text-left transition-all ${project.type === t.id
-                                                        ? 'bg-teal-500/10 border-teal-500'
-                                                        : 'bg-slate-950 border-slate-800 hover:border-slate-700'
+                                                    ? 'bg-teal-500/10 border-teal-500'
+                                                    : 'bg-slate-950 border-slate-800 hover:border-slate-700'
                                                     }`}
                                             >
                                                 <div className="font-bold text-white text-sm">{t.label}</div>
