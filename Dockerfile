@@ -8,7 +8,7 @@
 FROM oven/bun:1.1-alpine AS frontend-builder
 WORKDIR /app/ui
 COPY ui/package.json ui/bun.lock* ./
-RUN bun install --frozen-lockfile
+RUN bun install
 COPY ui/ ./
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN bun run build
