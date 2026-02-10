@@ -1,6 +1,6 @@
 
 import React, { useState, useRef } from 'react';
-import { Upload, Link, FileText, CheckCircle, AlertCircle, Plus } from 'lucide-react';
+import { Upload, FileText, CheckCircle, Plus } from 'lucide-react';
 
 export interface ExternalAIInsight {
     id: string;
@@ -18,7 +18,7 @@ interface ExternalInsightImporterProps {
 }
 
 export default function ExternalInsightImporter({ onImport }: ExternalInsightImporterProps) {
-    const [activeTab, setActiveTab] = useState<'paste' | 'upload'>('paste');
+    const [activeTab, setActiveTab] = useState<'paste' | 'file'>('paste');
     const [tool, setTool] = useState('NotebookLM');
     const [url, setUrl] = useState('');
     const [content, setContent] = useState('');
@@ -80,8 +80,8 @@ export default function ExternalInsightImporter({ onImport }: ExternalInsightImp
                         Link + Paste
                     </button>
                     <button
-                        onClick={() => setActiveTab('upload')}
-                        className={`px-3 py-1 text-xs font-medium rounded transition-colors ${activeTab === 'upload' ? 'bg-teal-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'}`}
+                        onClick={() => setActiveTab('file')}
+                        className={`px-3 py-1 text-xs font-medium rounded transition-colors ${activeTab === 'file' ? 'bg-teal-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'}`}
                     >
                         File Upload
                     </button>
