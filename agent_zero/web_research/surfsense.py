@@ -182,36 +182,38 @@ class SurfSense:
     ) -> CrawlResult:
         """
         Process a single page.
-        
-        Args:
-            url: URL to process
-            depth: Current crawl depth
-            config: Crawl configuration
-            executor: Executor instance
-            
-        Returns:
-            Crawl result
         """
-        # Fetch the page using config timeout (Fix for Bug #10: Hard-coded Timeout)
-        html = await executor.fetch_page(url, timeout=executor.config.timeout)
+        # Fetch raw content
+        raw = await executor.fetch_raw(url, timeout=executor.config.timeout)
         
-        if not html:
+        if not raw:
             return CrawlResult(
                 url=url,
                 depth=depth,
                 success=False,
-                error="Failed to fetch page"
+                error="Failed to fetch content"
             )
         
-        # Extract content
-        content = await executor.extract_text(html, url)
+        data, content_type = raw
+        links_found = []
         
-        # Apply extraction rules
-        if config.rules:
+        # 1. Handle Text Content
+        if "text/html" in content_type:
+            html = data.decode('utf-8', errors='ignore')
+            content = await executor.extract_text(html, url)
+            links_found = self._extract_links(html, url)
+        else:
+            # For non-HTML (PDF, image, etc.), we don't extract links/text yet
+            # but we preserve the raw data
+            content = f"[Binary Content: {content_type}]"
+            links_found = []
+
+        # Apply extraction rules (only to text/html)
+        if config.rules and "text/html" in content_type:
             content = await self.apply_extraction_rules(content, config.rules)
         
-        # Check for empty/short content (Fix for Bug #11: No Validation of Empty Content)
-        if not content or len(content) < config.rules.min_content_length:
+        # Check for empty/short content for HTML
+        if "text/html" in content_type and (not content or len(content) < config.rules.min_content_length):
              return CrawlResult(
                 url=url,
                 depth=depth,
@@ -222,10 +224,11 @@ class SurfSense:
         # Create metadata
         metadata = {
             'depth': depth,
-            'content_length': len(content),
+            'content_length': len(data),
             'links_count': len(links_found),
             'domain': urlparse(url).netloc,
-            'timestamp': None  # Will be set by executor
+            'content_type': content_type,
+            'raw_data': data if "text/html" not in content_type else None
         }
         
         return CrawlResult(

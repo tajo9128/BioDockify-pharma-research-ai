@@ -67,6 +67,14 @@ except ImportError as e:
     import logging
     logging.getLogger("biodockify_api").warning(f"RAG routes not loaded: {e}")
 
+# Register Enhanced Project Routes (Phase 11)
+try:
+    from api.routes.enhanced_project_routes import router as enhanced_project_router
+    app.include_router(enhanced_project_router)
+except ImportError as e:
+    import logging
+    logging.getLogger("biodockify_api").warning(f"Enhanced Project routes not loaded: {e}")
+
 from fastapi.middleware.cors import CORSMiddleware
 
 @app.get("/api/health")
@@ -281,6 +289,37 @@ async def startup_event():
     import threading
     threading.Thread(target=background_init, daemon=True).start()
     logger.info("Background initialization thread started.")
+
+    # 3. Initialize Integrated System (Agent Zero + Task Manager + Memory)
+    try:
+        from modules.integration.integrated_system import initialize_integrated_system
+        from agent_zero.biodockify_ai import get_biodockify_ai
+        
+        db_url = os.getenv("DATABASE_URL", "postgresql+asyncpg://biodock:biodockify@localhost/biodockify_tasks")
+        memory_dir = os.getenv("MEMORY_PERSIST_DIR", "./data/chroma_memory")
+        
+        agent_wrapper = get_biodockify_ai()
+        await agent_wrapper.initialize()
+        
+        integrated = await initialize_integrated_system(
+            db_url=db_url,
+            hybrid_agent=agent_wrapper.agent,
+            memory_persist_dir=memory_dir
+        )
+        await integrated.start()
+        logger.info("✅ Integrated System (Phase 10) Started Successfully.")
+        
+        # 4. Initialize Enhanced Project System (Phase 11)
+        try:
+            from modules.enhanced_integration.enhanced_system import get_enhanced_system
+            enhanced = get_enhanced_system(hybrid_agent=agent_wrapper.agent)
+            await enhanced.initialize()
+            await enhanced.start()
+            logger.info("✅ Enhanced Project System (Phase 11) Started Successfully.")
+        except Exception as enhanced_err:
+            logger.error(f"❌ Failed to start Enhanced Project System: {enhanced_err}")
+    except Exception as e:
+        logger.error(f"❌ Failed to start Integrated System: {e}")
 
     # 4. Check for high memory usage warning
     mem_status = psutil.virtual_memory()

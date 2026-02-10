@@ -418,6 +418,27 @@ async def run_research_task(task_id: str, title: str, mode: str):
 @router.post("/start", response_model=TaskResponse)
 async def start_research(request: ResearchRequest, background_tasks: BackgroundTasks):
     """Start a new research task."""
+    # Try Phase 10 Integrated System first (Agent Zero)
+    try:
+        from modules.integration.integrated_system import get_integrated_system
+        integrated = get_integrated_system()
+        
+        if integrated:
+            logger.info(f"Routing research request '{request.title}' through Agent Zero (Integrated System)")
+            task_id = await integrated.create_research_task(
+                query=request.title,
+                use_deep_research=True # Default to deep research for Agent Zero
+            )
+            
+            return TaskResponse(
+                success=True,
+                message="Research task orchestrated by Agent Zero started successfully",
+                task_id=task_id
+            )
+    except Exception as e:
+        logger.warning(f"Fallback to legacy research: Integrated System error: {e}")
+
+    # Legacy / Fallback Research Path
     task_id = f"task_{datetime.now().strftime('%Y%m%d%H%M%S')}_{str(uuid.uuid4())[:8]}"
     
     # Create task record in async store
@@ -429,7 +450,7 @@ async def start_research(request: ResearchRequest, background_tasks: BackgroundT
         
         return TaskResponse(
             success=True,
-            message="Research task started successfully",
+            message="Research task started successfully (Legacy Mode)",
             task_id=task_id
         )
     except Exception as e:

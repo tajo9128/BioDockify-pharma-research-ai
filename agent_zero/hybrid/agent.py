@@ -212,7 +212,7 @@ class HybridAgent:
     async def _tool_deep_research(self, params: dict) -> str:
         """
         Conduct deep research using SurfSense options.
-        Pipeline: Plan -> Search -> Crawl -> Curate -> Resaon.
+        Pipeline: Plan -> Search -> Crawl -> Curate -> Reason -> Ingest Materials.
         """
         query = params.get("query")
         if not query: return "Error: 'query' parameter is required"
@@ -274,6 +274,54 @@ class HybridAgent:
                 area=MemoryArea.MAIN
             )
             
+            # --- [ENHANCED] Material Ingestion (Bug #80) ---
+            try:
+                from modules.library.store import library_store
+                import mimetypes
+                
+                materials_found = 0
+                for res in results:
+                    url = res.url.lower()
+                    title = res.title or "Untitled Research Source"
+                    
+                    # 1. Detect PDFs (Papers/Books)
+                    if url.endswith(".pdf") or "pdf" in res.metadata.get("content_type", ""):
+                        logger.info(f"Ingesting scientific paper: {url}")
+                        raw_data = res.metadata.get("raw_data")
+                        
+                        if raw_data:
+                            # Save actual PDF binary
+                            library_store.add_file(
+                                raw_data,
+                                f"{title.replace(' ', '_')[:50]}.pdf",
+                                meta={"type": "paper", "source_url": res.url, "query": query, "format": "pdf"}
+                            )
+                        else:
+                            # Fallback to text archive
+                            file_content = f"# Paper archive: {title}\nSource: {res.url}\n\n{res.content}"
+                            library_store.add_file(
+                                file_content.encode("utf-8"), 
+                                f"{title.replace(' ', '_')[:50]}.md", 
+                                meta={"type": "paper", "source_url": res.url, "query": query, "format": "md_archive"}
+                            )
+                        materials_found += 1
+                        
+                    # 2. Detect Videos
+                    elif any(v in url for v in ["youtube.com", "vimeo.com", "video"]):
+                        logger.info(f"Ingesting video material stub: {url}")
+                        video_record = f"# Video Material: {title}\nURL: {res.url}\n\nDescription summary from search:\n{res.content[:500]}..."
+                        library_store.add_file(
+                            video_record.encode("utf-8"),
+                            f"video_{hashlib.md5(url.encode()).hexdigest()[:8]}.md",
+                            meta={"type": "video", "source_url": res.url, "query": query}
+                        )
+                        materials_found += 1
+                
+                if materials_found > 0:
+                    logger.info(f"Successfully ingested {materials_found} research materials into the library.")
+            except Exception as material_err:
+                logger.error(f"Failed to ingest materials: {material_err}")
+
             # --- Hardening: Bridge to RAG for Notebook (Bug #10 glue) ---
             try:
                 from modules.rag.ingestor import ingestor
@@ -283,7 +331,7 @@ class HybridAgent:
                 # Save answer as a research report in the library
                 filename = f"tool_research_{hashlib.md5(query.encode()).hexdigest()}.md"
                 content = f"# Research: {query}\n\n{answer_text}"
-                record = library_store.add_file(content.encode("utf-8"), filename, meta={"tool_call": "deep_research", "query": query})
+                record = library_store.add_file(content.encode("utf-8"), filename, meta={"tool_call": "deep_research", "query": query, "type": "research_report"})
                 
                 # Ingest for notebook
                 file_path = library_store.get_file_path(record['id'])
@@ -428,6 +476,16 @@ class HybridAgent:
                 self.is_running = False
                 raise e
                 
+    async def execute(self, prompt: str) -> str:
+        """Execution entry point for TaskManager."""
+        self.loop_data.user_message = prompt
+        self.loop_data.history.append({"role": "system", "content": f"Task Execution Triggered: {prompt}"})
+        
+        # Start/Resume loop
+        await self.monologue()
+        
+        return self.loop_data.last_response
+
     async def chat(self, user_message: str):
         """Entry point for user interaction."""
         self.loop_data.user_message = user_message
@@ -442,9 +500,18 @@ class HybridAgent:
         """Construct the prompt from context, memory, and history."""
         history_text = "\n".join([f"{msg['role'].upper()}: {msg['content']}" for msg in self.loop_data.history[-10:]])
         
+        # Semantic Memory Recall
+        query = self.loop_data.user_message or (self.loop_data.history[-1]['content'] if self.loop_data.history else "")
+        memories = []
+        if query:
+            memories = await self.memory.search(query, limit=3)
+        
+        memory_text = "\n".join([f"- {m['content']} (Score: {m['score']:.2f})" for m in memories]) if memories else "None"
+
         system = f"{get_system_prompt()}\n"
         system += f"Workspace: {self.config.workspace_path}\n"
-        system += f"Current Context:\n{await self.memory.get_recent(1)}\n"
+        system += f"Recent Activity Context:\n{self.memory.get_recent(1)}\n"
+        system += f"Relevant Semantic Memory:\n{memory_text}\n"
         system += f"Tools Available: {list(self.tools.keys())}\n"
         
         return f"{system}\n\nConversation:\n{history_text}\n\n{self.config.name}:"

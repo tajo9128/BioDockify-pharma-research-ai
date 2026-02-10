@@ -4,9 +4,10 @@
 # Optimized for faster builds and smaller context
 
 # Version Control
-.git
+.git/
 .gitignore
-.github
+.github/
+.gitattributes
 
 # Build Artifacts
 dist/
@@ -18,12 +19,14 @@ __pycache__/
 .pytest_cache/
 .coverage
 htmlcov/
+*.so
 
 # Node/Bun
 node_modules/
 .next/
 ui/node_modules/
 ui/.next/
+ui/out/
 *.log
 npm-debug.log*
 yarn-debug.log*
@@ -39,22 +42,23 @@ env/
 # IDE/Editor
 .idea/
 .vscode/
+.gemini/
 *.swp
 *.swo
 *~
 .DS_Store
 
-# Desktop App (Not needed for Docker)
+# Desktop App
 desktop/
 installer/
 
-# Tests (Not needed in production)
+# Tests
 tests/
 test_*.py
 *_test.py
 pytest.ini
 
-# Documentation (Not needed in container)
+# Documentation
 *.md
 !README.md
 docs/
@@ -66,6 +70,10 @@ docs/
 *.tmp
 local-*
 server_log.txt
+.pre-commit-config.yaml
+.pre-commit-hooks.yaml
+.bandit
+detect-secrets/
 
 # Data/Output Directories
 data/
@@ -74,18 +82,23 @@ test_output/
 test_slides_output/
 mock_cloud_storage/
 library_data/
+data/test_chroma/
+data/vectors/
+data/deep_drive/
+benchmarks/results/
 
-# External Repos (Cloned separately if needed)
+# External Repos
 external_repos/
 Prismer_Repo/
+external/
 
-# Lock files (recreated during build)
+# Lock files
 bun.lock
 package-lock.json
 yarn.lock
 pnpm-lock.yaml
 
-# Docker files (not needed in context)
+# Docker files
 Dockerfile*
 docker-compose*.yml
 .dockerignore

@@ -1,23 +1,25 @@
 version: '3.8'
 
 services:
-  # Main Application (Agent Zero + NanoBot)
+  # BioDockify Application (Agent Zero + NanoBot + Task Manager + Memory)
   app:
     build: .
     container_name: biodockify-app
     ports:
-      - "8234:8234"
+      - "8234:3000"
     environment:
-      - PORT=8234
       - DATABASE_URL=postgresql://biodockify:biodockify@db:5432/biodockify
       - REDIS_URL=redis://redis:6379/0
       - VECTOR_DB_TYPE=chroma
       - VECTOR_DB_PATH=/app/data/chroma
+      - MEMORY_PERSIST_DIR=/app/data/chroma_memory
       - ENABLE_SELF_REPAIR=true
+      - ENABLE_DIAGNOSIS=true
+      - ENABLE_MONITORING=true
       - GROBID_URL=http://grobid:8070
     depends_on:
       db:
-        condition: service_started
+        condition: service_healthy
       redis:
         condition: service_started
       chroma:
@@ -25,23 +27,29 @@ services:
     volumes:
       - ./data:/app/data
       - ./logs:/app/logs
+      - ./data/chroma_memory:/app/data/chroma_memory
     networks:
       - biodockify-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
     restart: unless-stopped
 
   # Vector Database (ChromaDB - FREE)
   chroma:
-    image: chromadb/chroma:latest
+    image: chromadb/chroma:0.4.18
     container_name: biodockify-chroma
     ports:
-      - "8000:8000"
+      - "8001:8000"
     volumes:
       - chroma_data:/chroma/chroma
     networks:
       - biodockify-network
     restart: unless-stopped
 
-  # Main Database (PostgreSQL - FREE)
+  # Main Database (PostgreSQL - FREE) - Task Manager
   db:
     image: postgres:15-alpine
     container_name: biodockify-postgres
@@ -55,6 +63,11 @@ services:
       - "5432:5432"
     networks:
       - biodockify-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U biodockify"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
     restart: unless-stopped
 
   # Cache (Redis - FREE)
@@ -65,19 +78,14 @@ services:
       - "6379:6379"
     volumes:
       - redis_data:/data
-    command: redis-server --appendonly yes
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
     networks:
       - biodockify-network
-    restart: unless-stopped
-
-  # GROBID PDF Parser (Existing)
-  grobid:
-    image: lfoppiano/grobid:0.8.0
-    container_name: biodockify-grobid
-    ports:
-      - "8070:8070"
-    networks:
-      - biodockify-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
     restart: unless-stopped
 
   # Monitoring Stack (All FREE)
@@ -120,6 +128,16 @@ services:
       - ./logs:/loki/logs
       - loki_data:/loki
     command: -config.file=/etc/loki/local-config.yaml
+    networks:
+      - biodockify-network
+    restart: unless-stopped
+
+  # GROBID PDF Parser
+  grobid:
+    image: lfoppiano/grobid:0.8.0
+    container_name: biodockify-grobid
+    ports:
+      - "8070:8070"
     networks:
       - biodockify-network
     restart: unless-stopped

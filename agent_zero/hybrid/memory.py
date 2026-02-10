@@ -1,5 +1,5 @@
 """
-Hybrid Memory System - Combines FAISS vector store with NanoBot's file memory.
+Hybrid Memory System - Combines ChromaDB (Advanced) with NanoBot's file memory.
 """
 from typing import List, Dict, Any, Optional
 from dataclasses import dataclass
@@ -9,6 +9,10 @@ import json
 import logging
 from enum import Enum
 
+from modules.memory.advanced_memory import (
+    AdvancedMemorySystem, MemoryType, MemoryImportance, get_memory_system
+)
+
 logger = logging.getLogger(__name__)
 
 class MemoryArea(Enum):
@@ -17,10 +21,20 @@ class MemoryArea(Enum):
     SOLUTIONS = "solutions"
     INSTRUMENTS = "instruments"
 
+    def to_memory_type(self) -> MemoryType:
+        """Map legacy area to new memory types"""
+        mapping = {
+            MemoryArea.MAIN: MemoryType.EPISODIC,
+            MemoryArea.FRAGMENTS: MemoryType.SEMANTIC,
+            MemoryArea.SOLUTIONS: MemoryType.PROCEDURAL,
+            MemoryArea.INSTRUMENTS: MemoryType.WORKING
+        }
+        return mapping.get(self, MemoryType.EPISODIC)
+
 class HybridMemory:
     """
     Unified memory system:
-    1. FAISS Vector DB for semantic search (Agent Zero style)
+    1. ChromaDB (AdvancedMemorySystem) for semantic search
     2. File-based daily notes (NanoBot style)
     """
     
@@ -33,16 +47,29 @@ class HybridMemory:
         self.memory_dir.mkdir(parents=True, exist_ok=True)
         self.daily_dir.mkdir(parents=True, exist_ok=True)
         
-        # Initialize Vector DB (Mock/Placeholder for now, integration with real FAISS next)
-        self.vector_store = None 
+        # Initialize Advanced Memory System (ChromaDB)
+        persist_path = str(self.memory_dir / "chroma_v2")
+        self.advanced_memory = get_memory_system(persist_dir=persist_path)
         
-    async def add_memory(self, content: str, area: MemoryArea = MemoryArea.MAIN):
-        """Add memory to both vector store and daily log."""
-        # 1. Add to daily log
+    async def add_memory(
+        self, 
+        content: str, 
+        area: MemoryArea = MemoryArea.MAIN,
+        importance: MemoryImportance = MemoryImportance.MEDIUM,
+        metadata: Optional[Dict[str, Any]] = None
+    ):
+        """Add memory to both ChromaDB and daily log."""
+        # 1. Add to daily log (Persistent Text)
         self._append_daily(content, area)
         
-        # 2. Add to vector store (Placeholder)
-        # await self.vector_store.add_texts([content], metadatas=[{"area": area.value}])
+        # 2. Add to Advanced Memory (Vector Search)
+        await self.advanced_memory.add_memory(
+            content=content,
+            memory_type=area.to_memory_type(),
+            importance=importance,
+            source="agent_zero_hybrid",
+            metadata=metadata
+        )
         
     def _append_daily(self, content: str, area: MemoryArea):
         """Append to today's markdown file."""
@@ -58,10 +85,9 @@ class HybridMemory:
                 f.write(f"# Daily Memory - {today}\n")
             f.write(entry)
             
-    async def search(self, query: str, limit: int = 5) -> List[str]:
-        """Search memory (Vector + Recent)."""
-        # Placeholder for real vector search
-        return []
+    async def search(self, query: str, limit: int = 5) -> List[Dict[str, Any]]:
+        """Search memory using ChromaDB."""
+        return await self.advanced_memory.search(query, limit=limit)
         
     def get_recent(self, days: int = 3) -> str:
         """Get recent daily logs."""

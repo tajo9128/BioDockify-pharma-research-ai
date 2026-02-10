@@ -105,14 +105,14 @@ class Executor:
             await self.session.close()
             logger.info("Executor stopped")
     
-    async def fetch_page(
+    async def fetch_raw(
         self,
         url: str,
         timeout: Optional[int] = None,
         _redirect_depth: int = 0
-    ) -> Optional[str]:
+    ) -> Optional[tuple[bytes, str]]:
         """
-        Fetch a web page with recursion protection and size limits.
+        Fetch raw bytes and content type from a URL.
         """
         if _redirect_depth > self.config.max_redirects:
             logger.error(f"Max redirects ({self.config.max_redirects}) exceeded for {url}")
@@ -125,53 +125,58 @@ class Executor:
         
         for attempt in range(self.config.max_retries):
             try:
-                # Use allow_redirects=False to manually handle for infinite loop protection
                 async with self.session.get(
                     url,
                     timeout=aiohttp.ClientTimeout(total=timeout),
                     allow_redirects=False 
                 ) as response:
-                    # 1. Check response size before loading (Fix for Bug #3: No Response Size Limits)
+                    # 1. Check response size
                     content_length = response.headers.get('Content-Length')
                     if content_length and int(content_length) > self.config.max_response_size:
                         logger.error(f"Response too large ({content_length} bytes) for {url}")
                         return None
 
-                    # 2. Handle Redirects (Fix for Bug #4: Redirect Loop Vulnerability)
+                    # 2. Handle Redirects
                     if response.status in (301, 302, 303, 307, 308):
                         redirect_url = response.headers.get('Location')
                         if redirect_url:
-                            logger.info(f"Redirecting [{_redirect_depth + 1}] to {redirect_url}")
-                            return await self.fetch_page(redirect_url, timeout, _redirect_depth + 1)
+                            return await self.fetch_raw(redirect_url, timeout, _redirect_depth + 1)
                         return None
 
                     if response.status == 200:
-                        # Chunked Reading for safety if Content-Length was missing
-                        content = await response.text()
-                        if len(content.encode('utf-8')) > self.config.max_response_size:
+                        content_type = response.headers.get('Content-Type', 'text/plain')
+                        data = await response.read()
+                        
+                        if len(data) > self.config.max_response_size:
                              logger.error(f"Actual response size exceeded limit for {url}")
                              return None
                         
-                        logger.debug(f"Successfully fetched {url}")
-                        return content
+                        return data, content_type
                     else:
                         logger.warning(f"HTTP {response.status} for {url}")
                         return None
                         
-            except asyncio.TimeoutError:
-                logger.warning(f"Timeout fetching {url} (attempt {attempt + 1}/{self.config.max_retries})")
-            except aiohttp.ClientError as e:
-                logger.warning(f"Client error fetching {url}: {e} (attempt {attempt + 1}/{self.config.max_retries})")
             except Exception as e:
-                logger.error(f"Unexpected error fetching {url}: {e}")
-                return None
+                logger.warning(f"Fetch error for {url}: {e} (attempt {attempt + 1})")
             
-            # Retry with exponential backoff
             if attempt < self.config.max_retries - 1:
-                delay = self.config.retry_delay * (2 ** attempt)
-                await asyncio.sleep(delay)
+                await asyncio.sleep(self.config.retry_delay * (2 ** attempt))
         
-        logger.error(f"Failed to fetch {url} after {self.config.max_retries} attempts")
+        return None
+
+    async def fetch_page(
+        self,
+        url: str,
+        timeout: Optional[int] = None
+    ) -> Optional[str]:
+        """Fetch a page and return its text content."""
+        raw = await self.fetch_raw(url, timeout)
+        if raw:
+            data, content_type = raw
+            try:
+                return data.decode('utf-8', errors='ignore')
+            except:
+                return None
         return None
     
     async def extract_text(

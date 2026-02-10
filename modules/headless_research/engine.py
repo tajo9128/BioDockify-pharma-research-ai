@@ -8,7 +8,15 @@ import asyncio
 import logging
 from pathlib import Path
 from typing import Optional, Dict, Any, List
-from playwright.async_api import async_playwright, Page, Browser, BrowserContext
+try:
+    from playwright.async_api import async_playwright, Page, Browser, BrowserContext
+    PLAYWRIGHT_AVAILABLE = True
+except ImportError:
+    PLAYWRIGHT_AVAILABLE = False
+    # Define stubs for type hinting
+    class Page: pass
+    class Browser: pass
+    class BrowserContext: pass
 
 from .stealth import StealthContext
 from .behavior import HumanBehavior
@@ -40,6 +48,12 @@ class HeadlessResearcher:
         self.timeout = int(os.getenv("BROWSER_TIMEOUT", "60000"))
 
     async def __aenter__(self):
+        if not PLAYWRIGHT_AVAILABLE:
+            raise ImportError(
+                "Playwright is not installed. Deep research capabilities are disabled. "
+                "Install with 'pip install playwright' and 'playwright install'."
+            )
+            
         self.playwright = await async_playwright().start()
         
         # Launch options for stability and stealth
@@ -166,5 +180,11 @@ class HeadlessResearcher:
 
 # Convenience function for simple usage
 async def deep_research(url: str) -> Dict[str, Any]:
+    if not PLAYWRIGHT_AVAILABLE:
+        return {
+            "status": "error", 
+            "error": "Playwright not installed. Deep research unavailable."
+        }
+        
     async with HeadlessResearcher() as researcher:
         return await researcher.research(url)
