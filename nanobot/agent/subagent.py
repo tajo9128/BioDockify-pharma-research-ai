@@ -45,6 +45,7 @@ class SubagentManager:
         self.exec_config = exec_config or ExecToolConfig()
         self.restrict_to_workspace = restrict_to_workspace
         self._running_tasks: dict[str, asyncio.Task[None]] = {}
+        self._task_status: dict[str, dict[str, Any]] = {} # Track subagent metadata
     
     async def spawn(
         self,
@@ -73,13 +74,22 @@ class SubagentManager:
             "chat_id": origin_chat_id,
         }
         
+        # Track initial status
+        self._task_status[task_id] = {
+            "id": task_id,
+            "label": display_label,
+            "task": task,
+            "status": "running",
+            "start_time": uuid.uuid4().hex, # Rough timestamp placeholder
+        }
+
         # Create background task
         bg_task = asyncio.create_task(
             self._run_subagent(task_id, task, display_label, origin)
         )
         self._running_tasks[task_id] = bg_task
         
-        # Cleanup when done
+        # Cleanup when done (keep status for history though)
         bg_task.add_done_callback(lambda _: self._running_tasks.pop(task_id, None))
         
         logger.info(f"Spawned subagent [{task_id}]: {display_label}")
@@ -169,11 +179,17 @@ class SubagentManager:
                 final_result = "Task completed but no final response was generated."
             
             logger.info(f"Subagent [{task_id}] completed successfully")
+            self._task_status[task_id]["status"] = "completed"
             await self._announce_result(task_id, label, task, final_result, origin, "ok")
             
+        except asyncio.CancelledError:
+            logger.warning(f"Subagent [{task_id}] was cancelled.")
+            self._task_status[task_id]["status"] = "cancelled"
+            await self._announce_result(task_id, label, task, "Task was cancelled by user/system.", origin, "error")
         except Exception as e:
             error_msg = f"Error: {str(e)}"
             logger.error(f"Subagent [{task_id}] failed: {e}")
+            self._task_status[task_id]["status"] = "failed"
             await self._announce_result(task_id, label, task, error_msg, origin, "error")
     
     async def _announce_result(
@@ -242,3 +258,14 @@ When you have completed the task, provide a clear summary of your findings or ac
     def get_running_count(self) -> int:
         """Return the number of currently running subagents."""
         return len(self._running_tasks)
+
+    def cancel_task(self, task_id: str) -> bool:
+        """Cancel a running subagent task."""
+        if task_id in self._running_tasks:
+            self._running_tasks[task_id].cancel()
+            return True
+        return False
+
+    def get_tasks_status(self) -> dict[str, Any]:
+        """Get status of all tasks (active and recent)."""
+        return self._task_status

@@ -4,7 +4,15 @@ Integrates the citation verification engine into Agent Zero skills.
 """
 
 from typing import Dict, Any, Optional
-from modules.literature.reviewer import CitationReviewer
+import threading
+try:
+    from modules.literature.reviewer import CitationReviewer
+except ImportError:
+    try:
+        from agent_zero.literature.reviewer import CitationReviewer
+    except ImportError:
+        logger.error("CitationReviewer not found in modules or agent_zero.")
+        raise
 from loguru import logger
 
 class ReviewerAgentSkill:
@@ -31,10 +39,12 @@ class ReviewerAgentSkill:
 
 # Singleton
 _reviewer_instance: Optional[ReviewerAgentSkill] = None
+_reviewer_lock = threading.Lock()
 
 def get_reviewer_agent() -> ReviewerAgentSkill:
     """Get singleton instance of ReviewerAgentSkill."""
     global _reviewer_instance
-    if _reviewer_instance is None:
-        _reviewer_instance = ReviewerAgentSkill()
+    with _reviewer_lock:
+        if _reviewer_instance is None:
+            _reviewer_instance = ReviewerAgentSkill()
     return _reviewer_instance

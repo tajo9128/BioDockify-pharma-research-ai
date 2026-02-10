@@ -25,8 +25,10 @@ async def generate_podcast_audio(text: str, voice: str = "alloy", output_path: s
     try:
         client = OpenAI(api_key=api_key or os.getenv("OPENAI_API_KEY"))
         
-        # Ensure output directory exists
-        os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
+        # Ensure output directory exists (Fix for Bug #7)
+        output_dir = os.path.dirname(os.path.abspath(output_path))
+        if output_dir:
+            os.makedirs(output_dir, exist_ok=True)
         
         response = client.audio.speech.create(
             model="tts-1",

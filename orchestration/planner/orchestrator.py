@@ -14,6 +14,13 @@ from modules.bio_ner.pubtator import PubTatorValidator
 from modules.literature.semantic_scholar import SemanticScholarSearcher
 from modules.compliance.academic_compliance import AcademicComplianceEngine
 
+try:
+    from modules.deep_drive.memory_engine import MemoryEngine
+    HAS_MEMORY_ENGINE = True
+except ImportError:
+    MemoryEngine = None
+    HAS_MEMORY_ENGINE = False
+
 
 # =============================================================================
 # Configuration Models
@@ -248,6 +255,13 @@ class ResearchOrchestrator:
         self.pubtator = PubTatorValidator()
         self.scholar = SemanticScholarSearcher()
         self.compliance = AcademicComplianceEngine(strictness=self.config.novelty_strictness)
+        
+        if HAS_MEMORY_ENGINE:
+            self.memory = MemoryEngine()
+            print("[+] Deep Drive Memory Engine: Connected")
+        else:
+            self.memory = None
+            print("[!] Deep Drive Memory Engine: Not available")
             
         if self.config.use_cloud_api and self.config.cloud_api_key:
             print(f"[+] Hybrid Mode Enabled: Using Cloud API")
@@ -258,7 +272,7 @@ class ResearchOrchestrator:
     # Main Planning Method
     # -------------------------------------------------------------------------
     
-    def plan_research(self, title: str, mode: str = "synthesize", task_id: Optional[str] = None) -> ResearchPlan:
+    async def plan_research(self, title: str, mode: str = "synthesize", task_id: Optional[str] = None) -> ResearchPlan:
         """
         Decompose a research title into a structured research plan.
         Respects Mode Enforcement and Citation Lock rules.
@@ -271,38 +285,42 @@ class ResearchOrchestrator:
             ResearchPlan with structured steps
         """
         
-        def _log(msg, type="thought"):
+        async def _log(msg, type="thought"):
             if task_id:
                 try:
-                    from runtime.task_manager import task_manager
-                    task = task_manager.load_task(task_id)
-                    if task:
-                        if "logs" not in task: task["logs"] = []
-                        task["logs"].append(f"[{type.upper()}] {msg}")
-                        task_manager.save_task(task_id, task)
+                    from runtime.task_store import get_task_store
+                    store = get_task_store()
+                    await store.append_log(task_id, f"[{type.upper()}] {msg}")
                 except: pass
 
-        _log(f"Planning research strategy for: {title}", "thought")
+        await _log(f"Planning research strategy for: {title}", "thought")
 
         print(f"\n{'='*60}")
         print(f"Planning Research: {title} [Mode: {mode.upper()}]")
         print(f"{'='*60}")
         
         # 1. Mode Enforcement & Intent Check
-        _log(f"Enforcing mode: {mode.upper()}", "thought")
+        await _log(f"Enforcing mode: {mode.upper()}", "thought")
         if mode not in ["search", "synthesize", "write"]:
-            _log(f"Invalid mode {mode}, falling back to synthesize", "warn")
+            await _log(f"Invalid mode {mode}, falling back to synthesize", "warn")
             mode = "synthesize" # Fallback default
             
-        # 2. Generate plan using configured AI backend
-        _log(f"Generating research steps using {self.config.primary_model}...", "thought")
+        # 2. Enrich Context (Phase 2 + Deep Drive)
+        await _log(f"Retrieving cognitive context for: {title}", "thought")
+        enriched_context = await self.enrich_context(title)
+
+        # 3. Generate plan using configured AI backend
+        await _log(f"Generating research steps using {self.config.primary_model}...", "thought")
+        import asyncio
         if self.config.use_cloud_api:
-            plan_data = self._generate_plan_hybrid(title, mode)
+            # Hybrid is now async-capable
+            plan_data = await self._generate_plan_hybrid(title, mode, enriched_context)
         else:
-            plan_data = self._generate_plan_local(title, mode)
+            # Local legacy is sync requests, wrap it
+            plan_data = await asyncio.to_thread(self._generate_plan_local, title, mode, enriched_context)
         
         # Create ResearchPlan from generated data
-        _log(f"Structural analysis of research goal: {title}", "thought")
+        await _log(f"Structural analysis of research goal: {title}", "thought")
         plan = ResearchPlan(
             research_title=title,
             objectives=plan_data.get("objectives", []),
@@ -310,7 +328,7 @@ class ResearchOrchestrator:
             total_estimated_time_minutes=plan_data.get("total_estimated_time")
         )
         
-        _log(f"Plan constructed with {len(plan.steps)} steps and {len(plan.objectives)} objectives.", "thought")
+        await _log(f"Plan constructed with {len(plan.steps)} steps and {len(plan.objectives)} objectives.", "thought")
         
         # 4. Citation Lock / Novelty Gate (Logic Rule #2 & #4)
         strictness = self.config.user_persona.get("strictness", "balanced")
@@ -349,17 +367,43 @@ class ResearchOrchestrator:
             return "search"
         return "synthesize" # Default to reasoning
 
-    def enrich_context(self, query: str) -> str:
+    async def enrich_context(self, query: str) -> str:
         """
         Fetches 'Pharma-Grade' context to prime the LLM planner.
+        Queries Semantic Scholar AND Cipher Memory.
         """
         context = []
         
         # 1. Semantic Scholar Impact Check
-        papers = self.scholar.search_impact_evidence(query, limit=3)
-        if papers:
-            titles = [f"'{p['title']}' (Inf: {p['influentialCitationCount']})" for p in papers]
-            context.append(f"Key Literature: {'; '.join(titles)}")
+        try:
+            papers = await asyncio.to_thread(self.scholar.search_impact_evidence, query, limit=3)
+            if papers:
+                titles = [f"'{p['title']}' (Inf: {p['influentialCitationCount']})" for p in papers]
+                context.append(f"Key Literature: {'; '.join(titles)}")
+        except Exception as e:
+            print(f"[!] Semantic Scholar context extraction failed: {e}")
+
+        # 2. Deep Drive Memory (Native)
+        if self.memory:
+            try:
+                # Search Memory
+                memories = await self.memory.search_memory(query, top_k=3)
+                if memories:
+                    mem_text = "; ".join([m.get("text", "")[:100] for m in memories])
+                    context.append(f"Internal Memory: {mem_text}")
+                
+                # Search Graph
+                graph_data = await self.memory.search_graph(query, limit=5)
+                if graph_data:
+                    nodes = graph_data.get("nodes", [])
+                    if nodes:
+                        node_labels = [n.get("labels", [])[0] if n.get("labels") else "Entity" for n in nodes]
+                        node_props = [n.get("properties", {}).get("name", "Unknown") for n in nodes]
+                        graph_summary = ", ".join([f"{l}:{p}" for l, p in zip(node_labels, node_props)])
+                        context.append(f"Knowledge Graph: {graph_summary}")
+                        
+            except Exception as e:
+                print(f"[!] Memory context extraction failed: {e}")
             
         return "\n".join(context)
     
@@ -367,11 +411,11 @@ class ResearchOrchestrator:
     # Local Ollama Implementation
     # -------------------------------------------------------------------------
     
-    def _generate_plan_local(self, title: str, mode: str) -> dict:
+    def _generate_plan_local(self, title: str, mode: str, context: str = "") -> dict:
         """
         Generate research plan using local Ollama instance.
         """
-        prompt = self._build_prompt(title, mode)
+        prompt = self._build_prompt(title, mode, context)
         
         try:
             response = requests.post(
@@ -404,7 +448,7 @@ class ResearchOrchestrator:
             print(f"[!] Error generating plan: {e}")
             return self._generate_fallback_plan(title)
     
-    def _build_prompt(self, title: str, mode: str = "synthesize") -> str:
+    def _build_prompt(self, title: str, mode: str = "synthesize", enriched_context: str = "") -> str:
         """
         Build the prompt for Ollama with Persona Injection AND Mode Enforcement.
         """
@@ -437,9 +481,8 @@ class ResearchOrchestrator:
         context_instruction += "\nCRITICAL: You must actively look for and highlight CONTRADICTIONS or CONFLICTING EVIDENCE in the literature. Create specific steps to resolve these discrepancies."
         
         # Inject Enriched Data (Phase 2)
-        enriched_data = self.enrich_context(title)
-        if enriched_data:
-            context_instruction += f"\n\nCONTEXT FROM DATABASE:\n{enriched_data}"
+        if enriched_context:
+            context_instruction += f"\n\nCONTEXT FROM DATABASE:\n{enriched_context}"
 
         prompt = f"""{system_instruction}
 {context_instruction}
@@ -507,7 +550,7 @@ Provide ONLY the JSON."""
     # Hybrid API Implementation with Fallback Logic
     # -------------------------------------------------------------------------
     
-    def _generate_plan_hybrid(self, title: str, mode: str = "synthesize") -> dict:
+    async def _generate_plan_hybrid(self, title: str, mode: str = "synthesize", context: str = "") -> dict:
         """
         Generate research plan using Cloud APIs with Fallback.
         Strategy: Primary -> Secondary -> Tertiary -> Local/Fallback
@@ -529,7 +572,7 @@ Provide ONLY the JSON."""
                 
         print(f"[*] Research Planner Strategy: {available_providers}")
         
-        prompt = self._build_prompt(title, mode)
+        prompt = self._build_prompt(title, mode, context)
         
         for provider in available_providers:
             try:
@@ -540,7 +583,10 @@ Provide ONLY the JSON."""
                 print(f"[*] Attempting generation with: {provider.upper()}")
                 
                 # Call Adapter
-                text_response = adapter.generate(prompt)
+                if hasattr(adapter, 'async_generate'):
+                    text_response = await adapter.async_generate(prompt)
+                else:
+                    text_response = await asyncio.to_thread(adapter.generate, prompt)
                 
                 # Parse
                 plan = self._parse_plan_response(text_response)

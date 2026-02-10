@@ -45,7 +45,7 @@ class PlagiarismChecker:
         
         for chunk in chunks:
             # Search KB for this chunk
-            results = self.vector_store.search(chunk, k=1)
+            results = await self.vector_store.search(chunk, k=1)
             if results:
                 # Assuming vector store returns a score/distance
                 # We need to normalize it. 

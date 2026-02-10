@@ -17,6 +17,8 @@ from Bio import Entrez
 from semanticscholar import SemanticScholar
 from .bohrium import BohriumConnector
 
+__all__ = ["Paper", "LiteratureDiscovery", "discovery_engine"]
+
 logger = logging.getLogger("literature.discovery")
 
 @dataclass
@@ -47,20 +49,30 @@ class LiteratureDiscovery:
         """Aggregate search across all sources."""
         logger.info(f"Discovery Engine: Searching for '{query}'")
         
-        # Run searches in parallel
-        results = await asyncio.gather(
-            self.search_arxiv(query, limit=limit // 2),
-            self.search_semantic_scholar(query, limit=limit // 2),
-            self.search_bohrium(query, limit=limit // 2),
-            # PubMed is synchronous, run in thread if needed, or simple sync mostly fast
-            self.search_pubmed(query, limit=limit // 2)
-        )
+        # Run searches in parallel with 30s timeout
+        try:
+            results = await asyncio.wait_for(
+                asyncio.gather(
+                    self.search_arxiv(query, limit=limit // 2),
+                    self.search_semantic_scholar(query, limit=limit // 2),
+                    self.search_bohrium(query, limit=limit // 2),
+                    self.search_pubmed(query, limit=limit // 2),
+                    return_exceptions=True
+                ),
+                timeout=30.0
+            )
+        except asyncio.TimeoutError:
+            logger.error(f"Global discovery search timed out after 30s for: {query}")
+            return []
         
-        # Flatten and deduplicate
+        # Flatten and deduplicate, filtering out exceptions
         all_papers = []
         seen_titles = set()
         
         for source_results in results:
+            if isinstance(source_results, Exception):
+                logger.error(f"Source search failed with exception: {source_results}")
+                continue
             for p in source_results:
                 # Basic dedup by title normaliztion
                 norm_title = p.title.lower().strip()
@@ -69,34 +81,36 @@ class LiteratureDiscovery:
                     seen_titles.add(norm_title)
         
         # Sort by relevance/citations/date (heuristic mix)
-        # Prioritize recent + high citation
         all_papers.sort(key=lambda x: (x.year, x.citations), reverse=True)
         
         return all_papers[:limit]
 
     async def search_arxiv(self, query: str, limit: int = 10) -> List[Paper]:
-        """Search ArXiv."""
+        """Search ArXiv (non-blocking)."""
         try:
-            search = arxiv.Search(
-                query=query,
-                max_results=limit,
-                sort_by=arxiv.SortCriterion.Relevance
-            )
-            
-            papers = []
-            # arxiv client is synchronous iterator
-            for result in search.results():
-                papers.append(Paper(
-                    title=result.title,
-                    url=result.entry_id,
-                    source="arxiv",
-                    authors=[a.name for a in result.authors],
-                    abstract=result.summary,
-                    year=result.published.year,
-                    doi=result.doi,
-                    pdf_url=result.pdf_url
-                ))
-            return papers
+            def _arxiv_sync():
+                search = arxiv.Search(
+                    query=query,
+                    max_results=limit,
+                    sort_by=arxiv.SortCriterion.Relevance
+                )
+                
+                res_papers = []
+                for result in search.results():
+                    res_papers.append(Paper(
+                        title=result.title,
+                        url=result.entry_id,
+                        source="arxiv",
+                        authors=[a.name for a in result.authors],
+                        abstract=result.summary,
+                        year=result.published.year,
+                        doi=result.doi,
+                        pdf_url=result.pdf_url
+                    ))
+                return res_papers
+
+            # Run synchronous SDK in a thread to avoid blocking the event loop
+            return await asyncio.to_thread(_arxiv_sync)
         except Exception as e:
             logger.error(f"ArXiv search failed: {e}")
             return []

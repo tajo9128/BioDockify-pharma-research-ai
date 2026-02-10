@@ -8,6 +8,7 @@ import logging
 import asyncio
 from typing import Dict, List, Any, Optional
 import aiohttp
+from runtime.robust_connection import async_with_retry
 
 logger = logging.getLogger("surfsense_client")
 
@@ -46,6 +47,7 @@ class SurfSenseClient:
         """Return cached health status."""
         return self._healthy
     
+    @async_with_retry(max_retries=3, circuit_name="surfsense")
     async def search(self, query: str, search_space_id: Optional[str] = None, top_k: int = 5) -> List[Dict[str, Any]]:
         """
         Search SurfSense knowledge base.
@@ -79,6 +81,7 @@ class SurfSenseClient:
             logger.error(f"SurfSense search error: {e}")
             return []
     
+    @async_with_retry(max_retries=2, circuit_name="surfsense")
     async def chat(self, message: str, search_space_id: Optional[str] = None, 
                    conversation_id: Optional[str] = None) -> Dict[str, Any]:
         """
@@ -112,6 +115,7 @@ class SurfSenseClient:
             logger.error(f"SurfSense chat error: {e}")
             return {"error": str(e)}
     
+    @async_with_retry(max_retries=2, circuit_name="surfsense")
     async def upload_document(self, content: bytes, filename: str, 
                                search_space_id: Optional[str] = None) -> Dict[str, Any]:
         """
@@ -141,6 +145,8 @@ class SurfSenseClient:
             logger.error(f"SurfSense upload error: {e}")
             return {"status": "failed", "error": str(e)}
     
+    VALID_VOICES = {'alloy', 'echo', 'fable', 'onyx', 'nova', 'shimmer'}
+
     async def generate_podcast(self, chat_id: str, voice: str = "alloy") -> Dict[str, Any]:
         """
         Generate audio podcast from a chat conversation.
@@ -155,6 +161,10 @@ class SurfSenseClient:
         if not await self.health_check():
             return {"error": "SurfSense offline"}
         
+        if voice not in self.VALID_VOICES:
+            logger.warning(f"Invalid voice '{voice}', defaulting to 'alloy'")
+            voice = "alloy"
+
         try:
             payload = {
                 "chat_id": chat_id,

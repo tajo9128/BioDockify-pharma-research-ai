@@ -1,79 +1,136 @@
+version: '3.8'
+
 services:
-  # --- BioDockify MAIN APP ---
+  # Main Application (Agent Zero + NanoBot)
   app:
-    build: . # Local build ensures 2.3.7 fixes (static paths + 3000) are applied
+    build: .
     container_name: biodockify-app
     ports:
-      - "3000:3000"
-    extra_hosts:
-      - "host.docker.internal:host-gateway" # Access LM Studio on host
+      - "8234:8234"
     environment:
-      - PORT=3000
-      # Database Config
-      - GRAPH_DB_TYPE=neo4j
-      - NEO4J_URI=bolt://neo4j:7687
-      - NEO4J_USER=neo4j
-      - NEO4J_PASSWORD=biodockify2024
-      # AI Config (LM Studio connection)
-      - LM_STUDIO_URL=http://host.docker.internal:1234/v1
-      # Services
+      - PORT=8234
+      - DATABASE_URL=postgresql://biodockify:biodockify@db:5432/biodockify
+      - REDIS_URL=redis://redis:6379/0
+      - VECTOR_DB_TYPE=chroma
+      - VECTOR_DB_PATH=/app/data/chroma
+      - ENABLE_SELF_REPAIR=true
       - GROBID_URL=http://grobid:8070
     depends_on:
-      neo4j:
-        condition: service_healthy
-      grobid:
+      db:
+        condition: service_started
+      redis:
+        condition: service_started
+      chroma:
         condition: service_started
     volumes:
-      - biodockify-data:/app/data
+      - ./data:/app/data
+      - ./logs:/app/logs
     networks:
       - biodockify-network
     restart: unless-stopped
 
-  # --- SUPPORTING SERVICES ---
-
-  # Neo4j Graph Database
-  neo4j:
-    image: neo4j:latest
-    container_name: biodockify-neo4j
+  # Vector Database (ChromaDB - FREE)
+  chroma:
+    image: chromadb/chroma:latest
+    container_name: biodockify-chroma
     ports:
-      - "7474:7474"
-      - "7687:7687"
-    environment:
-      - NEO4J_AUTH=neo4j/biodockify2024
-      - NEO4J_PLUGINS=["graph-data-science", "apoc"]
-      - NEO4J_dbms_memory_heap_initial__size=512m
-      - NEO4J_dbms_memory_heap_max__size=1G
+      - "8000:8000"
     volumes:
-      - neo4j-data:/data
-    healthcheck:
-      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider localhost:7474 || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 40s
+      - chroma_data:/chroma/chroma
     networks:
       - biodockify-network
     restart: unless-stopped
 
-  # GROBID PDF Parser
+  # Main Database (PostgreSQL - FREE)
+  db:
+    image: postgres:15-alpine
+    container_name: biodockify-postgres
+    environment:
+      POSTGRES_USER: biodockify
+      POSTGRES_PASSWORD: biodockify
+      POSTGRES_DB: biodockify
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - biodockify-network
+    restart: unless-stopped
+
+  # Cache (Redis - FREE)
+  redis:
+    image: redis:7-alpine
+    container_name: biodockify-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    networks:
+      - biodockify-network
+    restart: unless-stopped
+
+  # GROBID PDF Parser (Existing)
   grobid:
     image: lfoppiano/grobid:0.8.0
     container_name: biodockify-grobid
     ports:
       - "8070:8070"
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8070/api/isalive"]
-      interval: 30s
-      timeout: 10s
-      retries: 10
-      start_period: 120s
+    networks:
+      - biodockify-network
+    restart: unless-stopped
+
+  # Monitoring Stack (All FREE)
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: biodockify-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    networks:
+      - biodockify-network
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: biodockify-grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    networks:
+      - biodockify-network
+    restart: unless-stopped
+
+  loki:
+    image: grafana/loki:latest
+    container_name: biodockify-loki
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./logs:/loki/logs
+      - loki_data:/loki
+    command: -config.file=/etc/loki/local-config.yaml
     networks:
       - biodockify-network
     restart: unless-stopped
 
 volumes:
-  biodockify-data:
-  neo4j-data:
+  chroma_data:
+  postgres_data:
+  redis_data:
+  prometheus_data:
+  grafana_data:
+  loki_data:
 
 networks:
   biodockify-network:

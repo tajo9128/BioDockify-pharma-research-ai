@@ -1,0 +1,55 @@
+name: BioDockify Zero-Cost CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11"]
+
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r api/requirements.txt
+        pip install pytest pytest-asyncio pytest-cov
+        
+    - name: Security Scan (Bandit)
+      run: |
+        pip install bandit
+        # Run bandit on core modules
+        bandit -r api agent_zero modules -f json -o bandit-report.json || true
+        
+    - name: Run Trivy (Vulnerability Scan)
+      uses: aquasecurity/trivy-action@master
+      continue-on-error: true
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        format: 'table'
+        severity: 'CRITICAL,HIGH'
+        
+    - name: Run Tests with Coverage
+      run: |
+        # Run the new monitored agent tests and standard tests
+        pytest tests/test_monitored_agents.py tests/test_guardian.py --cov=agent_zero --cov=modules --cov-report=xml
+        
+    - name: Upload coverage reports to Codecov
+      uses: codecov/codecov-action@v4
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        files: ./coverage.xml
+        fail_ci_if_error: false

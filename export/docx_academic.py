@@ -129,7 +129,8 @@ class AcademicDOCXExporter:
         """
         if not DOCX_AVAILABLE:
             raise ImportError(
-                "python-docx is required. Install with: pip install python-docx"
+                "The 'python-docx' library is required for academic document generation. "
+                "Please install it using: pip install python-docx"
             )
 
         self.doc = Document()
@@ -674,33 +675,43 @@ class AcademicDOCXExporter:
             footer_para._p.append(fldChar1)
             footer_para._p.append(instrText)
             footer_para._p.append(fldChar2)
-
         logger.debug(f"Footer added: {text}")
 
     def export(self, filepath: str) -> str:
         """
-        Save DOCX file
-
+        Save DOCX file using atomic temp file replacement (Bug #16).
+        
         Args:
             filepath: Path to output .docx file
-
-        Returns:
-            Path to saved file
         """
+        import tempfile
+        import os
+        
         output_path = Path(filepath)
 
         # Ensure .docx extension
         if not output_path.suffix == '.docx':
             output_path = output_path.with_suffix('.docx')
 
-        # Create parent directories if needed
+        # Create parent directories
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
-        # Save document
-        self.doc.save(str(output_path))
+        # Save to temp file first to avoid corruption/locking issues
+        fd, tmp_path = tempfile.mkstemp(suffix='.docx', dir=str(output_path.parent))
+        try:
+            os.close(fd) # Close the file descriptor, docx will open it
+            self.doc.save(tmp_path)
+            # Atomic replace
+            if os.path.exists(str(output_path)):
+                os.remove(str(output_path))
+            os.rename(tmp_path, str(output_path))
+        except Exception as e:
+            if os.path.exists(tmp_path):
+                os.remove(tmp_path)
+            logger.error(f"Failed to export DOCX: {e}")
+            raise
 
-        logger.info(f"DOCX exported: {output_path}")
-
+        logger.info(f"DOCX exported successfully: {output_path}")
         return str(output_path)
 
     def add_table_of_contents(self):

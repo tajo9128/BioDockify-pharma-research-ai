@@ -3,21 +3,25 @@ Persistent Task Storage
 Provides SQLite-backed task storage for research tasks.
 """
 
-import sqlite3
+"""
+Persistent Task Storage
+Provides SQLite-backed task storage for research tasks.
+"""
+
+import aiosqlite
 import json
 import logging
+import asyncio
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Any
-from threading import Lock
 
 logger = logging.getLogger("task_store")
 
-
 class TaskStore:
     """
-    Persistent task storage using SQLite.
-    Thread-safe with automatic database creation.
+    Persistent task storage using aiosqlite.
+    Async-native for non-blocking I/O.
     """
     
     def __init__(self, db_path: str = None):
@@ -26,31 +30,29 @@ class TaskStore:
         
         self.db_path = Path(db_path)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
-        self._lock = Lock()
-        self._init_db()
+        # We don't init DB in __init__ because it's sync. 
+        # Application startup should call await store.init()
     
-    def _init_db(self):
+    async def init(self):
         """Initialize the database schema."""
-        with self._lock:
-            with sqlite3.connect(str(self.db_path)) as conn:
-                cursor = conn.cursor()
-                cursor.execute("""
-                    CREATE TABLE IF NOT EXISTS tasks (
-                        task_id TEXT PRIMARY KEY,
-                        status TEXT NOT NULL DEFAULT 'pending',
-                        progress INTEGER DEFAULT 0,
-                        title TEXT,
-                        mode TEXT,
-                        logs TEXT DEFAULT '[]',
-                        result TEXT,
-                        created_at TEXT NOT NULL,
-                        updated_at TEXT NOT NULL
-                    )
-                """)
-                conn.commit()
-            logger.info(f"TaskStore initialized at {self.db_path}")
+        async with aiosqlite.connect(self.db_path) as db:
+            await db.execute("""
+                CREATE TABLE IF NOT EXISTS tasks (
+                    task_id TEXT PRIMARY KEY,
+                    status TEXT NOT NULL DEFAULT 'pending',
+                    progress INTEGER DEFAULT 0,
+                    title TEXT,
+                    mode TEXT,
+                    logs TEXT DEFAULT '[]',
+                    result TEXT,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                )
+            """)
+            await db.commit()
+        logger.info(f"TaskStore initialized at {self.db_path}")
     
-    def create_task(self, task_id: str, title: str = "", mode: str = "local") -> Dict[str, Any]:
+    async def create_task(self, task_id: str, title: str = "", mode: str = "local") -> Dict[str, Any]:
         """Create a new task."""
         now = datetime.now().isoformat()
         task = {
@@ -65,34 +67,33 @@ class TaskStore:
             "updated_at": now
         }
         
-        with self._lock:
-            with sqlite3.connect(str(self.db_path)) as conn:
-                cursor = conn.cursor()
-                cursor.execute("""
+        async with aiosqlite.connect(self.db_path) as db:
+            try:
+                await db.execute("""
                     INSERT INTO tasks (task_id, status, progress, title, mode, logs, result, created_at, updated_at)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, (
                     task_id, "pending", 0, title, mode, 
                     json.dumps([]), None, now, now
                 ))
-                conn.commit()
+                await db.commit()
+            except Exception as e:
+                logger.error(f"Failed to create task: {e}")
+                raise
         
         return task
     
-    def get_task(self, task_id: str) -> Optional[Dict[str, Any]]:
+    async def get_task(self, task_id: str) -> Optional[Dict[str, Any]]:
         """Get a task by ID."""
-        with self._lock:
-            with sqlite3.connect(str(self.db_path)) as conn:
-                conn.row_factory = sqlite3.Row
-                cursor = conn.cursor()
-                cursor.execute("SELECT * FROM tasks WHERE task_id = ?", (task_id,))
-                row = cursor.fetchone()
-            
-            if row:
-                return self._row_to_dict(row)
-            return None
+        async with aiosqlite.connect(self.db_path) as db:
+            db.row_factory = aiosqlite.Row
+            async with db.execute("SELECT * FROM tasks WHERE task_id = ?", (task_id,)) as cursor:
+                row = await cursor.fetchone()
+                if row:
+                    return self._row_to_dict(row)
+        return None
     
-    def update_task(self, task_id: str, **updates) -> bool:
+    async def update_task(self, task_id: str, **updates) -> bool:
         """Update a task's fields."""
         if not updates:
             return False
@@ -101,7 +102,7 @@ class TaskStore:
         VALID_COLUMNS = {
             "current_task", "current_step", "total_steps", 
             "progress_percent", "is_running", "latest_thinking", 
-            "recent_log", "logs", "result", "updated_at", "status"
+            "recent_log", "logs", "result", "updated_at", "status", "progress"
         }
         
         filtered_updates = {k: v for k, v in updates.items() if k in VALID_COLUMNS}
@@ -121,84 +122,68 @@ class TaskStore:
         set_clause = ", ".join([f"{k} = ?" for k in filtered_updates.keys()])
         values = list(filtered_updates.values()) + [task_id]
         
-        with self._lock:
-            with sqlite3.connect(str(self.db_path)) as conn:
-                cursor = conn.cursor()
-                cursor.execute(f"UPDATE tasks SET {set_clause} WHERE task_id = ?", values)
-                conn.commit()
-                success = cursor.rowcount > 0
-        
-        return success
+        async with aiosqlite.connect(self.db_path) as db:
+            try:
+                cursor = await db.execute(f"UPDATE tasks SET {set_clause} WHERE task_id = ?", values)  # nosec B608
+                await db.commit()
+                return cursor.rowcount > 0
+            except Exception as e:
+                logger.error(f"Failed to update task: {e}")
+                return False
     
-    def append_log(self, task_id: str, log: str) -> bool:
+    async def append_log(self, task_id: str, log: str) -> bool:
         """Append a log entry to a task efficiently."""
-        with self._lock:
-            with sqlite3.connect(str(self.db_path)) as conn:
-                conn.row_factory = sqlite3.Row
-                cursor = conn.cursor()
-                
-                # Get existing logs
-                cursor.execute("SELECT logs FROM tasks WHERE task_id = ?", (task_id,))
-                row = cursor.fetchone()
+        async with aiosqlite.connect(self.db_path) as db:
+            db.row_factory = aiosqlite.Row
+            
+            # Get existing logs
+            async with db.execute("SELECT logs FROM tasks WHERE task_id = ?", (task_id,)) as cursor:
+                row = await cursor.fetchone()
                 if not row:
                     return False
                 
                 try:
                     logs = json.loads(row["logs"]) if row["logs"] else []
-                except (json.JSONDecodeError, TypeError):
+                except:
                     logs = []
                 
                 logs.append(log)
                 
-                # Update with current timestamp
-                cursor.execute(
+                cursor = await db.execute(
                     "UPDATE tasks SET logs = ?, updated_at = ? WHERE task_id = ?",
                     (json.dumps(logs), datetime.now().isoformat(), task_id)
                 )
-                conn.commit()
+                await db.commit()
                 return cursor.rowcount > 0
-    
-    def list_tasks(self, limit: int = 100) -> List[Dict[str, Any]]:
+
+    async def list_tasks(self, limit: int = 100) -> List[Dict[str, Any]]:
         """List all tasks, most recent first."""
-        with self._lock:
-            with sqlite3.connect(str(self.db_path)) as conn:
-                conn.row_factory = sqlite3.Row
-                cursor = conn.cursor()
-                cursor.execute(
-                    "SELECT * FROM tasks ORDER BY created_at DESC LIMIT ?", 
-                    (limit,)
-                )
-                rows = cursor.fetchall()
-        
-        return [self._row_to_dict(row) for row in rows]
+        async with aiosqlite.connect(self.db_path) as db:
+            db.row_factory = aiosqlite.Row
+            async with db.execute("SELECT * FROM tasks ORDER BY created_at DESC LIMIT ?", (limit,)) as cursor:
+                rows = await cursor.fetchall()
+                return [self._row_to_dict(row) for row in rows]
     
-    def delete_task(self, task_id: str) -> bool:
+    async def delete_task(self, task_id: str) -> bool:
         """Delete a task."""
-        with self._lock:
-            with sqlite3.connect(str(self.db_path)) as conn:
-                cursor = conn.cursor()
-                cursor.execute("DELETE FROM tasks WHERE task_id = ?", (task_id,))
-                conn.commit()
-                success = cursor.rowcount > 0
-        
-        return success
+        async with aiosqlite.connect(self.db_path) as db:
+            cursor = await db.execute("DELETE FROM tasks WHERE task_id = ?", (task_id,))
+            await db.commit()
+            return cursor.rowcount > 0
     
-    def cleanup_old_tasks(self, days: int = 30) -> int:
+    async def cleanup_old_tasks(self, days: int = 30) -> int:
         """Delete tasks older than specified days."""
         from datetime import timedelta
         cutoff = (datetime.now() - timedelta(days=days)).isoformat()
         
-        with self._lock:
-            with sqlite3.connect(str(self.db_path)) as conn:
-                cursor = conn.cursor()
-                cursor.execute("DELETE FROM tasks WHERE created_at < ?", (cutoff,))
-                conn.commit()
-                deleted = cursor.rowcount
-        
-        logger.info(f"Cleaned up {deleted} old tasks")
-        return deleted
+        async with aiosqlite.connect(self.db_path) as db:
+            cursor = await db.execute("DELETE FROM tasks WHERE created_at < ?", (cutoff,))
+            await db.commit()
+            deleted = cursor.rowcount
+            logger.info(f"Cleaned up {deleted} old tasks")
+            return deleted
     
-    def _row_to_dict(self, row: sqlite3.Row) -> Dict[str, Any]:
+    def _row_to_dict(self, row: aiosqlite.Row) -> Dict[str, Any]:
         """Convert a database row to a dictionary."""
         d = dict(row)
         

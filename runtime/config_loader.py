@@ -22,46 +22,105 @@ BASE_DIR = Path(__file__).parent.parent
 class SecurityManager:
     """
     Handles encryption of sensitive configuration values at rest.
-    Uses a machine-specific seed for basic obfuscation/encryption 
-    (since full cryptography lib is not guaranteed).
+    Uses cryptography.fernet for robust encryption with a machine-specific key.
     """
     def __init__(self):
-        # Machine-specific key (stable across runs on same machine)
-        self.node = str(uuid.getnode())
         self.sensitive_suffices = ("_key", "password", "secret", "token", "email")
+        self._key = self._get_or_create_key()
+        self._fernet = None
+        if self._key:
+            try:
+                from cryptography.fernet import Fernet
+                self._fernet = Fernet(self._key)
+            except ImportError:
+                logger.warning("cryptography not found. Falling back to basic obfuscation.")
         
+        # Legacy node info for backward compatibility fallback
+        self.node = str(uuid.getnode())
+
+    def _get_or_create_key(self) -> Optional[bytes]:
+        """Load or generate a machine-specific encryption key."""
+        try:
+            from cryptography.fernet import Fernet
+            # Path for the key: ~/.biodockify/encryption.key
+            key_dir = Path.home() / ".biodockify"
+            key_path = key_dir / "encryption.key"
+            
+            if key_path.exists():
+                return key_path.read_bytes()
+            
+            # Create new key
+            key_dir.mkdir(parents=True, exist_ok=True)
+            key = Fernet.generate_key()
+            key_path.write_bytes(key)
+            # Try to set permissions (owner only)
+            try:
+                key_path.chmod(0o600)
+            except:
+                pass
+            return key
+        except Exception as e:
+            logger.error(f"Failed to manage encryption key: {e}")
+            return None
+
     def _xor_cipher(self, text: str) -> str:
-        """Simple XOR cipher with node info."""
+        """Legacy XOR cipher for backward compatibility."""
         if not text: return text
         return ''.join(chr(ord(c) ^ ord(self.node[i % len(self.node)])) for i, c in enumerate(text))
 
     def encrypt_value(self, value: str) -> str:
-        """Encrypts a string value."""
+        """Encrypts a string value using Fernet."""
         if not value or value.startswith("ENC:"): return value
+        if not self._fernet:
+            # Fallback to XOR obfuscation if Fernet is unavailable
+            try:
+                xored = self._xor_cipher(value)
+                b64 = base64.b64encode(xored.encode("utf-8")).decode("utf-8")
+                return f"ENC:XOR:{b64}"
+            except:
+                return value
+
         try:
-            # 1. XOR
-            xored = self._xor_cipher(value)
-            # 2. Base64 encode to ensure safe character set for YAML
-            b64 = base64.b64encode(xored.encode("utf-8")).decode("utf-8")
-            return f"ENC:{b64}"
-        except:
+            encrypted = self._fernet.encrypt(value.encode("utf-8")).decode("utf-8")
+            return f"ENC:FRN:{encrypted}"
+        except Exception as e:
+            logger.error(f"Fernet encryption failed: {e}")
             return value
 
     def decrypt_value(self, value: str) -> str:
-        """Decrypts a string value."""
+        """Decrypts a string value with backward compatibility fallback."""
         if not value or not isinstance(value, str) or not value.startswith("ENC:"):
             return value
+        
         try:
-             payload = value[4:] # Strip ENC:
-             # 1. Base64 decode
-             xored = base64.b64decode(payload).decode("utf-8")
-             # 2. XOR (Symmetric)
-             return self._xor_cipher(xored)
-        except (UnicodeDecodeError, Exception) as e:
-            # If decryption fails (e.g. machine change invalidates key), 
-            # we return the original value (so user can see it's broken or just reset it)
-            # rather than crashing the checking logic.
-            print(f"[!] Config Decryption Warning: {e}. Resetting to raw value.")
+            # New format checks
+            if value.startswith("ENC:FRN:") and self._fernet:
+                payload = value[8:]
+                return self._fernet.decrypt(payload.encode("utf-8")).decode("utf-8")
+            
+            if value.startswith("ENC:XOR:"):
+                payload = value[8:]
+                xored = base64.b64decode(payload).decode("utf-8")
+                return self._xor_cipher(xored)
+            
+            # Legacy format (no type prefix)
+            payload = value[4:]
+            try:
+                # Try Fernet first if it looks like it (unlikely but safe)
+                if self._fernet:
+                    try:
+                        return self._fernet.decrypt(payload.encode("utf-8")).decode("utf-8")
+                    except:
+                        pass
+                
+                # Fallback to XOR
+                xored = base64.b64decode(payload).decode("utf-8")
+                return self._xor_cipher(xored)
+            except:
+                return value
+                
+        except Exception as e:
+            logger.warning(f"Config Decryption Error: {e}. Returning raw value.")
             return value
 
     def process_config(self, config: Dict, mode: str) -> Dict:

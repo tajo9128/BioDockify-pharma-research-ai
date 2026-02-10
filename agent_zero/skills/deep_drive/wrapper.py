@@ -7,6 +7,7 @@ import sys
 from typing import Optional, List, Dict, Any
 from loguru import logger
 from pathlib import Path
+import threading
 
 class DeepDriveSkill:
     """
@@ -49,9 +50,11 @@ class DeepDriveSkill:
 
 # Singleton
 _deep_drive_instance = None
+_deep_drive_lock = threading.Lock()
 
 def get_deep_drive() -> DeepDriveSkill:
     global _deep_drive_instance
-    if not _deep_drive_instance:
-        _deep_drive_instance = DeepDriveSkill()
+    with _deep_drive_lock:
+        if not _deep_drive_instance:
+            _deep_drive_instance = DeepDriveSkill()
     return _deep_drive_instance

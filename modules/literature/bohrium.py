@@ -29,12 +29,29 @@ class BohriumConnector:
         self.endpoint = endpoint or os.getenv("BOHRIUM_API_URL", "http://localhost:7000/mcp")
         self.timeout = 30 # seconds
         self.api_key = os.getenv("BOHRIUM_API_KEY", "")
+        self.consecutive_failures = 0
+        self.circuit_open = False
+        self.last_failure_time = 0
+
+    def _check_circuit(self) -> bool:
+        """Check if circuit is open (broken)."""
+        if self.circuit_open:
+            import time
+            # Reset after 5 minutes
+            if time.time() - self.last_failure_time > 300:
+                self.circuit_open = False
+                self.consecutive_failures = 0
+                return True
+            return False
+        return True
 
     async def search_literature(self, query: str, limit: int = 10) -> List[Dict]:
         """
         Search for scientific literature via Bohrium.
-        Returns raw dictionaries to be normalized by the caller.
         """
+        if not self._check_circuit():
+            logger.warning("Bohrium circuit is OPEN. Skipping search.")
+            return []
         return await self._execute_tool("search_papers", {"query": query, "limit": limit})
 
     async def search_patents(self, query: str, limit: int = 10) -> List[Dict]:
@@ -103,6 +120,12 @@ class BohriumConnector:
                     return []
 
         except Exception as e:
-            # Log but don't crash - allow other discovery sources to work
+            import time
+            self.consecutive_failures += 1
+            self.last_failure_time = time.time()
+            if self.consecutive_failures >= 5:
+                self.circuit_open = True
+                logger.error(f"Bohrium circuit OPENed after {self.consecutive_failures} failures.")
+            
             logger.debug(f"Bohrium connection failed ({self.endpoint}): {e}")
             return []

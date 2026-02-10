@@ -6,6 +6,7 @@ import sys
 from typing import Optional, List, Dict, Any
 from loguru import logger
 from pathlib import Path
+import threading
 try:
     from redlines import Redlines
     REDLINES_AVAILABLE = True
@@ -90,9 +91,11 @@ class AchademioSkill:
 
 # Singleton
 _achademio_instance = None
+_achademio_lock = threading.Lock()
 
 def get_achademio() -> AchademioSkill:
     global _achademio_instance
-    if not _achademio_instance:
-        _achademio_instance = AchademioSkill()
+    with _achademio_lock:
+        if not _achademio_instance:
+            _achademio_instance = AchademioSkill()
     return _achademio_instance

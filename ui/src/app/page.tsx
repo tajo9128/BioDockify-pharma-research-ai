@@ -6,13 +6,11 @@ import Sidebar from '@/components/Sidebar';
 import SettingsPanel from '@/components/SettingsPanel';
 import ResearchWorkstation from '@/components/ResearchWorkstation';
 import KnowledgeBaseView from '@/components/KnowledgeBaseView';
-import OmniToolsView from '@/components/OmniToolsView';
 import FirstRunWizard from '@/components/FirstRunWizard';
 import AgentChat from '@/components/AgentChat';
 import HypothesisView from '@/components/HypothesisView';
 import PublicationView from '@/components/PublicationView';
 import StatisticsView from '@/components/StatisticsView';
-import JournalChecker from '@/components/JournalChecker';
 import { AcademicWriterHub } from '@/components/writers/AcademicWriterHub';
 import HomeDashboard from '@/components/HomeDashboard';
 
@@ -235,14 +233,6 @@ export default function PharmaceuticalResearchApp() {
             </div>
           </ErrorBoundary>
         );
-      case 'omnitools':
-        return (
-          <ErrorBoundary name="OmniTools">
-            <div className="h-full overflow-hidden">
-              <OmniToolsView />
-            </div>
-          </ErrorBoundary>
-        );
       case 'publication':
         return (
           <ErrorBoundary name="Publication">
@@ -253,12 +243,6 @@ export default function PharmaceuticalResearchApp() {
         return (
           <ErrorBoundary name="Statistics">
             <StatisticsView />
-          </ErrorBoundary>
-        );
-      case 'journal-check':
-        return (
-          <ErrorBoundary name="JournalCheck">
-            <JournalChecker />
           </ErrorBoundary>
         );
       case 'hypothesis':

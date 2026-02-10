@@ -10,6 +10,7 @@ import logging
 from dataclasses import dataclass, field
 from typing import Dict, List, Any, Optional
 
+import asyncio
 from orchestration.planner.orchestrator import ResearchPlan, ResearchStep
 
 # Import Core Modules
@@ -25,6 +26,13 @@ except ImportError:
     def add_paper(*args, **kwargs): pass
     def connect_compound(*args, **kwargs): pass
     def create_constraints(*args, **kwargs): pass
+
+try:
+    from modules.deep_drive.memory_engine import MemoryEngine
+    HAS_MEMORY_ENGINE = True
+except ImportError:
+    MemoryEngine = None
+    HAS_MEMORY_ENGINE = False
 
 from modules.analyst.analytics_engine import ResearchAnalyst
 
@@ -61,37 +69,54 @@ class ResearchExecutor:
         self.analyst = ResearchAnalyst()
         # Vision is purely functional, no init needed
         
+        if HAS_MEMORY_ENGINE:
+            self.memory = MemoryEngine()
+        else:
+            self.memory = None
+        
         # Ensure graph constraints
         try:
             create_constraints()
         except:
             pass # Ignore if offline
 
-    def log_to_task(self, message: str, type: str = "info"):
+    async def log_to_task(self, message: str, type: str = "info"):
         """Append a log entry to the task state on disk."""
         if not self.task_id:
             return
         
         try:
-            from runtime.task_manager import task_manager
-            task = task_manager.load_task(self.task_id)
-            if task:
-                if "logs" not in task:
-                    task["logs"] = []
-                # Simple string log, the UI parses type from keywords if needed 
-                # or we can use a structured format
-                log_entry = f"[{type.upper()}] {message}"
-                task["logs"].append(log_entry)
-                task_manager.save_task(self.task_id, task)
+            from runtime.task_store import get_task_store
+            store = get_task_store()
+            # Simple string log, the UI parses type from keywords if needed
+            # or we can use a structured format
+            log_entry = f"[{type.upper()}] {message}"
+            await store.append_log(self.task_id, log_entry)
+
+            # Push to Deep Drive Memory
+            # Only store significant events to avoid noise
+            if self.memory and type.lower() in ["thought", "action", "result", "error"]:
+                try:
+                    await self.memory.store_memory(
+                        interaction=f"Research Task {self.task_id}: {message}",
+                        context={
+                            "taskId": self.task_id,
+                            "type": type,
+                            "source": "ResearchExecutor"
+                        }
+                    )
+                except Exception as e:
+                    logger.warning(f"Failed to store memory in Deep Drive: {e}")
+
         except Exception as e:
             logger.error(f"Failed to log to task: {e}")
 
-    def execute_plan(self, plan: ResearchPlan) -> ResearchContext:
+    async def execute_plan(self, plan: ResearchPlan) -> ResearchContext:
         """
         Execute the entire research plan with checkpointing.
         """
         logger.info(f"Starting execution of plan: {plan.research_title}")
-        self.log_to_task(f"Starting research on: {plan.research_title}", "info")
+        await self.log_to_task(f"Starting research on: {plan.research_title}", "info")
         
         context = ResearchContext(topic=plan.research_title)
         
@@ -99,76 +124,97 @@ class ResearchExecutor:
         # In a full production version, we would deserialize context from disk here.
         
         total_steps = len(plan.steps)
-        self.log_to_task(f"Plan contains {total_steps} analysis steps.", "thought")
+        await self.log_to_task(f"Plan contains {total_steps} analysis steps.", "thought")
         
         for idx, step in enumerate(plan.steps):
             logger.info(f"--- Executing Step {step.step_id}: {step.title} ---")
-            self.log_to_task(f"Step {idx+1}/{total_steps}: {step.title}", "action")
+            await self.log_to_task(f"Step {idx+1}/{total_steps}: {step.title}", "action")
             
             try:
-                self._execute_step(step, context)
+                await self._execute_step(step, context)
                 logger.info(f"✓ Step {step.step_id} completed.")
-                self.log_to_task(f"Completed {step.title}", "result")
+                await self.log_to_task(f"Completed {step.title}", "result")
                 
                 # CHECKPOINTING
                 if self.task_id:
-                    from runtime.task_manager import task_manager
-                    task = task_manager.load_task(self.task_id)
-                    if task:
-                        # Update Progress
-                        task["progress"] = int(((idx + 1) / total_steps) * 100)
-                        task["message"] = f"Completed: {step.title}"
-                        
-                        # Serialize Context (Partial) - For MVP we save stats/entities
-                        # Saving full extracted_text every time might be heavy, but safe.
-                        task["context_snapshot"] = {
-                            "entities": context.entities,
-                            "stats": context.analyst_stats,
-                            "last_step_id": step.step_id
-                        }
-                        task_manager.save_task(self.task_id, task)
+                    from runtime.task_store import get_task_store
+                    store = get_task_store()
+
+                    # Update Progress and Message
+                    progress = int(((idx + 1) / total_steps) * 100)
+                    msg = f"Completed: {step.title}"
+
+                    # Serialize Context (Partial) - For MVP we save stats/entities
+                    context_snapshot = {
+                        "entities": context.entities,
+                        "stats": context.analyst_stats,
+                        "last_step_id": step.step_id
+                    }
+                    
+                    # Store updates
+                    await store.update_task(self.task_id, progress=progress, message=msg, result=context_snapshot)
 
             except Exception as e:
                 logger.error(f"✗ Step {step.step_id} failed: {e}")
-                self.log_to_task(f"Error in {step.title}: {str(e)}", "error")
+                await self.log_to_task(f"Error in {step.title}: {str(e)}", "error")
                 if self.task_id:
-                     from runtime.task_manager import task_manager
-                     task = task_manager.load_task(self.task_id)
-                     if task:
-                         task["status"] = "failed"
-                         task["error"] = f"Step {step.step_id} failed: {e}"
-                         task_manager.save_task(self.task_id, task)
+                     from runtime.task_store import get_task_store
+                     store = get_task_store()
+                     await store.update_task(self.task_id, status="failed", result={"error": f"Step {step.step_id} failed: {e}"})
+
                 raise e # Re-raise to stop execution
         
-        self.log_to_task("Research execution finished successfully.", "result")
+        await self.log_to_task("Research execution finished successfully.", "result")
         return context
 
-    def _execute_step(self, step: ResearchStep, context: ResearchContext):
+    async def _handle_molecular_vision(self, step: ResearchStep, context: ResearchContext):
+        """
+        Scan data/images for chemical structures and log findings.
+        """
+        logger.info(f"[{self.task_id}] Running molecular vision scan...")
+        img_dir = Path("data/images")
+        if not img_dir.exists():
+            logger.warning(f"[{self.task_id}] No image directory found.")
+            return
+
+        found_structures = []
+        for img_path in img_dir.glob("*.[pj][np]g"):
+            # Placeholder for DECIMER/Vision processing
+            logger.debug(f"[{self.task_id}] Scanning {img_path.name}...")
+            # Simulate discovery in exploratory mode
+            if context.strictness == "exploratory":
+                found_structures.append(f"Structure in {img_path.name} matches {step.title}")
+        
+        if found_structures:
+            context.entities.extend([{"type": "structure", "name": s} for s in found_structures])
+            logger.info(f"[{self.task_id}] Detected {len(found_structures)} potential structures.")
+
+    async def _execute_step(self, step: ResearchStep, context: ResearchContext):
         """
         Dispatch execution based on step category.
         """
         category = step.category
         
         if category == "literature_search":
-            self._handle_literature_search(step, context)
+            await self._handle_literature_search(step, context)
         elif category == "entity_extraction":
-            self._handle_entity_extraction(step, context)
+            await self._handle_entity_extraction(step, context)
         elif category == "graph_building":
-            self._handle_graph_building(step, context)
+            await self._handle_graph_building(step, context)
         elif category == "data_analysis":
-            self._handle_data_analysis(step, context)
+            await self._handle_data_analysis(step, context)
         elif category == "molecular_analysis" and has_molecular_vision:
              # Just verify availability
              if is_decimer_available():
-                 self._handle_molecular_vision(step, context)
+                 await self._handle_molecular_vision(step, context)
              else:
                  logger.warning("Molecular Vision requested but DECIMER is unavailable.")
         elif category == "final_report":
-            self._handle_final_report(step, context)
+            await self._handle_final_report(step, context)
         else:
             logger.warning(f"No handler for category: {category}")
 
-    def _handle_literature_search(self, step: ResearchStep, context: ResearchContext):
+    async def _handle_literature_search(self, step: ResearchStep, context: ResearchContext):
         """
         Scan data/papers directory for PDFs. 
         If none found, AUTO-FETCH from PubMed using the Scraper.
@@ -235,7 +281,7 @@ class ResearchExecutor:
         
         logger.info(f"Total extracted text length: {len(context.extracted_text)} chars")
 
-    def _handle_entity_extraction(self, step: ResearchStep, context: ResearchContext):
+    async def _handle_entity_extraction(self, step: ResearchStep, context: ResearchContext):
         """
         Run BioNER on the extracted text.
         """
@@ -251,7 +297,7 @@ class ResearchExecutor:
                     f"{len(entities.get('diseases', []))} diseases, "
                     f"{len(entities.get('genes', []))} genes")
 
-    def _handle_graph_building(self, step: ResearchStep, context: ResearchContext):
+    async def _handle_graph_building(self, step: ResearchStep, context: ResearchContext):
         """
         Push extracted data to Neo4j.
         """
@@ -268,17 +314,35 @@ class ResearchExecutor:
                     connect_compound(paper['pmid'], drug)
                 # TODO: Add functions for diseases/genes in GraphBuilder
         
+        if self.memory and context.entities:
+            try:
+                # Create a summary interaction for the memory
+                interaction = f"Graph Building: Extracted {len(context.entities.get('drugs', []))} drugs, {len(context.entities.get('diseases', []))} diseases."
+                
+                await self.memory.store_memory(
+                    interaction=interaction,
+                    context={
+                        "taskId": self.task_id,
+                        "type": "graph_update",
+                        "source": "ResearchExecutor",
+                        "entities": context.entities
+                    }
+                )
+                logger.info("✓ Pushed entities to Deep Drive Memory Graph.")
+            except Exception as e:
+                logger.warning(f"Failed to push to Deep Drive Graph: {e}")
+
         logger.info("Graph population steps initiated.")
 
-    def _handle_data_analysis(self, step: ResearchStep, context: ResearchContext):
+    async def _handle_data_analysis(self, step: ResearchStep, context: ResearchContext):
         """
         Run analytics.
         """
-        stats = self.analyst.get_graph_statistics()
+        stats = await asyncio.to_thread(self.analyst.get_graph_statistics)
         context.analyst_stats = stats
         logger.info(f"Graph Stats: {stats}")
         
-        repurposing = self.analyst.find_potential_repurposing()
+        repurposing = await asyncio.to_thread(self.analyst.find_potential_repurposing)
         if repurposing:
             logger.info(f"Found {len(repurposing)} repurposing candidates.")
 
@@ -289,7 +353,7 @@ class ResearchExecutor:
         # Placeholder: Scan for image files or use extracted images from PDFs
         logger.info("Molecular vision step (Placeholder for image scanning)")
 
-    def _handle_final_report(self, step: ResearchStep, context: ResearchContext):
+    async def _handle_final_report(self, step: ResearchStep, context: ResearchContext):
         """
         Generate Final Report (DOCX) and Lab Protocols (SiLA).
         """

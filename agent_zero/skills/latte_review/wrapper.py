@@ -8,6 +8,7 @@ import pandas as pd
 from typing import Optional, List, Dict, Any
 from loguru import logger
 from pathlib import Path
+import threading
 
 # --- Dynamic Import for External Submodule ---
 # We point to the cloned repo in _external/LatteReview
@@ -32,7 +33,10 @@ class LatteReviewSkill:
     """
     def __init__(self):
         if not LATTE_AVAILABLE:
-            raise ImportError("LatteReview dependencies missing or path incorrect.")
+             logger.error("LatteReview dependencies missing. Skill cannot be fully initialized.")
+             self.available = False
+             return
+        self.available = True
             
         # Default Model Setup for LM Studio
         self.lm_studio_base = os.getenv("LM_STUDIO_URL", "http://localhost:1234/v1")
@@ -138,9 +142,16 @@ class LatteReviewSkill:
         try:
             results = asyncio.run(workflow(data))
         except RuntimeError:
-            import nest_asyncio
-            nest_asyncio.apply()
-            results = asyncio.run(workflow(data))
+            try:
+                import nest_asyncio
+                nest_asyncio.apply()
+                results = asyncio.run(workflow(data))
+            except ImportError:
+                logger.error("nest_asyncio not installed. Cannot run nested async logic.")
+                raise
+        except Exception as e:
+            logger.error(f"LatteReview workflow failed: {e}")
+            raise
             
         if not output_path:
             output_path = str(Path(input_path).parent / f"{prefix}_{Path(input_path).name}")
@@ -151,10 +162,12 @@ class LatteReviewSkill:
 
 # Singleton
 _latte_instance = None
+_latte_lock = threading.Lock()
 
 def get_latte_review() -> LatteReviewSkill:
     global _latte_instance
-    if not _latte_instance:
-        _latte_instance = LatteReviewSkill()
+    with _latte_lock:
+        if not _latte_instance:
+            _latte_instance = LatteReviewSkill()
     return _latte_instance
 

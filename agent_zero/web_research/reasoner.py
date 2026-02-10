@@ -68,6 +68,29 @@ class Reasoner:
         self.config = config or ReasonerConfig()
         self.llm_adapter = None  # Will be initialized with LLM provider
     
+    async def _ensure_adapter(self):
+        """Ensure an LLM adapter is available, attempting to load from factory if missing."""
+        if self.llm_adapter is not None:
+            return
+            
+        try:
+            from modules.llm.factory import LLMFactory
+            from runtime.config_loader import load_config
+            cfg = load_config()
+            ai_cfg = cfg.get("ai_provider", {})
+            
+            # Simple mock for config compatibility
+            class MockConfig:
+                def __init__(self, c):
+                    for k, v in c.items(): setattr(self, k, v)
+                    self.primary_model = c.get("primary_model", "google")
+
+            self.llm_adapter = LLMFactory.get_adapter(ai_cfg.get("primary_model", "google"), MockConfig(ai_cfg))
+            if self.llm_adapter:
+                logger.info(f"LLM adapter auto-initialized: {type(self.llm_adapter).__name__}")
+        except Exception as e:
+            logger.error(f"Failed to auto-initialize LLM adapter: {e}")
+
     def set_llm_adapter(self, llm_adapter):
         """
         Set the LLM adapter for generating answers.
@@ -95,8 +118,9 @@ class Reasoner:
         Returns:
             Generated answer
         """
+        await self._ensure_adapter()
         if not self.llm_adapter:
-            raise ValueError("LLM adapter not set. Call set_llm_adapter() first.")
+            raise ValueError("LLM adapter not set and could not be auto-initialized.")
         
         # Prepare context from knowledge
         context_text = self._prepare_knowledge_context(knowledge)

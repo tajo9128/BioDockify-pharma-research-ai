@@ -39,6 +39,11 @@ htmlcov/
 logs/
 data/tasks/
 data/exports/
+data/test_chroma/
+data/vectors/
+data/deep_drive/
+benchmarks/results/
+external/
 *.log
 tmp/
 *_backup.tsx

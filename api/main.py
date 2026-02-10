@@ -5,6 +5,12 @@ import time
 
 load_dotenv() # Load environment variables from .env
 
+try:
+    from runtime.sentry import setup_sentry
+    setup_sentry()
+except ImportError:
+    pass
+
 from pydantic import BaseModel
 from typing import Dict, Any, Optional, List
 import uuid
@@ -52,6 +58,14 @@ try:
 except ImportError as e:
     import logging
     logging.getLogger("biodockify_api").warning(f"Research routes not loaded: {e}")
+
+# Register RAG & Notebook Routes
+try:
+    from api.routes.rag_routes import router as rag_router
+    app.include_router(rag_router)
+except ImportError as e:
+    import logging
+    logging.getLogger("biodockify_api").warning(f"RAG routes not loaded: {e}")
 
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -979,25 +993,6 @@ def analyze_statistics(req: StatisticsRequest):
         
     return result
 
-# -----------------------------------------------------------------------------
-# JOURNAL INTELLIGENCE (Phase 5)
-# -----------------------------------------------------------------------------
-from modules.journal_intel import DecisionEngine
-
-class JournalRequest(BaseModel):
-    title: str
-    issn: str
-    url: Optional[str] = None
-
-@app.post("/api/journal/verify")
-def verify_journal(req: JournalRequest):
-    """
-    Verify potential journal authenticity using 6-Pillar Logic.
-    """
-    engine = DecisionEngine()
-    result = engine.verify(req.issn, req.title, req.url)
-    return result
-
 # File upload security constants
 ALLOWED_EXTENSIONS = {'.pdf', '.txt', '.docx', '.csv', '.xlsx', '.md', '.json', '.ipynb'}
 MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB
@@ -1097,75 +1092,6 @@ async def query_library(request: LibraryQuery):
          # Graceful fallback if RAG is offline
          logger.warning(f"RAG Search failed: {e}")
          return {"results": []}
-
-# -----------------------------------------------------------------------------
-# OMNI-TOOLS NATIVE ENDPOINTS
-# -----------------------------------------------------------------------------
-from fastapi.responses import StreamingResponse
-import io
-
-@app.post("/api/tools/pdf/merge")
-async def merge_pdfs(files: List[UploadFile] = File(...)):
-    """Merges multiple PDFs into one."""
-    try:
-        from modules.tools_native.processor import tool_processor
-        file_contents = []
-        for f in files:
-            file_contents.append(await f.read())
-            
-        merged_pdf = tool_processor.merge_pdfs(file_contents)
-        
-        return StreamingResponse(
-            io.BytesIO(merged_pdf),
-            media_type="application/pdf",
-            headers={"Content-Disposition": "attachment; filename=merged.pdf"}
-        )
-    except Exception as e:
-         raise HTTPException(status_code=500, detail=str(e))
-
-@app.post("/api/tools/image/convert")
-async def convert_image(file: UploadFile = File(...), format: str = Form(...)):
-    """Converts image to target format."""
-    try:
-        from modules.tools_native.processor import tool_processor
-        content = await file.read()
-        converted = tool_processor.convert_image(content, format)
-        
-        mime_map = {"png": "image/png", "jpeg": "image/jpeg", "webp": "image/webp"}
-        mime = mime_map.get(format.lower(), "application/octet-stream")
-        
-        return StreamingResponse(
-            io.BytesIO(converted),
-            media_type=mime,
-            headers={"Content-Disposition": f"attachment; filename=converted.{format.lower()}"}
-        )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.post("/api/tools/data/process")
-async def process_data(file: UploadFile = File(...), operation: str = Form(...)):
-    """Processes data files (CSV/JSON/Excel)."""
-    try:
-        from modules.tools_native.processor import tool_processor
-        content = await file.read()
-        # Returns string (JSON/CSV)
-        result = tool_processor.process_data(content, file.filename, operation)
-        
-        # Determine media type
-        if operation == "to_csv":
-            media = "text/csv"
-            ext = "csv"
-        else:
-            media = "application/json"
-            ext = "json"
-            
-        return StreamingResponse(
-            io.BytesIO(result.encode('utf-8')),
-            media_type=media,
-            headers={"Content-Disposition": f"attachment; filename=result.{ext}"}
-        )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
     except Exception as e:
         logger.error(f"Library search failed: {e}")
@@ -2460,6 +2386,8 @@ def check_neo4j_endpoint(request: Neo4jCheckRequest):
 class LinkRequest(BaseModel):
     url: str
 
+@app.post("/api/rag/link")
+async def link_url(request: LinkRequest):
     tmp_path = None
     try:
         text = scrape_url(request.url)

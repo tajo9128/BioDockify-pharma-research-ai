@@ -125,9 +125,9 @@ class HybridAgent:
             ),
             "latte_score": lambda p: get_latte_review().score_papers(
                 p.get("input_path"), 
-                p.get("task"), 
-                p.get("set", [0,1,2]), 
-                p.get("rules"), 
+                p.get("scoring_task") or p.get("task"), 
+                p.get("scoring_set") or p.get("set", [0,1,2]), 
+                p.get("scoring_rules") or p.get("rules"), 
                 p.get("output_path")
             ),
 
@@ -160,6 +160,8 @@ class HybridAgent:
         self.loop_data = LoopData()
         self.is_running = False
         self._channels_started = False
+        self.repair_attempts = {} # Track repairs per error
+        self.max_repairs_per_error = 3
 
     async def _handle_external_trigger(self, message: str):
         """Handle input from Cron or Channels."""
@@ -170,7 +172,7 @@ class HybridAgent:
         content = params.get("content")
         target = params.get("target") or "discord"
         chat_id = params.get("chat_id")
-        if not content or not chat_id: return "Error: content and chat_id required"
+        if not content or not chat_id: return "Error: 'content' and 'chat_id' parameters are required"
         
         await self.bus.push_outbound(OutboundMessage(content=content, target=target, chat_id=chat_id))
         return "Message queued for delivery."
@@ -199,7 +201,7 @@ class HybridAgent:
     async def _spawn_subagent(self, params: dict) -> str:
         task = params.get("task")
         label = params.get("label", "subagent")
-        if not task: return "Error: 'task' parameter required"
+        if not task: return "Error: 'task' parameter is required"
         
         try:
             from agent_zero.enhanced import get_agent_zero_enhanced
@@ -213,7 +215,7 @@ class HybridAgent:
         Pipeline: Plan -> Search -> Crawl -> Curate -> Resaon.
         """
         query = params.get("query")
-        if not query: return "Error: 'query' required"
+        if not query: return "Error: 'query' parameter is required"
         
         try:
             # 1. Imports (Lazy to avoid circular deps if any)
@@ -261,9 +263,38 @@ class HybridAgent:
             # 6. Reason (Synthesize Answer)
             reasoner = Reasoner()
             reasoner.set_llm_adapter(self.llm_adapter)
-            answer = await reasoner.synthesize_answer(query, results)
+            answer_obj = await reasoner.synthesize_answer(query, results)
+            answer_text = reasoner.format_answer_with_citations(answer_obj)
             
-            return reasoner.format_answer_with_citations(answer)
+            # --- Hardening: Save to Memory (Bug #4) ---
+            await self.memory.add_memory(
+                f"Deep research completed for query: {query}\n"
+                f"Synthesized Answer: {answer_obj.answer}\n"
+                f"Sources: {len(results)} crawled.",
+                area=MemoryArea.MAIN
+            )
+            
+            # --- Hardening: Bridge to RAG for Notebook (Bug #10 glue) ---
+            try:
+                from modules.rag.ingestor import ingestor
+                from modules.rag.vector_store import get_vector_store
+                from modules.library.store import library_store
+                
+                # Save answer as a research report in the library
+                filename = f"tool_research_{hashlib.md5(query.encode()).hexdigest()}.md"
+                content = f"# Research: {query}\n\n{answer_text}"
+                record = library_store.add_file(content.encode("utf-8"), filename, meta={"tool_call": "deep_research", "query": query})
+                
+                # Ingest for notebook
+                file_path = library_store.get_file_path(record['id'])
+                chunks = ingestor.ingest_file(str(file_path))
+                if chunks:
+                    await get_vector_store().add_documents(chunks)
+                    logger.info(f"Research result indexed into RAG: {len(chunks)} chunks")
+            except Exception as bridge_err:
+                logger.error(f"Failed to bridge tool research to RAG: {bridge_err}")
+            
+            return answer_text
             
         except Exception as e:
             logger.error(f"Deep Research Failed: {e}")
@@ -287,7 +318,7 @@ class HybridAgent:
         """Tool for general browser scraping (non-stealth or login-based)."""
         url = params.get("url")
         wait_for = params.get("wait_for", "body")
-        if not url: return "Error: url required"
+        if not url: return "Error: 'url' parameter is required"
         
         # Get singleton and run
         scraper = get_browser_scraper()
@@ -323,7 +354,7 @@ class HybridAgent:
                 content_to_summarize = res
         
         if not content_to_summarize:
-            return "Error: 'text' or 'url' parameter required."
+            return "Error: 'text' or 'url' parameters are required"
             
         prompt = f"Please provide a concise summary of the following content:\n\n{content_to_summarize[:10000]}"
         return await self.llm_adapter.generate(prompt)
@@ -368,7 +399,17 @@ class HybridAgent:
                          self.is_running = False
 
             except RepairableException as e:
-                logger.warning(f"Self-Healing Triggered: {e}")
+                err_str = str(e)
+                attempts = self.repair_attempts.get(err_str, 0)
+                
+                if attempts >= self.max_repairs_per_error:
+                    logger.error(f"Max repair attempts reached for error: {err_str}")
+                    self.loop_data.history.append({"role": "system", "content": f"FATAL: Max repair attempts ({self.max_repairs_per_error}) reached for: {err_str}. Please intervene."})
+                    self.is_running = False
+                    continue
+
+                self.repair_attempts[err_str] = attempts + 1
+                logger.warning(f"Self-Healing Triggered (Attempt {attempts + 1}/{self.max_repairs_per_error}): {e}")
                 err_msg = format_error(e)
                 # Feed error back into history to prompt a fix
                 self.loop_data.history.append({

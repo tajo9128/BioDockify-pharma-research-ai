@@ -3,9 +3,11 @@ PubMed Scraper Module - Zero-Cost Pharma Research AI
 Handles fetching of scientific literature using Bio.Entrez (public API) with offline resilience.
 """
 
+import re
 import socket
 import time
 import os
+from pathlib import Path
 from typing import List, Dict, Optional, Union
 from dataclasses import dataclass
 import logging
@@ -20,6 +22,8 @@ from modules.literature.europe_pmc import EuropePMCScraper
 from modules.literature.crossref import CrossRefScraper
 from modules.literature.biorxiv import BioRxivScraper
 from modules.literature.bohrium import BohriumConnector
+
+from runtime.robust_connection import with_retry
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -93,6 +97,16 @@ class PubmedScraper:
         else:
             logger.warning("Biopython not installed. Scraper will function in OFFLINE mode only.")
 
+    def _is_valid_pmid(self, pmid: str) -> bool:
+        """Validate PMID format (Numeric, non-NaN)."""
+        if not pmid or not pmid.isdigit():
+            return False
+        try:
+            int(pmid)
+            return True
+        except ValueError:
+            return False
+
     def _is_online(self, host="www.ncbi.nlm.nih.gov", port=443, timeout=3) -> bool:
         """Check for internet connectivity."""
         try:
@@ -101,6 +115,7 @@ class PubmedScraper:
         except OSError:
             return False
 
+    @with_retry(max_retries=3, circuit_name="pubmed")
     def search_papers(self, query: str, max_results: Optional[int] = None) -> List[Dict]:
         """
         Search PubMed for papers matching the query.
@@ -117,66 +132,52 @@ class PubmedScraper:
             logger.error("Biopython missing. Please run: pip install biopython")
             return []
 
-        # RETRY LOOP
-        max_retries = 3
-        for attempt in range(max_retries):
-            try:
-                rate_limiter.wait()
-                
-                # 2. Search for IDs
-                logger.info("Searching PubMed for: %s (Attempt %d/%d)", query, attempt+1, max_retries)
-                handle = Entrez.esearch(db="pubmed", term=query, retmax=limit)
-                record = Entrez.read(handle)
-                handle.close()
-                
-                id_list = record.get("IdList", [])
-                if not id_list:
-                    logger.info("No results found.")
-                    return []
-
-                # 3. Fetch Details
-                logger.info("Fetching details for %d papers...", len(id_list))
-                rate_limiter.wait()
-                
-                handle = Entrez.efetch(db="pubmed", id=",".join(id_list), retmode="xml")
-                papers = Entrez.read(handle)
-                handle.close()
-                
-                # 4. Parse Results
-                results = []
-                for article in papers.get('PubmedArticle', []):
-                    medline = article.get('MedlineCitation', {})
-                    article_data = medline.get('Article', {})
-                    
-                    # Extract abstract safely
-                    abstract_list = article_data.get('Abstract', {}).get('AbstractText', [])
-                    abstract = " ".join(abstract_list) if abstract_list else "No abstract available."
-                    
-                    # Extract robust metadata
-                    paper = {
-                        "title": article_data.get('ArticleTitle', 'No title'),
-                        "abstract": abstract,
-                        "pmid": str(medline.get('PMID', '')),
-                        "publication_date": article_data.get('Journal', {}).get('JournalIssue', {}).get('PubDate', {}).get('Year', 'Unknown'),
-                        "journal": article_data.get('Journal', {}).get('Title', 'Unknown'),
-                        "source": "PubMed",
-                        "authors": [a.get('LastName', '') + ' ' + a.get('Initials', '') 
-                                  for a in article_data.get('AuthorList', [])],
-                        "doi": next((id.title() for id in article.get('PubmedData', {}).get('ArticleIdList', []) 
-                                   if id.attributes.get('IdType') == 'doi'), None)
-                    }
-                    results.append(paper)
-                
-                return results
-            
-            except Exception as e:
-                # Use Global Handler
-                should_retry = rate_limiter.handle_error(e)
-                if not should_retry:
-                    logger.error("Error during PubMed search: %s", e)
-                    break # Abort if not recoverable
+        # 2. Search for IDs
+        logger.info("Searching PubMed for: %s", query)
+        rate_limiter.wait()
+        handle = Entrez.esearch(db="pubmed", term=query, retmax=limit)
+        record = Entrez.read(handle)
+        handle.close()
         
-        return []
+        id_list = record.get("IdList", [])
+        if not id_list:
+            logger.info("No results found.")
+            return []
+
+        # 3. Fetch Details
+        logger.info("Fetching details for %d papers...", len(id_list))
+        rate_limiter.wait()
+        
+        handle = Entrez.efetch(db="pubmed", id=",".join(id_list), retmode="xml")
+        papers = Entrez.read(handle)
+        handle.close()
+        
+        # 4. Parse Results
+        results = []
+        for article in papers.get('PubmedArticle', []):
+            medline = article.get('MedlineCitation', {})
+            article_data = medline.get('Article', {})
+            
+            # Extract abstract safely
+            abstract_list = article_data.get('Abstract', {}).get('AbstractText', [])
+            abstract = " ".join(abstract_list) if abstract_list else "No abstract available."
+            
+            # Extract robust metadata
+            paper = {
+                "title": article_data.get('ArticleTitle', 'No title'),
+                "abstract": abstract,
+                "pmid": str(medline.get('PMID', '')),
+                "publication_date": article_data.get('Journal', {}).get('JournalIssue', {}).get('PubDate', {}).get('Year', 'Unknown'),
+                "journal": article_data.get('Journal', {}).get('Title', 'Unknown'),
+                "source": "PubMed",
+                "authors": [a.get('LastName', '') + ' ' + a.get('Initials', '') 
+                          for a in article_data.get('AuthorList', [])],
+                "doi": next((id.title() for id in article.get('PubmedData', {}).get('ArticleIdList', []) 
+                           if id.attributes.get('IdType') == 'doi'), None)
+            }
+            results.append(paper)
+        
+        return results
 
     def batch_search(self, queries: List[str]) -> Dict[str, List[Dict]]:
         """

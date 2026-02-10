@@ -55,7 +55,11 @@ class ConfigManagerTool:
             # 1. Load current config
             current_config = load_config()
             
-            # 2. Navigate and update
+            # 2. Deep copy for rollback (simple copy if not nested deeply enough for dict.copy issues)
+            import copy
+            backup_config = copy.deepcopy(current_config)
+            
+            # 3. Navigate and update
             keys = key.split(".")
             target = current_config
             
@@ -67,16 +71,19 @@ class ConfigManagerTool:
                 if not isinstance(target, dict):
                     return f"Error: '{k}' is not a dictionary container."
             
-            # 3. Set the value
+            # 4. Set the value
             last_key = keys[-1]
             old_value = target.get(last_key, "N/A")
             target[last_key] = value
             
-            # 4. Save
+            # 5. Save
             if save_config(current_config):
                 return f"Successfully updated '{key}' from '{old_value}' to '{value}'."
             else:
-                return "Failed to save configuration to disk."
+                # Rollback - this tool doesn't keep a persistent live copy, 
+                # but if it did, we'd restore here. For now, returning error is enough
+                # since the local variable 'current_config' just dies.
+                return "Failed to save configuration to disk. Settings remain unchanged."
                 
         except Exception as e:
             logger.error(f"Config update failed: {e}")

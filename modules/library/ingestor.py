@@ -57,7 +57,15 @@ class LibraryIngestor:
                 # 3. Add to Vector Index
                 if doc_texts:
                     vector_store = get_vector_store()
-                    vector_store.add_documents(doc_texts, doc_metas)
+                    import asyncio
+                    try:
+                        loop = asyncio.get_event_loop()
+                        if loop.is_running():
+                            loop.create_task(vector_store.add_documents(doc_texts, doc_metas))
+                        else:
+                            asyncio.run(vector_store.add_documents(doc_texts, doc_metas))
+                    except Exception:
+                        asyncio.run(vector_store.add_documents(doc_texts, doc_metas))
                     logger.info(f"Ingested {len(doc_texts)} chunks into VectorStore for {file_path.name}")
             except Exception as ve:
                 logger.error(f"Vector Store ingestion failed for {file_path}: {ve}")

@@ -11,13 +11,16 @@ import logging
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Tuple, Optional, Dict, Any
+from runtime.robust_connection import async_with_retry
 
 logger = logging.getLogger(__name__)
 
-# Supabase configuration (same as FirstRunWizard)
-# Ideally these should come from environment variables
-SUPABASE_URL = os.environ.get('SUPABASE_URL', 'https://ohzfktmtwmubyhvspexv.supabase.co')
-SUPABASE_ANON_KEY = os.environ.get('SUPABASE_KEY', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9oemZrdG10d211YnlodnNwZXh2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM4MTk2MjgsImV4cCI6MjA3OTM5NTYyOH0.v8qHeRx5jkL8iaNEbEP_NMIvvUk4oidwwW6PkXo_DVY')
+# Supabase configuration
+SUPABASE_URL = os.environ.get('SUPABASE_URL')
+SUPABASE_ANON_KEY = os.environ.get('SUPABASE_KEY')
+
+if not SUPABASE_URL or not SUPABASE_ANON_KEY:
+    logger.warning("SUPABASE_URL or SUPABASE_KEY missing. License verification may fail.")
 
 # License duration: 1 year from signup
 LICENSE_DURATION_DAYS = 365
@@ -68,6 +71,7 @@ class LicenseGuard:
         except Exception as e:
             logger.error(f"Failed to save license cache: {e}")
     
+    @async_with_retry(max_retries=2, base_delay=2, circuit_name="supabase_license")
     async def check_license_online(self, email: str) -> Tuple[bool, str, Optional[Dict]]:
         """
         Check license against Supabase over internet.

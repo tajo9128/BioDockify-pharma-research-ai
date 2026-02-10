@@ -70,18 +70,19 @@ async def create_video_summary(slide_images: List[str], audio_file: str, output_
                 acodec='aac', 
                 pix_fmt='yuv420p',
                 r=24,  # 24 fps
-                shortest=None
+                **{'shortest': None} # Fix for Bug #6: Invalid parameter name
             )
             .overwrite_output()
             .run(capture_stdout=True, capture_stderr=True, cmd=ffmpeg_exe)
         )
         
-        # Cleanup
+        # Cleanup (Fix for Bug #9)
         try:
             os.remove(concat_file_path)
-        except:
-            pass
-            
+        except Exception as e:
+            import logging
+            logging.getLogger("surfsense.video").debug(f"Failed to remove concat file {concat_file_path}: {e}")
+        
         return str(Path(output_path).absolute())
         
     except ffmpeg.Error as e:

@@ -163,6 +163,66 @@ def with_retry(
     return decorator
 
 
+def async_with_retry(
+    max_retries: int = 3,
+    base_delay: float = 1.0,
+    max_delay: float = 30.0,
+    exponential: bool = True,
+    circuit_name: Optional[str] = None
+):
+    """
+    Async decorator for functions that need retry logic.
+    """
+    def decorator(func: Callable) -> Callable:
+        @functools.wraps(func)
+        async def wrapper(*args, **kwargs) -> Any:
+            import asyncio
+            import aiohttp
+            
+            circuit = get_circuit_breaker(circuit_name or func.__name__) if circuit_name else None
+            
+            # Check circuit breaker
+            if circuit and not circuit.can_execute():
+                logger.warning(f"[{circuit_name}] Circuit OPEN - service temporarily unavailable")
+                raise ConnectionError(f"Service '{circuit_name}' is temporarily unavailable")
+            
+            last_exception = None
+            
+            for attempt in range(max_retries + 1):
+                try:
+                    result = await func(*args, **kwargs)
+                    if circuit:
+                        circuit.record_success()
+                    return result
+                    
+                except (aiohttp.ClientError, asyncio.TimeoutError, ConnectionError) as e:
+                    last_exception = e
+                    
+                    if circuit:
+                        circuit.record_failure()
+                    
+                    if attempt < max_retries:
+                        delay = base_delay * (2 ** attempt) if exponential else base_delay
+                        delay = min(delay, max_delay)
+                        logger.warning(
+                            f"[{func.__name__}] Async Attempt {attempt + 1}/{max_retries + 1} failed: {e}. "
+                            f"Retrying in {delay:.1f}s..."
+                        )
+                        await asyncio.sleep(delay)
+                    else:
+                        logger.error(f"[{func.__name__}] All {max_retries + 1} async attempts failed")
+                
+                except Exception as e:
+                    if circuit:
+                        circuit.record_failure()
+                    raise
+            
+            raise last_exception
+        
+        return wrapper
+    return decorator
+
+
 def graceful_request(
     url: str,
     method: str = "GET",

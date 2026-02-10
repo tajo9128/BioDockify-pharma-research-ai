@@ -34,14 +34,14 @@ class ServiceManager:
                 logger.warning("SurfSense docker-compose.yml not found.")
                 return
 
-            cmd = f"docker-compose -f {compose_file} up -d"
-            logger.info(f"Starting Service: {cmd}")
+            cmd = ["docker-compose", "-f", str(compose_file), "up", "-d"]
+            logger.info(f"Starting Service: {' '.join(cmd)}")
             
             startupinfo, flags = self._get_startup_flags()
             
             proc = subprocess.Popen(
                 cmd,
-                shell=True,
+                shell=False,
                 startupinfo=startupinfo,
                 creationflags=flags,
                 stdout=subprocess.DEVNULL,

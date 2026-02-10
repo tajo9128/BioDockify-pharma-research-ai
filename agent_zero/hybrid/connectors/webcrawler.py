@@ -25,11 +25,23 @@ class WebCrawlerConnector:
             max_pages=10  # Conservative default
         )
         
-        # We need an executor to pass to crawl for fetching
-        # For now usage of internal helper not fully wired
-        # Implementing basic fetch simulation or using agent's browser tool
-        
         logger.info(f"Starting crawl for {len(urls)} URLs")
         
-        # Placeholder compatible return
-        return []
+        from agent_zero.web_research.executor import Executor
+        executor = Executor()
+        
+        try:
+            results = await self.crawler.crawl(config, executor)
+            
+            # Index results into memory
+            for res in results:
+                if res.success:
+                    await self.agent.memory.add_memory(
+                        f"Crawled Source: {res.url}\nTitle: {res.title}\nContent: {res.content[:1000]}",
+                        area="fragments" # MemoryArea.FRAGMENTS
+                    )
+            
+            return results
+        except Exception as e:
+            logger.error(f"Crawl failed: {e}")
+            return []

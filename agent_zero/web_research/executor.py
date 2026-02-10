@@ -61,7 +61,6 @@ class Executor:
             config: Executor configuration (uses default if None)
         """
         self.config = config or ExecutorConfig()
-        self.config = config or ExecutorConfig()
         self.session: Optional[aiohttp.ClientSession] = None
         self._lock = asyncio.Lock()
     
@@ -77,20 +76,28 @@ class Executor:
     async def start(self):
         """Start the executor and create HTTP session - Thread safe."""
         async with self._lock:
-            if self.session is None or self.session.closed:
-                timeout = aiohttp.ClientTimeout(total=self.config.timeout)
-                headers = {
-                    'User-Agent': self.config.user_agent,
-                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                    'Accept-Language': 'en-US,en;q=0.5',
-                    'Accept-Encoding': 'gzip, deflate',
-                    'Connection': 'keep-alive'
-                }
-                self.session = aiohttp.ClientSession(
-                    timeout=timeout,
-                    headers=headers
-                )
-                logger.info("Executor started")
+            try:
+                if self.session is None or self.session.closed:
+                    # Ensure session is actually None if it was closed
+                    if self.session and self.session.closed:
+                        self.session = None
+
+                    timeout = aiohttp.ClientTimeout(total=self.config.timeout)
+                    headers = {
+                        'User-Agent': self.config.user_agent,
+                        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                        'Accept-Language': 'en-US,en;q=0.5',
+                        'Accept-Encoding': 'gzip, deflate',
+                        'Connection': 'keep-alive'
+                    }
+                    self.session = aiohttp.ClientSession(
+                        timeout=timeout,
+                        headers=headers
+                    )
+                    logger.info("Executor started")
+            except Exception as e:
+                logger.error(f"Failed to start executor: {e}")
+                raise
     
     async def stop(self):
         """Stop the executor and close HTTP session."""
@@ -238,9 +245,15 @@ class Executor:
             soup = BeautifulSoup(html, 'html.parser')
             title_tag = soup.find('title')
             title = title_tag.get_text().strip() if title_tag else ""
-        except Exception:
-            soup = html # Fallback to raw html for extract_text if soup fails
-            title = ""
+        except Exception as e:
+            logger.error(f"Failed to parse HTML for {url}: {e}")
+            # Use raw HTML for title extraction with regex as fallback
+            title_match = re.search(r'<title>(.*?)</title>', html, re.IGNORECASE | re.DOTALL)
+            title = title_match.group(1).strip() if title_match else ""
+            try:
+                soup = BeautifulSoup(html, 'html.parser')  # Try again for extract_text
+            except:
+                soup = html # Absolute fallback
         
         # Extract text content passing the soup
         content = await self.extract_text(soup, url)

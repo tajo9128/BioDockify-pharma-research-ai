@@ -124,11 +124,12 @@ async def generate_slides(markdown_text: str, theme: str = "default", output_dir
             
             generated_paths.append(str(output_image_path.absolute()))
             
-            # Cleanup html
+            # Cleanup html (Fix for Bug #8)
             try:
                 os.remove(temp_html_path)
-            except:
-                pass
+            except Exception as e:
+                import logging
+                logging.getLogger("surfsense.slides").debug(f"Failed to remove temp file {temp_html_path}: {e}")
                 
         await browser.close()
         

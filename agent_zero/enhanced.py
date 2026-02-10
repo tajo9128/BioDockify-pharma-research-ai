@@ -55,8 +55,8 @@ class AgentZeroEnhanced:
                 from nanobot.agent.memory import MemoryStore
                 self._memory = MemoryStore(self.workspace)
             except ImportError:
-                logger.warning("NanoBot memory not available")
-                self._memory = None
+                logger.error("NanoBot memory module not found. Please ensure NanoBot is installed.")
+                raise RuntimeError("NanoBot memory system unavailable.")
         return self._memory
     
     @property
@@ -67,8 +67,8 @@ class AgentZeroEnhanced:
                 from nanobot.agent.skills import SkillsLoader
                 self._skills = SkillsLoader(self.workspace)
             except ImportError:
-                logger.warning("NanoBot skills not available")
-                self._skills = None
+                logger.error("NanoBot skills module not found. Please ensure NanoBot is installed.")
+                raise RuntimeError("NanoBot skills system unavailable.")
         return self._skills
     
     def build_enhanced_prompt(self, user_message: str) -> str:

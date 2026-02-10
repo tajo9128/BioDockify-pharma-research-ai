@@ -4,6 +4,7 @@ Literature review synthesis tool for Agent Zero.
 Agent Zero provides the AI content generation - this module handles structure and formatting.
 """
 import logging
+import threading
 from typing import List, Dict, Any, Optional, Callable
 
 from .discovery import Paper
@@ -73,7 +74,7 @@ class ReviewSynthesizer:
             logger.info(f"Generating section: {section_title}")
             
             # Get relevant context from vector store
-            context = self._get_section_context(topic, section_title, section_focus)
+            context = await self._get_section_context(topic, section_title, section_focus)
             
             if agent_generate:
                 # Agent Zero generates content
@@ -94,7 +95,7 @@ class ReviewSynthesizer:
         logger.info(f"Review complete: {len(full_report)} characters")
         return full_report
     
-    async def _index_papers(self, papers: List[Paper]):
+    async def _index_papers(self, papers: List[Paper]) -> bool:
         """Index papers in vector store for RAG."""
         try:
             for paper in papers:
@@ -106,23 +107,29 @@ class ReviewSynthesizer:
                         "source": paper.source,
                         "doi": paper.doi or ""
                     }
-                    self.vector_store.add(content, metadata=metadata)
+                    await self.vector_store.add_documents([content], [metadata])
             logger.debug(f"Indexed {len(papers)} papers")
+            return True
         except Exception as e:
-            logger.warning(f"Failed to index papers: {e}")
+            logger.error(f"Failed to index papers: {e}")
+            return False
     
-    def _get_section_context(self, topic: str, section: str, focus: str) -> str:
+    async def _get_section_context(self, topic: str, section: str, focus: str) -> str:
         """Retrieve relevant context from vector store."""
         query = f"{topic} {section} {focus}"
-        results = self.vector_store.search(query, k=5)
-        
-        context_parts = []
-        for r in results:
-            text = r.get('text', '')[:600]
-            if text:
-                context_parts.append(text)
-        
-        return "\n\n---\n\n".join(context_parts) if context_parts else ""
+        try:
+            results = await self.vector_store.search(query, k=5)
+            
+            context_parts = []
+            for r in results:
+                text = r.get('text', '')[:600]
+                if text:
+                    context_parts.append(text)
+            
+            return "\n".join(context_parts) if context_parts else "No specific context available."
+        except Exception as e:
+            logger.warning(f"Context retrieval failed: {e}")
+            return "Context retrieval failed."
     
     def _build_section_prompt(self, topic: str, section: str, focus: str, context: str) -> str:
         """Build prompt for Agent Zero to generate section content."""
@@ -143,11 +150,12 @@ Write the section:"""
     
     def _fallback_section(self, topic: str, section: str, context: str) -> str:
         """Generate fallback content when no agent is available."""
-        if context:
+        if context and context != "No specific context available.":
             excerpts = context[:800]
             return f"*Based on reviewed literature:*\n\n> {excerpts}..."
         else:
-            return f"*This section covers {section.lower()} for {topic}. Content pending Agent Zero generation.*"
+            logger.warning(f"No agent available for synthesis of section: {section}")
+            return f"*This section covers {section.lower()} for {topic}. Content pending Agent Zero generation. Please ensure an AI provider is configured.*"
     
     def _format_references(self, papers: List[Paper]) -> str:
         """Format references section."""
@@ -160,27 +168,43 @@ Write the section:"""
             refs += "\n"
         return refs
     
-    def prepare_for_agent(self, topic: str, papers: List[Paper]) -> Dict[str, Any]:
+    async def prepare_for_agent(self, topic: str, papers: List[Paper]) -> Dict[str, Any]:
         """
         Prepare review data for Agent Zero to process.
         
         Returns structured data for Agent Zero's planning.
         """
         # Index papers first
-        try:
             for paper in papers:
                 if paper.abstract:
-                    self.vector_store.add(
-                        f"Title: {paper.title}\nAbstract: {paper.abstract}",
-                        metadata={"title": paper.title}
-                    )
+                    import asyncio
+                    try:
+                        loop = asyncio.get_event_loop()
+                        if loop.is_running():
+                            loop.create_task(self.vector_store.add_documents(
+                                [f"Title: {paper.title}\nAbstract: {paper.abstract}"],
+                                [{"title": paper.title}]
+                            ))
+                        else:
+                            asyncio.run(self.vector_store.add_documents(
+                                [f"Title: {paper.title}\nAbstract: {paper.abstract}"],
+                                [{"title": paper.title}]
+                            ))
+                    except:
+                        asyncio.run(self.vector_store.add_documents(
+                            [f"Title: {paper.title}\nAbstract: {paper.abstract}"],
+                            [{"title": paper.title}]
+                        ))
         except:
             pass
         
         # Prepare section contexts
         sections_data = []
         for section_title, section_focus in self.SECTIONS:
-            context = self._get_section_context(topic, section_title, section_focus)
+            # Note: prepare_for_agent is SYNC, so we can't await here easily without making it async.
+            # But the context is needed for the return.
+            # I'll make prepare_for_agent async.
+            pass
             sections_data.append({
                 "section": section_title,
                 "focus": section_focus,
@@ -237,7 +261,7 @@ Write the section:"""
         Returns context for Agent Zero to generate content.
         """
         focus = dict(self.SECTIONS).get(section, section)
-        context = self._get_section_context(topic, section, focus)
+        context = await self._get_section_context(topic, section, focus)
         
         return {
             "section": section,
@@ -249,12 +273,14 @@ Write the section:"""
 
 
 # Singleton
-_synthesis_engine: Optional[ReviewSynthesizer] = None
+_synthesis_engine_instance: Optional[ReviewSynthesizer] = None
+_synthesis_engine_lock = threading.Lock()
 
 
 def get_synthesizer() -> ReviewSynthesizer:
     """Get or create the ReviewSynthesizer singleton."""
-    global _synthesis_engine
-    if _synthesis_engine is None:
-        _synthesis_engine = ReviewSynthesizer()
-    return _synthesis_engine
+    global _synthesis_engine_instance
+    with _synthesis_engine_lock:
+        if _synthesis_engine_instance is None:
+            _synthesis_engine_instance = ReviewSynthesizer()
+        return _synthesis_engine_instance

@@ -66,6 +66,7 @@ class SurfSense:
         self.url_queue: deque = deque()
         self.domain_counts: Dict[str, int] = {}
         self.max_per_domain = 10
+        self.max_queue_size = 1000  # Fix for Bug #4: Infinite URL Queue
         self.default_rules = ExtractionRules()
         
         # Default clean patterns for removing unwanted content
@@ -147,10 +148,14 @@ class SurfSense:
                 self.visited_urls.add(url)
                 self.domain_counts[domain] = self.domain_counts.get(domain, 0) + 1
                 
-                # Add discovered links to queue
-                if depth < config.depth:
+                # Add discovered links to queue (with size check for Bug #4)
+                if depth < config.depth and len(self.url_queue) < self.max_queue_size:
                     for link in result.links_found:
-                        self.url_queue.append((link, depth + 1))
+                        if len(self.url_queue) < self.max_queue_size:
+                            if link not in self.visited_urls:
+                                self.url_queue.append((link, depth + 1))
+                        else:
+                            break
                 
                 # Respect delay between requests
                 if config.delay_seconds > 0:
@@ -187,8 +192,8 @@ class SurfSense:
         Returns:
             Crawl result
         """
-        # Fetch the page
-        html = await executor.fetch_page(url, timeout=30)
+        # Fetch the page using config timeout (Fix for Bug #10: Hard-coded Timeout)
+        html = await executor.fetch_page(url, timeout=executor.config.timeout)
         
         if not html:
             return CrawlResult(
@@ -205,13 +210,19 @@ class SurfSense:
         if config.rules:
             content = await self.apply_extraction_rules(content, config.rules)
         
-        # Extract links
-        links_found = self._extract_links(html, url)
-        
+        # Check for empty/short content (Fix for Bug #11: No Validation of Empty Content)
+        if not content or len(content) < config.rules.min_content_length:
+             return CrawlResult(
+                url=url,
+                depth=depth,
+                success=False,
+                error=f"Content too short or empty ({len(content) if content else 0} chars)"
+            )
+
         # Create metadata
         metadata = {
             'depth': depth,
-            'content_length': len(content) if content else 0,
+            'content_length': len(content),
             'links_count': len(links_found),
             'domain': urlparse(url).netloc,
             'timestamp': None  # Will be set by executor
@@ -255,20 +266,24 @@ class SurfSense:
             # Convert to absolute URL
             absolute_url = urljoin(base_url, href)
             
-            # Only include HTTP/HTTPS URLs
-            parsed = urlparse(absolute_url)
-            if parsed.scheme in ('http', 'https'):
-                links.append(absolute_url)
+            # Fix for Bug #13: Missing URL Validation
+            if not self._is_valid_url(absolute_url):
+                continue
+                
+            links.append(absolute_url)
         
-        # Remove duplicates while preserving order
-        seen = set()
-        unique_links = []
-        for link in links:
-            if link not in seen:
-                seen.add(link)
-                unique_links.append(link)
+        # Remove duplicates while preserving order (Fix for Bug #12: Inefficient List Deduplication)
+        unique_links = list(dict.fromkeys(links))
         
         return unique_links
+
+    def _is_valid_url(self, url: str) -> bool:
+        """Check if URL is valid (Fix for Bug #13)."""
+        try:
+            result = urlparse(url)
+            return all([result.scheme in ('http', 'https'), result.netloc])
+        except:
+            return False
     
     async def apply_extraction_rules(
         self,
@@ -308,17 +323,26 @@ class SurfSense:
     
     async def _respect_robots_txt(self, url: str) -> bool:
         """
-        Check if URL is allowed by robots.txt.
-        
-        Args:
-            url: URL to check
-            
-        Returns:
-            True if allowed, False otherwise
+        Check if URL is allowed by robots.txt (Fix for Bug #3: Missing Robots.txt Implementation).
         """
-        # For now, return True (allow all)
-        # In production, implement proper robots.txt parsing
-        return True
+        from urllib.robotparser import RobotFileParser
+        try:
+            parsed = urlparse(url)
+            robots_url = f"{parsed.scheme}://{parsed.netloc}/robots.txt"
+            
+            rp = RobotFileParser()
+            rp.set_url(robots_url)
+            
+            # Run the blocking read in a thread
+            await asyncio.to_thread(rp.read)
+            
+            # Use a default user-agent or a custom one if available
+            return rp.can_fetch("*", url)
+        except Exception as e:
+            logger.debug(f"Failed to check robots.txt for {url}: {e}")
+            # Be conservative/permissive if check fails depending on policy; 
+            # common approach is to allow if robots.txt is missing/unparseable
+            return True
     
     def create_default_rules(self) -> ExtractionRules:
         """

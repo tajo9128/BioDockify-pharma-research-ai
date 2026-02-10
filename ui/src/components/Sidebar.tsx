@@ -22,12 +22,10 @@ export default function Sidebar({ activeView, onViewChange }: SidebarProps) {
     { id: 'writers', icon: PenTool, label: 'Academic Suite' },
     { id: 'results', icon: FileText, label: 'Results' },
     { id: 'statistics', icon: Calculator, label: 'Statistics' },
-    { id: 'journal-check', icon: ShieldCheck, label: 'Journal Authenticity' },
   ];
 
   /* Tools & System moved to bottom or specific sections */
   const bottomNav = [
-    { id: 'omnitools', icon: Hammer, label: 'Research Utilities' }, // Tool
     { id: 'surfsense', icon: Brain, label: 'Knowledge Base' },    // Base
     { id: 'settings', icon: Settings, label: 'Settings' },        // System
   ];

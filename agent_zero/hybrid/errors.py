@@ -28,5 +28,14 @@ class HandledException(Exception):
     pass
 
 def format_error(e: Exception) -> str:
-    """Format exception trace for LLM consumption."""
-    return "".join(traceback.format_exception(type(e), e, e.__traceback__))
+    """Format exception trace for LLM consumption with cleaner summary."""
+    tb = traceback.extract_tb(e.__traceback__)
+    if not tb:
+        return f"Error: {str(e)}"
+    
+    last_call = tb[-1]
+    filename = last_call.filename
+    lineno = last_call.lineno
+    name = last_call.name
+    
+    return f"Error Type: {type(e).__name__}\nMessage: {str(e)}\nLocation: {filename}:{lineno} in {name}"

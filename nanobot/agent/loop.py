@@ -238,7 +238,8 @@ class AgentLoop:
                     await self.brain.store_result(
                         task={"task": tool_call.name, "params": tool_call.arguments},
                         result=result,
-                        goal=msg.content
+                        goal=msg.content,
+                        tags=["agent_loop", msg.channel]
                     )
                     
                     messages = self.context.add_tool_result(

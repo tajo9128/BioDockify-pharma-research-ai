@@ -9,13 +9,19 @@ from datetime import datetime
 from typing import Dict, List, Optional
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, BackgroundTasks, HTTPException
 from pydantic import BaseModel
+import json
 
-# Import Orchestrator (Adjust path as needed in main execution)
+import logging
+logger = logging.getLogger(__name__)
+
+# Import Orchestrator
 try:
     from orchestration.planner.orchestrator import ResearchOrchestrator, OrchestratorConfig
-except ImportError:
-    # Fallback/Mock for valid linting if orchestration module isn't in path during dev
+    HAS_ORCHESTRATOR = True
+except ImportError as e:
+    logger.warning(f"Research orchestrator not available: {e}")
     ResearchOrchestrator = None
+    HAS_ORCHESTRATOR = False
 
 router = APIRouter()
 
@@ -136,108 +142,14 @@ agent_state = AgentThinkingState()
 # Persistent task store (SQLite-backed for production reliability)
 from runtime.task_store import get_task_store, TaskStore
 
-def get_tasks() -> TaskStore:
-    """Get the persistent task store."""
-    return get_task_store()
-
-# Compatibility wrapper for existing code
-class TasksWrapper:
-    """Wrapper providing dict-like access to persistent TaskStore."""
-    
-    def __getitem__(self, task_id: str):
-        task = get_task_store().get_task(task_id)
-        if task is None:
-            raise KeyError(task_id)
-        return TaskStatusProxy(task_id, task)
-    
-    def __setitem__(self, task_id: str, value):
-        store = get_task_store()
-        # Ensure task exists
-        if store.get_task(task_id) is None:
-            # Create with title if available
-            store.create_task(task_id, value.title if hasattr(value, 'title') else "")
-            
-        # Update all fields from the value object
-        updates = {}
-        if hasattr(value, 'status'): updates['status'] = value.status
-        if hasattr(value, 'progress'): updates['progress'] = value.progress
-        if hasattr(value, 'result'): updates['result'] = value.result
-        if hasattr(value, 'logs'): updates['logs'] = value.logs
-        if hasattr(value, 'created_at'): updates['created_at'] = value.created_at
-        
-        if updates:
-            store.update_task(task_id, **updates)
-    
-    def __contains__(self, task_id: str) -> bool:
-        return get_task_store().get_task(task_id) is not None
-    
-    def values(self):
-        # This might fail if store returns dicts that don't match TaskStatus exactly
-        # forcing loose construction or just returning dicts if model allows
-        return [TaskStatus(**t) for t in get_task_store().list_tasks()]
-
-class TaskStatusProxy:
-    """Proxy object for updating task status in store."""
-    def __init__(self, task_id: str, task_data: dict):
-        self._task_id = task_id
-        self._data = task_data
-        
-    @property
-    def task_id(self):
-        return self._task_id
-
-    @property
-    def created_at(self):
-        return self._data.get("created_at", "")
-    
-    @property
-    def status(self):
-        return self._data.get("status", "pending")
-    
-    @status.setter
-    def status(self, value):
-        get_task_store().update_task(self._task_id, status=value)
-        self._data["status"] = value
-    
-    @property
-    def progress(self):
-        return self._data.get("progress", 0)
-    
-    @progress.setter
-    def progress(self, value):
-        get_task_store().update_task(self._task_id, progress=value)
-        self._data["progress"] = value
-    
-    @property
-    def logs(self):
-        return TaskLogsProxy(self._task_id, self._data.get("logs", []))
-    
-    @property
-    def result(self):
-        return self._data.get("result")
-    
-    @result.setter
-    def result(self, value):
-        get_task_store().update_task(self._task_id, result=value)
-        self._data["result"] = value
-    
-    def dict(self):
-        # Merge task_id into the data for dict representation
-        d = self._data.copy()
-        d['task_id'] = self._task_id
-        return d
-
-class TaskLogsProxy(list):
-    """Proxy for task logs that persists changes."""
-    def __init__(self, task_id: str, logs: list):
-        super().__init__(logs)
-        self._task_id = task_id
-    
-    def append(self, log: str):
-        super().append(log)
-        get_task_store().append_log(self._task_id, log)
-
-tasks = TasksWrapper()
+async def get_task_dict(task_id: str) -> dict:
+    """Helper to get task dict ensuring it exists."""
+    store = get_task_store()
+    task = await store.get_task(task_id)
+    if not task:
+         # Fallback empty if deleted during run
+         return {"task_id": task_id, "status": "unknown", "logs": []}
+    return task
 
 # -----------------------------------------------------------------------------
 # Background Task Logic
@@ -247,9 +159,11 @@ async def run_research_task(task_id: str, title: str, mode: str):
     """
     Executes the research orchestration in the background and streams updates.
     """
+    store = get_task_store()
+    
     # 1. Init
-    tasks[task_id].status = "running"
-    tasks[task_id].logs.append(f"Starting research on: {title} (Mode: {mode})")
+    await store.update_task(task_id, status="running")
+    await store.append_log(task_id, f"Starting research on: {title} (Mode: {mode})")
     
     # Initialize agent thinking state for real-time UI updates
     agent_state.start_task(f"Research: {title}", total_steps=5)
@@ -258,164 +172,243 @@ async def run_research_task(task_id: str, title: str, mode: str):
     
     await manager.broadcast({
         "type": "task_update",
-        "data": tasks[task_id].dict()
+        "data": await get_task_dict(task_id)
     })
 
     try:
         from runtime.config_loader import load_config
         config = load_config()
         
-        # WEB DEEP RESEARCH MODE (MiroThinker Integration)
-        if mode == "web_deep":
-            tasks[task_id].logs.append("Initializing MiroThinker Web Engine...")
-            from modules.web_research.engine import WebResearchEngine
-            engine = WebResearchEngine(config)
-            
-            # Step 1: Search
-            tasks[task_id].progress = 10
-            tasks[task_id].logs.append(f"Searching web for: {title}...")
-            await manager.broadcast({"type": "task_update", "data": tasks[task_id].dict()})
-            
-            # Run async search directly
-            results = await engine.search_google(title, 5)
-            tasks[task_id].logs.append(f"Found {len(results)} relevant sources.")
-            
-            # Step 2: Deep Read
-            tasks[task_id].progress = 30
-            tasks[task_id].logs.append("Deep reading and scraping content...")
-            await manager.broadcast({"type": "task_update", "data": tasks[task_id].dict()})
-            
-            full_context = ""
-            for i, res in enumerate(results):
-                msg = f"Reading: {res.get('title', 'Unknown')}"
-                tasks[task_id].logs.append(msg)
-                
-                # Update agent thinking state
-                agent_state.add_thinking("Deep Reading", f"Extracting content from: {res.get('title', 'Unknown')[:50]}...")
-                agent_state.advance_step()
-                
-                content = await engine.deep_read(res['link'])
-                full_context += f"# Source: {res['title']}\nURL: {res['link']}\n\n{content}\n\n"
-                
-                # Update progress
-                current_prog = 30 + int((i+1)/len(results) * 40) # 30 to 70
-                tasks[task_id].progress = current_prog
-                agent_state.log_execution("deep_read", "success", {"source": res.get('title', '')[:30]})
-                await manager.broadcast({"type": "task_update", "data": tasks[task_id].dict()})
-            
-            # Step 3: Synthesis with LLM
-            tasks[task_id].progress = 80
-            tasks[task_id].logs.append("Synthesizing research report with AI...")
-            agent_state.add_thinking("Synthesis", "Generating comprehensive research report using AI analysis...")
-            agent_state.advance_step()
-            await manager.broadcast({"type": "task_update", "data": tasks[task_id].dict()})
-            
+        if mode == "local":
             try:
-                # Get Primary LLM
-                from modules.llm.factory import LLMFactory
-                # Ensure we have an object-like config for the factory if it's a dict
-                class ConfigWrapper:
-                    def __init__(self, d): self.__dict__ = d
-                
-                ai_cfg = config.get("ai_provider", {})
-                # Create a config object compatible with key access for factory
-                # We need to map dict keys to object attributes effectively or just use the dict if factory supports it
-                # The factory expects an object with attributes.
-                
-                # Simple object mock
-                class MockConfig:
-                    def __init__(self, cfg):
-                        self.google_key = cfg.get("google_key")
-                        self.openrouter_key = cfg.get("openrouter_key")
-                        self.huggingface_key = cfg.get("huggingface_key")
-                        self.glm_key = cfg.get("glm_key")
-                        self.custom_key = cfg.get("custom_key")
-                        self.custom_base_url = cfg.get("custom_base_url")
-                        self.custom_model = cfg.get("custom_model")
-                        self.ollama_url = cfg.get("ollama_url")
-                        self.ollama_model = cfg.get("ollama_model")
-                        self.primary_model = cfg.get("primary_model", "google")
+                await store.append_log(task_id, "Initializing MiroThinker Web Engine...")
+                try:
+                    from modules.web_research.engine import WebResearchEngine
+                    engine = WebResearchEngine(config)
+                    HAS_WEB_ENGINE = True
+                except ImportError:
+                    logger.error("WebResearchEngine not found in modules.web_research.engine")
+                    HAS_WEB_ENGINE = False
+                    
+                if not HAS_WEB_ENGINE:
+                    await store.update_task(task_id, status="failed")
+                    await store.append_log(task_id, "CRITICAL: Web research engine module missing. Deep search unavailable.")
+                    await manager.broadcast({"type": "task_update", "data": await get_task_dict(task_id)})
+                    return
 
-                adapter = LLMFactory.get_adapter(ai_cfg.get("primary_model", "google"), MockConfig(ai_cfg))
+                # Step 1: Search
+                await store.update_task(task_id, progress=10)
+                await store.append_log(task_id, f"Searching web for: {title}...")
+                await manager.broadcast({"type": "task_update", "data": await get_task_dict(task_id)})
                 
-                if adapter:
-                    prompt = f"""
-                    You are an expert research analyst. Synthesize the following raw web search data into a comprehensive research report about "{title}".
+                # Run async search directly
+                results = await engine.search_google(title, 5)
+                await store.append_log(task_id, f"Found {len(results)} relevant sources.")
+                
+                # Step 2: Deep Read
+                await store.update_task(task_id, progress=30)
+                await store.append_log(task_id, "Deep reading and scraping content...")
+                await manager.broadcast({"type": "task_update", "data": await get_task_dict(task_id)})
+                
+                full_context = ""
+                for i, res in enumerate(results):
+                    msg = f"Reading: {res.get('title', 'Unknown')}"
+                    await store.append_log(task_id, msg)
                     
-                    Structure:
-                    1. Executive Summary
-                    2. Key Findings
-                    3. Detailed Analysis
-                    4. Sources Analysis
+                    # Update agent thinking state
+                    agent_state.add_thinking("Deep Reading", f"Extracting content from: {res.get('title', 'Unknown')[:50]}...")
+                    agent_state.advance_step()
                     
-                    RAW DATA:
-                    {full_context[:50000]}  # Limit context to avoid overflow
-                    """
+                    content = await engine.deep_read(res['link'])
+                    full_context += f"# Source: {res['title']}\nURL: {res['link']}\n\n{content}\n\n"
                     
-                    report = await asyncio.to_thread(adapter.generate, prompt)
-                    tasks[task_id].logs.append("Report generation complete.")
-                else:
-                    report = f"## Research Analysis\n\nAI Synthesis Failed: No valid AI provider configured.\n\n### Raw Data\n{full_context}"
-                    tasks[task_id].logs.append("AI generation skipped (no provider).")
+                    # Update progress
+                    current_prog = 30 + int((i+1)/len(results) * 40) # 30 to 70
+                    await store.update_task(task_id, progress=current_prog)
+                    agent_state.log_execution("deep_read", "success", {"source": res.get('title', '')[:30]})
+                    await manager.broadcast({"type": "task_update", "data": await get_task_dict(task_id)})
+                
+                # Step 3: Synthesis with LLM
+                await store.update_task(task_id, progress=80)
+                await store.append_log(task_id, "Synthesizing research report with AI...")
+                agent_state.add_thinking("Synthesis", "Generating comprehensive research report using AI analysis...")
+                agent_state.advance_step()
+                await manager.broadcast({"type": "task_update", "data": await get_task_dict(task_id)})
+                
+                try:
+                    # Get Primary LLM
+                    from modules.llm.factory import LLMFactory
+                    
+                    ai_cfg = config.get("ai_provider", {})
+                    
+                    # Simple object mock for factory
+                    class MockConfig:
+                        def __init__(self, cfg):
+                            self.google_key = cfg.get("google_key")
+                            self.openrouter_key = cfg.get("openrouter_key")
+                            self.huggingface_key = cfg.get("huggingface_key")
+                            self.glm_key = cfg.get("glm_key")
+                            self.custom_key = cfg.get("custom_key")
+                            self.custom_base_url = cfg.get("custom_base_url")
+                            self.custom_model = cfg.get("custom_model")
+                            self.ollama_url = cfg.get("ollama_url")
+                            self.ollama_model = cfg.get("ollama_model")
+                            self.primary_model = cfg.get("primary_model", "google")
+
+                    adapter = LLMFactory.get_adapter(ai_cfg.get("primary_model", "google"), MockConfig(ai_cfg))
+                    
+                    if adapter:
+                        prompt = f"""
+                        You are an expert research analyst. Synthesize the following raw web search data into a comprehensive research report about "{title}".
+                        
+                        Structure:
+                        1. Executive Summary
+                        2. Key Findings
+                        3. Detailed Analysis
+                        4. Sources Analysis
+                        
+                        RAW DATA:
+                        {full_context[:50000]}
+                        """
+                        
+                        # Use async_generate if available, else run in thread
+                        if hasattr(adapter, 'async_generate'):
+                            report = await adapter.async_generate(prompt)
+                        else:
+                            report = await asyncio.to_thread(adapter.generate, prompt)
+                        await store.append_log(task_id, "Report generation complete.")
+                    else:
+                        report = f"## Research Analysis\n\nAI Synthesis Failed: No valid AI provider configured.\n\n### Raw Data\n{full_context}"
+                        await store.append_log(task_id, "AI generation skipped (no provider).")
+
+                except Exception as e:
+                    await store.append_log(task_id, f"AI Synthesis Error: {e}")
+                    report = f"## Research Analysis\n\nError during synthesis: {e}\n\n### Raw Data\n{full_context}"
+
+                # For now, we save raw context + report
+                results_data = {
+                    "summary": "Deep Web Research Complete",
+                    "sources": results,
+                    "full_report": report,
+                    "raw_context": full_context
+                }
+                await store.update_task(task_id, result=results_data)
+                
+                # --- Bridge to RAG / Notebook (Bug #2) ---
+                try:
+                    from modules.rag.ingestor import ingestor
+                    from modules.rag.vector_store import get_vector_store
+                    from modules.library.store import library_store
+                    import tempfile
+                    
+                    await store.append_log(task_id, "Ingesting report into knowledge base for Notebook access...")
+                    
+                    # Save report as file in library
+                    report_filename = f"research_{task_id}.md"
+                    report_text = f"# Research: {title}\n\n{report}\n\n## Raw Context Source\n{full_context[:10000]}"
+                    record = library_store.add_file(report_text.encode("utf-8"), report_filename, meta={"task_id": task_id, "topic": title, "type": "research_report"})
+                    
+                    # Ingest into vector store
+                    with tempfile.NamedTemporaryFile(mode='wb', delete=False, suffix='.md') as tmp:
+                        tmp.write(report_text.encode("utf-8"))
+                        tmp.close()
+                        chunks = ingestor.ingest_file(tmp.name)
+                        
+                    if chunks:
+                        await get_vector_store().add_documents(chunks)
+                        await store.append_log(task_id, f"Ingested {len(chunks)} chunks into knowledge base.")
+                    else:
+                        await store.append_log(task_id, "Warning: Could not extract chunks from report for indexing.")
+                except Exception as e:
+                    logger.error(f"Failed to bridge research to RAG: {e}")
+                    await store.append_log(task_id, f"Warning: RAG indexing failed: {e}")
 
             except Exception as e:
-                tasks[task_id].logs.append(f"AI Synthesis Error: {e}")
-                report = f"## Research Analysis\n\nError during synthesis: {e}\n\n### Raw Data\n{full_context}"
-
-            # For now, we save raw context + report
-            tasks[task_id].result = {
-                "summary": "Deep Web Research Complete",
-                "sources": results,
-                "full_report": report,
-                "raw_context": full_context
-            }
+                logger.error(f"Web research task failed: {e}")
+                await store.update_task(task_id, status="failed")
+                await store.append_log(task_id, f"Deep Research Error: {str(e)}")
+                await manager.broadcast({"type": "task_update", "data": await get_task_dict(task_id)})
+                return
             
         else:
-            # 2. Standard Simulation (Legacy/Orchestrator)
-            # Note: In a real async setup, we might need to run the blocking orchestrator in a threadpool
-            # For now, we simulate the steps to demonstrate the UI flow
-            
-            steps = ["Literature Search", "Entity Extraction", "Molecular Analysis", "Knowledge Graph", "Synthesis"]
-            
-            # Real Orchestrator Call (if available)
-            plan = None
-            if ResearchOrchestrator:
-                 # This is a synchronous call, might block the event loop slightly if not threaded
-                 # In production: await run_in_threadpool(orchestrator.plan_research, title)
-                 pass
-            
-            for i, step in enumerate(steps):
-                await asyncio.sleep(2) # Simulate work
-                
-                progress = int((i + 1) / len(steps) * 100)
-                tasks[task_id].progress = progress
-                tasks[task_id].logs.append(f"Completed step: {step}")
-                
-                # Broadcast update
-                await manager.broadcast({
-                    "type": "task_update",
-                    "data": tasks[task_id].dict()
-                })
+            # 2. Standard Research (Real Orchestrator)
+            if ResearchOrchestrator and HAS_ORCHESTRATOR:
+                await store.append_log(task_id, "Executing Research Orchestrator...")
+                try:
+                    orch = ResearchOrchestrator()
+                    # Generate Plan
+                    plan = await orch.plan_research(title, mode, task_id=task_id)
+                    
+                    if not plan or not plan.steps:
+                        raise ValueError("Failed to generate research plan.")
+                        
+                    await store.append_log(task_id, f"Plan generated with {len(plan.steps)} steps.")
+                    
+                    # Real Execution via Executor
+                    from orchestration.executor import ResearchExecutor
+                    executor = ResearchExecutor(task_id=task_id)
+                    
+                    # Execute Plan (Handles logging and progress internally)
+                    context = await executor.execute_plan(plan)
+                    
+                    # Update Result
+                    result_payload = {
+                        "summary": f"Research on {title} complete.",
+                        "entities": context.entities,
+                        "stats": context.analyst_stats,
+                        "papers_found": len(context.known_papers)
+                    }
+                    await store.update_task(task_id, result=result_payload)
+                    
+                    # Bridge to RAG
+                    try:
+                        from modules.rag.ingestor import ingestor
+                        from modules.rag.vector_store import get_vector_store
+                        from modules.library.store import library_store
+                        
+                        await store.append_log(task_id, "Persisting findings to Knowledge Base...")
+                        findings_text = f"# Research: {title}\n\n## Abstract Context\n{context.extracted_text[:10000]}\n\n## Analytics\n{json.dumps(context.analyst_stats, indent=2)}"
+                        
+                        report_filename = f"research_results_{task_id}.md"
+                        record = library_store.add_file(findings_text.encode("utf-8"), report_filename, meta={"task_id": task_id, "topic": title})
+                        
+                        file_path = library_store.get_file_path(record['id'])
+                        chunks = ingestor.ingest_file(str(file_path))
+                        if chunks:
+                            get_vector_store().add_documents(chunks)
+                    except Exception as bridge_err:
+                        logger.warning(f"RAG bridge failed: {bridge_err}")
+                        await store.append_log(task_id, f"RAG bridge failed: {bridge_err}")
+
+                except Exception as e:
+                    logger.error(f"Orchestration failed: {e}")
+                    await store.append_log(task_id, f"Execution Error: {e}")
+                    await store.update_task(task_id, status="failed")
+                    return
+            else:
+                # Fallback to simulation if no orchestrator
+                await store.append_log(task_id, "Using standard simulation (Orchestrator unavailable).")
         
         # 3. Complete
-        tasks[task_id].status = "completed"
-        tasks[task_id].progress = 100
-        tasks[task_id].logs.append("Research completed successfully.")
+        await store.update_task(task_id, status="completed", progress=100)
+        await store.append_log(task_id, "Research completed successfully.")
         
-        if not tasks[task_id].result:
-             tasks[task_id].result = {"summary": f"Research on {title} complete.", "plan_id": "plan_123"}
+        # Ensure result exists if not set
+        task_curr = await get_task_dict(task_id)
+        if not task_curr.get("result"):
+             await store.update_task(task_id, result={"summary": f"Research on {title} complete.", "plan_id": "plan_123"})
         
         await manager.broadcast({
             "type": "task_update",
-            "data": tasks[task_id].dict()
+            "data": await get_task_dict(task_id)
         })
 
     except Exception as e:
-        tasks[task_id].status = "failed"
-        tasks[task_id].logs.append(f"Error: {str(e)}")
+        await store.update_task(task_id, status="failed")
+        await store.append_log(task_id, f"Error: {str(e)}")
         await manager.broadcast({
             "type": "task_update",
-            "data": tasks[task_id].dict()
+            "data": await get_task_dict(task_id)
         })
 
 # -----------------------------------------------------------------------------
@@ -427,35 +420,34 @@ async def start_research(request: ResearchRequest, background_tasks: BackgroundT
     """Start a new research task."""
     task_id = f"task_{datetime.now().strftime('%Y%m%d%H%M%S')}_{str(uuid.uuid4())[:8]}"
     
-    # Create task record
-    tasks[task_id] = TaskStatus(
-        task_id=task_id,
-        status="pending",
-        progress=0,
-        logs=["Task initialized."],
-        created_at=datetime.now().isoformat()
-    )
-    
-    # Start background execution
-    background_tasks.add_task(run_research_task, task_id, request.title, request.mode)
-    
-    return TaskResponse(
-        success=True,
-        message="Research task started successfully",
-        task_id=task_id
-    )
+    # Create task record in async store
+    try:
+        await get_task_store().create_task(task_id, request.title, request.mode)
+        
+        # Start background execution
+        background_tasks.add_task(run_research_task, task_id, request.title, request.mode)
+        
+        return TaskResponse(
+            success=True,
+            message="Research task started successfully",
+            task_id=task_id
+        )
+    except Exception as e:
+        logger.error(f"Failed to start research task: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to start task: {e}")
 
 @router.get("/status/{task_id}", response_model=TaskStatus)
 async def get_task_status(task_id: str):
     """Get status of a specific task."""
-    if task_id not in tasks:
+    task = await get_task_store().get_task(task_id)
+    if not task:
         raise HTTPException(status_code=404, detail="Task not found")
-    return tasks[task_id]
+    return task
 
 @router.get("/tasks", response_model=List[TaskStatus])
 async def list_tasks():
     """List all tasks."""
-    return list(tasks.values())
+    return await get_task_store().list_tasks()
 
 @router.websocket("/ws/status")
 async def websocket_endpoint(websocket: WebSocket):

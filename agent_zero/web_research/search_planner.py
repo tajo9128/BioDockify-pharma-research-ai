@@ -5,7 +5,7 @@ Generates search queries and chooses appropriate sources for web research.
 """
 
 from typing import List, Dict, Optional, Any
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import logging
 import re
 
@@ -17,10 +17,11 @@ class SourceConfig:
     """Configuration for a research source."""
     name: str
     base_url: str
-    search_params: dict
-    extraction_rules: dict
-    depth_limit: int
     priority: int
+    depth_limit: int
+    search_params: dict = field(default_factory=dict)
+    extraction_rules: dict = field(default_factory=dict)
+    score: int = 0  # Add score field for Bug #14
 
 
 @dataclass
@@ -172,8 +173,14 @@ class SearchPlanner:
         source_scores.sort(key=lambda x: x[1], reverse=True)
         selected_sources = source_scores[:max_sources]
         
-        logger.info(f"Recommended {len(selected_sources)} sources: {[s[0] for s in selected_sources]}")
-        return [s[0] for s in selected_sources]
+        # Attach scores to config objects before returning
+        result_configs = []
+        for name, score, config in selected_sources:
+            config.score = score
+            result_configs.append(config)
+            
+        logger.info(f"Recommended {len(selected_sources)} sources: {[s[0] for s in selected_sources]} with scores")
+        return result_configs
     
     def generate_search_queries(
         self,

@@ -470,21 +470,37 @@ class Curator:
     ) -> List[Dict[str, Any]]:
         """
         Search the index for relevant results.
-        
-        Args:
-            query: Search query
-            limit: Maximum number of results to return
-            
-        Returns:
-            List of matching results
+        Leverages semantic search if the vector store is available.
         """
         matches = []
-        query_lower = query.lower()
         
-        # Search through all indexed results
+        # 1. Semantic Search (Primary)
+        try:
+            from modules.rag.vector_store import get_vector_store
+            store = get_vector_store()
+            v_results = await store.search(query, k=limit)
+            for res in v_results:
+                meta = res.get("metadata", {})
+                if meta.get("file_path"):
+                    matches.append({
+                        'query_id': meta.get("query_id", "external"),
+                        'url': meta.get("url", ""),
+                        'title': meta.get("title", meta.get("filename", "Untitled")),
+                        'domain': meta.get("domain", "knowledge_base"),
+                        'timestamp': meta.get("timestamp", datetime.now().isoformat()),
+                        'file_path': meta.get("file_path"),
+                        'score': res.get("score", 0.8) # Semantic score
+                    })
+            if matches:
+                logger.debug(f"Found {len(matches)} semantic matches in vector store.")
+                return matches
+        except Exception as e:
+            logger.warning(f"Semantic search failed, falling back to keyword: {e}")
+
+        # 2. Keyword Search (Fallback)
+        query_lower = query.lower()
         for query_id, results in self.index.results.items():
             for result in results:
-                # Check URL, title, and domain
                 if (query_lower in result.url.lower() or
                     query_lower in result.title.lower() or
                     query_lower in result.domain.lower()):
@@ -494,11 +510,11 @@ class Curator:
                         'title': result.title,
                         'domain': result.domain,
                         'timestamp': result.timestamp,
-                        'file_path': result.file_path
+                        'file_path': result.file_path,
+                        'score': 0.5 # Default score for keyword match
                     })
         
-        # Sort by timestamp (most recent first) and limit
-        matches.sort(key=lambda x: x['timestamp'], reverse=True)
+        matches.sort(key=lambda x: (x.get('score', 0), x['timestamp']), reverse=True)
         return matches[:limit]
     
     async def cleanup_old_results(

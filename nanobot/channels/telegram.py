@@ -252,6 +252,10 @@ class TelegramChannel(BaseChannel):
                 ext = self._get_extension(media_type, getattr(media_file, 'mime_type', None))
                 
                 # Path Sanitization: prevent traversal by using .name
+                # Ensure media dir exists
+                if not media_dir.exists():
+                    media_dir.mkdir(parents=True, exist_ok=True)
+
                 safe_file_id = Path(media_file.file_id).name[:32]
                 file_path = media_dir / f"{safe_file_id}{ext}"
                 

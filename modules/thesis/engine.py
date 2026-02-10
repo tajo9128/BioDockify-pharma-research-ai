@@ -44,12 +44,26 @@ class ThesisEngine:
         """
         Generate a thesis chapter with branch-specific focus.
         """
+        # 0. Input Validation (Bug #8)
+        if not topic or not topic.strip():
+            return {"status": "error", "message": "Research topic is required."}
+        
+        if not isinstance(branch, PharmaBranch):
+            return {"status": "error", "message": f"Invalid pharma branch: {branch}"}
+            
+        if not isinstance(degree, DegreeType):
+            return {"status": "error", "message": f"Invalid degree type: {degree}"}
+
         logger.info(f"Generating {chapter_id} for topic: {topic} | Branch: {branch} | Degree: {degree}")
         
-        # 1. Structure Selection
-        template = get_template(chapter_id, degree)
-        if not template:
-            return {"status": "error", "message": f"Invalid chapter ID: {chapter_id}"}
+        # 1. Structure Selection (Bug #15)
+        try:
+            template = get_template(chapter_id, degree)
+            if not template:
+                return {"status": "error", "message": f"Invalid or missing chapter template for: {chapter_id}"}
+        except Exception as e:
+            logger.error(f"Template system error: {e}")
+            return {"status": "error", "message": f"Thesis structure system unavailable: {str(e)}"}
         
         profile = get_branch_profile(branch)
         
@@ -63,7 +77,7 @@ class ThesisEngine:
             }
         
         # 3. Context Preparation
-        chapter_context = self._get_chapter_context(template, topic, branch, profile)
+        chapter_context = await self._get_chapter_context(template, topic, branch, profile)
         
         # 4. Generate Content
         if agent_generate:
@@ -87,7 +101,7 @@ class ThesisEngine:
             "degree_applied": degree.value
         }
     
-    def _get_chapter_context(self, template: ChapterTemplate, topic: str, branch: PharmaBranch, profile: Dict) -> Dict[str, Any]:
+    async def _get_chapter_context(self, template: ChapterTemplate, topic: str, branch: PharmaBranch, profile: Dict) -> Dict[str, Any]:
         context = {
             "topic": topic,
             "branch": branch.value,
@@ -99,12 +113,12 @@ class ThesisEngine:
         
         try:
             query = f"{topic} {template.title} {branch.value}"
-            results = self.vector_store.search(query, k=5)
+            results = await self.vector_store.search(query, k=5)
             context["excerpts"] = [r.get("text", "")[:500] for r in results]
             
             for section in template.sections:
                 section_query = f"{topic} {section.title} {branch.value} {section.description}"
-                section_results = self.vector_store.search(section_query, k=3)
+                section_results = await self.vector_store.search(section_query, k=3)
                 context["section_contexts"][section.title] = [
                     r.get("text", "")[:400] for r in section_results
                 ]

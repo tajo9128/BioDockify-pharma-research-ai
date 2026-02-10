@@ -1,5 +1,7 @@
 import json
 import logging
+import threading
+from datetime import datetime
 from typing import List, Optional, Dict
 from pathlib import Path
 from .models import Hypothesis, HypothesisStatus, Evidence, EvidenceType
@@ -53,12 +55,12 @@ class HypothesisEngine:
             self.hypotheses[id].updated_at = datetime.now()
             self._save()
 
-    def add_evidence(self, id: str, description: str, type: EvidenceType, source_id: str = None):
+    def add_evidence(self, id: str, description: str, evidence_type: EvidenceType, source_id: str = None, confidence: float = 0.5):
         if id not in self.hypotheses:
             raise ValueError("Hypothesis not found")
         
         h = self.hypotheses[id]
-        h.add_evidence(description, type, source_id, confidence=0.5)
+        h.add_evidence(description, evidence_type, source_id, confidence=confidence)
         
         # Simple Logic Rule: If evidence accumulates, update confidence
         # In future: Use LLM to re-evaluate confidence based on evidence text
@@ -88,10 +90,12 @@ class HypothesisEngine:
         pass
 
 # Singleton
-_engine = None
+_engine_instance = None
+_engine_lock = threading.Lock()
 
 def get_hypothesis_engine():
-    global _engine
-    if _engine is None:
-        _engine = HypothesisEngine()
-    return _engine
+    global _engine_instance
+    with _engine_lock:
+        if _engine_instance is None:
+            _engine_instance = HypothesisEngine()
+        return _engine_instance

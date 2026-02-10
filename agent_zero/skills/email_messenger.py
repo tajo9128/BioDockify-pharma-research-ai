@@ -14,6 +14,9 @@ from pathlib import Path
 from typing import Optional, List, Dict, Any
 from loguru import logger
 from datetime import datetime
+import threading
+import asyncio
+import email.utils
 
 
 class EmailMessenger:
@@ -81,7 +84,7 @@ class EmailMessenger:
         subject: str,
         body: str,
         attachments: List[str] = None,
-        html: bool = False,
+        is_html: bool = False,
         cc: List[str] = None
     ) -> bool:
         """
@@ -92,8 +95,8 @@ class EmailMessenger:
             subject: Email subject
             body: Email body (text or HTML)
             attachments: List of file paths to attach
-            html: If True, body is HTML
-            cc: CC recipients
+            is_html: If True, body is HTML
+            cc_recipients: CC recipients
             
         Returns:
             True if sent successfully
@@ -113,7 +116,7 @@ class EmailMessenger:
                 msg["Cc"] = ", ".join(cc)
             
             # Add body
-            content_type = "html" if html else "plain"
+            content_type = "html" if is_html else "plain"
             msg.attach(MIMEText(body, content_type))
             
             # Add attachments
@@ -125,24 +128,18 @@ class EmailMessenger:
                             part = MIMEBase("application", "octet-stream")
                             part.set_payload(f.read())
                         encoders.encode_base64(part)
+                        
+                        # Fix for Bug #25: Path Sanitization
+                        safe_filename = email.utils.encode_rfc2231(path.name)
                         part.add_header(
                             "Content-Disposition",
-                            f"attachment; filename={path.name}"
+                            f"attachment; filename*=UTF-8''{safe_filename}"
                         )
                         msg.attach(part)
                         logger.info(f"Attached: {path.name}")
             
-            # Send email
-            context = ssl.create_default_context()
-            
-            with smtplib.SMTP(self.smtp_host, self.smtp_port) as server:
-                server.ehlo()
-                server.starttls(context=context)
-                server.ehlo()
-                server.login(self.smtp_user, self.smtp_pass)
-                
-                recipients = [to] + (cc or [])
-                server.sendmail(self.smtp_user, recipients, msg.as_string())
+            # Send email via thread to avoid blocking (Fix for Bug #15)
+            await asyncio.to_thread(self._send_email_sync, msg, to, cc)
             
             logger.info(f"Email sent to {to}: {subject}")
             return True
@@ -150,6 +147,18 @@ class EmailMessenger:
         except Exception as e:
             logger.error(f"Email send failed: {e}")
             return False
+
+    def _send_email_sync(self, msg: MIMEMultipart, to: str, cc: List[str] = None):
+        """Synchronous SMTP send logic."""
+        context = ssl.create_default_context()
+        with smtplib.SMTP(self.smtp_host, self.smtp_port) as server:
+            server.ehlo()
+            server.starttls(context=context)
+            server.ehlo()
+            server.login(self.smtp_user, self.smtp_pass)
+            
+            recipients = [to] + (cc or [])
+            server.sendmail(self.smtp_user, recipients, msg.as_string())
     
     async def send_research_results(
         self,
@@ -320,12 +329,14 @@ This email was sent automatically. Do not reply.
         return results
 
 
-# Singleton instance
+# Singleton
 _messenger_instance: Optional[EmailMessenger] = None
+_messenger_lock = threading.Lock()
 
 def get_email_messenger() -> EmailMessenger:
     """Get singleton email messenger instance."""
     global _messenger_instance
-    if _messenger_instance is None:
-        _messenger_instance = EmailMessenger()
+    with _messenger_lock:
+        if _messenger_instance is None:
+            _messenger_instance = EmailMessenger()
     return _messenger_instance

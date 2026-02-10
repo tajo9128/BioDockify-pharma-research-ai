@@ -6,6 +6,7 @@ import sys
 from typing import Optional, List, Dict, Any, Tuple
 from loguru import logger
 from pathlib import Path
+import threading
 
 # Path to the cloned repo
 COPILOT_DIR = Path(os.path.abspath(__file__)).parent.parent.parent.parent / "_external" / "ScholarCopilot" / "run_demo"
@@ -68,7 +69,7 @@ class ScholarCopilotSkill:
 
     def search_citations(self, cite_rep: Any, top_k: int = 5) -> List[Dict]:
         """Search for citations based on a citation representation tensor."""
-        if not self.index:
+        if not self.index or cite_rep is None:
             return []
             
         import scholar_copilot_model as scm
@@ -87,9 +88,11 @@ class ScholarCopilotSkill:
 
 # Singleton
 _copilot_instance = None
+_copilot_lock = threading.Lock()
 
 def get_scholar_copilot() -> ScholarCopilotSkill:
     global _copilot_instance
-    if not _copilot_instance:
-        _copilot_instance = ScholarCopilotSkill()
+    with _copilot_lock:
+        if not _copilot_instance:
+            _copilot_instance = ScholarCopilotSkill()
     return _copilot_instance

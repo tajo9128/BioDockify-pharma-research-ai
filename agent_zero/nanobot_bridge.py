@@ -23,7 +23,7 @@ from loguru import logger
 
 # NanoBot imports
 from nanobot.agent.loop import AgentLoop
-from nanobot.agent.memory import MemoryStore
+from nanobot.agent.memory import PersistentMemory
 from nanobot.agent.skills import SkillsLoader
 from nanobot.agent.subagent import SubagentManager
 from nanobot.bus.queue import MessageBus
@@ -67,7 +67,7 @@ class HybridAgentBrain:
         self.bus = MessageBus()
         
         # Initialize NanoBot Memory (daily notes + long-term)
-        self.memory = MemoryStore(workspace)
+        self.memory = PersistentMemory(workspace)
         
         # Initialize Skills Loader
         self.skills = SkillsLoader(workspace)

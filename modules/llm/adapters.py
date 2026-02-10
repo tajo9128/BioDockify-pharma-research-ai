@@ -8,14 +8,22 @@ from typing import Dict, Any, Optional
 import requests
 import json
 import litellm
+import asyncio
+from runtime.robust_connection import with_retry, async_with_retry, get_circuit_breaker
+from runtime.cache import cache_llm_call
 
 class BaseLLMAdapter(ABC):
     """Abstract base class for LLM providers."""
     
     @abstractmethod
     def generate(self, prompt: str, **kwargs) -> str:
-        """Generate text from prompt. Returns raw text."""
+        """Generate text from prompt synchronously."""
         pass
+
+    async def async_generate(self, prompt: str, **kwargs) -> str:
+        """Generate text from prompt asynchronously. Default implementation runs in thread."""
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(None, lambda: self.generate(prompt, **kwargs))
 
 class GoogleGeminiAdapter(BaseLLMAdapter):
     """Adapter for Google Gemini API (REST)."""
@@ -25,17 +33,16 @@ class GoogleGeminiAdapter(BaseLLMAdapter):
         self.model = model
         self.base_url = "https://generativelanguage.googleapis.com/v1beta/models"
 
+    @cache_llm_call
+    @with_retry(max_retries=3, circuit_name="google_gemini")
     def generate(self, prompt: str, **kwargs) -> str:
         url = f"{self.base_url}/{self.model}:generateContent?key={self.api_key}"
         payload = {"contents": [{"parts": [{"text": prompt}]}]}
         
-        try:
-            resp = requests.post(url, json=payload, headers={"Content-Type": "application/json"}, timeout=30)
-            resp.raise_for_status()
-            data = resp.json()
-            return data["candidates"][0]["content"]["parts"][0]["text"]
-        except Exception as e:
-            raise ValueError(f"Google Gemini API Error: {e}")
+        resp = requests.post(url, json=payload, headers={"Content-Type": "application/json"}, timeout=30)
+        resp.raise_for_status()
+        data = resp.json()
+        return data["candidates"][0]["content"]["parts"][0]["text"]
 
 class OpenRouterAdapter(BaseLLMAdapter):
     """Adapter for OpenRouter API."""
@@ -45,27 +52,26 @@ class OpenRouterAdapter(BaseLLMAdapter):
         self.model = model
         self.url = "https://openrouter.ai/api/v1/chat/completions"
 
+    @cache_llm_call
+    @with_retry(max_retries=3, circuit_name="openrouter")
     def generate(self, prompt: str, **kwargs) -> str:
         payload = {
             "model": self.model,
             "messages": [{"role": "user", "content": prompt}]
         }
         
-        try:
-            resp = requests.post(
-                self.url, 
-                json=payload, 
-                headers={
-                    "Authorization": f"Bearer {self.api_key}",
-                    "Content-Type": "application/json"
-                }, 
-                timeout=30
-            )
-            resp.raise_for_status()
-            data = resp.json()
-            return data["choices"][0]["message"]["content"]
-        except Exception as e:
-            raise ValueError(f"OpenRouter API Error: {e}")
+        resp = requests.post(
+            self.url, 
+            json=payload, 
+            headers={
+                "Authorization": f"Bearer {self.api_key}",
+                "Content-Type": "application/json"
+            }, 
+            timeout=30
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        return data["choices"][0]["message"]["content"]
 
 class HuggingFaceAdapter(BaseLLMAdapter):
     """Adapter for HuggingFace Inference API."""
@@ -76,6 +82,8 @@ class HuggingFaceAdapter(BaseLLMAdapter):
         # Note: HF URL format depends on model
         self.url = f"https://api-inference.huggingface.co/models/{self.model}"
 
+    @cache_llm_call
+    @with_retry(max_retries=3, circuit_name="huggingface")
     def generate(self, prompt: str, **kwargs) -> str:
         # HF Inference API parameters
         payload = {
@@ -86,24 +94,21 @@ class HuggingFaceAdapter(BaseLLMAdapter):
             }
         }
         
-        try:
-            resp = requests.post(
-                self.url, 
-                json=payload, 
-                headers={"Authorization": f"Bearer {self.api_key}"}, 
-                timeout=30
-            )
-            resp.raise_for_status()
-            data = resp.json()
-            # HF returns a list of result objects
-            if isinstance(data, list) and len(data) > 0:
-                return data[0].get("generated_text", "")
-            elif isinstance(data, dict) and "generated_text" in data:
-                 return data["generated_text"]
-            else:
-                raise ValueError(f"Unexpected HF Response: {data}")
-        except Exception as e:
-            raise ValueError(f"HuggingFace API Error: {e}")
+        resp = requests.post(
+            self.url, 
+            json=payload, 
+            headers={"Authorization": f"Bearer {self.api_key}"}, 
+            timeout=30
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        # HF returns a list of result objects
+        if isinstance(data, list) and len(data) > 0:
+            return data[0].get("generated_text", "")
+        elif isinstance(data, dict) and "generated_text" in data:
+             return data["generated_text"]
+        else:
+            raise ValueError(f"Unexpected HF Response: {data}")
 
 class CustomAdapter(BaseLLMAdapter):
     """Generic OpenAI-Compatible Adapter."""
@@ -121,6 +126,8 @@ class CustomAdapter(BaseLLMAdapter):
             api_key = api_key.replace("Bearer ", "")
         self.api_key = api_key
 
+    @cache_llm_call
+    @with_retry(max_retries=3, circuit_name="custom_llm")
     def generate(self, prompt: str, **kwargs) -> str:
         url = f"{self.base_url}/chat/completions"
         payload = {
@@ -129,29 +136,22 @@ class CustomAdapter(BaseLLMAdapter):
             "temperature": kwargs.get("temperature", 0.7)
         }
         
-        try:
-            headers = {
-                "Authorization": f"Bearer {self.api_key}",
-                "Content-Type": "application/json"
-            }
-            resp = requests.post(url, json=payload, headers=headers, timeout=60)
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json"
+        }
+        resp = requests.post(url, json=payload, headers=headers, timeout=60)
+        
+        if resp.status_code == 401:
+            raise ValueError("Invalid API Key (401 Unauthorized)")
+        elif resp.status_code == 404:
+            raise ValueError(f"Endpoint not found (404). Check Base URL: {url}")
+        elif resp.status_code == 403:
+            raise ValueError("Access Denied (403 Forbidden)")
             
-            if resp.status_code == 401:
-                raise ValueError("Invalid API Key (401 Unauthorized)")
-            elif resp.status_code == 404:
-                raise ValueError(f"Endpoint not found (404). Check Base URL: {url}")
-            elif resp.status_code == 403:
-                raise ValueError("Access Denied (403 Forbidden)")
-                
-            resp.raise_for_status()
-            data = resp.json()
-            return data["choices"][0]["message"]["content"]
-        except requests.exceptions.Timeout:
-            raise ValueError("Connection timed out. The server might be slow.")
-        except requests.exceptions.ConnectionError:
-            raise ValueError(f"Could not connect to {self.base_url}. Check if the server is running.")
-        except Exception as e:
-            raise ValueError(f"Custom API Error: {e}")
+        resp.raise_for_status()
+        data = resp.json()
+        return data["choices"][0]["message"]["content"]
 
 class AnthropicAdapter(BaseLLMAdapter):
     """Adapter for Anthropic API."""
@@ -161,6 +161,8 @@ class AnthropicAdapter(BaseLLMAdapter):
         self.model = model
         self.url = "https://api.anthropic.com/v1/messages"
 
+    @cache_llm_call
+    @with_retry(max_retries=3, circuit_name="anthropic")
     def generate(self, prompt: str, **kwargs) -> str:
         payload = {
             "model": self.model,
@@ -168,22 +170,19 @@ class AnthropicAdapter(BaseLLMAdapter):
             "messages": [{"role": "user", "content": prompt}]
         }
         
-        try:
-            resp = requests.post(
-                self.url, 
-                json=payload, 
-                headers={
-                    "x-api-key": self.api_key,
-                    "anthropic-version": "2023-06-01",
-                    "Content-Type": "application/json"
-                }, 
-                timeout=60
-            )
-            resp.raise_for_status()
-            data = resp.json()
-            return data["content"][0]["text"]
-        except Exception as e:
-            raise ValueError(f"Anthropic API Error: {e}")
+        resp = requests.post(
+            self.url, 
+            json=payload, 
+            headers={
+                "x-api-key": self.api_key,
+                "anthropic-version": "2023-06-01",
+                "Content-Type": "application/json"
+            }, 
+            timeout=60
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        return data["content"][0]["text"]
 
 class LMStudioAdapter(BaseLLMAdapter):
     """
@@ -265,6 +264,7 @@ class LMStudioAdapter(BaseLLMAdapter):
             print(f"[WARN] Model Auto-Detection Warning: {e}")
             return self.config_model if self.config_model != "auto" else "local-model"
 
+    @cache_llm_call
     def generate(self, prompt: str, **kwargs) -> str:
         try:
             # Determine effective model
@@ -316,6 +316,8 @@ class ZhipuAdapter(BaseLLMAdapter):
         self.model = model
         self.url = "https://open.bigmodel.cn/api/paas/v4/chat/completions"
 
+    @cache_llm_call
+    @with_retry(max_retries=3, circuit_name="zhipu")
     def generate(self, prompt: str, **kwargs) -> str:
         payload = {
             "model": self.model,
@@ -323,17 +325,14 @@ class ZhipuAdapter(BaseLLMAdapter):
             "temperature": 0.7
         }
         
-        try:
-            headers = {
-                "Authorization": f"Bearer {self.api_key}",
-                "Content-Type": "application/json"
-            }
-            resp = requests.post(self.url, json=payload, headers=headers, timeout=60)
-            resp.raise_for_status()
-            data = resp.json()
-            return data["choices"][0]["message"]["content"]
-        except Exception as e:
-            raise ValueError(f"Zhipu/GLM API Error: {e}")
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json"
+        }
+        resp = requests.post(self.url, json=payload, headers=headers, timeout=60)
+        resp.raise_for_status()
+        data = resp.json()
+        return data["choices"][0]["message"]["content"]
 
 
 class OllamaAdapter(BaseLLMAdapter):
@@ -387,9 +386,10 @@ class OllamaAdapter(BaseLLMAdapter):
             f"To install the model run: ollama pull {self.model}"
         )
 
+    @cache_llm_call
+    @with_retry(max_retries=3, circuit_name="ollama")
     def generate(self, prompt: str, **kwargs) -> str:
         """Generate text with automatic retries and model verification."""
-        
         # Pre-check: Verify model exists
         model_error = self._verify_model_or_fallback()
         if model_error:
@@ -406,59 +406,25 @@ class OllamaAdapter(BaseLLMAdapter):
             }
         }
         
-        last_error = None
-        for attempt in range(self.MAX_RETRIES):
-            try:
-                resp = requests.post(url, json=payload, timeout=120)
-                
-                # Handle specific HTTP errors
-                if resp.status_code == 404:
-                    return self._model_not_found_error()
-                
-                resp.raise_for_status()
-                data = resp.json()
-                
-                # Check for Ollama-specific error in response
-                if "error" in data:
-                    error_msg = data.get("error", "")
-                    if "not found" in error_msg.lower() or "doesn't exist" in error_msg.lower():
-                        return self._model_not_found_error()
-                    return f"[Ollama Error] {error_msg}"
-                
-                self._failure_count = 0
-                import time as t
-                self._last_success = t.time()
-                return data.get("response", "")
-                
-            except requests.exceptions.ConnectionError as e:
-                last_error = e
-                self._failure_count += 1
-                if attempt < self.MAX_RETRIES - 1:
-                    import time as t
-                    t.sleep(self.RETRY_DELAY * (attempt + 1))
-                    continue
-                    
-            except requests.exceptions.Timeout as e:
-                last_error = e
-                self._failure_count += 1
-                if attempt < self.MAX_RETRIES - 1:
-                    import time as t
-                    t.sleep(self.RETRY_DELAY)
-                    continue
-                    
-            except requests.exceptions.HTTPError as e:
-                # Parse HTTP error for better message
-                if e.response is not None and e.response.status_code == 404:
-                    return self._model_not_found_error()
-                last_error = e
-                break
-                    
-            except Exception as e:
-                last_error = e
-                break
+        resp = requests.post(url, json=payload, timeout=120)
         
-        # Return graceful fallback instead of crashing
-        return self._graceful_fallback(str(last_error))
+        # Handle specific HTTP errors
+        if resp.status_code == 404:
+            return self._model_not_found_error()
+        
+        resp.raise_for_status()
+        data = resp.json()
+        
+        # Check for Ollama-specific error in response
+        if "error" in data:
+            error_msg = data.get("error", "")
+            if "not found" in error_msg.lower() or "doesn't exist" in error_msg.lower():
+                return self._model_not_found_error()
+            return f"[Ollama Error] {error_msg}"
+        
+        import time as t
+        self._last_success = t.time()
+        return data.get("response", "")
     
     def _model_not_found_error(self) -> str:
         """Return a helpful error message when model is not found."""
