@@ -5,6 +5,13 @@ All notable changes to **BioDockify** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v2.4.4] - 2026-02-10
+### Added
+- **Enhanced Project System**: Implemented `ProjectPlanner`, `DeviceStateManager`, and `MultiTaskScheduler` for complex research orchestration.
+- **Persistence & Progress**: Added task queue persistence and granular progress tracking for long-running research jobs.
+- **Headless Resilience**: Made Playwright an optional dependency, allowing the system to run in a degraded mode when browser environments are restricted.
+- **Git Maintenance**: Consolidated repository branches into `CI` and `Docker-release`.
+
 ## [v2.4.2] - 2026-02-09
 ### Added
 - **Full Agent Zero Port**: Reached 100% parity with original Agent Zero core, including PhDPlanner (stage-aware research), PersistentMemory (long-term knowledge retention), and self-healing ReasoningEngine.

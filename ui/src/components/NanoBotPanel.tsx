@@ -236,7 +236,7 @@ export default function NanoBotPanel() {
                     </div>
                     <div>
                         <h2 className="text-xl font-bold">BioDockify AI</h2>
-                        <p className="text-sm text-gray-500">Research Workstation v2.4.2</p>
+                        <p className="text-sm text-gray-500">Research Workstation v2.4.4</p>
                     </div>
                 </div>
                 {status && (

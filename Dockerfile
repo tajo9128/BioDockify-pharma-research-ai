@@ -1,5 +1,5 @@
 # =============================================================================
-# BioDockify v2.4.3 - Optimized Multi-Stage Docker Image
+# BioDockify v2.4.4 - Optimized Multi-Stage Docker Image
 # =============================================================================
 
 # -----------------------------------------------------------------------------
@@ -128,7 +128,7 @@ environment=PORT="3001",HOSTNAME="0.0.0.0",NODE_ENV="production" \n\
 
 # Startup Scripts
 RUN echo '#!/bin/bash \n\
-echo "BioDockify v2.4.3 - Optimized Launch" \n\
+echo "BioDockify v2.4.4 - Optimized Launch" \n\
 mkdir -p /app/data \n\
 exec /usr/bin/supervisord -c /etc/supervisor/supervisord.conf \n\
 ' > /app/start.sh && chmod +x /app/start.sh

@@ -13,7 +13,7 @@ def check_file_version(filepath, pattern):
             print(f"   MISSING FILE: {filepath}")
             return False
             
-        with open(filepath, 'r', encoding='utf-8') as f:
+        with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
             content = f.read()
             matches = re.findall(pattern, content)
             if matches:
@@ -33,11 +33,11 @@ def check_file_version(filepath, pattern):
 
 def main():
     print("="*60)
-    print("BioDockify Version Verification (v2.4.2)")
+    print("BioDockify Version Verification (v2.4.4)")
     print("="*60)
     
-    expected_v = "2.4.2"
-    expected_v_regex = r'2\.4\.2'
+    expected_v = "2.4.4"
+    expected_v_regex = r'2\.4\.4'
     
     results = []
     
@@ -47,23 +47,23 @@ def main():
     
     # 2. package.json
     print("\n[2] Checking package.json...")
-    results.append(check_file_version("package.json", r'"version":\s*"2\.4\.2"'))
+    results.append(check_file_version("package.json", r'"version":\s*"2\.4\.4"'))
     
     # 3. ui/package.json
     print("\n[3] Checking ui/package.json...")
-    results.append(check_file_version("ui/package.json", r'"version":\s*"2\.4\.2"'))
+    results.append(check_file_version("ui/package.json", r'"version":\s*"2\.4\.4"'))
 
     # 4. api/main.py
     print("\n[4] Checking api/main.py...")
-    results.append(check_file_version("api/main.py", r'version="2\.4\.2"'))
+    results.append(check_file_version("api/main.py", r'version="2\.4\.4"'))
 
     # 5. runtime/config_loader.py
     print("\n[5] Checking runtime/config_loader.py...")
-    results.append(check_file_version("runtime/config_loader.py", r'"version":\s*"2\.4\.2"'))
+    results.append(check_file_version("runtime/config_loader.py", r'"version":\s*"2\.4\.4"'))
 
     # 6. README.md
     print("\n[6] Checking README.md...")
-    results.append(check_file_version("README.md", r'v2\.4\.2'))
+    results.append(check_file_version("README.md", r'v2\.4\.4'))
 
     # 7. INSTALLATION.md
     print("\n[7] Checking INSTALLATION.md...")
@@ -71,15 +71,15 @@ def main():
 
     # 8. Dockerfile
     print("\n[8] Checking Dockerfile...")
-    results.append(check_file_version("Dockerfile", r'version="2\.4\.2"'))
+    results.append(check_file_version("Dockerfile", r'v2\.4\.4'))
     
     # 9. NanoBotPanel.tsx
     print("\n[9] Checking ui/src/components/NanoBotPanel.tsx...")
-    results.append(check_file_version("ui/src/components/NanoBotPanel.tsx", r'v2\.4\.2'))
+    results.append(check_file_version("ui/src/components/NanoBotPanel.tsx", r'v2\.4\.4'))
 
     # 10. HomeDashboard.tsx
     print("\n[10] Checking ui/src/components/HomeDashboard.tsx...")
-    results.append(check_file_version("ui/src/components/HomeDashboard.tsx", r'v2\.4\.2'))
+    results.append(check_file_version("ui/src/components/HomeDashboard.tsx", r'v2\.4\.4'))
     
     # 11. CHANGELOG.md
     print("\n[11] Checking CHANGELOG.md...")
