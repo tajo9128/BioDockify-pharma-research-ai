@@ -91,6 +91,7 @@ benchmarks/results/
 external_repos/
 Prismer_Repo/
 external/
+_external/
 
 # Lock files
 bun.lock
