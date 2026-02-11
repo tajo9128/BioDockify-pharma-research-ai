@@ -1,4 +1,4 @@
-import { llm, webSearch } from 'z-ai-web-dev-sdk';
+import ZAI from 'z-ai-web-dev-sdk';
 
 export interface AIResearchOptions {
   topic: string;
@@ -19,16 +19,21 @@ export class AIResearchService {
    */
   static async searchLiterature(topic: string, maxResults: number = 10) {
     try {
-      const searchResults = await webSearch({
+      const zai = await ZAI.create();
+      const searchResults = await zai.functions.invoke('web_search', {
         query: `${topic} pharmaceutical research recent studies`,
-        maxResults,
+        num: maxResults,
       });
 
-      return searchResults.results.map(result => ({
-        title: result.title,
+      if (!Array.isArray(searchResults)) {
+        return [];
+      }
+
+      return searchResults.map((result: any) => ({
+        title: result.name,
         url: result.url,
         snippet: result.snippet,
-        publishedDate: result.publishedDate,
+        publishedDate: result.date,
       }));
     } catch (error) {
       console.error('Error in literature search:', error);
@@ -41,6 +46,7 @@ export class AIResearchService {
    */
   static async extractEntities(content: string, maxEntities: number = 50): Promise<ExtractedEntity[]> {
     try {
+      const zai = await ZAI.create();
       const prompt = `Extract and classify pharmaceutical entities from the following research content. 
       Classify entities into: drug, disease, protein, or gene.
       For each entity, provide the name, type, a brief description, and a confidence score (0-1).
@@ -57,7 +63,7 @@ export class AIResearchService {
         }
       ]`;
 
-      const response = await llm({
+      const response = await zai.chat.completions.create({
         messages: [
           {
             role: 'system',
@@ -69,11 +75,12 @@ export class AIResearchService {
           },
         ],
         temperature: 0.3,
-        maxTokens: 2000,
+        max_tokens: 2000,
+        thinking: { type: 'disabled' }
       });
 
       // Parse the response
-      const entities = JSON.parse(response.content || '[]');
+      const entities = JSON.parse(response.choices[0]?.message?.content || '[]');
       return entities.slice(0, maxEntities);
     } catch (error) {
       console.error('Error in entity extraction:', error);
@@ -87,6 +94,7 @@ export class AIResearchService {
    */
   static async generateSummary(topic: string, entities: ExtractedEntity[]): Promise<string> {
     try {
+      const zai = await ZAI.create();
       const entityList = entities.map(e => `${e.type}: ${e.name}`).join(', ');
 
       const prompt = `Generate a comprehensive research summary on "${topic}" based on the following extracted entities:
@@ -102,7 +110,7 @@ export class AIResearchService {
       
       Write in a professional, scientific tone suitable for researchers.`;
 
-      const response = await llm({
+      const response = await zai.chat.completions.create({
         messages: [
           {
             role: 'system',
@@ -114,10 +122,11 @@ export class AIResearchService {
           },
         ],
         temperature: 0.7,
-        maxTokens: 1500,
+        max_tokens: 1500,
+        thinking: { type: 'disabled' }
       });
 
-      return response.content || '';
+      return response.choices[0]?.message?.content || '';
     } catch (error) {
       console.error('Error generating summary:', error);
       return '';
@@ -134,6 +143,7 @@ export class AIResearchService {
     confidence: number;
   }>> {
     try {
+      const zai = await ZAI.create();
       const entityNames = entities.map(e => e.name).join(', ');
 
       const prompt = `Identify relationships between the following pharmaceutical entities:
@@ -156,7 +166,7 @@ export class AIResearchService {
         }
       ]`;
 
-      const response = await llm({
+      const response = await zai.chat.completions.create({
         messages: [
           {
             role: 'system',
@@ -168,10 +178,11 @@ export class AIResearchService {
           },
         ],
         temperature: 0.3,
-        maxTokens: 1500,
+        max_tokens: 1500,
+        thinking: { type: 'disabled' }
       });
 
-      const relationships = JSON.parse(response.content || '[]');
+      const relationships = JSON.parse(response.choices[0]?.message?.content || '[]');
       return relationships;
     } catch (error) {
       console.error('Error generating relationships:', error);
@@ -184,6 +195,7 @@ export class AIResearchService {
    */
   static async generateResearchQuestions(topic: string, numQuestions: number = 5): Promise<string[]> {
     try {
+      const zai = await ZAI.create();
       const prompt = `Generate ${numQuestions} important research questions about "${topic}" that would be valuable for pharmaceutical researchers. 
       The questions should be:
       1. Relevant to current research trends
@@ -192,7 +204,7 @@ export class AIResearchService {
       
       Return only the questions, one per line.`;
 
-      const response = await llm({
+      const response = await zai.chat.completions.create({
         messages: [
           {
             role: 'system',
@@ -204,10 +216,11 @@ export class AIResearchService {
           },
         ],
         temperature: 0.8,
-        maxTokens: 500,
+        max_tokens: 500,
+        thinking: { type: 'disabled' }
       });
 
-      const content = response.content || '';
+      const content = response.choices[0]?.message?.content || '';
       return content
         .split('\n')
         .map(q => q.trim())
@@ -228,6 +241,7 @@ export class AIResearchService {
     keyFindings: string[];
   }> {
     try {
+      const zai = await ZAI.create();
       const prompt = `Analyze the following pharmaceutical research content:
       
       Content: ${content}
@@ -244,7 +258,7 @@ export class AIResearchService {
         "keyFindings": ["Finding 1", "Finding 2", "Finding 3"]
       }`;
 
-      const response = await llm({
+      const response = await zai.chat.completions.create({
         messages: [
           {
             role: 'system',
@@ -256,10 +270,11 @@ export class AIResearchService {
           },
         ],
         temperature: 0.3,
-        maxTokens: 800,
+        max_tokens: 800,
+        thinking: { type: 'disabled' }
       });
 
-      return JSON.parse(response.content || '{}');
+      return JSON.parse(response.choices[0]?.message?.content || '{}');
     } catch (error) {
       console.error('Error analyzing content:', error);
       return {
