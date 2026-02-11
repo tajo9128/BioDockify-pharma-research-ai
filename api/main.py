@@ -25,7 +25,7 @@ from modules.literature.synthesis import get_synthesizer
 from modules.system.auth_manager import auth_manager
 from dataclasses import asdict
 
-app = FastAPI(title="BioDockify - Pharma Research AI", version="2.5.8")
+app = FastAPI(title="BioDockify - Pharma Research AI", version="2.5.9")
 
 # Register NanoBot Hybrid Agent Routes
 try:

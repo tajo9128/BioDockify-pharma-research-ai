@@ -6,7 +6,7 @@ import Sidebar from '@/components/Sidebar';
 import SettingsPanel from '@/components/SettingsPanel';
 import ResearchWorkstation from '@/components/ResearchWorkstation';
 import KnowledgeBaseView from '@/components/KnowledgeBaseView';
-import FirstRunWizard from '@/components/FirstRunWizard';
+import StartupChecks from '@/components/StartupChecks';
 import AgentChat from '@/components/AgentChat';
 import HypothesisView from '@/components/HypothesisView';
 import PublicationView from '@/components/PublicationView';
@@ -179,12 +179,19 @@ export default function PharmaceuticalResearchApp() {
 
   const checkOnboardingStatus = async () => {
     try {
+      // We now perform startup checks every session or if not marked as optimized
+      // For now, let's reset hasOnboarded to false to ensure checks run
+      // unless we want to skip them? User asked to "remove first run open homepage"
+      // BUT "check internet, check lm studio then welcome" implies checks run.
+
+      // So we force hasOnboarded = false initially (default)
+      // Checks will run and set it to true.
+
+      // If we want to persist "persona" we can check settings, but wizard is gone.
       const settings = await api.getSettings();
-      if (settings?.persona?.role) {
-        setHasOnboarded(true);
-      }
+      // We don't auto-set hasOnboarded here anymore, we let StartupChecks do it.
     } catch (e) {
-      console.warn("Failed to check onboarding:", e);
+      console.warn("Failed to check settings:", e);
     } finally {
       setIsLoading(false);
     }
@@ -313,9 +320,9 @@ export default function PharmaceuticalResearchApp() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-teal-500/30">
 
-      {/* First Run Wizard Overlay */}
+      {/* First Run Wizard / Startup Checks Overlay */}
       {!hasOnboarded && (
-        <FirstRunWizard onComplete={c_settings} />
+        <StartupChecks onComplete={() => setHasOnboarded(true)} />
       )}
 
       {/* Background Ambience */}
