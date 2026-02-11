@@ -35,13 +35,20 @@ COPY api/requirements_heavy.txt ./
 # Install core requirements first
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Install heavy requirements separately with CPU-only PyTorch index
-RUN pip install --no-cache-dir --extra-index-url https://download.pytorch.org/whl/cpu -r requirements_heavy.txt
+# Install heavy requirements separately (index-url is in the file)
+RUN pip install --no-cache-dir -r requirements_heavy.txt
 
 # ── CRITICAL: Strip the venv to reclaim ~2GB+ of space ──
+# 1. Remove cache and tests
 RUN find /opt/venv -type d -name '__pycache__' -exec rm -rf {} + 2>/dev/null; \
     find /opt/venv -type d -name 'tests' -exec rm -rf {} + 2>/dev/null; \
     find /opt/venv -type d -name 'test' -exec rm -rf {} + 2>/dev/null; \
+# 2. Remove static libraries and compiled python files
+    find /opt/venv -type f -name '*.pyc' -delete 2>/dev/null; \
+    find /opt/venv -type f -name '*.pyo' -delete 2>/dev/null; \
+    find /opt/venv -type f -name '*.a' -delete 2>/dev/null; \
+# 3. Remove pip, setuptools, wheel (not needed at runtime)
+    pip uninstall -y pip setuptools wheel; \
     find /opt/venv -type f -name '*.pyc' -delete 2>/dev/null; \
     find /opt/venv -type f -name '*.pyo' -delete 2>/dev/null; \
     find /opt/venv -type f -name '*.a' -delete 2>/dev/null; \

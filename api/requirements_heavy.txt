@@ -5,12 +5,14 @@
 # the Docker image light.
 # ============================================================
 
+--index-url https://download.pytorch.org/whl/cpu
+
 # TensorFlow & Deep Learning (CPU-only to save ~2GB)
 tensorflow-cpu==2.15.0
 transformers>=4.38.0
 sentence-transformers>=2.2.2
-torch>=2.2.0
-torchvision>=0.17.0
+torch==2.2.0+cpu
+torchvision==0.17.0+cpu
 
 # Chemistry & Molecular Analysis
 decimer>=2.2.0
