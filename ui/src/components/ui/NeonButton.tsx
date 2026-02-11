@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils';
 import { motion, HTMLMotionProps } from 'framer-motion';
 import { Loader2 } from 'lucide-react';
 
-interface NeonButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+interface NeonButtonProps extends HTMLMotionProps<"button"> {
     variant?: 'primary' | 'secondary' | 'danger' | 'ghost';
     size?: 'sm' | 'md' | 'lg';
     isLoading?: boolean;
@@ -40,7 +40,7 @@ export const NeonButton = React.forwardRef<HTMLButtonElement, NeonButtonProps>(
                     className
                 )}
                 disabled={disabled || isLoading}
-                {...props}
+                {...(props as any)}
             >
                 {isLoading ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
