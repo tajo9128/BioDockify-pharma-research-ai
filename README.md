@@ -98,6 +98,25 @@ Ensuring your research meets the highest standards of integrity and compliance:
 5. **Open** [http://localhost:3000](http://localhost:3000)
 6. **Install as Desktop App** → Click the install prompt in browser for PWA!
 
+    #### ⚙️ Advanced Settings (Optional)
+    Click the "Optional settings" (or "Advanced settings") dropdown, and fill in the fields like this:
+
+    **1. Ports**
+    - **Local Host:** `3000`
+    - **Container Port:** `3000`
+    *(This lets you open the app at http://localhost:3000)*
+
+    **2. Volumes (Persistence)**
+    - **Host Path:** Choose a folder on your computer (e.g., `C:\BioDockifyData`)
+    - **Container Path:** `/app/data`
+    *(This ensures your research data isn't deleted when the container stops)*
+
+    **3. Environment Variables**
+    Click the "+" button for each one:
+    - `LM_STUDIO_URL` : `http://host.docker.internal:1234/v1`
+    - `PORT` : `3000`
+    - `NODE_ENV` : `production`
+
 ### 💻 Via Command Line (One-Click)
 
 The standard `docker run` command is complex. We provide robust scripts to handle port mapping and data persistence for you.
