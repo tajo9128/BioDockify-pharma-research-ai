@@ -1,4 +1,4 @@
-from fastapi import FastAPI, BackgroundTasks, HTTPException
+from fastapi import FastAPI, BackgroundTasks, HTTPException, Request
 from dotenv import load_dotenv
 import os
 import time
@@ -1345,7 +1345,8 @@ def safe_request(method, url, max_retries=3, **kwargs):
 # -----------------------------------------------------------------------------
 # Persistence Layer (Disk-Based)
 # -----------------------------------------------------------------------------
-from runtime.task_manager import task_manager
+from modules.task_manager.manager import TaskManager
+task_manager = TaskManager(os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./tasks.db"))
 
 # -----------------------------------------------------------------------------
 # Data Models

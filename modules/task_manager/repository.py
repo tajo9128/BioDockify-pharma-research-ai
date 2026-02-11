@@ -74,7 +74,7 @@ class TaskExecutionEventORM(Base):
     event_type = Column(String, nullable=False, index=True)
     timestamp = Column(DateTime, default=datetime.utcnow, index=True)
     message = Column(Text, nullable=True)
-    metadata = Column(JSON, nullable=True, default=dict)
+    event_metadata = Column(JSON, nullable=True, default=dict)
     agent_id = Column(String, nullable=True)
 
     # Index for querying task history
@@ -236,7 +236,7 @@ class TaskRepository:
         task_id: str,
         event_type: str,
         message: Optional[str] = None,
-        metadata: Optional[Dict[str, Any]] = None,
+        event_metadata: Optional[Dict[str, Any]] = None,
         agent_id: Optional[str] = None
     ):
         """Log a task execution event"""
@@ -247,7 +247,7 @@ class TaskRepository:
                     task_id=task_id,
                     event_type=event_type,
                     message=message,
-                    metadata=metadata or {},
+                    event_metadata=event_metadata or {},
                     agent_id=agent_id
                 )
                 session.add(event)

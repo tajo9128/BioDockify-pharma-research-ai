@@ -175,36 +175,20 @@ Write the section:"""
         Returns structured data for Agent Zero's planning.
         """
         # Index papers first
+        try:
             for paper in papers:
                 if paper.abstract:
-                    import asyncio
-                    try:
-                        loop = asyncio.get_event_loop()
-                        if loop.is_running():
-                            loop.create_task(self.vector_store.add_documents(
-                                [f"Title: {paper.title}\nAbstract: {paper.abstract}"],
-                                [{"title": paper.title}]
-                            ))
-                        else:
-                            asyncio.run(self.vector_store.add_documents(
-                                [f"Title: {paper.title}\nAbstract: {paper.abstract}"],
-                                [{"title": paper.title}]
-                            ))
-                    except:
-                        asyncio.run(self.vector_store.add_documents(
-                            [f"Title: {paper.title}\nAbstract: {paper.abstract}"],
-                            [{"title": paper.title}]
-                        ))
-        except:
-            pass
+                    await self.vector_store.add_documents(
+                        [f"Title: {paper.title}\nAbstract: {paper.abstract}"],
+                        [{"title": paper.title}]
+                    )
+        except Exception as e:
+            logger.warning(f"Failed to index papers for agent preparation: {e}")
         
         # Prepare section contexts
         sections_data = []
         for section_title, section_focus in self.SECTIONS:
-            # Note: prepare_for_agent is SYNC, so we can't await here easily without making it async.
-            # But the context is needed for the return.
-            # I'll make prepare_for_agent async.
-            pass
+            context = await self._get_section_context(topic, section_title, section_focus)
             sections_data.append({
                 "section": section_title,
                 "focus": section_focus,
