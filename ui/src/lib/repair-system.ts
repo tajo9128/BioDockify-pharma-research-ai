@@ -100,7 +100,7 @@ export class RepairManager {
 
                     try {
                         // Use the backend API to start LM Studio
-                        const res = await fetch('http://localhost:8234/api/diagnose/lm-studio/start', {
+                        const res = await fetch('/api/diagnose/lm-studio/start', {
                             method: 'POST',
                             signal: AbortSignal.timeout(30000) // LM Studio takes time to start
                         });
@@ -141,7 +141,7 @@ export class RepairManager {
 
                     try {
                         // Use the backend repair API
-                        const res = await fetch('http://localhost:8234/api/v2/system/repair?service=ollama', {
+                        const res = await fetch('/api/v2/system/repair?service=ollama', {
                             method: 'POST',
                             signal: AbortSignal.timeout(30000)
                         });
@@ -189,7 +189,7 @@ export class RepairManager {
 
                     // Try via Backend API first (if it supports docker control)
                     try {
-                        const res = await fetch('http://localhost:8234/api/v2/system/start-surfsense', {
+                        const res = await fetch('/api/v2/system/start-surfsense', {
                             method: 'POST',
                             signal: AbortSignal.timeout(15000)
                         });
@@ -222,7 +222,7 @@ export class RepairManager {
                     console.log('[Repair] Running full connectivity diagnosis with auto-repair...');
 
                     try {
-                        const res = await fetch('http://localhost:8234/api/diagnose/connectivity', {
+                        const res = await fetch('/api/diagnose/connectivity', {
                             method: 'GET',
                             signal: AbortSignal.timeout(30000)
                         });
@@ -253,7 +253,7 @@ export class RepairManager {
                     console.log('[Repair] Resetting settings to defaults...');
 
                     try {
-                        const res = await fetch('http://localhost:8234/api/settings/reset', {
+                        const res = await fetch('/api/settings/reset', {
                             method: 'POST',
                             signal: AbortSignal.timeout(10000)
                         });

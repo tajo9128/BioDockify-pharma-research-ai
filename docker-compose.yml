@@ -6,7 +6,7 @@ services:
     build: .
     container_name: biodockify-app
     ports:
-      - "8234:3000"
+      - "3000:3000"
     environment:
       - DATABASE_URL=postgresql://biodockify:biodockify@db:5432/biodockify
       - REDIS_URL=redis://redis:6379/0
@@ -75,7 +75,7 @@ services:
     image: redis:7-alpine
     container_name: biodockify-redis
     ports:
-      - "6379:6379"
+      - "16379:6379"
     volumes:
       - redis_data:/data
     command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
@@ -108,7 +108,7 @@ services:
     image: grafana/grafana:latest
     container_name: biodockify-grafana
     ports:
-      - "3000:3000"
+      - "3001:3000"
     volumes:
       - grafana_data:/var/lib/grafana
       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning

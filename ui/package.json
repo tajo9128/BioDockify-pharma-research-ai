@@ -1,7 +1,7 @@
 {
   "name": "biodockify-ui",
-  "version": "2.4.9",
-  "description": "BioDockify v2.4.9 🧬 Pharma Research AI: Fully Baked Docker Image",
+  "version": "2.5.0",
+  "description": "BioDockify v2.5.0 🧬 Pharma Research AI: Fully Baked Docker Image",
   "private": true,
   "scripts": {
     "dev": "next dev -p 3000 2>&1 | tee dev.log",

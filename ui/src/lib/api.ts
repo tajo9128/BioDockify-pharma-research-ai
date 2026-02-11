@@ -1,7 +1,7 @@
 // API service module for BioDockify pharmaceutical research platform
 // All API calls are relative - the gateway handles routing
 
-const API_BASE = 'http://localhost:8234/api';
+const API_BASE = '/api';
 
 export interface ResearchStatus {
   taskId: string;

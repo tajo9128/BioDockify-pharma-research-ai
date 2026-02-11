@@ -22,7 +22,7 @@ interface BackendInitializerProps {
     timeout?: number;
 }
 
-const API_BASE = 'http://localhost:8234';
+const API_BASE = '';
 const MAX_RETRIES = 30; // 30 retries * 2s = 60s max wait
 const RETRY_INTERVAL = 2000; // 2 seconds
 
@@ -31,7 +31,7 @@ const RETRY_INTERVAL = 2000; // 2 seconds
  */
 async function checkBackendHealth(): Promise<boolean> {
     try {
-        const res = await fetch(`${API_BASE}/health`, {
+        const res = await fetch(`${API_BASE}/api/health`, {
             method: 'GET',
             signal: AbortSignal.timeout(3000)
         });
