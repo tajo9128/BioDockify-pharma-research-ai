@@ -1,5 +1,5 @@
 # =============================================================================
-# BioDockify v2.5.5 - Optimized Multi-Stage Docker Image
+# BioDockify v2.5.6 - Optimized Multi-Stage Docker Image
 # =============================================================================
 
 # -----------------------------------------------------------------------------
@@ -71,7 +71,10 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl ca-certificates libpq5 \
     libgl1 libglib2.0-0 ffmpeg poppler-utils \
+
     nginx supervisor chromium chromium-driver \
+    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y nodejs \
     && rm -rf /var/lib/apt/lists/* && apt-get clean
 
 # Copy virtual environment from builder
@@ -154,7 +157,7 @@ environment=PORT="3001",HOSTNAME="0.0.0.0",NODE_ENV="production" \n\
 
 # Startup Scripts
 RUN echo '#!/bin/bash \n\
-echo "BioDockify v2.5.5 - Optimized Launch" \n\
+echo "BioDockify v2.5.6 - Optimized Launch" \n\
 mkdir -p /app/data \n\
 exec /usr/bin/supervisord -c /etc/supervisor/supervisord.conf \n\
 ' > /app/start.sh && chmod +x /app/start.sh
