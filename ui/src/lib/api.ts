@@ -88,8 +88,13 @@ export interface Settings {
     novelty_strictness: 'low' | 'medium' | 'high';
     grobid_url?: string; // V2: GROBID Analysis
   };
+  channels?: {
+    telegram?: { enabled: boolean; token: string; allow_from: string[] };
+    whatsapp?: { enabled: boolean; bridge_url: string; auth_token: string; allow_from: string[] };
+    discord?: { enabled: boolean; token: string; allow_from: string[]; gateway_url: string };
+  };
   ai_provider: {
-    mode: 'auto' | 'lm_studio' | 'z-ai';
+    mode: 'google' | 'openai' | 'anthropic' | 'deepseek' | 'openrouter' | 'groq' | 'huggingface' | 'lm_studio' | 'ollama' | 'glm' | 'kimi' | 'custom' | 'surfsense';
 
     // LM Studio (Local)
     lm_studio_url?: string;

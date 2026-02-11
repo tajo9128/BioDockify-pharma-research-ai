@@ -30,10 +30,29 @@ ENV PATH="/opt/venv/bin:$PATH"
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel
 
 COPY api/requirements.txt ./
-# We also install heavy requirements if they exist, to ensure full capability
 COPY api/requirements_heavy.txt ./
-RUN pip install --no-cache-dir -r requirements.txt && \
-    pip install --no-cache-dir -r requirements_heavy.txt
+
+# Install core requirements first
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Install heavy requirements separately with CPU-only PyTorch index
+RUN pip install --no-cache-dir --extra-index-url https://download.pytorch.org/whl/cpu -r requirements_heavy.txt
+
+# ── CRITICAL: Strip the venv to reclaim ~2GB+ of space ──
+RUN find /opt/venv -type d -name '__pycache__' -exec rm -rf {} + 2>/dev/null; \
+    find /opt/venv -type d -name 'tests' -exec rm -rf {} + 2>/dev/null; \
+    find /opt/venv -type d -name 'test' -exec rm -rf {} + 2>/dev/null; \
+    find /opt/venv -type f -name '*.pyc' -delete 2>/dev/null; \
+    find /opt/venv -type f -name '*.pyo' -delete 2>/dev/null; \
+    find /opt/venv -type f -name '*.a' -delete 2>/dev/null; \
+    find /opt/venv -type d -name '*.dist-info' -exec sh -c 'find "$1" -not -name METADATA -not -name RECORD -not -name top_level.txt -not -name INSTALLER -type f -delete' _ {} \; 2>/dev/null; \
+    rm -rf /opt/venv/lib/python3.11/site-packages/torch/test/ \
+           /opt/venv/lib/python3.11/site-packages/tensorflow/python/debug/ \
+           /opt/venv/lib/python3.11/site-packages/tensorflow/lite/ \
+           /opt/venv/lib/python3.11/site-packages/tensorboard/data/ \
+           /opt/venv/lib/python3.11/site-packages/nvidia/ \
+           /opt/venv/lib/python3.11/site-packages/caffe2/ \
+    ; true
 
 # -----------------------------------------------------------------------------
 # Stage 3: Runtime Stage

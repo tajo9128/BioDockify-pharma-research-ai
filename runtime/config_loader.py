@@ -230,6 +230,18 @@ DEFAULT_CONFIG = {
         }
     },
 
+    # SECTION D: NANOBOT & CHANNELS
+    "nanobot": {
+        "headless_browser": True,
+        "stealth_mode": False,
+        "browser_timeout": 30
+    },
+    "channels": {
+        "telegram": { "enabled": False, "token": "", "allow_from": [] },
+        "whatsapp": { "enabled": False, "bridge_url": "ws://localhost:3001", "auth_token": "", "allow_from": [] },
+        "discord": { "enabled": False, "token": "", "allow_from": [], "gateway_url": "wss://gateway.discord.gg/?v=10&encoding=json" }
+    },
+
     # SECTION E: API & AI SETTINGS
     "ai_provider": {
         "primary_model": "google",

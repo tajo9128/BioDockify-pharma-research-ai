@@ -5,13 +5,12 @@
 # the Docker image light.
 # ============================================================
 
-# TensorFlow & Deep Learning (The biggest contributors)
-tensorflow==2.15.0
-tensorflow-intel==2.15.0; sys_platform == 'win32'
+# TensorFlow & Deep Learning (CPU-only to save ~2GB)
+tensorflow-cpu==2.15.0
 transformers>=4.38.0
 sentence-transformers>=2.2.2
-torch>=2.2.0 --index-url https://download.pytorch.org/whl/cpu
-torchvision>=0.17.0 --index-url https://download.pytorch.org/whl/cpu
+torch>=2.2.0
+torchvision>=0.17.0
 
 # Chemistry & Molecular Analysis
 decimer>=2.2.0
