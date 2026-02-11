@@ -5,15 +5,13 @@
 
 import {
     detectAllServices,
-    checkOllama,
     checkBackend,
-    DetectedServices,
-    ServiceConfig
 } from './auto-config';
+import type { DetectedServices, ServiceConfig } from './auto-config';
 
 // Re-export types and functions
 export type { DetectedServices, ServiceConfig };
-export { detectAllServices, checkOllama, checkBackend };
+export { detectAllServices, checkBackend };
 
 // Legacy interface for backward compatibility
 export interface HealthStatus {
@@ -31,7 +29,7 @@ export async function checkServices(): Promise<HealthStatus> {
 
     return {
         backend: detected.backend,
-        ollama: detected.ollama,
+        ollama: detected.ollama || false,
         grobid: detected.grobid
     };
 }

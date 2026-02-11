@@ -223,8 +223,8 @@ export class AIResearchService {
       const content = response.choices[0]?.message?.content || '';
       return content
         .split('\n')
-        .map(q => q.trim())
-        .filter(q => q.length > 0)
+        .map((q: string) => q.trim())
+        .filter((q: string) => q.length > 0)
         .slice(0, numQuestions);
     } catch (error) {
       console.error('Error generating research questions:', error);

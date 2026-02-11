@@ -486,7 +486,7 @@ export function isConfigured(): boolean {
 
     // Check stored config
     const config = getStoredConfig();
-    const autoConfigured = config.auto_configured === 'true' || config.auto_configured === true;
+    const autoConfigured = String(config.auto_configured) === 'true';
 
     return firstRunComplete || autoConfigured || lmStudioConfigured;
 }

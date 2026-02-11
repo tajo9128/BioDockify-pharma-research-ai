@@ -3,6 +3,23 @@
  * Automatically detects and configures available services (Ollama, GROBID)
  */
 
+const DEFAULT_LM_STUDIO_URL = 'http://localhost:1234/v1';
+const DEFAULT_GROBID_URL = 'http://localhost:8070';
+const API_BASE = '';
+
+export interface DetectedServices {
+    backend: boolean;
+    lm_studio: boolean;
+    lm_studio_model?: string;
+    ollama: boolean;
+    grobid: boolean;
+}
+
+export interface ServiceConfig {
+    lmStudioUrl: string;
+    grobidUrl: string;
+}
+
 /**
  * Check LM Studio availability and detect loaded model
  * Returns { available: boolean, model?: string }
@@ -116,6 +133,7 @@ export async function detectAllServices(): Promise<DetectedServices> {
         backend,
         lm_studio: lmStudioResult.available,
         lm_studio_model: lmStudioResult.model,
+        ollama: false,
         grobid: backend
     };
 

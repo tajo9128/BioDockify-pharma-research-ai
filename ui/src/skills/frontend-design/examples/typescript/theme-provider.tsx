@@ -107,7 +107,7 @@ export function ThemeProvider({
     if (theme !== 'system') return;
 
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    
+
     const handleChange = (e: MediaQueryListEvent) => {
       const systemTheme = e.matches ? 'dark' : 'light';
       const root = window.document.documentElement;
@@ -154,11 +154,11 @@ export function ThemeProvider({
 
 export function useTheme(): ThemeContextType {
   const context = useContext(ThemeContext);
-  
+
   if (context === undefined) {
     throw new Error('useTheme must be used within a ThemeProvider');
   }
-  
+
   return context;
 }
 
@@ -234,7 +234,7 @@ export function ThemeSelector({ className = '' }: ThemeSelectorProps) {
   const { theme, setTheme } = useTheme();
   const [isOpen, setIsOpen] = useState(false);
 
-  const themes: { value: Theme; label: string; icon: JSX.Element }[] = [
+  const themes: { value: Theme; label: string; icon: React.JSX.Element }[] = [
     {
       value: 'light',
       label: 'Light',
