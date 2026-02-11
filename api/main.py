@@ -25,7 +25,7 @@ from modules.literature.synthesis import get_synthesizer
 from modules.system.auth_manager import auth_manager
 from dataclasses import asdict
 
-app = FastAPI(title="BioDockify - Pharma Research AI", version="2.5.7")
+app = FastAPI(title="BioDockify - Pharma Research AI", version="2.5.8")
 
 # Register NanoBot Hybrid Agent Routes
 try:
@@ -320,6 +320,13 @@ async def startup_event():
                 logger.info("✅ Enhanced Project System (Phase 11) Started Successfully.")
             except Exception as enhanced_err:
                 logger.error(f"❌ Failed to start Enhanced Project System: {enhanced_err}")
+            
+            print("\n" + "="*60)
+            print("🚀  BioDockify is Ready!")
+            print("🔗  Login here: http://localhost:3000")
+            print("="*60 + "\n")
+            logger.info("BioDockify is Ready! Login at http://localhost:3000")
+
         except Exception as e:
             logger.error(f"❌ Failed to start Integrated System: {e}")
 
