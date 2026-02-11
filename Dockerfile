@@ -36,7 +36,7 @@ COPY api/requirements_heavy.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Install heavy requirements separately (index-url is in the file)
-RUN pip install --no-cache-dir -r requirements_heavy.txt
+RUN pip install --no-cache-dir -r requirements_heavy.txt --extra-index-url https://download.pytorch.org/whl/cpu
 
 # ── CRITICAL: Strip the venv to reclaim ~2GB+ of space ──
 # 1. Remove cache and tests
