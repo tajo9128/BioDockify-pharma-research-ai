@@ -5,7 +5,7 @@
 # the Docker image light.
 # ============================================================
 
---index-url https://download.pytorch.org/whl/cpu
+--extra-index-url https://download.pytorch.org/whl/cpu
 
 # TensorFlow & Deep Learning (CPU-only to save ~2GB)
 tensorflow-cpu==2.15.0
