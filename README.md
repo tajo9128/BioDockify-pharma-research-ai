@@ -1,11 +1,11 @@
-# BioDockify v2.4.9 🧬
+# BioDockify v2.21.0 🧬
 
 **The Integrated AI Research Workstation for Pharmaceutical & Life Sciences.**
 
 BioDockify is a specialized, autonomous AI ecosystem designed to manage the entire research lifecycle for **PG students, PhD researchers, and pharmaceutical scientists**. It delivers "Pharma-Grade" intelligence by combining deep reasoning, robotic automation, and local-first privacy.
 
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-2.4.9-green.svg)](https://github.com/tajo9128/BioDockify-pharma-research-ai)
+[![Version](https://img.shields.io/badge/version-2.21.0-green.svg)](https://github.com/tajo9128/BioDockify-pharma-research-ai)
 [![Docker](https://img.shields.io/badge/docker-tajo9128%2Fbiodockify--ai-blue.svg)](https://hub.docker.com/r/tajo9128/biodockify-ai)
 [![Privacy](https://img.shields.io/badge/privacy-Local--First-green.svg)]()
 
