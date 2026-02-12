@@ -77,10 +77,17 @@ export interface Settings {
     use_knowledge_graph?: boolean; // V2: Neo4j Integration
     human_approval_gates?: boolean; // V2: Safety/Consent Switch
   };
+  // Agent Zero (Research Agent) Settings
+  agent_zero?: {
+    autonomy_level?: string;
+    force_persona?: string;
+    internet_research?: boolean;
+    // Add other properties as needed
+  };
   nanobot?: {
-    headless_browser: boolean;
-    stealth_mode: boolean;
-    browser_timeout: number;
+    headless_browser?: boolean;
+    stealth_mode?: boolean;
+    browser_timeout?: number;
   };
   literature: {
     sources: string[];
