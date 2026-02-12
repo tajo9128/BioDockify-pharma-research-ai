@@ -103,7 +103,43 @@ export const BrainSettings: React.FC<BrainSettingsProps> = ({ settings, onSettin
         updateProgress({ status: 'testing', progress: 20, message: 'Testing...', details: '' });
 
         try {
-            const result = await api.testConnection(serviceType, provider, key || '', provider === 'custom' ? baseUrl : undefined, model);
+            // Construct the provider config based on the service type and provider
+            const config: any = {
+                ai_provider: {
+                    mode: provider,
+                }
+            };
+
+            // Map provider-specific keys
+            if (provider === 'openai') {
+                config.ai_provider.openai_key = key;
+                config.ai_provider.openai_model = model;
+                if (baseUrl) config.ai_provider.custom_base_url = baseUrl;
+            } else if (provider === 'anthropic') {
+                config.ai_provider.anthropic_key = key;
+                config.ai_provider.anthropic_model = model;
+            } else if (provider === 'google') {
+                config.ai_provider.google_key = key;
+                config.ai_provider.google_model = model;
+            } else if (provider === 'groq') {
+                config.ai_provider.groq_key = key;
+                config.ai_provider.groq_model = model;
+            } else if (provider === 'huggingface') {
+                config.ai_provider.huggingface_key = key;
+                config.ai_provider.huggingface_model = model;
+            } else if (provider === 'deepseek') {
+                config.ai_provider.deepseek_key = key;
+                config.ai_provider.deepseek_model = model;
+            } else if (provider === 'openrouter') {
+                config.ai_provider.openrouter_key = key;
+                config.ai_provider.openrouter_model = model;
+            } else if (provider === 'custom') {
+                config.ai_provider.custom_key = key;
+                config.ai_provider.custom_base_url = baseUrl;
+                config.ai_provider.custom_model = model;
+            }
+
+            const result = await api.testConnection(config);
             if (result.status === 'success') {
                 updateProgress({ status: 'success', progress: 100, message: 'PASSED', details: result.message });
             } else {
