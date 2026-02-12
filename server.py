@@ -2,14 +2,20 @@
 import uvicorn
 import os
 import sys
+import logging
+import traceback
+
+# Configure immediate logging to stdout
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s", stream=sys.stdout)
+sys.stdout.reconfigure(line_buffering=True)
+sys.stderr.reconfigure(line_buffering=True)
+
+logging.info("🚀 Server process started. Initializing...")
 
 # Add the current directory to sys.path so imports work
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 # --- PROTECTIVE STARTUP CHECKS ---
-import logging
-logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
-
 REQUIRED_ENV = [
     # "NEO4J_URI", "NEO4J_USER", "NEO4J_PASS",  # Uncomment if Neo4j is critical for startup
     # "OLLAMA_HOST" # Uncomment if Ollama is critical
@@ -25,8 +31,6 @@ except ImportError:
 missing = [v for v in REQUIRED_ENV if not os.getenv(v)]
 if missing:
     logging.warning("⚠️  Startup Warning: Missing recommended environment variables: %s", ", ".join(missing))
-    # logging.error("Startup aborted...") # Uncomment to enforce fail-fast
-    # raise SystemExit(1) 
 
 # Check for critical dependencies before importing heavy libs
 TF_AVAILABLE = False
@@ -40,7 +44,6 @@ except ImportError:
 
 
 # EXPLICIT IMPORTS FOR PYINSTALLER BUNDLING (graceful)
-# We try/except to allow Docker startup even if some deps are missing
 try:
     import tensorflow as tf
 except ImportError:
@@ -49,7 +52,6 @@ except ImportError:
 try:
     import numpy as np
 except ImportError:
-    import logging
     logging.warning("NumPy not found")
     np = None
 
@@ -68,7 +70,7 @@ try:
 except ImportError:
     pdfminer = None
 
-# Optional dependencies - these modules handle missing deps gracefully
+# Optional dependencies
 try:
     import neo4j
     NEO4J_AVAILABLE = True
@@ -76,21 +78,25 @@ except ImportError:
     NEO4J_AVAILABLE = False
     logging.info("Neo4j not installed - graph features will operate in offline mode")
 
-# Hint for DECIMER if available, but it might be a sub-module.
-# We skip top-level import to avoid startup hangs due to heavy weights.
-# The modules using it (like im2smiles) handle lazy loading internally.
-
-from api.main import app
+# Safe Import of Main App
+try:
+    logging.info("Attempting to import api.main...")
+    from api.main import app
+    logging.info("✅ api.main imported successfully.")
+except Exception as e:
+    logging.critical("🔥 CRITICAL ERROR: Failed to import api.main!")
+    traceback.print_exc()
+    sys.exit(1)
 
 def main():
-    # Dummy usage to trick PyInstaller static analysis into keeping these libs
     try:
-        print(f"Initializing AI Engine with TF {tf.__version__}, NumPy {np.__version__}")
-    except:
-        pass
-
-    # Bind to 0.0.0.0 (More robust for Windows/IPv6 resolution of localhost)
-    uvicorn.run(app, host="0.0.0.0", port=8234, log_level="info")
+        logging.info("Starting Uvicorn server...")
+        # Bind to 0.0.0.0 (More robust for Windows/IPv6 resolution of localhost)
+        uvicorn.run(app, host="0.0.0.0", port=8234, log_level="info")
+    except Exception as e:
+        logging.critical(f"🔥 Server crashed: {e}")
+        traceback.print_exc()
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()

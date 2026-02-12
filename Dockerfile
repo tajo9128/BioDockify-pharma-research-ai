@@ -1,5 +1,5 @@
 # =============================================================================
-# BioDockify v2.5.6 - Optimized Multi-Stage Docker Image
+# BioDockify v2.6.0 - Optimized Multi-Stage Docker Image
 # =============================================================================
 
 # -----------------------------------------------------------------------------
@@ -151,13 +151,15 @@ command=python /app/server.py \n\
 environment=PYTHONPATH="/app",PYTHONUNBUFFERED="1" \n\
 \n\
 [program:frontend] \n\
-command=node /app/server.js \n\
+command=/usr/bin/node /app/server.js \n\
 environment=PORT="3001",HOSTNAME="0.0.0.0",NODE_ENV="production" \n\
 ' > /etc/supervisor/conf.d/biodockify.conf
 
 # Startup Scripts
 RUN echo '#!/bin/bash \n\
-echo "BioDockify v2.5.6 - Optimized Launch" \n\
+echo "BioDockify v2.6.0 - Optimized Launch" \n\
+echo "Node Version: $(node -v)" \n\
+echo "Node Path: $(which node)" \n\
 mkdir -p /app/data \n\
 exec /usr/bin/supervisord -c /etc/supervisor/supervisord.conf \n\
 ' > /app/start.sh && chmod +x /app/start.sh

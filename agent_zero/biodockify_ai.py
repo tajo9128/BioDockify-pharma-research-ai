@@ -30,23 +30,52 @@ class BioDockifyAI:
         self._init_done = False
         
     async def initialize(self, workspace_path: str = "./data/workspace"):
-        """Initialize the hybrid engine."""
+        """Initialize the hybrid engine with robustness checks."""
         if self._init_done:
             return
             
         logger.info("Initializing BioDockify Triple Hybrid AI...")
         
-        try:
-            self.agent = create_hybrid_agent(workspace_path)
-            # Setup skills, tools, channels here
-            # self.agent.skills = SkillsLoader(self.agent).load_all()
-            
-            self._init_done = True
-            logger.info("BioDockify AI Initialized Successfully.")
-            
-        except Exception as e:
-            logger.error(f"Failed to initialize AI: {e}")
-            raise e
+        # 1. robust_retry_loop
+        max_retries = 5
+        base_delay = 2
+        
+        for attempt in range(max_retries):
+            try:
+                # Pre-flight checks (Optional but recommended)
+                # self._check_dependencies() 
+                
+                self.agent = create_hybrid_agent(workspace_path)
+                
+                self._init_done = True
+                logger.info("BioDockify AI Initialized Successfully.")
+                return
+                
+            except Exception as e:
+                logger.warning(f"Initialization attempt {attempt + 1}/{max_retries} failed: {e}")
+                if attempt < max_retries - 1:
+                    wait_time = base_delay * (2 ** attempt)
+                    logger.info(f"Retrying in {wait_time}s...")
+                    await asyncio.sleep(wait_time)
+                else:
+                    logger.error("All initialization attempts failed.")
+                    raise e
+                    
+    def _check_dependencies(self):
+        """Check critical upstream services (DB, Redis, etc)."""
+        import socket
+        services = [
+            ("postgres", 5432),
+            ("redis", 6379)
+        ]
+        for host, port in services:
+            try:
+                with socket.create_connection((host, port), timeout=1):
+                    pass
+            except OSError:
+                logger.warning(f"Dependency check failed: {host}:{port} is not reachable yet.")
+                # We don't raise here, just warn, as local execution might not use containers
+
             
     async def process_chat(self, user_message: str) -> str:
         """Process user chat message."""

@@ -63,60 +63,67 @@ class HybridAgent:
         self.bus = MessageBus()
         self.cron = CronService(config.workspace_path, self._handle_external_trigger)
         
-        # Initialize Tools
-        self.diagnosis = SystemDiagnosis()
-        self.code_exec = SafeCodeExecutionTool()
-        self.file_editor = FileEditorTool(root_dir=".") # Full access to current execution dir
-        self.config_manager = ConfigManagerTool()
-        self.graph_tool = KnowledgeGraphTool()
+        # Initialize Tools (Robustly)
+        self.tools = {}
+        
+        def safe_init(name: str, init_func: Callable) -> Optional[Any]:
+            try:
+                return init_func()
+            except Exception as e:
+                logger.warning(f"⚠️ Tool '{name}' failed to load: {e}. Running in degraded mode.")
+                return None
+
+        # Core Tools
+        self.diagnosis = safe_init("SystemDiagnosis", lambda: SystemDiagnosis())
+        self.code_exec = safe_init("SafeCodeExecutionTool", lambda: SafeCodeExecutionTool())
+        self.file_editor = safe_init("FileEditorTool", lambda: FileEditorTool(root_dir="."))
+        self.config_manager = safe_init("ConfigManagerTool", lambda: ConfigManagerTool())
+        self.graph_tool = safe_init("KnowledgeGraphTool", lambda: KnowledgeGraphTool())
         
         # GitHub Tool (Dynamic injection)
         github_token = getattr(llm_config, "github_token", None)
-        self.github = GitHubTool(token=github_token)
-        
-        self.tools = {
-            "diagnosis": self.diagnosis.get_diagnosis_report,
-            "execute_shell": self.code_exec.execute_shell,
-            "execute_python": self.code_exec.execute_python,
-            "verify_citations": get_reviewer_agent().verify_citations,
+        self.github = safe_init("GitHubTool", lambda: GitHubTool(token=github_token))
+
+        # Register Available Tools
+        if self.diagnosis:
+            self.tools["diagnosis"] = self.diagnosis.get_diagnosis_report
             
-            # File Editing (Self-Repair)
-            "read_file": self.file_editor.read_file,
-            "write_file": self.file_editor.write_file,
-            "replace_in_file": self.file_editor.replace_in_file,
+        if self.code_exec:
+            self.tools["execute_shell"] = self.code_exec.execute_shell
+            self.tools["execute_python"] = self.code_exec.execute_python
             
-            # Agent Spawning
+        if self.file_editor:
+            self.tools["read_file"] = self.file_editor.read_file
+            self.tools["write_file"] = self.file_editor.write_file
+            self.tools["replace_in_file"] = self.file_editor.replace_in_file
+            
+        if self.config_manager:
+            self.tools["get_config"] = self.config_manager.get_config
+            self.tools["update_config"] = self.config_manager.update_config
+            
+        if self.graph_tool:
+            self.tools["graph_query"] = self.graph_tool.query_graph
+            self.tools["graph_schema"] = self.graph_tool.get_schema
+            self.tools["graph_add_node"] = self.graph_tool.add_node
+
+        if self.github:
+            self.tools["github_search"] = self.github.search_repositories
+            self.tools["github_read"] = self.github.get_repo_content
+            self.tools["github_issue"] = self.github.create_issue
+
+        # Skills (Lazy Safe Load)
+        self.tools.update({
             "spawn_agent": self._spawn_subagent,
-            
-            # NanoBot: Messaging
             "send_message": self._tool_send_message,
-            
-            # NanoBot: Cron
             "manage_cron": self._tool_manage_cron,
-            
-            # NanoBot: GitHub
-            "github_search": self.github.search_repositories,
-            "github_read": self.github.get_repo_content,
-            "github_issue": self.github.create_issue,
-            
-            # Config Management (Self-Correction)
-            "get_config": self.config_manager.get_config,
-            "update_config": self.config_manager.update_config,
-
-            # SurfSense: Deep Research
             "deep_research": self._tool_deep_research,
-
-            # Knowledge Graph (Memgraph/Neo4j)
-            "graph_query": self.graph_tool.query_graph,
-            "graph_schema": self.graph_tool.get_schema,
-            "graph_add_node": self.graph_tool.add_node,
-
-            # Achademio (Writer)
+            
+            # Wrappers that are already safe or lazy
+            "verify_citations": get_reviewer_agent().verify_citations,
             "academic_rewrite": lambda p: get_achademio().rewrite_academic(p.get("text")),
             "academic_slides": lambda p: get_achademio().text_to_slides(p.get("text")),
             "academic_proofread": lambda p: get_achademio().proofread(p.get("text")),
-
-            # LatteReview (Reviewer)
+            
             "latte_screen": lambda p: get_latte_review().screen_papers(
                 p.get("input_path"), 
                 p.get("inclusion"), 
@@ -130,29 +137,22 @@ class HybridAgent:
                 p.get("scoring_rules") or p.get("rules"), 
                 p.get("output_path")
             ),
-
-            # EmailMessenger (Notifier)
+            
             "send_email": lambda p: get_email_messenger().send_email(
                 p.get("to"), p.get("subject"), p.get("body"), p.get("attachments")
             ),
             "notify_user": lambda p: get_email_messenger().notify_user(
                 p.get("email"), p.get("message"), p.get("channels"), p.get("file")
             ),
-
-            # Browser Automation (Playwright)
+            
             "browse_stealth": self._tool_browse_stealth,
             "browse_general": self._tool_browse_general,
             "browse_pdf": self._tool_browse_pdf,
-
-            # Deep Drive (Forensics)
-            "deep_drive_analyze": lambda p: get_deep_drive().analyze_authorship(p.get("text"), p.get("task", "clef24")),
-
-            # Scholar Copilot (Writing Assist)
-            "scholar_complete": lambda p: get_scholar_copilot().complete_text(p.get("text")),
             
-            # Summarize (Native LLM)
+            "deep_drive_analyze": lambda p: get_deep_drive().analyze_authorship(p.get("text"), p.get("task", "clef24")),
+            "scholar_complete": lambda p: get_scholar_copilot().complete_text(p.get("text")),
             "summarize_content": self._tool_summarize_content
-        }
+        })
         
         self.skills = {} # Will load skills later
         
@@ -620,9 +620,8 @@ def create_hybrid_agent(workspace: str = "./data/workspace") -> HybridAgent:
     )
     
     # Ensure attributes exist for LLMFactory if OrchestratorConfig doesn't have them
-    # Explicitly set LM Studio attributes for LLMFactory
-    llm_config.lm_studio_url = ai_config.get("lm_studio_url") or "http://localhost:1234/v1"
-    llm_config.lm_studio_model = ai_config.get("lm_studio_model") or "auto"
+    # custom_base_url and custom_model are already mapped above for LM Studio usage
+
     
     agent_config = AgentConfig(
         name="BioDockify AI",
