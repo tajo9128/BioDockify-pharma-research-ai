@@ -58,7 +58,23 @@ export const ResearchSettings: React.FC<ResearchSettingsProps> = ({ settings, on
         updateProgress({ status: 'testing', progress: 20, message: 'Testing...', details: '' });
 
         try {
-            const result = await api.testConnection(serviceType, provider, key || '', undefined, undefined);
+            // Construct the provider config
+            const config: any = {
+                ai_provider: {
+                    mode: provider,
+                }
+            };
+
+            // Map keys
+            if (provider === 'brave') {
+                config.ai_provider.brave_key = key;
+            } else if (provider === 'serper') {
+                config.ai_provider.serper_key = key;
+            } else if (provider === 'bohrium') {
+                config.ai_provider.bohrium_url = key; // key is used as URL for bohrium in this context based on usage
+            }
+
+            const result = await api.testConnection(config);
             if (result.status === 'success') {
                 updateProgress({ status: 'success', progress: 100, message: 'PASSED', details: result.message });
             } else {

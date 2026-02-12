@@ -28,7 +28,7 @@ from dataclasses import asdict
 app = FastAPI(
     title="BioDockify API",
     description="Backend for BioDockify Pharma Research AI",
-    version="v2.6.6"
+    version="v2.6.7"
 )
 
 # Register NanoBot Hybrid Agent Routes
