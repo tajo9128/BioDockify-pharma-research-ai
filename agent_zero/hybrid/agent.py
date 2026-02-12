@@ -10,7 +10,10 @@ Combines:
 import asyncio
 import json
 import logging
+from datetime import datetime, timezone
 from typing import Any, Callable, Coroutine, List, Optional
+
+from nanobot.models.heartbeat_schema import Heartbeat
 
 from modules.llm.factory import LLMFactory
 from orchestration.planner.orchestrator import OrchestratorConfig
@@ -50,6 +53,7 @@ class HybridAgent:
         self.config = config
         self.context = AgentContext(config=config)
         self.memory = HybridMemory(config.workspace_path, config.memory_subdir)
+        self.on_heartbeat: Optional[Callable[[Heartbeat], Coroutine[Any, Any, None]]] = None
         
         # Unified LLM Interface
         self.llm_adapter = LLMFactory.get_adapter(
@@ -151,7 +155,9 @@ class HybridAgent:
             
             "deep_drive_analyze": lambda p: get_deep_drive().analyze_authorship(p.get("text"), p.get("task", "clef24")),
             "scholar_complete": lambda p: get_scholar_copilot().complete_text(p.get("text")),
-            "summarize_content": self._tool_summarize_content
+            "summarize_content": self._tool_summarize_content,
+            "report_progress": self._tool_report_progress,
+            "declare_task": self._tool_declare_task
         })
         
         self.skills = {} # Will load skills later
@@ -162,6 +168,11 @@ class HybridAgent:
         self._channels_started = False
         self.repair_attempts = {} # Track repairs per error
         self.max_repairs_per_error = 3
+        
+        # Internal Supervision state
+        self._current_progress = 0.0
+        self._current_task_type = "general"
+        self._current_task_id = "initialization"
 
     async def _handle_external_trigger(self, message: str):
         """Handle input from Cron or Channels."""
@@ -407,6 +418,65 @@ class HybridAgent:
         prompt = f"Please provide a concise summary of the following content:\n\n{content_to_summarize[:10000]}"
         return await self.llm_adapter.generate(prompt)
 
+    async def _tool_report_progress(self, params: dict) -> str:
+        """Tool for the agent to explicitly report research progress."""
+        progress = params.get("percent")
+        task_id = params.get("task_id") or self._current_task_id
+        task_type = params.get("task_type") or self._current_task_type
+        message = params.get("message", "Progress update")
+
+        if progress is not None:
+            try:
+                self._current_progress = float(progress)
+            except ValueError:
+                return "Error: progress must be a number"
+
+        if task_id: self._current_task_id = task_id
+        if task_type: self._current_task_type = task_type
+
+        await self._emit_heartbeat(status="running", activity=message)
+        return f"Progress reported: {self._current_progress}% for task {self._current_task_id}"
+
+    async def _tool_declare_task(self, params: dict) -> str:
+        """Tool to formally declare task metadata before execution."""
+        task_id = params.get("task_id")
+        task_type = params.get("task_type")
+        
+        if not task_id or not task_type:
+            return "Error: 'task_id' and 'task_type' are required for task declaration."
+            
+        self._current_task_id = task_id
+        self._current_task_type = task_type
+        self._current_progress = 0.0
+        
+        # Store metadata for heartbeat context
+        self.loop_data.data["task_metadata"] = params
+        
+        await self._emit_heartbeat(status="running", activity=f"Task Declared: {task_id}")
+        return f"Task {task_id} declared successfully. Ready for execution."
+
+    async def _emit_heartbeat(self, status: str = "running", activity: str = "Idle"):
+        """Emit a structured heartbeat for the supervisor."""
+        if not self.on_heartbeat:
+            return
+
+        # Ensure we have a valid task_id
+        task_id = self._current_task_id or "idle"
+        
+        hb = Heartbeat(
+            task_id=task_id,
+            task_type=self._current_task_type,
+            status=status,
+            progress_percent=self._current_progress,
+            activity_state=activity,
+            timestamp=datetime.now(timezone.utc)
+        )
+        
+        try:
+            await self.on_heartbeat(hb)
+        except Exception as e:
+            logger.error(f"Failed to emit heartbeat: {e}")
+
     async def monologue(self):
         """
         The Core Loop (Agent Zero Style).
@@ -427,6 +497,10 @@ class HybridAgent:
                 # 3. Process Response (Tool Calls vs Answer)
                 if self._is_tool_call(response):
                     try:
+                        # Extract tool name for activity state
+                        activity = f"Executing tool: {response[:50]}..."
+                        await self._emit_heartbeat(status="running", activity=activity)
+                        
                         result = await self._execute_tool(response)
                         await self.memory.add_memory(f"Tool Result: {result}", area=MemoryArea.FRAGMENTS)
                         self.loop_data.history.append({"role": "system", "content": f"Tool Output: {result}"})
@@ -498,7 +572,19 @@ class HybridAgent:
 
     async def _build_prompt(self) -> str:
         """Construct the prompt from context, memory, and history."""
-        history_text = "\n".join([f"{msg['role'].upper()}: {msg['content']}" for msg in self.loop_data.history[-10:]])
+        
+        # Performance Pruning
+        if self.config.performance_profile == "low":
+            # Low Resource Mode: Only last 3 messages
+            history_slice = self.loop_data.history[-3:]
+        elif self.config.performance_profile == "moderate":
+            # Moderate Resource Mode: Last 6 messages (4k context)
+            history_slice = self.loop_data.history[-6:]
+        else:
+            # High Resource Mode: Last 10 messages
+            history_slice = self.loop_data.history[-10:]
+            
+        history_text = "\n".join([f"{msg['role'].upper()}: {msg['content']}" for msg in history_slice])
         
         # Semantic Memory Recall
         query = self.loop_data.user_message or (self.loop_data.history[-1]['content'] if self.loop_data.history else "")
@@ -596,7 +682,7 @@ def create_hybrid_agent(workspace: str = "./data/workspace") -> HybridAgent:
     cfg = load_config()
     ai_config = cfg.get("ai_provider", {})
     
-    mode = ai_config.get("mode", "lm_studio")
+    mode = ai_config.get("mode", "openai")
     
     # Map settings to OrchestratorConfig
     llm_config = OrchestratorConfig(
@@ -608,6 +694,26 @@ def create_hybrid_agent(workspace: str = "./data/workspace") -> HybridAgent:
         groq_key=ai_config.get("groq_key"),
         openrouter_key=ai_config.get("openrouter_key"),
         deepseek_key=ai_config.get("deepseek_key"),
+        
+        # Extended Providers
+        mistral_key=ai_config.get("mistral_key"),
+        mistral_model=ai_config.get("mistral_model"),
+        venice_key=ai_config.get("venice_key"),
+        venice_model=ai_config.get("venice_model"),
+        kimi_key=ai_config.get("kimi_key"),
+        kimi_model=ai_config.get("kimi_model"),
+
+        # Azure OpenAI
+        azure_endpoint=ai_config.get("azure_endpoint"),
+        azure_deployment=ai_config.get("azure_deployment"),
+        azure_key=ai_config.get("azure_key"),
+        azure_api_version=ai_config.get("azure_api_version", "2024-02-15-preview"),
+
+        # AWS Bedrock
+        aws_access_key=ai_config.get("aws_access_key"),
+        aws_secret_key=ai_config.get("aws_secret_key"),
+        aws_region_name=ai_config.get("aws_region_name", "us-east-1"),
+        aws_model_id=ai_config.get("aws_model_id"),
         
         # Custom/Local fields
         custom_base_url=ai_config.get("custom_base_url") or ai_config.get("lm_studio_url") or "http://localhost:1234/v1",
@@ -625,7 +731,8 @@ def create_hybrid_agent(workspace: str = "./data/workspace") -> HybridAgent:
     
     agent_config = AgentConfig(
         name="BioDockify AI",
-        workspace_path=workspace
+        workspace_path=workspace,
+        performance_profile=cfg.get("ai_advanced", {}).get("performance_profile", "high")
     )
     
     return HybridAgent(agent_config, llm_config)

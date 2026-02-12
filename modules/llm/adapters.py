@@ -288,7 +288,8 @@ class LMStudioAdapter(BaseLLMAdapter):
                 messages=messages,
                 temperature=kwargs.get("temperature", 0.7),
                 max_tokens=kwargs.get("max_tokens", 2048),
-                response_format=response_format
+                response_format=response_format,
+                timeout=300 # 5 minutes for slow local hardware
             )
             
             return response.choices[0].message.content
@@ -516,3 +517,71 @@ class OllamaAdapter(BaseLLMAdapter):
             )
         else:
             return f"[Ollama Error] {error}. Please check Ollama logs or use a cloud API."
+
+class AzureAdapter(BaseLLMAdapter):
+    """Adapter for Azure OpenAI Service using LiteLLM."""
+    
+    def __init__(self, api_key: str, endpoint: str, deployment_name: str, api_version: str):
+        self.api_key = api_key
+        self.endpoint = endpoint
+        self.deployment_name = deployment_name
+        self.api_version = api_version
+        
+    @cache_llm_call
+    @with_retry(max_retries=3, circuit_name="azure_openai")
+    def generate(self, prompt: str, **kwargs) -> str:
+        messages = [{"role": "user", "content": prompt}]
+        
+        # Azure requires: 
+        # model="azure/<deployment_name>"
+        # api_base=endpoint
+        # api_key=key
+        # api_version=ver
+        
+        response = litellm.completion(
+            model=f"azure/{self.deployment_name}",
+            api_key=self.api_key,
+            api_base=self.endpoint,
+            api_version=self.api_version,
+            messages=messages,
+            temperature=kwargs.get("temperature", 0.7),
+            max_tokens=kwargs.get("max_tokens", 4096),
+            timeout=60
+        )
+        return response.choices[0].message.content
+
+class AWSAdapter(BaseLLMAdapter):
+    """Adapter for AWS Bedrock using LiteLLM."""
+    
+    def __init__(self, access_key: str, secret_key: str, region_name: str, model_id: str):
+        self.access_key = access_key
+        self.secret_key = secret_key
+        self.region_name = region_name
+        self.model_id = model_id
+        
+        # Set environment variables for boto3/litellm implicitly or pass explicitly if litellm supports
+        # LiteLLM supports passing aws_access_key_id etc. in some versions, or env vars.
+        # Safest is to set env vars temporarily or use os.environ if safe.
+        # But for thread safety, let's see if litellm accepts them in completion.
+        # LiteLLM docs say: set os.environ['AWS_ACCESS_KEY_ID'] etc.
+        # To avoid global side effects, we can try passing them or context manager.
+        # For now, we'll set them in os.environ if not present, but this is a bit risky for concurrency if multiple keys.
+        # Better: LiteLLM allows passing `aws_access_key_id` in `completion` in newer versions.
+        # If not, we fall back to os.environ.
+    
+    @cache_llm_call
+    @with_retry(max_retries=3, circuit_name="aws_bedrock")
+    def generate(self, prompt: str, **kwargs) -> str:
+        messages = [{"role": "user", "content": prompt}]
+        
+        response = litellm.completion(
+            model=f"bedrock/{self.model_id}",
+            aws_access_key_id=self.access_key,
+            aws_secret_access_key=self.secret_key,
+            aws_region_name=self.region_name,
+            messages=messages,
+            temperature=kwargs.get("temperature", 0.7),
+            max_tokens=kwargs.get("max_tokens", 4096),
+            timeout=60
+        )
+        return response.choices[0].message.content

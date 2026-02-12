@@ -10,5 +10,29 @@
       }
     },
     "result": "BACE1 is a key target."
+  },
+  {
+    "timestamp": "2026-02-12T09:24:14.153241",
+    "phd_stage": "proposal",
+    "goal": "Find Alzheimer targets",
+    "task": {
+      "task": "search",
+      "params": {
+        "q": "Alzheimer target"
+      }
+    },
+    "result": "BACE1 is a key target."
+  },
+  {
+    "timestamp": "2026-02-12T09:40:07.431692",
+    "phd_stage": "proposal",
+    "goal": "Find Alzheimer targets",
+    "task": {
+      "task": "search",
+      "params": {
+        "q": "Alzheimer target"
+      }
+    },
+    "result": "BACE1 is a key target."
   }
 ]

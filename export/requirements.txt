@@ -22,3 +22,6 @@ requests>=2.31.0
 # - Windows: MiKTeX (https://miktex.org) or TeX Live
 # - macOS: MacTeX (https://www.tug.org/mactex/)
 # - Linux: texlive-latex-base (sudo apt-get install texlive-latex-base)
+
+# VS Code / PPTX generation
+python-pptx>=0.6.21

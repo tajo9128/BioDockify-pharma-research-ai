@@ -58,6 +58,8 @@ export interface ReportRequest {
   template: 'full' | 'summary' | 'executive';
 }
 
+export type UserRole = 'PhD Student' | 'PG Student' | 'Senior Researcher' | 'Industry Scientist' | 'Researcher' | 'Student' | 'Lab Tech' | 'Clinician' | 'Faculty' | 'Receptionist';
+
 export interface Settings {
   project: {
     name: string;
@@ -94,7 +96,7 @@ export interface Settings {
     discord?: { enabled: boolean; token: string; allow_from: string[]; gateway_url: string };
   };
   ai_provider: {
-    mode: 'google' | 'openai' | 'anthropic' | 'deepseek' | 'openrouter' | 'groq' | 'huggingface' | 'lm_studio' | 'ollama' | 'glm' | 'kimi' | 'custom' | 'surfsense';
+    mode: 'google' | 'openai' | 'anthropic' | 'deepseek' | 'openrouter' | 'groq' | 'huggingface' | 'lm_studio' | 'ollama' | 'glm' | 'kimi' | 'custom' | 'surfsense' | 'azure' | 'aws' | 'mistral' | 'venice';
 
     // LM Studio (Local)
     lm_studio_url?: string;
@@ -115,12 +117,30 @@ export interface Settings {
     deepseek_model?: string;
     glm_key?: string;
     glm_model?: string;
-    kimi_key?: string;
-    kimi_model?: string;
     openai_key?: string;
     openai_model?: string;
     anthropic_key?: string;
     anthropic_model?: string;
+
+    // NEW: Expanded Providers
+    mistral_key?: string;
+    mistral_model?: string;
+    venice_key?: string;
+    venice_model?: string;
+    kimi_key?: string;
+    kimi_model?: string;
+
+    // NEW: Cloud Enterprise
+    azure_endpoint?: string;
+    azure_deployment?: string;
+    azure_key?: string;
+    azure_api_version?: string;
+
+    aws_access_key?: string;
+    aws_secret_key?: string;
+    aws_region_name?: string;
+    aws_model_id?: string;
+
     // Custom/Paid API (OpenAI-compatible)
     custom_provider?: string;
     custom_base_url?: string;
@@ -175,13 +195,14 @@ export interface Settings {
     provider?: string;
     endpoint?: string;
     key?: string;
+    performance_profile?: string; // "high", "moderate", "low"
   };
   persona: {
     name?: string;
     email?: string;
     organization?: string;
     department?: string;
-    role: 'PhD Student' | 'PG Student' | 'Senior Researcher' | 'Industry Scientist';
+    roles: UserRole[];
     strictness: 'exploratory' | 'balanced' | 'conservative';
     introduction: string;
     research_focus: string;
@@ -206,6 +227,7 @@ export interface ConnectionTest {
   type: 'llm' | 'database' | 'elsevier' | 'bohrium' | 'brave';
   status: 'success' | 'error' | 'warning';
   message: string;
+  success?: boolean; // For compatibility
 }
 
 
@@ -278,8 +300,8 @@ export const api = {
   getResults: (taskId: string) =>
     apiRequest<ResearchResults>(`/research/${taskId}/results`),
 
-  agentChat: (message: string, mode: 'chat' | 'semi-autonomous' | 'autonomous' | 'thesis_writer' | 'review_writer' | 'research_writer' = 'chat') =>
-    apiRequest<{ reply: string; provider: string }>('/agent/chat', {
+  agentChat: (message: string, mode: 'lite' | 'hybrid' = 'lite') =>
+    apiRequest<{ reply: string; provider: string; enhanced?: boolean }>('/agent/chat', {
       method: 'POST',
       body: JSON.stringify({ message, mode })
     }),
@@ -331,10 +353,10 @@ export const api = {
     }),
 
   // Settings endpoints
-  testConnection: (serviceType: 'llm' | 'elsevier' | 'bohrium' | 'brave', provider?: string, key?: string, baseUrl?: string, model?: string) =>
+  testConnection: (config: any) =>
     apiRequest<ConnectionTest>('/settings/test', {
       method: 'POST',
-      body: JSON.stringify({ service_type: serviceType, provider, key, base_url: baseUrl, model })
+      body: JSON.stringify(config)
     }),
 
 

@@ -38,6 +38,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Install heavy requirements separately (index-url is in the file)
 RUN pip install --no-cache-dir -r requirements_heavy.txt --extra-index-url https://download.pytorch.org/whl/cpu
 
+COPY agent_zero/requirements_pharma.txt ./
+# Install Pharma Intelligence Stack
+RUN pip install --no-cache-dir -r requirements_pharma.txt
+
 # ── CRITICAL: Strip the venv to reclaim ~2GB+ of space ──
 # 1. Remove cache and tests
 RUN find /opt/venv -type d -name '__pycache__' -exec rm -rf {} + 2>/dev/null; \
@@ -156,8 +160,10 @@ environment=PORT="3001",HOSTNAME="0.0.0.0",NODE_ENV="production" \n\
 ' > /etc/supervisor/conf.d/biodockify.conf
 
 # Startup Scripts
+LABEL version="v2.6.2"
+LABEL description="BioDockify - Pharma Research AI"
 RUN echo '#!/bin/bash \n\
-echo "BioDockify v2.6.0 - Optimized Launch" \n\
+echo "BioDockify v2.6.2 - Optimized Launch" \n\
 echo "Node Version: $(node -v)" \n\
 echo "Node Path: $(which node)" \n\
 mkdir -p /app/data \n\

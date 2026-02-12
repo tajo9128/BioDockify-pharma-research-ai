@@ -25,5 +25,15 @@ This skill provides a foundation for forensic text analysis within the BioDockif
 # Usage examples pending specific module integration
 ```
 
+## 🏗️ Structure and Function (Legacy Forensics)
+
+The Deep Drive skill integrates the core documentation and logic from the PAN Code repository. Its primary functional mechanism is the `plagdet_score`, which is structured to evaluate:
+
+1.  **Recall**: Ability to identify all instances of reused text.
+2.  **Precision**: Accuracy in distinguishing between original and reused content.
+3.  **Granularity**: Measuring if detection occurred at the appropriate hierarchical level.
+
+These functions allow Agent Zero Hybrid to perform complex **Authorship Attribution** and rank detection algorithms with academic rigor.
+
 ## Note
 This skill is a direct clone of the PAN Code repository. Performance and results depend on the specific forensic models used.

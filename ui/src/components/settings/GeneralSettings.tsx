@@ -1,6 +1,6 @@
 import React from 'react';
 import { Settings } from '@/lib/api';
-import { UserCircle, Building2, FlaskConical, Bot } from 'lucide-react';
+import { UserCircle, Building2, FlaskConical, Bot, Check } from 'lucide-react';
 
 interface GeneralSettingsProps {
     settings: Settings;
@@ -123,6 +123,43 @@ export const GeneralSettings: React.FC<GeneralSettingsProps> = ({ settings, onSe
                                 className="w-full bg-slate-950 border border-slate-800 rounded p-2 text-sm text-white focus:border-indigo-500/50 focus:outline-none"
                                 placeholder="Molecular Biology"
                             />
+                        </div>
+                    </div>
+                    <div>
+                        <label className="text-xs text-slate-500 uppercase block mb-3 pl-1">Professional Roles (Select all that apply)</label>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                            {[
+                                { id: 'PhD Student', label: 'PhD Student' },
+                                { id: 'PG Student', label: 'PG Student' },
+                                { id: 'Faculty', label: 'Faculty' },
+                                { id: 'Industry Scientist', label: 'Industry Scientist' },
+                                { id: 'Senior Researcher', label: 'Senior Researcher' },
+                                { id: 'Receptionist', label: 'Receptionist' }
+                            ].map(role => {
+                                const isSelected = settings.persona?.roles?.includes(role.id as any);
+                                return (
+                                    <button
+                                        key={role.id}
+                                        type="button"
+                                        onClick={() => {
+                                            const currentRoles = settings.persona?.roles || [];
+                                            const newRoles = isSelected
+                                                ? currentRoles.filter(r => r !== role.id)
+                                                : [...currentRoles, role.id];
+                                            onSettingChange('persona', { ...settings.persona, roles: newRoles });
+                                        }}
+                                        className={`flex items-center p-3 rounded-lg border transition-all ${isSelected
+                                            ? 'bg-indigo-500/10 border-indigo-500 text-white ring-1 ring-indigo-500/30'
+                                            : 'bg-slate-950 border-slate-800 text-slate-500 hover:border-slate-700'
+                                            }`}
+                                    >
+                                        <div className={`w-4 h-4 rounded border mr-3 flex items-center justify-center transition-colors ${isSelected ? 'bg-indigo-500 border-indigo-500' : 'bg-slate-900 border-slate-700'}`}>
+                                            {isSelected && <Check className="w-3 h-3 text-white" />}
+                                        </div>
+                                        <span className="text-sm font-medium">{role.label}</span>
+                                    </button>
+                                );
+                            })}
                         </div>
                     </div>
                     <div>

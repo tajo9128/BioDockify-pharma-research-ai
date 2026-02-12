@@ -39,6 +39,7 @@ class AgentConfig:
     ssh_port: int = 22
     ssh_user: str = "root"
     ssh_pass: str = ""
+    performance_profile: str = "high" # "high" or "low"
     
 class AgentContext:
     _contexts: dict[str, "AgentContext"] = {}

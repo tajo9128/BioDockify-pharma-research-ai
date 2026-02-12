@@ -244,7 +244,8 @@ DEFAULT_CONFIG = {
 
     # SECTION E: API & AI SETTINGS
     "ai_provider": {
-        "primary_model": "google",
+        "mode": "auto",        # Default to Auto-Detect
+        "primary_model": "openai", # Default to Paid API standard
         "cloud_fallback": True,
         
         # LM Studio
@@ -257,6 +258,31 @@ DEFAULT_CONFIG = {
         "glm_key": "",
         "elsevier_key": "",
         "pubmed_email": "",
+        "item_key": "",     # Generic Item Key (not used but reserved)
+        
+        # Specific Providers
+        "mistral_key": "",
+        "mistral_model": "mistral-large-latest",
+        "venice_key": "",
+        "venice_model": "llama-3-70b",
+        "kimi_key": "",
+        "kimi_model": "moonshot-v1-8k",
+        "deepseek_key": "", # Already exists but grouping related keys
+        "deepseek_model": "deepseek-chat",
+        
+        # Azure OpenAI
+        "azure_endpoint": "",
+        "azure_deployment": "",
+        "azure_key": "",
+        "azure_api_version": "2024-02-15-preview",
+
+        # AWS Bedrock
+        "aws_access_key": "",
+        "aws_secret_key": "",
+        "aws_region_name": "us-east-1",
+        "aws_model_id": "anthropic.claude-3-sonnet-20240229-v1:0",
+
+        # Custom / Universal
         "custom_key": "",
         "custom_base_url": "", 
         "custom_model": "gpt-3.5-turbo",
@@ -269,6 +295,7 @@ DEFAULT_CONFIG = {
     
     # NEW: Advanced Hardware Controls
     "ai_advanced": {
+        "performance_profile": "high", # "high", "moderate", "low"
         "context_window": 8192,
         "gpu_layers": -1,
         "thread_count": 8
@@ -276,7 +303,7 @@ DEFAULT_CONFIG = {
     
     # NEW: User Persona
     "persona": {
-        "role": "PhD Student",
+        "roles": ["PhD Student"], # Updated from 'role' to 'roles'
         "strictness": "conservative",
         "introduction": "",
         "research_focus": ""
@@ -304,7 +331,7 @@ DEFAULT_CONFIG = {
         "pause_on_battery": True,
         "max_cpu_percent": 80,
         "log_level": "INFO",
-        "version": "2.4.9"
+        "version": "2.6.2" # Bumped version for config migration
     }
 }
 
@@ -368,7 +395,7 @@ class ConfigLoader:
     def _resolve_auto_mode(self, config: Dict[str, Any]):
         """
         Resolves 'auto' mode to a specific provider based on available keys.
-        Logic: Google -> OpenRouter -> HuggingFace -> Custom -> LM Studio
+        Logic: Google -> OpenRouter -> HuggingFace -> Custom -> OpenAI (Fallback)
         """
         ai = config.get("ai_provider", {})
         if ai.get("mode") == "auto":
@@ -385,9 +412,10 @@ class ConfigLoader:
                 config["ai_provider"]["mode"] = "custom"
                 print("[*] Auto-Mode: Selected 'custom' (Key + URL detected)")
             else:
-                # Fallback to LM Studio (user must start manually)
-                config["ai_provider"]["mode"] = "lm_studio"
-                print("[*] Auto-Mode: Selected 'lm_studio' (Local, Please ensure LM Studio is running)")
+                # Fallback to OpenAI (standard Paid API)
+                # This ensures we don't default to specific vendor unless configured
+                config["ai_provider"]["mode"] = "openai"
+                print("[*] Auto-Mode: Defaulting to 'openai'. Please configure API keys.")
 
 
     def save_config(self, new_config: Dict[str, Any]) -> bool:
@@ -478,8 +506,20 @@ class ConfigLoader:
 
     def _migrate_config(self, config: Dict) -> Dict:
         """
-        Handles version migration.
+        Handles version migration and schema updates.
         """
+        # Migrate persona.role -> persona.roles
+        persona = config.get("persona", {})
+        if "role" in persona and "roles" not in persona:
+            role = persona.get("role")
+            if role:
+                persona["roles"] = [role]
+            else:
+                persona["roles"] = ["PhD Student"]
+            # Remove old key
+            persona.pop("role", None)
+            print(f"[*] Migrated legacy persona role '{role}' to roles list.")
+            
         current_version = config.get("system", {}).get("version", "0.0.0")
         target_version = DEFAULT_CONFIG["system"]["version"]
         

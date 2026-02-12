@@ -47,6 +47,7 @@ class AgentDefaults(BaseModel):
     max_tokens: int = 8192
     temperature: float = 0.7
     max_tool_iterations: int = 20
+    performance_profile: str = "high"  # Options: "high" (default), "moderate" (4k context), "low" (2k context)
 
 
 class AgentsConfig(BaseModel):
@@ -102,6 +103,14 @@ class ToolsConfig(BaseModel):
     restrict_to_workspace: bool = False  # If true, restrict all tool access to workspace directory
 
 
+class PersonaConfig(BaseModel):
+    """Configuration for user persona."""
+    roles: list[str] = Field(default_factory=lambda: ["PhD Student"])
+    strictness: str = "conservative"
+    introduction: str = ""
+    research_focus: str = ""
+
+
 class Config(BaseSettings):
     """Root configuration for nanobot."""
     agents: AgentsConfig = Field(default_factory=AgentsConfig)
@@ -109,6 +118,7 @@ class Config(BaseSettings):
     providers: ProvidersConfig = Field(default_factory=ProvidersConfig)
     gateway: GatewayConfig = Field(default_factory=GatewayConfig)
     tools: ToolsConfig = Field(default_factory=ToolsConfig)
+    persona: PersonaConfig = Field(default_factory=PersonaConfig)
     
     @property
     def workspace_path(self) -> Path:

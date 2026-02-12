@@ -51,6 +51,26 @@ class OrchestratorConfig(BaseModel):
     groq_key: Optional[str] = Field(default=None)
     deepseek_key: Optional[str] = Field(default=None)
     anthropic_key: Optional[str] = Field(default=None)
+    
+    # Specific Keys
+    mistral_key: Optional[str] = Field(default=None)
+    mistral_model: Optional[str] = Field(default=None)
+    venice_key: Optional[str] = Field(default=None)
+    venice_model: Optional[str] = Field(default=None)
+    kimi_key: Optional[str] = Field(default=None)
+    kimi_model: Optional[str] = Field(default=None)
+
+    # Azure OpenAI
+    azure_endpoint: Optional[str] = Field(default=None)
+    azure_deployment: Optional[str] = Field(default=None)
+    azure_key: Optional[str] = Field(default=None)
+    azure_api_version: str = Field(default="2024-02-15-preview")
+
+    # AWS Bedrock
+    aws_access_key: Optional[str] = Field(default=None)
+    aws_secret_key: Optional[str] = Field(default=None)
+    aws_region_name: str = Field(default="us-east-1")
+    aws_model_id: str = Field(default="anthropic.claude-3-sonnet-20240229-v1:0")
 
     custom_key: Optional[str] = Field(default=None)
     custom_base_url: Optional[str] = Field(default=None)
@@ -62,6 +82,9 @@ class OrchestratorConfig(BaseModel):
     research_type: str = Field(default="PhD Thesis")
     disease_context: str = Field(default="General")
     research_stage: str = Field(default="Literature Review")
+    
+    # Advanced / Hardware
+    performance_profile: str = Field(default="high", description="'high', 'moderate', or 'low'")
     
     # 3. Agent AI Behavior (Section B)
     agent_mode: str = Field(default="semi-autonomous")
@@ -248,7 +271,10 @@ class ResearchOrchestrator:
                 literature_sources=lit.get("sources", []),
                 year_range=lit.get("year_range", 10),
 
-                novelty_strictness=lit.get("novelty_strictness", "medium")
+                novelty_strictness=lit.get("novelty_strictness", "medium"),
+                
+                # Hardware Profile
+                performance_profile=runtime_cfg.get("ai_advanced", {}).get("performance_profile", "high")
             )
 
         # Initialize Brain Components (Phase 2)

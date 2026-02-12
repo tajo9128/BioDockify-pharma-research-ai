@@ -40,6 +40,26 @@ export const SystemSettings: React.FC<SystemSettingsProps> = ({ settings, onSett
                             <Cpu className="w-4 h-4 text-blue-400" />
                             <h4 className="text-sm font-bold text-slate-300">Hardware Resource Limits</h4>
                         </div>
+
+                        {/* Performance Profile */}
+                        <div className="mb-4 pb-4 border-b border-slate-800">
+                            <div className="flex items-center justify-between mb-2">
+                                <label className="text-sm font-medium text-slate-300">Performance Profile</label>
+                                <select
+                                    value={settings.ai_advanced?.performance_profile || 'high'}
+                                    onChange={(e) => onSettingChange && onSettingChange('ai_advanced', { ...settings.ai_advanced, performance_profile: e.target.value })}
+                                    className="bg-slate-900 border border-slate-700 rounded px-3 py-1 text-xs text-white focus:outline-none focus:border-blue-500"
+                                >
+                                    <option value="low">Low (2k Context - 8GB RAM)</option>
+                                    <option value="moderate">Moderate (4k Context - 16GB RAM)</option>
+                                    <option value="high">High (8k Context - 32GB+ RAM)</option>
+                                </select>
+                            </div>
+                            <p className="text-xs text-slate-500">
+                                Adjusts memory optimization strategy. Lower profiles prune conversation history more aggressively.
+                            </p>
+                        </div>
+
                         <div className="flex items-center justify-between">
                             <span className="text-sm text-slate-400">Max CPU Usage (%)</span>
                             <div className="flex items-center gap-3">

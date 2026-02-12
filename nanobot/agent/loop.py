@@ -23,6 +23,7 @@ from nanobot.agent.skills import SkillsLoader
 from nanobot.agent.tools.cron import CronTool
 from nanobot.agent.subagent import SubagentManager
 from nanobot.session.manager import SessionManager
+from nanobot.agent.tools.faculty import GrantForgeTool, SyllabusArchitectTool, NoteGathererTool, SlideDeckBuilderTool
 
 
 class AgentLoop:
@@ -111,6 +112,12 @@ class AgentLoop:
         # Cron tool (for scheduling)
         if self.cron_service:
             self.tools.register(CronTool(self.cron_service))
+
+        # Faculty Tools
+        self.tools.register(GrantForgeTool())
+        self.tools.register(SyllabusArchitectTool())
+        self.tools.register(NoteGathererTool())
+        self.tools.register(SlideDeckBuilderTool())
     
     async def run(self) -> None:
         """Run the agent loop, processing messages from the bus."""

@@ -196,80 +196,14 @@ While you can run locally, adding a **Free or Paid API Key** unlocks:
         }
     };
 
+    // Agent Mode State
+    const [agentMode, setAgentMode] = useState<'lite' | 'hybrid'>('lite');
+
     const handleSend = async () => {
         if (!input.trim()) return;
 
         // Check for first-time API prompt
         await checkFirstTimeApiPrompt();
-
-        // Check if any AI provider is configured (including LM Studio)
-        try {
-            const settings = await api.getSettings();
-            const providerConfig = settings?.ai_provider || {};
-
-            // Check for cloud providers
-            const hasCloudProvider = !!(
-                providerConfig.google_key ||
-                providerConfig.openrouter_key ||
-                providerConfig.huggingface_key ||
-                providerConfig.custom_key ||
-                providerConfig.glm_key ||
-                providerConfig.groq_key
-            );
-
-            // Check for LM Studio (local AI)
-            const rawLmUrl = providerConfig.lm_studio_url || 'http://localhost:1234/v1/models';
-            const baseLmUrl = rawLmUrl.replace(/\/models\/?$/, ''); // Strip /models for safety
-
-            let hasLmStudio = false;
-
-            if (providerConfig.mode === 'lm_studio' || !hasCloudProvider) {
-                try {
-                    const { universalFetch } = await import('@/lib/services/universal-fetch');
-                    const lmCheck = await universalFetch(`${baseLmUrl}/models`, {
-                        method: 'GET',
-                        timeout: 3000
-                    });
-                    hasLmStudio = lmCheck.ok && lmCheck.data?.data?.length > 0;
-                } catch (e) {
-                    console.log('[AgentChat] LM Studio check failed:', e);
-                }
-            }
-
-            // If no provider available, show helpful message
-            if (!hasCloudProvider && !hasLmStudio) {
-                const userMsg: Message = { role: 'user', content: input, timestamp: new Date() };
-                setMessages(prev => [...prev, userMsg]);
-                setInput('');
-
-                setMessages(prev => [...prev, {
-                    role: 'system',
-                    content: `⚠️ **No AI Provider Available**
-
-**LM Studio** is not running or no model is loaded.
-
-**Quick Fix Options:**
-
-**Option 1: Use LM Studio (Recommended for privacy)**
-1. Open LM Studio application
-2. Load any model (e.g., Llama, Mistral, Qwen)
-3. Enable "Local Server" (port 1234)
-4. Try again
-
-**Option 2: Use Free Cloud API**
-Go to **Settings → AI & Brain** and add one of these free APIs:
-• **Google Gemini** - https://ai.google.dev/
-• **Groq** - https://console.groq.com/keys
-• **HuggingFace** - https://huggingface.co/settings/tokens
-
-After configuring, try again.`,
-                    timestamp: new Date()
-                }]);
-                return;
-            }
-        } catch (e) {
-            console.warn("Failed to check provider configuration:", e);
-        }
 
         const userMsg: Message = { role: 'user', content: input, timestamp: new Date() };
         setMessages(prev => [...prev, userMsg]);
@@ -289,48 +223,54 @@ After configuring, try again.`,
         }
 
         setIsLoading(true);
-        setStatus('Thinking...');
+        setStatus(agentMode === 'hybrid' ? 'Reasoning...' : 'Thinking...');
 
         try {
-            // 1. Check Settings for Internet Research
+            // 1. Check Settings for Internet Research (Only relevant for Lite mode as Hybrid does its own)
             let context = "";
             let sourceUrl = "";
-            const needsResearch = lowerInput.includes('search') ||
-                lowerInput.includes('find') ||
-                lowerInput.includes('who') ||
-                lowerInput.includes('what is') ||
-                lowerInput.includes('latest');
+            if (agentMode === 'lite') {
+                const needsResearch = lowerInput.includes('search') ||
+                    lowerInput.includes('find') ||
+                    lowerInput.includes('who') ||
+                    lowerInput.includes('what is') ||
+                    lowerInput.includes('latest');
 
-            if (needsResearch) {
-                setStatus('Searching Web...');
-                const urls = await searchWeb(input);
-                if (urls.length > 0) {
-                    sourceUrl = urls[0];
-                    setStatus(`Reading ${new URL(sourceUrl).hostname}...`);
-                    try {
-                        const page = await fetchWebPage(sourceUrl);
-                        context = `[Context retrieved from Internet (${sourceUrl})]:\n${page.textContent.slice(0, 4000)}\n\n`;
-                    } catch (e) {
-                        console.warn("Retreival failed", e);
+                if (needsResearch) {
+                    setStatus('Searching Web...');
+                    const urls = await searchWeb(userMsg.content); // Use captured content
+                    if (urls.length > 0) {
+                        sourceUrl = urls[0];
+                        setStatus(`Reading ${new URL(sourceUrl).hostname}...`);
+                        try {
+                            const page = await fetchWebPage(sourceUrl);
+                            context = `[Context retrieved from Internet (${sourceUrl})]:\n${page.textContent.slice(0, 4000)}\n\n`;
+                        } catch (e) {
+                            console.warn("Retreival failed", e);
+                        }
                     }
                 }
             }
 
-            // 2. Prepare Prompt with Persona
+            // 2. Prepare Prompt with Persona (Only for Lite mode, Hybrid has its own prompt)
             let systemInstruction = "";
-            try {
-                const settings = await api.getSettings();
-                const roleId = settings?.persona?.role || 'pg_student';
-                const persona = getPersonaById(roleId);
-                systemInstruction = `[SYSTEM]: ${persona.systemPrompt}\n\n`;
-            } catch (e) {
-                console.warn("Failed to load persona", e);
+            if (agentMode === 'lite') {
+                try {
+                    const settings = await api.getSettings();
+                    const roleId = settings?.persona?.roles?.[0] || 'pg_student';
+                    const persona = getPersonaById(roleId);
+                    systemInstruction = `[SYSTEM]: ${persona.systemPrompt}\n\n`;
+                } catch (e) {
+                    console.warn("Failed to load persona", e);
+                }
             }
 
-            const finalPrompt = `${systemInstruction}${context}User Query: ${input}`;
+            const finalPrompt = agentMode === 'lite'
+                ? `${systemInstruction}${context}User Query: ${userMsg.content}`
+                : userMsg.content;
 
             setStatus('Generating Answer...');
-            const data = await api.agentChat(finalPrompt);
+            const data = await api.agentChat(finalPrompt, agentMode);
 
             // BioDockify AI JSON Parsing Logic
             let replyContent = data.reply;
@@ -346,9 +286,6 @@ After configuring, try again.`,
                         thoughts = parsed.thoughts;
                         replyContent = parsed.headline || parsed.action?.name || "Action executed.";
                         action = parsed.action;
-
-                        // If there is text in the action arguments, maybe use that as content?
-                        // For now, headline is the summary.
                     }
                 }
             } catch (e) {
@@ -370,59 +307,9 @@ After configuring, try again.`,
 
         } catch (error: any) {
             console.error("Chat error:", error);
-
-            // FALLBACK: Try Direct LM Studio Connection if Backend Failed
-            if (health.lmStudio === 'online') {
-                try {
-                    setStatus('Contacting LM Studio directly...');
-                    const lmRes = await fetch('http://localhost:1234/v1/chat/completions', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            model: "local-model", // LM Studio usually ignores this or uses loaded model
-                            messages: [
-                                { role: "system", content: "You are BioDockify AI, an expert research assistant." },
-                                ...messages.map(m => ({ role: m.role, content: m.content })),
-                                { role: "user", content: input } // Use the original input since we added it to messages state but haven't sent it? No, input is cleared.
-                                // Wait, handleSend adds userMsg to state at line 271.
-                                // We need to use 'userMsg' content which is 'input' captured before clearing.
-                                // Actually, 'messages' state might not have updated yet in this closure?
-                                // 'messages' is a const in this render. The 'prev' update is async.
-                                // But 'input' variable holds the text.
-                            ].filter(m => m.content) // Filter empty?
-                        })
-                    });
-
-                    if (lmRes.ok) {
-                        const lmData = await lmRes.json();
-                        const content = lmData.choices?.[0]?.message?.content || "No response.";
-
-                        setMessages(prev => [...prev, {
-                            role: 'assistant',
-                            content: content,
-                            timestamp: new Date(),
-                            source: "LM Studio (Direct)"
-                        }]);
-                        return; // Success handling
-                    }
-                } catch (lmError: any) {
-                    console.error("LM Studio direct fallback failed:", lmError);
-                    setMessages(prev => [...prev, {
-                        role: 'system',
-                        content: `⚠️ **Fallback Failed**\n\nLM Studio direct connection attempted but failed: ${lmError.message}`,
-                        timestamp: new Date()
-                    }]);
-                }
-            }
-
             setMessages(prev => [...prev, {
                 role: 'system',
-                content: `⚠️ **Connection Error**
-                
-Failed to reach BioDockify Backend.
-${health.lmStudio === 'online' ? 'Attempted direct LM Studio connection but failed.' : 'LM Studio also appears offline.'}
-
-Please check that your backend or LM Studio is running.`,
+                content: `⚠️ **Connection Error**\n\nFailed to reach BioDockify Backend: ${error.message}`,
                 timestamp: new Date()
             }]);
         } finally {
@@ -440,15 +327,28 @@ Please check that your backend or LM Studio is running.`,
 
             {/* Header */}
             <div className="h-16 border-b border-slate-800 flex items-center justify-between px-6 bg-slate-900/50 backdrop-blur-sm">
+
                 <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-purple-500/20">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-lg transition-colors ${agentMode === 'hybrid' ? 'bg-gradient-to-br from-indigo-600 to-purple-700 shadow-indigo-500/20' : 'bg-gradient-to-br from-teal-500 to-cyan-600 shadow-teal-500/20'}`}>
                         <Bot className="w-6 h-6 text-white" />
                     </div>
                     <div>
-                        <h2 className="font-bold text-lg tracking-tight">BioDockify AI</h2>
+                        <h2 className="font-bold text-lg tracking-tight">BioDockify Intelligence</h2>
                         <div className="flex items-center gap-2">
-                            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                            <span className="text-xs text-slate-400">Online • Role: Research Assistant</span>
+                            <div className="flex bg-slate-800/80 rounded-full p-0.5 border border-slate-700">
+                                <button
+                                    onClick={() => setAgentMode('lite')}
+                                    className={`px-3 py-1 text-[10px] uppercase font-bold tracking-wider rounded-full transition-all ${agentMode === 'lite' ? 'bg-teal-500 text-white shadow-sm' : 'text-slate-400 hover:text-slate-300'}`}
+                                >
+                                    BioDockify Lite
+                                </button>
+                                <button
+                                    onClick={() => setAgentMode('hybrid')}
+                                    className={`px-3 py-1 text-[10px] uppercase font-bold tracking-wider rounded-full transition-all ${agentMode === 'hybrid' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-300'}`}
+                                >
+                                    BioDockify AI
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -476,7 +376,7 @@ Please check that your backend or LM Studio is running.`,
                                     ? 'bg-red-900/20 border border-red-900/50 text-red-200'
                                     : 'bg-slate-900 border border-slate-800 text-slate-300 rounded-tl-sm'
                                 }`}>
-                                {/* Agent Zero: Thoughts Section */}
+                                {/* BioDockify AI: Thoughts Section */}
                                 {msg.thoughts && msg.thoughts.length > 0 && (
                                     <div className="mb-3 p-3 bg-black/20 rounded-lg border border-white/5">
                                         <div className="flex items-center gap-2 mb-2 text-xs font-bold text-indigo-400 uppercase tracking-wider">
@@ -490,10 +390,12 @@ Please check that your backend or LM Studio is running.`,
                                     </div>
                                 )}
 
-                                <h1 className="text-xl font-bold text-white tracking-tight flex items-center">
-                                    <Bot className="w-6 h-6 mr-3 text-teal-400 animate-pulse-soft" />
-                                    BioDockify AI
-                                    <span className="ml-3 text-xs font-mono bg-teal-500/10 text-teal-400 px-2 py-0.5 rounded border border-teal-500/20">v2.0</span>
+                                <h1 className="text-xl font-bold text-white tracking-tight flex items-center mb-2">
+                                    <Bot className={`w-6 h-6 mr-3 animate-pulse-soft ${msg.thoughts ? 'text-indigo-400' : 'text-teal-400'}`} />
+                                    {msg.thoughts ? "BioDockify AI" : "BioDockify AI Lite"}
+                                    <span className={`ml-3 text-xs font-mono px-2 py-0.5 rounded border ${msg.thoughts ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20' : 'bg-teal-500/10 text-teal-400 border-teal-500/20'}`}>
+                                        {msg.thoughts ? "RESEARCH ENGINE" : "COORDINATOR"}
+                                    </span>
                                 </h1>
                                 <p className="leading-relaxed whitespace-pre-wrap text-sm">{msg.content}</p>
 
@@ -549,20 +451,22 @@ Please check that your backend or LM Studio is running.`,
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                        placeholder="Ask BioDockify AI..."
-                        className="w-full bg-slate-900/50 border border-slate-800 rounded-xl py-4 pl-5 pr-14 text-slate-200 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all shadow-xl"
+                        placeholder={`Message ${agentMode === 'hybrid' ? 'BioDockify AI (Reasoning enabled)...' : 'BioDockify Lite (Fast tools)...'}`}
+                        className={`w-full bg-slate-900/50 border rounded-xl py-4 pl-5 pr-14 text-slate-200 placeholder:text-slate-500 focus:outline-none focus:ring-2 transition-all shadow-xl ${agentMode === 'hybrid' ? 'border-indigo-500/30 focus:ring-indigo-500/50 focus:border-indigo-500/50' : 'border-slate-800 focus:ring-teal-500/50 focus:border-teal-500/50'}`}
                         disabled={isLoading}
                     />
                     <button
                         onClick={handleSend}
                         disabled={!input.trim() || isLoading}
-                        className="absolute right-2 top-2 p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        className={`absolute right-2 top-2 p-2 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${agentMode === 'hybrid' ? 'bg-indigo-600 hover:bg-indigo-500' : 'bg-teal-600 hover:bg-teal-500'}`}
                     >
                         <Send className="w-4 h-4" />
                     </button>
                 </div>
                 <div className="mt-2 flex justify-center gap-4 text-[10px] text-slate-600 font-medium uppercase tracking-wider">
-                    <span>Model: {isLoading ? 'Busy' : 'Ready'}</span>
+                    <span className={agentMode === 'hybrid' ? 'text-indigo-400' : 'text-teal-400'}>
+                        {agentMode === 'hybrid' ? '🧠 40-Pillar Intelligence' : '⚡ Rapid Coordinator'}
+                    </span>
                     <span>•</span>
                     <span>Tools: Enabled</span>
                 </div>

@@ -8,6 +8,7 @@ from typing import Optional, Any
 from abc import ABC, abstractmethod
 
 from agent_zero.hybrid.agent import HybridAgent, create_hybrid_agent
+from nanobot.agent.receptionist import NanoBotReceptionist
 
 logger = logging.getLogger(__name__)
 
@@ -15,6 +16,9 @@ class BioDockifyAI:
     """
     Main AI Controller for BioDockify.
     Ensures single unified interface for all AI operations.
+    HIERARCHY:
+    1. User talks to NanoBot (Receptionist).
+    2. NanoBot talks to Agent Zero (Boss/HybridAgent).
     """
     
     _instance = None
@@ -27,6 +31,7 @@ class BioDockifyAI:
         
     def __init__(self):
         self.agent: Optional[HybridAgent] = None
+        self.nanobot: Optional[NanoBotReceptionist] = None # The Receptionist
         self._init_done = False
         
     async def initialize(self, workspace_path: str = "./data/workspace"):
@@ -45,10 +50,19 @@ class BioDockifyAI:
                 # Pre-flight checks (Optional but recommended)
                 # self._check_dependencies() 
                 
+                # Boss
                 self.agent = create_hybrid_agent(workspace_path)
                 
+                # Receptionist (Given access to Boss)
+                self.nanobot = NanoBotReceptionist(agent_zero_instance=self)
+                
+                # Bridge: Connect Supervisor to Agent Heartbeats
+                if self.agent and self.nanobot and hasattr(self.nanobot, 'supervisor'):
+                    self.agent.on_heartbeat = self.nanobot.supervisor.register_heartbeat
+                    logger.info("Bridge established: Agent Zero heartbeats connected to NanoBot Supervisor.")
+                
                 self._init_done = True
-                logger.info("BioDockify AI Initialized Successfully.")
+                logger.info("BioDockify AI (Boss & Receptionist) Initialized Successfully.")
                 return
                 
             except Exception as e:
@@ -77,19 +91,30 @@ class BioDockifyAI:
                 # We don't raise here, just warn, as local execution might not use containers
 
             
-    async def process_chat(self, user_message: str) -> str:
-        """Process user chat message."""
-        if not self.agent:
+    async def process_chat(self, user_message: str, mode: str = "lite") -> str:
+        """
+        Process user chat message.
+        - mode="lite": Route to NanoBot Receptionist (Fast, Tools).
+        - mode="hybrid": Route to Agent Zero (Reasoning, Deep Research).
+        """
+        if not self.agent or not self.nanobot:
             await self.initialize()
             
-        return await self.agent.chat(user_message)
+        if mode == "hybrid":
+            # Direct to Boss (Agent Zero)
+            logger.info("Routing to Agent Zero (Hybrid Mode)")
+            return await self.agent.chat(user_message)
+        else:
+            # Default to Receptionist (NanoBot)
+            logger.info("Routing to NanoBot (Lite Mode)")
+            return await self.nanobot.process_chat(user_message)
         
     async def run_task(self, task: str):
-        """Run an autonomous task."""
+        """Run an autonomous task (Called by NanoBot or API)."""
         if not self.agent:
             await self.initialize()
             
-        # Inject task and start loop
+        # Boss handles the task
         self.agent.loop_data.user_message = f"Task: {task}"
         await self.agent.monologue()
         return self.agent.loop_data.last_response

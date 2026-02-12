@@ -25,7 +25,11 @@ from modules.literature.synthesis import get_synthesizer
 from modules.system.auth_manager import auth_manager
 from dataclasses import asdict
 
-app = FastAPI(title="BioDockify - Pharma Research AI", version="2.6.0")
+app = FastAPI(
+    title="BioDockify API",
+    description="Backend for BioDockify Pharma Research AI",
+    version="v2.6.2"
+)
 
 # Register NanoBot Hybrid Agent Routes
 try:
@@ -74,6 +78,14 @@ try:
 except ImportError as e:
     import logging
     logging.getLogger("biodockify_api").warning(f"Enhanced Project routes not loaded: {e}")
+
+# Register Settings Routes (Universal API & Connection Test)
+try:
+    from api.routes.settings_routes import router as settings_router
+    app.include_router(settings_router)
+except ImportError as e:
+    import logging
+    logging.getLogger("biodockify_api").warning(f"Settings routes not loaded: {e}")
 
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -443,29 +455,29 @@ async def verify_emergency_access(request: Dict[str, str]):
 
 class AgentRequest(BaseModel):
     message: str
-    mode: str = "chat"
+    mode: str = "lite" # 'lite' (NanoBot) or 'hybrid' (Agent Zero)
 
 @app.post("/api/agent/chat")
 async def agent_chat(request: AgentRequest):
     """
-    Direct Chat Endpoint for BioDockify AI (Hybrid Agent).
-    Fully autonomous loop with tools, memory, and research capabilities.
+    Direct Chat Endpoint for BioDockify AI.
+    - mode="lite": Fast, tool-using receptionist.
+    - mode="hybrid": Full reasoning agent.
     """
     try:
         from agent_zero.biodockify_ai import get_biodockify_ai
         
-        logger.info(f"BioDockify AI: Processing chat request (len={len(request.message)})")
+        logger.info(f"BioDockify AI: Processing chat request (len={len(request.message)}, mode={request.mode})")
         agent = get_biodockify_ai()
         
-        # Process chat via the Hybrid Agent Loop
-        # This triggers: Prompt Building -> LLM -> Tool Execution -> Response
-        reply = await agent.process_chat(request.message)
+        # Process chat via the Hybrid Agent Loop or Receptionist based on mode
+        reply = await agent.process_chat(request.message, mode=request.mode)
         
         # Return format expected by UI
         return {
             "reply": reply,
-            "provider": "biodockify-hybrid",
-            "enhanced": True
+            "provider": f"biodockify-{request.mode}",
+            "enhanced": request.mode == "hybrid"
         }
     except Exception as e:
         logger.error(f"Agent Chat Failed: {e}")

@@ -161,3 +161,68 @@ class WebFetchTool(Tool):
         text = re.sub(r'</(p|div|section|article)>', '\n\n', text, flags=re.I)
         text = re.sub(r'<(br|hr)\s*/?>', '\n', text, flags=re.I)
         return _normalize(_strip_tags(text))
+
+
+class BrowserTool(Tool):
+    """
+    Full Browser Automation Tool.
+    Uses the shared Headless Browser (Playwright) to handle JS, logins, and complex rendering.
+    """
+    
+    @property
+    def name(self) -> str:
+        return "browser_automation"
+    
+    @property
+    def description(self) -> str:
+        return "Visit a website using a full browser. Use this for pages that require JavaScript, or to download PDFs. Capabilities: 'scrape', 'screenshot', 'download_pdf'."
+    
+    @property
+    def parameters(self) -> dict[str, Any]:
+        return {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["scrape", "download_pdf"], 
+                    "description": "Action to perform."
+                },
+                "url": {
+                    "type": "string", 
+                    "description": "Target URL."
+                },
+                "wait_for": {
+                    "type": "string",
+                    "description": "CSS selector to wait for (optional, default 'body')."
+                }
+            },
+            "required": ["action", "url"]
+        }
+        
+    async def execute(self, action: str, url: str, wait_for: str = "body", **kwargs: Any) -> str:
+        try:
+            # Lazy import to avoid circular dependency issues at module level
+            from agent_zero.skills.browser_scraper import get_browser_scraper
+            scraper = get_browser_scraper()
+            
+            if action == "scrape":
+                res = await scraper.scrape_page(url, wait_for=wait_for)
+                if res.get("success"):
+                    title = res.get("title", "No Title")
+                    content = res.get("content", "")[:5000] # Truncate for Receptionist
+                    return f"Page Visited: {title}\nURL: {url}\n\nContent Preview:\n{content}..."
+                else:
+                    return f"Failed to visit page: {res.get('error')}"
+                    
+            elif action == "download_pdf":
+                path = await scraper.download_pdf(url)
+                if path:
+                    return f"PDF Downloaded to: {path}"
+                return "Failed to download PDF."
+            
+            return f"Unknown browser action: {action}"
+            
+        except ImportError:
+            return "Error: Browser capability not available (dependency missing)."
+        except Exception as e:
+            return f"Browser Error: {e}"
