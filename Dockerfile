@@ -160,10 +160,10 @@ environment=PORT="3001",HOSTNAME="0.0.0.0",NODE_ENV="production" \n\
 ' > /etc/supervisor/conf.d/biodockify.conf
 
 # Startup Scripts
-LABEL version="v2.6.2"
+LABEL version="v2.6.3"
 LABEL description="BioDockify - Pharma Research AI"
 RUN echo '#!/bin/bash \n\
-echo "BioDockify v2.6.2 - Optimized Launch" \n\
+echo "BioDockify v2.6.3 - Optimized Launch" \n\
 echo "Node Version: $(node -v)" \n\
 echo "Node Path: $(which node)" \n\
 mkdir -p /app/data \n\

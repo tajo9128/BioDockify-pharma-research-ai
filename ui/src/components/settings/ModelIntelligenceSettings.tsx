@@ -282,7 +282,7 @@ export function ModelIntelligenceSettings({ settings, onUpdate }: ModelIntellige
                     {/* --- LM Studio --- */}
                     {mode === 'lm_studio' && (
                         <div className="space-y-4">
-                            <p className="text-sm text-slate-400">Ensure LM Studio is running and the "Local Inference Server" is started.</p>
+                            <p className="text-sm text-slate-400">Ensure LM Studio is running and the &quot;Local Inference Server&quot; is started.</p>
                             <div className="space-y-2">
                                 <label className="text-sm font-medium text-slate-300">Base URL</label>
                                 <input
@@ -302,7 +302,7 @@ export function ModelIntelligenceSettings({ settings, onUpdate }: ModelIntellige
                                     placeholder="auto"
                                     className="w-full bg-slate-800 border-slate-700 rounded-lg px-4 py-2 text-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
                                 />
-                                <p className="text-xs text-slate-500">Leave as 'auto' to use the loaded model</p>
+                                <p className="text-xs text-slate-500">Leave as &apos;auto&apos; to use the loaded model</p>
                             </div>
                         </div>
                     )}
@@ -347,10 +347,10 @@ export function ModelIntelligenceSettings({ settings, onUpdate }: ModelIntellige
                             onClick={handleTest}
                             disabled={testingConnection}
                             className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${connectionStatus === 'success'
-                                    ? 'bg-green-500/20 text-green-400 border border-green-500/50'
-                                    : connectionStatus === 'failure'
-                                        ? 'bg-red-500/20 text-red-400 border border-red-500/50'
-                                        : 'bg-blue-600 hover:bg-blue-500 text-white'
+                                ? 'bg-green-500/20 text-green-400 border border-green-500/50'
+                                : connectionStatus === 'failure'
+                                    ? 'bg-red-500/20 text-red-400 border border-red-500/50'
+                                    : 'bg-blue-600 hover:bg-blue-500 text-white'
                                 }`}
                         >
                             {testingConnection ? 'Testing Connection...' :
