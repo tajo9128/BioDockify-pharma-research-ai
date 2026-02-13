@@ -1,4 +1,6 @@
 from fastapi import FastAPI, BackgroundTasks, HTTPException, Request
+from contextlib import asynccontextmanager
+import asyncio
 from dotenv import load_dotenv
 from fastapi.responses import JSONResponse
 import os
@@ -21,10 +23,21 @@ from pydantic import BaseModel
 from typing import Dict, Any, Optional, List
 import uuid
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    BioDockify Backend Lifespan Controller.
+    Handles startup/shutdown logic for all modules.
+    """
+    await startup_event()
+    yield
+    logger.info("BioDockify Backend Shutdown.")
+
 app = FastAPI(
     title="BioDockify API",
     description="Backend for BioDockify Pharma Research AI",
-    version="v2.6.8"
+    version="v2.6.8",
+    lifespan=lifespan
 )
 
 # Robust Imports
@@ -1105,7 +1118,6 @@ async def background_monitor():
             logger.error(f"Monitor Error: {e}")
             await asyncio.sleep(60) # Prevent tight loop on error
 
-@app.on_event("startup")
 async def startup_event():
     """
     Service Stability: Model Loading & Pre-warming.

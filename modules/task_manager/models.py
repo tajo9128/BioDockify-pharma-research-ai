@@ -5,7 +5,7 @@ Integration point: Agent Zero + NanoBot + ChromaDB
 from enum import Enum
 from datetime import datetime
 from typing import Optional, Dict, Any, List
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 
 
 class TaskStatus(str, Enum):
@@ -89,8 +89,7 @@ class Task(BaseModel):
     # Labels for filtering
     labels: Dict[str, str] = Field(default_factory=dict)
 
-    class Config:
-        use_enum_values = True
+    model_config = ConfigDict(use_enum_values=True)
 
 
 class TaskTemplate(BaseModel):

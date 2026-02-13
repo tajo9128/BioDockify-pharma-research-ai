@@ -4,7 +4,7 @@ import asyncio
 import datetime
 import os
 from pathlib import Path
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 import re
 from typing import List, Optional, Dict, Any, Union, Callable
 from tqdm.asyncio import tqdm
@@ -40,8 +40,7 @@ class BasicReviewer(BaseModel):
     verbose: bool = True
     max_retries: int = DEFAULT_MAX_RETRIES
 
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     def model_post_init(self, __context: Any) -> None:
         """Initialize after Pydantic model initialization."""
