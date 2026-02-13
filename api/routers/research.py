@@ -40,6 +40,7 @@ class TaskResponse(BaseModel):
 
 class TaskStatus(BaseModel):
     task_id: str
+    title: Optional[str] = None
     status: str  # pending, running, completed, failed
     progress: int
     logs: List[str]

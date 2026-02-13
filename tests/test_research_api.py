@@ -15,6 +15,17 @@ def override_task_store(task_store):
     yield
     runtime.task_store._task_store = original_store
 
+@pytest.fixture(autouse=True)
+def mock_env_vars():
+    """Set up temporary environment variables for testing."""
+    import tempfile
+    import os
+    with tempfile.TemporaryDirectory() as temp_dir:
+        os.environ["BIODOCKIFY_DATA_DIR"] = temp_dir
+        yield
+        if "BIODOCKIFY_DATA_DIR" in os.environ:
+            del os.environ["BIODOCKIFY_DATA_DIR"]
+
 def test_start_research_task():
     """Test starting a research task."""
     response = client.post("/api/research/start", json={"title": "Test Research", "mode": "local"})

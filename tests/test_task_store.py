@@ -4,14 +4,6 @@ import tempfile
 from pathlib import Path
 from runtime.task_store import TaskStore
 
-@pytest.fixture
-async def task_store():
-    """Create a TaskStore with a temporary database."""
-    with tempfile.TemporaryDirectory() as temp_dir:
-        db_path = Path(temp_dir) / "tasks.db"
-        store = TaskStore(str(db_path))
-        await store.init()
-        yield store
 
 @pytest.mark.asyncio
 async def test_task_creation(task_store):

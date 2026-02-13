@@ -102,13 +102,12 @@ async def main():
         # Let's try setting an env var that config_loader might pick up, 
         # or monkey-patching the repository creation if possible.
         
-        # For this specific test, we can try to patch the database URL at the os.environ level
-        # IF the modules read it from there at runtime. 
-        # Assuming typical "sqlite:///./data/tasks.db" default.
+        # Set enviroment variable for TaskStore and other components
+        os.environ["BIODOCKIFY_DATA_DIR"] = temp_dir
         
         original_cwd = os.getcwd()
         try:
-            # Change CWD to temp dir so relative paths work
+            # Change CWD to temp dir so relative paths work (if any remain)
             os.chdir(temp_dir)
             # Create necessary subdirectories
             os.makedirs("data", exist_ok=True)

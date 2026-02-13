@@ -26,7 +26,13 @@ class TaskStore:
     
     def __init__(self, db_path: str = None):
         if db_path is None:
-            db_path = Path.home() / ".biodockify" / "data" / "tasks.db"
+            # Check env var first
+            import os
+            env_path = os.getenv("BIODOCKIFY_DATA_DIR")
+            if env_path:
+                db_path = Path(env_path) / "tasks.db"
+            else:
+                db_path = Path.home() / ".biodockify" / "data" / "tasks.db"
         
         self.db_path = Path(db_path)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
