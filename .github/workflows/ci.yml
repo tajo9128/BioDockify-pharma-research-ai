@@ -43,9 +43,12 @@ jobs:
         severity: 'CRITICAL,HIGH'
         
     - name: Run Tests with Coverage
+      env:
+        BIODOCKIFY_DATA_DIR: /tmp/biodockify_ci_data
       run: |
-        # Run the new monitored agent tests and standard tests
-        pytest tests/test_monitored_agents.py tests/test_guardian.py --cov=agent_zero --cov=modules --cov-report=xml
+        mkdir -p /tmp/biodockify_ci_data
+        # Run all tests including research API and integrated flows
+        pytest tests/ --cov=agent_zero --cov=modules --cov=api --cov-report=xml
         
     - name: Upload coverage reports to Codecov
       uses: codecov/codecov-action@v4

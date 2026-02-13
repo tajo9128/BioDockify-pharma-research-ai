@@ -52,7 +52,10 @@ jobs:
         echo "Backend is ready!"
 
     - name: Run Backend Tests
+      env:
+        BIODOCKIFY_DATA_DIR: /tmp/biodockify_ci_tests
       run: |
+        mkdir -p /tmp/biodockify_ci_tests
         # Only run if tests exist
         if [ -d "tests" ]; then
           export PYTHONPATH=$PYTHONPATH:.
