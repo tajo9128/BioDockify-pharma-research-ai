@@ -43,27 +43,16 @@ COPY agent_zero/requirements_pharma.txt ./
 RUN pip install --no-cache-dir -r requirements_pharma.txt
 
 # ── CRITICAL: Strip the venv to reclaim ~2GB+ of space ──
-# 1. Remove cache and tests
+# 1. Remove cache and tests (Standard cleanup only)
 RUN find /opt/venv -type d -name '__pycache__' -exec rm -rf {} + 2>/dev/null; \
     find /opt/venv -type d -name 'tests' -exec rm -rf {} + 2>/dev/null; \
     find /opt/venv -type d -name 'test' -exec rm -rf {} + 2>/dev/null; \
-# 2. Remove static libraries and compiled python files
-    find /opt/venv -type f -name '*.pyc' -delete 2>/dev/null; \
-    find /opt/venv -type f -name '*.pyo' -delete 2>/dev/null; \
+# 2. Remove static libraries (Safe)
     find /opt/venv -type f -name '*.a' -delete 2>/dev/null; \
 # 3. Remove pip, setuptools, wheel (not needed at runtime)
     pip uninstall -y pip setuptools wheel; \
-    find /opt/venv -type f -name '*.pyc' -delete 2>/dev/null; \
-    find /opt/venv -type f -name '*.pyo' -delete 2>/dev/null; \
-    find /opt/venv -type f -name '*.a' -delete 2>/dev/null; \
-    find /opt/venv -type d -name '*.dist-info' -exec sh -c 'find "$1" -not -name METADATA -not -name RECORD -not -name top_level.txt -not -name INSTALLER -type f -delete' _ {} \; 2>/dev/null; \
-    rm -rf /opt/venv/lib/python3.11/site-packages/torch/test/ \
-           /opt/venv/lib/python3.11/site-packages/tensorflow/python/debug/ \
-           /opt/venv/lib/python3.11/site-packages/tensorflow/lite/ \
-           /opt/venv/lib/python3.11/site-packages/tensorboard/data/ \
-           /opt/venv/lib/python3.11/site-packages/nvidia/ \
-           /opt/venv/lib/python3.11/site-packages/caffe2/ \
-    ; true
+    true
+
 
 # -----------------------------------------------------------------------------
 # Stage 3: Runtime Stage

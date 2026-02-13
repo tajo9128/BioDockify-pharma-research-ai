@@ -1115,28 +1115,38 @@ async def startup_event():
     # 1. Background Initialization (Models + Services)
     def background_init():
         """Runs heavy startup tasks without blocking API availability."""
+        logger.info("Background Init: Starting...")
+        
         # Start Prometheus metrics server
         try:
             from runtime.monitoring import start_monitoring_server
             start_monitoring_server(8000)
         except Exception as e:
-            logger.warning(f"Failed to start monitoring server: {e}")
+            logger.warning(f"Background Init: Failed to start monitoring server: {e}")
 
         # A. Wait for server bind
-        time.sleep(2) 
+        time.sleep(5) 
         
-        # B. Warm up Embedding Model
+        # B. Warm up Embedding Model with Crash Protection
         try:
-            logger.info("Probe: Pre-loading Embedding Model...")
+            logger.info("Background Init: Pre-loading Embedding Model...")
             from modules.rag.vector_store import get_vector_store
             vs = get_vector_store()
-            if vs.model is None:
+            
+            # Guard against partial loading
+            if hasattr(vs, '_load_dependencies'):
                  vs._load_dependencies()
-            if vs.model:
+                 
+            if hasattr(vs, 'model') and vs.model:
+                 logger.info("Background Init: Running warmup inference...")
                  vs.model.encode(["warmup"])
-            logger.info("Probe: Embedding Model Ready.")
+                 logger.info("Background Init: Embedding Model Ready.")
+            else:
+                 logger.warning("Background Init: Model not loaded (dependencies missing?).")
+                 
         except Exception as e:
-            logger.warning(f"Probe: Model warmup failed: {e}")
+            logger.warning(f"Background Init: Model warmup failed: {e}")
+            # Do NOT re-raise, to keep the thread alive
 
         # C. Start Background Services (Ollama/SurfSense)
         try:
@@ -1145,7 +1155,7 @@ async def startup_event():
             
             config = load_config()
             if config.get("system", {}).get("auto_start_services", True):
-                logger.info("Probe: Auto-starting services...")
+                logger.info("Background Init: Auto-starting services...")
                 svc_mgr = get_service_manager(config)
                 
                 # Ollama
@@ -1153,24 +1163,25 @@ async def startup_event():
                      try:
                          if hasattr(svc_mgr, 'start_ollama'):
                              svc_mgr.start_ollama()
-                         else:
-                             # Fallback/Mock if method missing
-                             logger.info("Probe: start_ollama not implemented in ServiceManager (skipping)")
                      except Exception as e:
-                         logger.warning(f"Probe: Ollama start failed: {e}")
+                         logger.warning(f"Background Init: Ollama start failed: {e}")
                 
                 # SurfSense
                 try:
-                    svc_mgr.start_surfsense()
+                    # Check if method exists and is safe
+                    if hasattr(svc_mgr, 'start_surfsense'):
+                        svc_mgr.start_surfsense()
                 except Exception as e:
-                    logger.warning(f"Probe: SurfSense start failed: {e}")
+                    logger.warning(f"Background Init: SurfSense start failed: {e}")
                     
         except Exception as e:
-            logger.error(f"Probe: Service init failed: {e}")
+            logger.error(f"Background Init: Service init failed: {e}")
+
+        logger.info("Background Init: Completed.")
 
     import threading
     threading.Thread(target=background_init, daemon=True).start()
-    logger.info("Background initialization thread started.")
+    logger.info("Background initialization thread launched.")
 
     # 4. Start Background Monitoring Loop
     asyncio.create_task(background_monitor())
