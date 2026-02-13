@@ -37,33 +37,41 @@ class MonitoredAgentZero:
     
     def _setup_metrics(self):
         """Setup Prometheus metrics."""
-        # Total executions by status (success/failed) and mode
-        self.execution_counter = Counter(
-            'agent_zero_executions_total',
-            'Total agent executions',
-            ['status', 'mode']
-        )
-        
-        # Duration of executions
-        self.execution_duration = Histogram(
-            'agent_zero_execution_duration_seconds',
-            'Agent execution duration',
-            ['mode', 'self_repair_used']
-        )
-        
-        # Self-repair attempts and success
-        self.repair_counter = Counter(
-            'agent_zero_self_repairs_total',
-            'Total self-repair attempts',
-            ['success', 'repair_type']
-        )
-        
-        # Error diagnoses
-        self.diagnosis_counter = Counter(
-            'agent_zero_diagnoses_total',
-            'Total error diagnoses',
-            ['error_type']
-        )
+        try:
+            # Total executions by status (success/failed) and mode
+            self.execution_counter = Counter(
+                'agent_zero_executions_total',
+                'Total agent executions',
+                ['status', 'mode']
+            )
+            
+            # Duration of executions
+            self.execution_duration = Histogram(
+                'agent_zero_execution_duration_seconds',
+                'Agent execution duration',
+                ['mode', 'self_repair_used']
+            )
+            
+            # Self-repair attempts and success
+            self.repair_counter = Counter(
+                'agent_zero_self_repairs_total',
+                'Total self-repair attempts',
+                ['success', 'repair_type']
+            )
+            
+            # Error diagnoses
+            self.diagnosis_counter = Counter(
+                'agent_zero_diagnoses_total',
+                'Total error diagnoses',
+                ['error_type']
+            )
+        except ValueError:
+             # Metrics already registered
+            from prometheus_client import REGISTRY
+            self.execution_counter = REGISTRY._names_to_collectors['agent_zero_executions_total']
+            self.execution_duration = REGISTRY._names_to_collectors['agent_zero_execution_duration_seconds']
+            self.repair_counter = REGISTRY._names_to_collectors['agent_zero_self_repairs_total']
+            self.diagnosis_counter = REGISTRY._names_to_collectors['agent_zero_diagnoses_total']
 
     async def execute(self, task: str, mode: str = 'standard') -> Dict[str, Any]:
         """

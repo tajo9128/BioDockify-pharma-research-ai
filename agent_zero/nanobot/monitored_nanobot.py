@@ -31,25 +31,32 @@ class MonitoredNanoBotCoordinator:
     
     def _setup_metrics(self):
         """Setup NanoBot metrics."""
-        # Current active subagent count
-        self.bot_count = Gauge(
-            'nanobot_active_count',
-            'Number of active NanoBots'
-        )
-        
-        # Total coordinations (chat requests)
-        self.coordination_counter = Counter(
-            'nanobot_coordinations_total',
-            'Total NanoBot coordinations',
-            ['result']
-        )
-        
-        # Skill usage tracking
-        self.skill_usage = Counter(
-            'nanobot_skill_usage_total',
-            'Skill usage by NanoBots',
-            ['skill', 'status']
-        )
+        try:
+            # Current active subagent count
+            self.bot_count = Gauge(
+                'nanobot_active_count',
+                'Number of active NanoBots'
+            )
+            
+            # Total coordinations (chat requests)
+            self.coordination_counter = Counter(
+                'nanobot_coordinations_total',
+                'Total NanoBot coordinations',
+                ['result']
+            )
+            
+            # Skill usage tracking
+            self.skill_usage = Counter(
+                'nanobot_skill_usage_total',
+                'Skill usage by NanoBots',
+                ['skill', 'status']
+            )
+        except ValueError:
+            # Metrics already registered (e.g. during tests or hot reload)
+            from prometheus_client import REGISTRY
+            self.bot_count = REGISTRY._names_to_collectors['nanobot_active_count']
+            self.coordination_counter = REGISTRY._names_to_collectors['nanobot_coordinations_total']
+            self.skill_usage = REGISTRY._names_to_collectors['nanobot_skill_usage_total']
     
     async def chat(self, message: str, session_key: str = "default", channel: str = "api") -> str:
         """

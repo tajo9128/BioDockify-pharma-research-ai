@@ -80,12 +80,46 @@ async def main():
     # Setup logging to be less verbose for the test
     logging.basicConfig(level=logging.ERROR)
     
-    try:
-        await test_integrated_flow()
-    except Exception as e:
-        print(f"\nTEST FAILED: {e}")
-        import traceback
-        traceback.print_exc()
+    import tempfile
+    import shutil
+    
+    # Create a temporary directory for the test databases
+    with tempfile.TemporaryDirectory() as temp_dir:
+        print(f"Running tests in temporary directory: {temp_dir}")
+        
+        # Patch the paths/environment to use this temp dir
+        # We need to ensure that the modules use this path for their DBs
+        # Since we can't easily patch global variables in already imported modules,
+        # we might need to rely on the modules respecting an env var or 
+        # creating the system with specific paths if supported.
+        
+        # Taking a simpler approach: Monkey-patch the defaults/constants if possible
+        # Or better, check if we can pass valid paths to the factory functions.
+        
+        # Looking at get_enhanced_system, it doesn't seem to take DB paths directly.
+        # However, TaskRepository takes db_url.
+        
+        # Let's try setting an env var that config_loader might pick up, 
+        # or monkey-patching the repository creation if possible.
+        
+        # For this specific test, we can try to patch the database URL at the os.environ level
+        # IF the modules read it from there at runtime. 
+        # Assuming typical "sqlite:///./data/tasks.db" default.
+        
+        original_cwd = os.getcwd()
+        try:
+            # Change CWD to temp dir so relative paths work
+            os.chdir(temp_dir)
+            # Create necessary subdirectories
+            os.makedirs("data", exist_ok=True)
+            
+            await test_integrated_flow()
+        except Exception as e:
+            print(f"\nTEST FAILED: {e}")
+            import traceback
+            traceback.print_exc()
+        finally:
+            os.chdir(original_cwd)
 
 if __name__ == "__main__":
     asyncio.run(main())
