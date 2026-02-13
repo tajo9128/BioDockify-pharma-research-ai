@@ -45,8 +45,7 @@ class BaseProvider(pydantic.BaseModel):
     last_response: Optional[Any] = None
     calculate_cost: bool = True  # if False, the cost will be -1 for both input and output
 
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = pydantic.ConfigDict(arbitrary_types_allowed=True)
 
     def create_client(self) -> Any:
         """Create and initialize the client for the provider."""

@@ -42,13 +42,20 @@ jobs:
         format: 'table'
         severity: 'CRITICAL,HIGH'
         
-    - name: Run Tests with Coverage
+    - name: Run Backend Tests
       env:
-        BIODOCKIFY_DATA_DIR: /tmp/biodockify_ci_data
+        BIODOCKIFY_DATA_DIR: /tmp/biodockify_ci_tests
+        ANONYMIZED_TELEMETRY: "False"
+        CHROMA_TELEMETRY_ENABLED: "False"
       run: |
-        mkdir -p /tmp/biodockify_ci_data
-        # Run all tests including research API and integrated flows
-        pytest tests/ --cov=agent_zero --cov=modules --cov=api --cov-report=xml
+        mkdir -p /tmp/biodockify_ci_tests
+        # Only run if tests exist
+        if [ -d "tests" ]; then
+          export PYTHONPATH=$PYTHONPATH:.
+          pytest tests/ --cov=agent_zero --cov=modules --cov=api --cov-report=xml
+        else
+          echo "No tests directory found, skipping"
+        fi
         
     - name: Upload coverage reports to Codecov
       uses: codecov/codecov-action@v4

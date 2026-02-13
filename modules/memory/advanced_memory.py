@@ -459,5 +459,13 @@ def get_memory_system(persist_dir: str = "./data/chroma_memory") -> AdvancedMemo
     """Get or create global memory system instance"""
     global _memory_system
     if _memory_system is None:
-        _memory_system = AdvancedMemorySystem(persist_dir=persist_dir)
+        import os
+        # Respect environment variable for data directory (useful for CI/tests)
+        data_dir = os.environ.get("BIODOCKIFY_DATA_DIR")
+        if data_dir:
+            resolved_dir = os.path.join(data_dir, "chroma_memory")
+            logger.info(f"Using BIODOCKIFY_DATA_DIR for memory: {resolved_dir}")
+            _memory_system = AdvancedMemorySystem(persist_dir=resolved_dir)
+        else:
+            _memory_system = AdvancedMemorySystem(persist_dir=persist_dir)
     return _memory_system

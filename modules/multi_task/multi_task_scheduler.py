@@ -317,5 +317,17 @@ def get_multi_task_scheduler(max_parallel_tasks=5, task_manager=None) -> MultiTa
     """Get or create global multi-task scheduler instance"""
     global _multi_task_scheduler
     if _multi_task_scheduler is None:
-        _multi_task_scheduler = MultiTaskScheduler(max_parallel_tasks=max_parallel_tasks, task_manager=task_manager)
+        import os
+        # Respect environment variable for data directory (useful for CI/tests)
+        data_dir = os.environ.get("BIODOCKIFY_DATA_DIR")
+        if data_dir:
+            persistence_path = os.path.join(data_dir, "scheduler_state.json")
+            logger.info(f"Using BIODOCKIFY_DATA_DIR for scheduler: {persistence_path}")
+            _multi_task_scheduler = MultiTaskScheduler(
+                max_parallel_tasks=max_parallel_tasks, 
+                task_manager=task_manager,
+                persistence_path=persistence_path
+            )
+        else:
+            _multi_task_scheduler = MultiTaskScheduler(max_parallel_tasks=max_parallel_tasks, task_manager=task_manager)
     return _multi_task_scheduler
