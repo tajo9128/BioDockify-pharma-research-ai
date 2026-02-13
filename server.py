@@ -10,7 +10,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(mess
 sys.stdout.reconfigure(line_buffering=True)
 sys.stderr.reconfigure(line_buffering=True)
 
-logging.info("🚀 Server process started. Initializing...")
+logging.info("Server process started. Initializing...")
 
 # Add the current directory to sys.path so imports work
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -84,7 +84,7 @@ try:
     from api.main import app
     logging.info("✅ api.main imported successfully.")
 except Exception as e:
-    logging.critical("🔥 CRITICAL ERROR: Failed to import api.main!")
+    logging.critical("CRITICAL ERROR: Failed to import api.main!")
     traceback.print_exc()
     sys.exit(1)
 
@@ -94,7 +94,7 @@ def main():
         # Bind to 0.0.0.0 (More robust for Windows/IPv6 resolution of localhost)
         uvicorn.run(app, host="0.0.0.0", port=8234, log_level="info")
     except Exception as e:
-        logging.critical(f"🔥 Server crashed: {e}")
+        logging.critical(f"Server crashed: {e}")
         traceback.print_exc()
         sys.exit(1)
 

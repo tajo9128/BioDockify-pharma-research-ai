@@ -27,7 +27,6 @@ services:
     volumes:
       - ./data:/app/data
       - ./logs:/app/logs
-      - ./data/chroma_memory:/app/data/chroma_memory
     networks:
       - biodockify-network
     healthcheck:
@@ -37,12 +36,28 @@ services:
       retries: 3
     restart: unless-stopped
 
+  # Knowledge Graph (Neo4j/Memgraph)
+  neo4j:
+    image: neo4j:5.12-community
+    container_name: biodockify-neo4j
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    environment:
+      - NEO4J_AUTH=none
+    volumes:
+      - neo4j_data:/data
+    networks:
+      - biodockify-network
+    restart: unless-stopped
+
+
   # Vector Database (ChromaDB - FREE)
   chroma:
     image: chromadb/chroma:0.4.18
     container_name: biodockify-chroma
-    ports:
-      - "8001:8000"
+#    ports:
+#      - "8001:8000"
     volumes:
       - chroma_data:/chroma/chroma
     networks:
@@ -59,8 +74,8 @@ services:
       POSTGRES_DB: biodockify
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
+#    ports:
+#      - "5432:5432"
     networks:
       - biodockify-network
     healthcheck:
@@ -72,10 +87,10 @@ services:
 
   # Cache (Redis - FREE)
   redis:
-    image: redis:7-alpine
-    container_name: biodockify-redis
-    ports:
-      - "16379:6379"
+    image: redis:alpine
+    container_name: redis
+#    ports:
+#      - "6379:6379"
     volumes:
       - redis_data:/data
     command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
@@ -106,12 +121,14 @@ services:
 
   grafana:
     image: grafana/grafana:latest
-    container_name: biodockify-grafana
+    container_name: grafana
     ports:
       - "3001:3000"
     volumes:
       - grafana_data:/var/lib/grafana
       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
+    depends_on:
+      - prometheus
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=admin
       - GF_USERS_ALLOW_SIGN_UP=false
@@ -136,8 +153,8 @@ services:
   grobid:
     image: lfoppiano/grobid:0.8.0
     container_name: biodockify-grobid
-    ports:
-      - "8070:8070"
+#    ports:
+#      - "8070:8070"
     networks:
       - biodockify-network
     restart: unless-stopped
@@ -149,6 +166,7 @@ volumes:
   prometheus_data:
   grafana_data:
   loki_data:
+  neo4j_data:
 
 networks:
   biodockify-network:

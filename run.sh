@@ -5,7 +5,7 @@
 
 echo "========================================================"
 echo "  BioDockify AI - Pharma Research Station"
-echo "  Version: 2.3.7 (Full Stack + LM Studio Ready)"
+echo "  Version: 2.6.7 (Full Stack + LM Studio Ready)"
 echo "========================================================"
 echo ""
 
@@ -21,7 +21,7 @@ echo "[OK] Docker is running."
 echo "[INFO] Orchestrating BioDockify Ecosystem..."
 echo ""
 echo "    Core App:   Port 3000"
-echo "    Database:   Neo4j (Graph DB)"
+echo "    Database:   PostgreSQL + ChromaDB"
 echo "    AI Engine:  LM Studio (On Host: Port 1234)"
 echo "    PDF Parser: Grobid"
 echo ""

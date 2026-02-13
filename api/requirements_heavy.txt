@@ -10,7 +10,6 @@
 # TensorFlow & Deep Learning (CPU-only to save ~2GB)
 tensorflow-cpu==2.15.0
 transformers>=4.38.0
-sentence-transformers>=2.2.2
 torch==2.2.0+cpu
 torchvision==0.17.0+cpu
 
@@ -22,8 +21,7 @@ rdkit>=2023.9.4
 playwright>=1.41.0
 
 # Vector Database & Embeddings
-chromadb==0.4.22
-faiss-cpu>=1.7.4
+
 
 # Multimedia Processing
 ffmpeg-python>=0.2.0

@@ -9,7 +9,10 @@ from typing import List, Dict, Any, Optional
 try:
     import faiss
     from sentence_transformers import SentenceTransformer
-except ImportError:
+except Exception as e:
+    # Catching broad Exception because transformers can throw NameError/RuntimeError
+    # when PyTorch is missing or version mismatched (e.g. "name 'nn' is not defined")
+    logging.getLogger(__name__).warning(f"RAG dependencies failed to load: {e}")
     faiss = None
     SentenceTransformer = None
 

@@ -1,5 +1,6 @@
 from fastapi import FastAPI, BackgroundTasks, HTTPException, Request
 from dotenv import load_dotenv
+from fastapi.responses import JSONResponse
 import os
 import time
 
@@ -11,25 +12,59 @@ try:
 except ImportError:
     pass
 
+try:
+    from runtime.monitoring import start_monitoring_server
+except ImportError:
+    pass
+
 from pydantic import BaseModel
 from typing import Dict, Any, Optional, List
 import uuid
 
-from orchestration.planner.orchestrator import ResearchOrchestrator, OrchestratorConfig
-from orchestration.executor import ResearchExecutor
-from modules.analyst.analytics_engine import ResearchAnalyst
-from modules.backup import DriveClient, BackupManager
-from modules.literature.reviewer import CitationReviewer
-from modules.literature.scraper import LiteratureAggregator, LiteratureConfig
-from modules.literature.synthesis import get_synthesizer
-from modules.system.auth_manager import auth_manager
-from dataclasses import asdict
-
 app = FastAPI(
     title="BioDockify API",
     description="Backend for BioDockify Pharma Research AI",
-    version="v2.6.7"
+    version="v2.6.8"
 )
+
+# Robust Imports
+import logging
+logger = logging.getLogger("biodockify_api")
+
+try:
+    from orchestration.planner.orchestrator import ResearchOrchestrator, OrchestratorConfig
+    from orchestration.executor import ResearchExecutor
+    logger.info("Orchestration modules loaded.")
+except Exception as e:
+    logger.error(f"Failed to load Orchestration modules: {e}")
+
+try:
+    from modules.analyst.analytics_engine import ResearchAnalyst
+    logger.info("Analytics Engine loaded.")
+except Exception as e:
+    logger.error(f"Failed to load Analytics Engine: {e}")
+
+try:
+    from modules.backup import DriveClient, BackupManager
+    logger.info("Backup Manager loaded.")
+except Exception as e:
+    logger.error(f"Failed to load Backup Manager: {e}")
+
+try:
+    from modules.literature.reviewer import CitationReviewer
+    from modules.literature.scraper import LiteratureAggregator, LiteratureConfig
+    from modules.literature.synthesis import get_synthesizer
+    logger.info("Literature modules loaded.")
+except Exception as e:
+    logger.error(f"Failed to load Literature modules: {e}")
+
+try:
+    from modules.system.auth_manager import auth_manager
+    logger.info("Auth Manager loaded.")
+except Exception as e:
+    logger.error(f"Failed to load Auth Manager: {e}")
+
+from dataclasses import asdict
 
 # Register NanoBot Hybrid Agent Routes
 try:
@@ -194,7 +229,7 @@ async def limit_request_size(request: Request, call_next):
 # Global Error Handling & Resilience
 # -----------------------------------------------------------------------------
 from fastapi import Request
-from fastapi.responses import JSONResponse
+from fastapi import Request
 import logging
 import time
 import requests
@@ -242,128 +277,7 @@ def cached_llm_request(params_tuple):
         timeout=timeout
     )
 
-@app.on_event("startup")
-async def startup_event():
-    """
-    Service Stability: Model Loading & Pre-warming.
-    """
-    logger.info("Initializing BioDockify Backend...")
-    
-    # 1. Background Initialization (Models + Services)
-    def background_init():
-        """Runs heavy startup tasks without blocking API availability."""
-        # A. Wait for server bind
-        time.sleep(2) 
-        
-        # B. Warm up Embedding Model
-        try:
-            logger.info("Probe: Pre-loading Embedding Model...")
-            from modules.rag.vector_store import get_vector_store
-            vs = get_vector_store()
-            if vs.model is None:
-                 vs._load_dependencies()
-            if vs.model:
-                 vs.model.encode(["warmup"])
-            logger.info("Probe: Embedding Model Ready.")
-        except Exception as e:
-            logger.warning(f"Probe: Model warmup failed: {e}")
 
-        # C. Start Background Services (Ollama/SurfSense)
-        try:
-            from runtime.config_loader import load_config
-            from runtime.service_manager import get_service_manager
-            
-            config = load_config()
-            if config.get("system", {}).get("auto_start_services", True):
-                logger.info("Probe: Auto-starting services...")
-                svc_mgr = get_service_manager(config)
-                
-                # Ollama
-                if config.get("ai_provider", {}).get("mode") in ["auto", "ollama"]:
-                     try:
-                         if hasattr(svc_mgr, 'start_ollama'):
-                             svc_mgr.start_ollama()
-                         else:
-                             # Fallback/Mock if method missing
-                             logger.info("Probe: start_ollama not implemented in ServiceManager (skipping)")
-                     except Exception as e:
-                         logger.warning(f"Probe: Ollama start failed: {e}")
-                
-                # SurfSense
-                try:
-                    svc_mgr.start_surfsense()
-                except Exception as e:
-                    logger.warning(f"Probe: SurfSense start failed: {e}")
-                    
-        except Exception as e:
-            logger.error(f"Probe: Service init failed: {e}")
-
-    import threading
-    threading.Thread(target=background_init, daemon=True).start()
-    logger.info("Background initialization thread started.")
-
-
-    # 3. Initialize Integrated System (Agent Zero + Task Manager + Memory)
-    async def init_integrated_system_background():
-        try:
-            from modules.integration.integrated_system import initialize_integrated_system
-            from agent_zero.biodockify_ai import get_biodockify_ai
-            
-            db_url = os.getenv("DATABASE_URL", "postgresql+asyncpg://biodock:biodockify@localhost/biodockify_tasks")
-            memory_dir = os.getenv("MEMORY_PERSIST_DIR", "./data/chroma_memory")
-            
-            agent_wrapper = get_biodockify_ai()
-            await agent_wrapper.initialize()
-            
-            integrated = await initialize_integrated_system(
-                db_url=db_url,
-                hybrid_agent=agent_wrapper.agent,
-                memory_persist_dir=memory_dir
-            )
-            await integrated.start()
-            logger.info("✅ Integrated System (Phase 10) Started Successfully.")
-            
-            # 4. Initialize Enhanced Project System (Phase 11)
-            try:
-                from modules.enhanced_integration.enhanced_system import get_enhanced_system
-                enhanced = get_enhanced_system(hybrid_agent=agent_wrapper.agent)
-                await enhanced.initialize()
-                await enhanced.start()
-                logger.info("✅ Enhanced Project System (Phase 11) Started Successfully.")
-            except Exception as enhanced_err:
-                logger.error(f"❌ Failed to start Enhanced Project System: {enhanced_err}")
-            
-            print("\n" + "="*60)
-            print("🚀  BioDockify is Ready!")
-            print("🔗  Login here: http://localhost:3000")
-            print("="*60 + "\n")
-            logger.info("BioDockify is Ready! Login at http://localhost:3000")
-
-        except Exception as e:
-            logger.error(f"❌ Failed to start Integrated System: {e}")
-
-    # Run heavy initialization in background to unblock health check
-    asyncio.create_task(init_integrated_system_background())
-    logger.info("Integrated System initialization scheduled in background.")
-
-    # 4. Check for high memory usage warning
-    mem_status = psutil.virtual_memory()
-    if mem_status.percent > 90:
-        logger.warning(f"High Memory Usage on Startup: {mem_status.percent}%")
-
-
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    """Cleanup resources on shutdown."""
-    logger.info("Shutting down BioDockify Backend...")
-    
-    # Stop Background Services
-    from runtime.service_manager import service_manager
-    if service_manager:
-        service_manager.stop_all()
-        
-    logger.info("Services stopped.")
 
 # -----------------------------------------------------------------------------
 # V2 AGENT ENDPOINTS (Phase 16)
@@ -1201,6 +1115,13 @@ async def startup_event():
     # 1. Background Initialization (Models + Services)
     def background_init():
         """Runs heavy startup tasks without blocking API availability."""
+        # Start Prometheus metrics server
+        try:
+            from runtime.monitoring import start_monitoring_server
+            start_monitoring_server(8000)
+        except Exception as e:
+            logger.warning(f"Failed to start monitoring server: {e}")
+
         # A. Wait for server bind
         time.sleep(2) 
         

@@ -69,7 +69,12 @@ RUN find /opt/venv -type d -name '__pycache__' -exec rm -rf {} + 2>/dev/null; \
 # Stage 3: Runtime Stage
 # -----------------------------------------------------------------------------
 FROM python:3.11-slim AS runtime
+FROM python:3.11-slim AS runtime
 WORKDIR /app
+
+# Ensure UTF-8 Locale
+ENV LANG=C.UTF-8
+ENV LC_ALL=C.UTF-8
 
 # Install runtime dependencies (OpenCV, FFmpeg, Poppler, etc.)
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -160,10 +165,10 @@ environment=PORT="3001",HOSTNAME="0.0.0.0",NODE_ENV="production" \n\
 ' > /etc/supervisor/conf.d/biodockify.conf
 
 # Startup Scripts
-LABEL version="v2.6.7"
+LABEL version="v2.6.8"
 LABEL description="BioDockify - Pharma Research AI"
 RUN echo '#!/bin/bash \n\
-echo "BioDockify v2.6.7 - Optimized Launch" \n\
+echo "BioDockify v2.6.8 - Optimized Launch" \n\
 echo "Node Version: $(node -v)" \n\
 echo "Node Path: $(which node)" \n\
 mkdir -p /app/data \n\

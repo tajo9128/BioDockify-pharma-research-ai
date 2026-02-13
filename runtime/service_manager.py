@@ -53,6 +53,15 @@ class ServiceManager:
         except Exception as e:
             logger.warning(f"Failed to start SurfSense: {e}")
 
+    def start_ollama(self):
+        """Starts Ollama service check."""
+        logger.info("BioDockify: Checking for local Ollama instance...")
+        try:
+            # For now, just logging as Ollama is usually external
+            logger.info("Ollama: Please ensure Ollama is running at http://localhost:11434")
+        except Exception as e:
+            logger.error(f"Failed to initiate Ollama check: {e}")
+
     def stop_all(self):
         """Terminates all managed subprocesses."""
         logger.info(f"Stopping {len(self.processes)} background services...")
@@ -74,6 +83,7 @@ class ServiceManager:
         ports = {
             "lm_studio": 1234,
             "surfsense": 3003,
+            "ollama": 11434,
             "api": 8234
         }
         

@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "BioDockify v2.20.0 - Pharma Research AI",
+  title: "BioDockify v2.6.7 - Pharma Research AI",
   description: "The Integrated AI Research Workstation for Pharmaceutical & Life Sciences",
   keywords: ["BioDockify", "Pharma Research", "AI", "Drug Discovery", "PhD Research", "Neo4j", "Literature Review"],
   authors: [{ name: "BioDockify Team" }],

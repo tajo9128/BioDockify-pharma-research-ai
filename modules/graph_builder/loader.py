@@ -62,8 +62,17 @@ class Neo4jLoader:
             return
 
         try:
-            self.driver = GraphDatabase.driver(self.uri, auth=self.auth)
-            # Verify connectivity
+            # Set a connection timeout (5 seconds) to prevent hanging
+            # Note: The driver creation is lazy, but verify_connectivity checks it immediately.
+            from neo4j import GraphDatabase # Re-import to be safe
+            self.driver = GraphDatabase.driver(
+                self.uri, 
+                auth=self.auth,
+                connection_timeout=5.0, # 5 seconds timeout
+                max_connection_lifetime=60,
+                max_connection_pool_size=1
+            )
+            # Verify connectivity with timeout protection
             self.driver.verify_connectivity()
             self._connected = True
             logger.info(f"Connected to Neo4j at {self.uri}")

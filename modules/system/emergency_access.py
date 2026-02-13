@@ -13,8 +13,7 @@ import os
 # For this hotfix/robust offline mode, we are embedding a default fallback key.
 # Change this string to rotate keys (will invalidate old codes).
 EMERGENCY_SECRET_KEY = os.environ.get(
-    "BIODOCKIFY_EMERGENCY_SECRET", 
-    "BIODOCKIFY_PHARMA_RESEARCH_OFFLINE_ACCESS_KEY_V1"
+    "BIODOCKIFY_EMERGENCY_SECRET"
 )
 
 def validate_emergency_token(email: str, token: str) -> bool:

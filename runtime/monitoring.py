@@ -10,31 +10,45 @@ from logging.handlers import RotatingFileHandler
 from prometheus_client import Counter, Histogram, Gauge, start_http_server
 from typing import Dict, Any
 
+def _define_metrics():
+    """Defines and returns Prometheus metrics, avoiding duplicate registration errors."""
+    try:
+        return {
+            'http_requests_total': Counter(
+                'biodockify_http_requests_total',
+                'Total HTTP requests processed',
+                ['method', 'endpoint', 'status']
+            ),
+            
+            'http_request_duration_seconds': Histogram(
+                'biodockify_http_request_duration_seconds',
+                'HTTP request duration',
+                ['method', 'endpoint']
+            ),
+            
+            'active_users': Gauge(
+                'biodockify_active_users',
+                'Number of active users/sessions'
+            ),
+            
+            'research_tasks_total': Counter(
+                'biodockify_research_tasks_total',
+                'Total research tasks executed',
+                ['mode', 'status']
+            )
+        }
+    except ValueError:
+        # Metrics already registered, this should not happen with a global METRICS but good for robustness
+        from prometheus_client import REGISTRY
+        return {
+            'http_requests_total': REGISTRY._names_to_collectors.get('biodockify_http_requests_total'),
+            'http_request_duration_seconds': REGISTRY._names_to_collectors.get('biodockify_http_request_duration_seconds'),
+            'active_users': REGISTRY._names_to_collectors.get('biodockify_active_users'),
+            'research_tasks_total': REGISTRY._names_to_collectors.get('biodockify_research_tasks_total')
+        }
+
 # Global metrics definitions
-METRICS = {
-    'http_requests_total': Counter(
-        'biodockify_http_requests_total',
-        'Total HTTP requests processed',
-        ['method', 'endpoint', 'status']
-    ),
-    
-    'http_request_duration_seconds': Histogram(
-        'biodockify_http_request_duration_seconds',
-        'HTTP request duration',
-        ['method', 'endpoint']
-    ),
-    
-    'active_users': Gauge(
-        'biodockify_active_users',
-        'Number of active users/sessions'
-    ),
-    
-    'research_tasks_total': Counter(
-        'biodockify_research_tasks_total',
-        'Total research tasks executed',
-        ['mode', 'status']
-    )
-}
+METRICS = _define_metrics()
 
 def setup_structured_logging(log_file: str = "logs/app.log"):
     """

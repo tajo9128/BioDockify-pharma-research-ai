@@ -19,11 +19,9 @@ class ResearchAnalyst:
     def __init__(self):
         """Initialize connection to the Knowledge Graph."""
         self.loader = get_loader()
-        # Ensure connection
-        try:
-            self.loader.connect()
-        except Exception as e:
-            logger.warning(f"Could not connect to Neo4j: {e}. Analytics will be disabled.")
+        # Lazy connection - do not connect in __init__ to prevent startup hangs
+        # self.loader.connect() 
+        logger.info("Research Analyst initialized (Graph connection is lazy).")
 
     def get_graph_statistics(self) -> Dict[str, int]:
         """

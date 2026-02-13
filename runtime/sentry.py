@@ -49,18 +49,24 @@ def filter_sensitive_data(event, hint):
         return event
     
     # Redact Authorization and Cookie headers
-    headers = event['request'].get('headers', {})
+    request = event.get('request', {})
+    headers = request.get('headers', {})
     sensitive_headers = ['authorization', 'x-api-key', 'cookie', 'set-cookie']
     for header in sensitive_headers:
         if header in headers:
             headers[header] = '[REDACTED]'
+    
+    # Ensure updated headers are in the event
+    if 'request' in event and 'headers' in event['request']:
+        event['request']['headers'] = headers
             
     # Redact potential secrets in request body
-    data = event['request'].get('data')
+    data = request.get('data')
     if isinstance(data, dict):
         for key in ['password', 'api_key', 'secret', 'token']:
             if key in data:
                 data[key] = '[REDACTED]'
+        event['request']['data'] = data
                 
     # Redact user email
     if 'user' in event and 'email' in event['user']:
