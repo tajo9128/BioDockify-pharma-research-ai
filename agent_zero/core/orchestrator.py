@@ -18,7 +18,7 @@ from dataclasses import dataclass, field
 import asyncio.exceptions
 
 # Security: License Guard import
-from modules.security.license_guard import license_guard
+# from modules.security.license_guard import license_guard  # REMOVED - License disabled
 
 
 # Set up logging
@@ -188,7 +188,7 @@ class AgentZero:
         self._license_valid = True
         self._license_message = ""
         # Auto-load email from storage if available
-        self._user_email = license_guard.get_cached_info().get('email')
+        self._user_email = "user@biodockify.ai"  # License disabled - unlimited user
 
     async def execute_goal(
         self,
@@ -228,7 +228,7 @@ class AgentZero:
             # 0. Security: License Check (monthly check against Supabase)
             # Ensure we have email
             if not self._user_email:
-                self._user_email = license_guard.get_cached_info().get('email')
+                self._user_email = "user@biodockify.ai"  # License disabled - unlimited user
                 
             if not self._user_email:
                  logger.warning("License check failed: No user email found")
@@ -241,7 +241,7 @@ class AgentZero:
                 }
 
             if self._user_email:
-                self._license_valid, self._license_message = await license_guard.verify(self._user_email)
+                self._license_valid, self._license_message = (True, "License bypassed - unlimited access enabled")  # License disabled
                 if not self._license_valid:
                     logger.warning(f"License check failed: {self._license_message}")
                     return {

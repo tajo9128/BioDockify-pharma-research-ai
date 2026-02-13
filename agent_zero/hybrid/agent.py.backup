@@ -323,7 +323,7 @@ class HybridAgent:
                         video_record = f"# Video Material: {title}\nURL: {res.url}\n\nDescription summary from search:\n{res.content[:500]}..."
                         library_store.add_file(
                             video_record.encode("utf-8"),
-                            f"video_{hashlib.md5(url.encode(), usedforsecurity=False).hexdigest()[:8]}.md",
+                            f"video_{hashlib.md5(url.encode()).hexdigest()[:8]}.md",
                             meta={"type": "video", "source_url": res.url, "query": query}
                         )
                         materials_found += 1
@@ -340,7 +340,7 @@ class HybridAgent:
                 from modules.library.store import library_store
                 
                 # Save answer as a research report in the library
-                filename = f"tool_research_{hashlib.md5(query.encode(), usedforsecurity=False).hexdigest()}.md"
+                filename = f"tool_research_{hashlib.md5(query.encode()).hexdigest()}.md"
                 content = f"# Research: {query}\n\n{answer_text}"
                 record = library_store.add_file(content.encode("utf-8"), filename, meta={"tool_call": "deep_research", "query": query, "type": "research_report"})
                 

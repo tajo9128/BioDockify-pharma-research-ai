@@ -3,7 +3,6 @@
 import os
 import sys
 import codecs
-import ast
 
 
 
@@ -68,7 +67,7 @@ def roc_curve(truth_d, scr_d):
 def auc(roc_curve):
 
     if isinstance(roc_curve, str):
-        roc_curve = list(ast.literal_eval(roc_curve))
+        roc_curve = list(eval(roc_curve))
 
     y = roc_curve[0]
     x = roc_curve[1]

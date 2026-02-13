@@ -69,7 +69,7 @@ from numpy.ma import zeros, sum as npsum
 import os
 import sys
 import unittest
-from defusedxml import ElementTree as ET
+import xml.dom.minidom
 import shutil
 import json
 
@@ -294,7 +294,7 @@ def extract_average_execution_time(path):
     xmlfiles = glob.glob(os.path.join(path, '*.xml'))
     xmlfiles.extend(glob.glob(os.path.join(path, os.path.join('*', '*.xml'))))
     for xmlfile in xmlfiles:
-        doc = ET.parse(xmlfile)
+        doc = xml.dom.minidom.parse(xmlfile)
         if doc.documentElement.hasAttribute('reference'):
             for node in doc.documentElement.childNodes:
                 if node.nodeType == xml.dom.Node.ELEMENT_NODE and \
@@ -318,7 +318,7 @@ def extract_annotations_from_files(path, tagname):
 
 def extract_annotations_from_file(xmlfile, tagname):
     """Returns a set of plagiarism annotations from an XML file."""
-    doc = ET.parse(xmlfile)
+    doc = xml.dom.minidom.parse(xmlfile)
     annotations = set()
     if not doc.documentElement.hasAttribute('reference'):
         return annotations

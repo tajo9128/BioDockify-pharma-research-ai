@@ -1983,6 +1983,348 @@ async def agent_execute(request: AgentExecuteRequest):
 
 
 # -----------------------------------------------------------------------------
+# Agent Chat API (with multi-mode support)
+# -----------------------------------------------------------------------------
+    mode: str = "chat"  # "chat", "semi-autonomous", "autonomous"
+
+@app.post("/api/agent/chat")
+def agent_chat_endpoint(request: AgentChatRequest):
+    """
+    Agent Zero Chat Endpoint with SurfSense + RAG Integration.
+    1. Tries SurfSense first (if running) for advanced RAG
+    2. Falls back to internal Knowledge Base
+    3. Routes to configured LLM provider
+    """
+    import requests as req
+    import asyncio
+    from modules.rag.vector_store import get_vector_store
+    from modules.surfsense import get_surfsense_client
+    
+    config = load_config()
+    provider_config = config.get('ai_provider', {})
+    
+    user_query = request.message
+    
+    # =========================================================================
+    # STEP 1: Search SurfSense (Priority) then Internal KB (Fallback)
+    # =========================================================================
+    kb_context = ""
+    kb_sources = []
+    context_source = "none"
+    
+    # Try SurfSense first
+    surfsense_url = provider_config.get('surfsense_url', 'http://localhost:8000')
+    surfsense_client = get_surfsense_client(surfsense_url)
+    
+    try:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        
+        # Check if SurfSense is running
+        if loop.run_until_complete(surfsense_client.health_check()):
+            results = loop.run_until_complete(surfsense_client.search(user_query, top_k=3))
+            if results:
+                context_parts = []
+                for r in results:
+                    source = r.get('source', r.get('metadata', {}).get('source', 'SurfSense'))
+                    text = r.get('text', r.get('content', ''))[:500]
+                    context_parts.append(f"[Source: {source}]\n{text}")
+                    kb_sources.append(source)
+                kb_context = "\n\n---\n\n".join(context_parts)
+                context_source = "surfsense"
+        loop.close()
+    except Exception as e:
+        logger.warning(f"SurfSense search failed, falling back to internal KB: {e}")
+    
+    # Fallback to internal KB
+    if not kb_context:
+        try:
+            vector_store = get_vector_store()
+            results = vector_store.search(user_query, k=3)
+            
+            if results:
+                context_parts = []
+                for r in results:
+                    source = r.get('metadata', {}).get('source', 'Unknown')
+                    text = r.get('text', '')[:500]
+                    context_parts.append(f"[Source: {source}]\n{text}")
+                    kb_sources.append(source)
+                kb_context = "\n\n---\n\n".join(context_parts)
+                context_source = "internal_kb"
+        except Exception as e:
+            logger.warning(f"Internal KB search failed: {e}")
+    
+    # =========================================================================
+    # STEP 2: Build Enhanced Prompt with KB Context and Constitution
+    # =========================================================================
+    # =========================================================================
+    # =========================================================================
+    # STEP 2: Build Enhanced Prompt with KB Context and Constitution
+    # =========================================================================
+    # Use the full Agent Zero Constitution as system prompt
+    from modules.agent import AGENT_ZERO_SYSTEM_PROMPT, PHD_THESIS_WRITER_PROMPT, PHARMA_REVIEW_WRITER_PROMPT, PHARMA_RESEARCH_WRITER_PROMPT
+    
+    if request.mode == "thesis_writer":
+        base_prompt = PHD_THESIS_WRITER_PROMPT
+    elif request.mode == "review_writer":
+        base_prompt = PHARMA_REVIEW_WRITER_PROMPT
+    elif request.mode == "research_writer":
+        base_prompt = PHARMA_RESEARCH_WRITER_PROMPT
+    else:
+        # Default to the Pharma Research / General Agent Zero prompt
+        base_prompt = AGENT_ZERO_SYSTEM_PROMPT
+
+    system_prompt = base_prompt + f"""
+
+## CURRENT MODE: {request.mode.upper()}
+## CONTEXT SOURCE: {context_source}
+"""
+
+    if kb_context:
+        enhanced_prompt = f"""Use the following context from the Knowledge Base to answer the question:
+
+---
+KNOWLEDGE BASE CONTEXT:
+{kb_context}
+---
+
+USER QUESTION: {user_query}
+
+Provide a well-structured answer based on the context above. If the context doesn't contain relevant information, say so and provide general guidance."""
+    else:
+        enhanced_prompt = user_query
+    
+    errors = []  # Track all provider errors for debugging
+    
+    # =========================================================================
+    # PROVIDER 1: Custom/Paid OpenAI-Compatible API (GLM, Groq, OpenAI, etc.)
+    # =========================================================================
+    if provider_config.get('custom_key') and provider_config.get('custom_base_url'):
+        try:
+            base_url = provider_config['custom_base_url'].rstrip('/')
+            key = provider_config['custom_key']
+            model = provider_config.get('custom_model', 'gpt-3.5-turbo')
+            
+            url = f"{base_url}/chat/completions"
+            headers = {"Authorization": f"Bearer {key}", "Content-Type": "application/json"}
+            payload = {
+                "model": model,
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": enhanced_prompt}
+                ]
+            }
+            
+            resp = req.post(url, json=payload, headers=headers, timeout=60)
+            if resp.status_code == 200:
+                data = resp.json()
+                content = data.get('choices', [{}])[0].get('message', {}).get('content', '')
+                if content:
+                    return {"reply": content, "provider": "custom"}
+            errors.append(f"Custom API ({model}): {resp.status_code}")
+        except Exception as e:
+            errors.append(f"Custom API: {str(e)}")
+    
+    # =========================================================================
+    # PROVIDER 2: Google Gemini
+    # =========================================================================
+    if provider_config.get('google_key'):
+        try:
+            key = provider_config['google_key']
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={key}"
+            payload = {
+                "contents": [{"parts": [{"text": f"{system_prompt}\n\nUser: {enhanced_prompt}"}]}]
+            }
+            
+            resp = req.post(url, json=payload, timeout=60)
+            if resp.status_code == 200:
+                data = resp.json()
+                content = data.get('candidates', [{}])[0].get('content', {}).get('parts', [{}])[0].get('text', '')
+                if content:
+                    return {"reply": content, "provider": "google"}
+            errors.append(f"Google Gemini: {resp.status_code}")
+        except Exception as e:
+            errors.append(f"Google Gemini: {str(e)}")
+    
+    # =========================================================================
+    # PROVIDER 3: OpenRouter
+    # =========================================================================
+    if provider_config.get('openrouter_key'):
+        try:
+            key = provider_config['openrouter_key']
+            url = "https://openrouter.ai/api/v1/chat/completions"
+            headers = {
+                "Authorization": f"Bearer {key}",
+                "HTTP-Referer": "http://localhost:3000",
+                "X-Title": "BioDockify",
+                "Content-Type": "application/json"
+            }
+            payload = {
+                "model": "openai/gpt-3.5-turbo",  # Default free-tier model
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": enhanced_prompt}
+                ]
+            }
+            
+            resp = req.post(url, json=payload, headers=headers, timeout=60)
+            if resp.status_code == 200:
+                content = resp.json().get('choices', [{}])[0].get('message', {}).get('content', '')
+                if content:
+                    return {"reply": content, "provider": "openrouter"}
+            errors.append(f"OpenRouter: {resp.status_code}")
+        except Exception as e:
+            errors.append(f"OpenRouter: {str(e)}")
+    
+    # =========================================================================
+    # PROVIDER 4: GLM (ZhipuAI) - Direct API
+    # =========================================================================
+    if provider_config.get('glm_key'):
+        try:
+            key = provider_config['glm_key']
+            url = "https://open.bigmodel.cn/api/paas/v4/chat/completions"
+            headers = {"Authorization": f"Bearer {key}", "Content-Type": "application/json"}
+            payload = {
+                "model": "glm-4",
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": enhanced_prompt}
+                ]
+            }
+            
+            resp = req.post(url, json=payload, headers=headers, timeout=60)
+            if resp.status_code == 200:
+                content = resp.json().get('choices', [{}])[0].get('message', {}).get('content', '')
+                if content:
+                    return {"reply": content, "provider": "glm"}
+            errors.append(f"GLM: {resp.status_code}")
+        except Exception as e:
+            errors.append(f"GLM: {str(e)}")
+    
+    # =========================================================================
+    # PROVIDER 5: HuggingFace Inference API
+    # =========================================================================
+    if provider_config.get('huggingface_key'):
+        try:
+            key = provider_config['huggingface_key']
+            url = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.1"
+            headers = {"Authorization": f"Bearer {key}"}
+            payload = {"inputs": f"<s>[INST] {system_prompt}\n\n{enhanced_prompt} [/INST]"}
+            
+            resp = req.post(url, json=payload, headers=headers, timeout=60)
+            if resp.status_code == 200:
+                data = resp.json()
+                if isinstance(data, list) and len(data) > 0:
+                    content = data[0].get('generated_text', '')
+                    # Extract response after [/INST]
+                    if '[/INST]' in content:
+                        content = content.split('[/INST]')[-1].strip()
+                    if content:
+                        return {"reply": content, "provider": "huggingface"}
+            errors.append(f"HuggingFace: {resp.status_code}")
+        except Exception as e:
+            errors.append(f"HuggingFace: {str(e)}")
+    
+    # =========================================================================
+    # PROVIDER 5.5: LM Studio (Local OpenAI-Compatible)
+    # =========================================================================
+    if provider_config.get('mode') == 'lm_studio' or provider_config.get('lm_studio_url'):
+        try:
+            lm_url = provider_config.get('lm_studio_url', 'http://localhost:1234/v1')
+            lm_model = provider_config.get('lm_studio_model', 'local-model')
+            
+            # Ensure URL ends with /chat/completions if not present, but handle base URL correctly
+            # LM Studio usually gives http://localhost:1234/v1
+            if not lm_url.endswith('/chat/completions'):
+                url = f"{lm_url.rstrip('/')}/chat/completions"
+            else:
+                url = lm_url
+
+            payload = {
+                "model": lm_model,
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": enhanced_prompt}
+                ],
+                "temperature": 0.7,
+                "max_tokens": -1, # LM Studio often needs this for unlimited
+                "stream": False
+            }
+            
+            # LM Studio doesn't strictly require a key, but some setups might
+            headers = {"Content-Type": "application/json"}
+            
+            resp = req.post(url, json=payload, headers=headers, timeout=120)
+            
+            if resp.status_code == 200:
+                data = resp.json()
+                content = data.get('choices', [{}])[0].get('message', {}).get('content', '')
+                if content:
+                    return {"reply": content, "provider": "lm_studio"}
+            errors.append(f"LM Studio: {resp.status_code} - {resp.text}")
+        except Exception as e:
+            errors.append(f"LM Studio Error: {str(e)}")
+
+    try:
+        ollama_url = provider_config.get('ollama_url', 'http://localhost:11434')
+        model = provider_config.get('ollama_model', 'llama2')
+        
+        url = f"{ollama_url}/api/chat"
+        payload = {
+            "model": model,
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": enhanced_prompt}
+            ],
+            "stream": False
+        }
+        
+        resp = req.post(url, json=payload, timeout=120)  # Longer timeout for local
+        if resp.status_code == 200:
+            content = resp.json().get('message', {}).get('content', '')
+            if content:
+                return {"reply": content, "provider": "ollama"}
+        errors.append(f"Ollama ({model}): {resp.status_code}")
+    except Exception as e:
+        errors.append(f"Ollama: {str(e)}")
+    
+    # =========================================================================
+    # ALL PROVIDERS FAILED
+    # =========================================================================
+    error_summary = "; ".join(errors) if errors else "No providers configured"
+    
+    # Check if Ollama was the only configured provider and failed
+    has_cloud_provider = any([
+        provider_config.get('custom_key'),
+        provider_config.get('google_key'),
+        provider_config.get('openrouter_key'),
+        provider_config.get('glm_key'),
+        provider_config.get('huggingface_key')
+    ])
+    
+    if not has_cloud_provider and 'Ollama' in error_summary:
+        # User only has Ollama configured and it failed
+        return {
+            "reply": f"⚠️ Agent Zero could not connect to Ollama.\n\n**Error:** {error_summary}\n\n**Why this happens:** Ollama requires a good CPU or GPU to run. If you don't have one, Ollama may not work well or at all.\n\n**Solution:** Configure a free cloud API in Settings:\n• **Google Gemini** (Free tier available)\n• **OpenRouter** (Free tier available)\n• **HuggingFace** (Free tier available)\n\nGo to **Settings → AI & Brain** to add your API key.",
+            "provider": "none",
+            "errors": errors
+        }
+    else:
+        return {
+            "reply": f"⚠️ Agent Zero could not connect to any AI provider.\n\n**Attempted:** {error_summary}\n\n**Solution:** Please configure at least one provider in Settings (Google, OpenRouter, HuggingFace, Custom API, or Ollama).",
+            "provider": "none",
+            "errors": errors
+        }
+
+from fastapi import UploadFile, File
+from modules.rag.ingestor import ingestor
+from modules.rag.vector_store import get_vector_store
+import shutil
+import tempfile
+import os
+
+@app.post("/api/rag/upload")
+async def upload_document(file: UploadFile = File(...)):
     """Upload and ingest a document (PDF, Notebook, MD) into the knowledge base."""
     import re
     

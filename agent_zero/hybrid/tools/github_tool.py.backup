@@ -35,7 +35,7 @@ class GitHubTool:
         
         try:
             url = f"{self.base_url}/search/repositories"
-            resp = requests.get(url, headers=self.headers, params={"q": query, "per_page": 5}, timeout=10)
+            resp = requests.get(url, headers=self.headers, params={"q": query, "per_page": 5})
             resp.raise_for_status()
             data = resp.json()
             
@@ -59,7 +59,7 @@ class GitHubTool:
         
         try:
             url = f"{self.base_url}/repos/{repo}/contents/{path}"
-            resp = requests.get(url, headers=self.headers, timeout=10)
+            resp = requests.get(url, headers=self.headers)
             resp.raise_for_status()
             data = resp.json()
             
@@ -85,7 +85,7 @@ class GitHubTool:
         
         try:
             url = f"{self.base_url}/repos/{repo}/issues"
-            resp = requests.post(url, headers=self.headers, json={"title": title, "body": body}, timeout=10)
+            resp = requests.post(url, headers=self.headers, json={"title": title, "body": body})
             resp.raise_for_status()
             data = resp.json()
             return f"Issue created: {data['html_url']}"
