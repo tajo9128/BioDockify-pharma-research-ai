@@ -58,7 +58,6 @@ RUN find /opt/venv -type d -name '__pycache__' -exec rm -rf {} + 2>/dev/null; \
 # Stage 3: Runtime Stage
 # -----------------------------------------------------------------------------
 FROM python:3.11-slim AS runtime
-FROM python:3.11-slim AS runtime
 WORKDIR /app
 
 # Ensure UTF-8 Locale
@@ -101,7 +100,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PYTHONPATH=/app \
     NODE_ENV=production \
-    BIODOCKIFY_DATA=/app/data \
+    BIODOCKIFY_DATA_DIR=/app/data \
     PORT=3000
 
 # -----------------------------------------------------------------------------
@@ -154,10 +153,10 @@ environment=PORT="3001",HOSTNAME="0.0.0.0",NODE_ENV="production" \n\
 ' > /etc/supervisor/conf.d/biodockify.conf
 
 # Startup Scripts
-LABEL version="v2.6.9"
+LABEL version="v2.6.10"
 LABEL description="BioDockify - Pharma Research AI"
 RUN echo '#!/bin/bash \n\
-echo "BioDockify v2.6.9 - Optimized Launch" \n\
+echo "BioDockify v2.6.10 - Optimized Launch" \n\
 echo "Node Version: $(node -v)" \n\
 echo "Node Path: $(which node)" \n\
 mkdir -p /app/data \n\
