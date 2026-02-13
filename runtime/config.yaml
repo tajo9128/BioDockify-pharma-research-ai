@@ -56,6 +56,7 @@ channels:
     allow_from: []
     gateway_url: wss://gateway.discord.gg/?v=10&encoding=json
 ai_provider:
+  mode: lm_studio
   primary_model: ollama
   cloud_fallback: true
   lm_studio_url: http://localhost:1234/v1
@@ -66,25 +67,44 @@ ai_provider:
   glm_key: ''
   elsevier_key: ''
   pubmed_email: ''
+  item_key: ''
+  mistral_key: ''
+  mistral_model: mistral-large-latest
+  venice_key: ''
+  venice_model: llama-3-70b
+  kimi_key: ''
+  kimi_model: moonshot-v1-8k
+  deepseek_key: ''
+  deepseek_model: deepseek-chat
+  azure_endpoint: ''
+  azure_deployment: ''
+  azure_key: ''
+  azure_api_version: 2024-02-15-preview
+  aws_access_key: ''
+  aws_secret_key: ''
+  aws_region_name: us-east-1
+  aws_model_id: anthropic.claude-3-sonnet-20240229-v1:0
   custom_key: ''
   custom_base_url: ''
   custom_model: gpt-3.5-turbo
   serper_key: ''
   jina_key: ''
   brave_key: ''
-  mode: lm_studio
   ollama_fallback: true
   ollama_url: http://localhost:11434
   ollama_model: llama2
 ai_advanced:
+  performance_profile: high
   context_window: 8192
   gpu_layers: -1
   thread_count: 8
 persona:
-  role: PhD Student
+  roles:
+  - PhD Student
   strictness: balanced
   introduction: I am a researcher specializing in neurodegenerative diseases...
   research_focus: Investigating the role of Tau proteins in early-stage Alzheimer's...
+  role: PhD Student
 output:
   format: markdown
   citation_style: apa
@@ -100,6 +120,6 @@ system:
   pause_on_battery: true
   max_cpu_percent: 80
   log_level: INFO
-  version: 2.4.9
+  version: 2.6.2
   auto_start: true
   minimize_to_tray: true

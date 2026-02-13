@@ -5,6 +5,13 @@ All notable changes to **BioDockify** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v2.6.9] - 2026-02-13
+### Fixed
+- **CI Hardening**: Resolved persistent `sqlite3.OperationalError` (Readonly DB) by enforcing absolute writable paths for `AdvancedMemorySystem` and `MultiTaskScheduler` via `BIODOCKIFY_DATA_DIR`.
+- **Noise Reduction**: Fully suppressed ChromaDB/PostHog telemetry noise in CI logs using system environment variables.
+- **Pydantic V2 Migration**: Fixed remaining `PydanticDeprecatedSince20` warnings in `BaseProvider` by adopting `ConfigDict`.
+- **API Stability**: Added missing `title` field to `TaskStatus` model to resolve frontend deserialization errors.
+
 ## [v2.4.9] - 2026-02-10
 ### Added
 - **Production Efficiency**: Final build optimizations for v2.4.9 release.
