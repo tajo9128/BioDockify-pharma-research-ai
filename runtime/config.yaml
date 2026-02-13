@@ -123,3 +123,56 @@ system:
   minimize_to_tray: true
   pause_on_battery: true
   version: 2.6.2
+
+# =============================================================================
+# INTERNATIONAL SETTINGS (ISO Standards & Compliance)
+# =============================================================================
+international:
+  # Language Configuration (ISO 639-1)
+  default_language: "en"  # en, zh, es, fr, de, ja, ko, ar, etc.
+  supported_languages:
+    - "en"  # English
+    - "zh"  # Chinese (Simplified)
+    - "es"  # Spanish
+    - "fr"  # French
+    - "de"  # German
+    - "ja"  # Japanese
+    - "ko"  # Korean
+    - "ar"  # Arabic (RTL)
+    - "pt"  # Portuguese
+    - "ru"  # Russian
+  
+  # Region Configuration (ISO 3166-1 alpha-2)
+  default_region: "US"  # US, CN, EU, JP, etc.
+  
+  # Timezone (IANA timezone database)
+  default_timezone: "UTC"
+  auto_detect_timezone: true
+  
+  # Date/Time/Number Formatting
+  date_format: "ISO8601"  # ISO8601, ISO, US, EU, LOCAL
+  time_format: "24h"  # 24h or 12h
+  number_format: "ISO"  # ISO, US, EU, LOCAL
+  
+  # RTL (Right-to-Left) Support
+  enable_rtl: true  # For Arabic, Hebrew, Farsi, etc.
+  
+  # Data Compliance
+  compliance:
+    gdpr_mode: false  # Enable GDPR compliance for EU users
+    ccpa_mode: false  # Enable CCPA compliance for CA users
+    data_localization: false  # Keep data in user's region
+    consent_required: true  # Require user consent for data processing
+    
+  # Legal & Standards
+  standards:
+    iso_3166_country_codes: true  # Use ISO country codes
+    iso_639_language_codes: true  # Use ISO language codes
+    iso_8601_datetime: true  # Use ISO datetime format
+    unicode_support: true  # Full Unicode support (UTF-8)
+    
+  # Cultural Settings
+  cultural_adaptation:
+    respect_local_holidays: true
+    respect_working_hours: true  # Avoid notifications outside business hours
+    currency_aware: true  # Display local currency when applicable

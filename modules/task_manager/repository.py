@@ -121,7 +121,7 @@ class TaskRepository:
 
                 # Create initial event
                 event_orm = TaskExecutionEventORM(
-                    id=f"event_{task.id}_{datetime.utcnow().timestamp()}",
+                    id=f"event_{task.id}_{datetime.now(datetime.UTC).timestamp()}",
                     task_id=task.id,
                     event_type="created",
                     message=f"Task '{task.title}' created"
@@ -243,7 +243,7 @@ class TaskRepository:
         async with self.async_session() as session:
             async with session.begin():
                 event = TaskExecutionEventORM(
-                    id=f"event_{task_id}_{datetime.utcnow().timestamp()}_{event_type}",
+                    id=f"event_{task_id}_{datetime.now(datetime.UTC).timestamp()}_{event_type}",
                     task_id=task_id,
                     event_type=event_type,
                     message=message,

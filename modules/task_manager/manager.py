@@ -163,7 +163,7 @@ class TaskManager:
 
             await self.db.update_task(task_id, {
                 "status": TaskStatus.IN_PROGRESS,
-                "started_at": datetime.utcnow()
+                "started_at": datetime.now(datetime.UTC)
             })
 
             await self.db.log_event(
@@ -206,7 +206,7 @@ class TaskManager:
             logger.error(f"Task not found for execution: {task_id}")
             return
 
-        start_time = datetime.utcnow()
+        start_time = datetime.now(datetime.UTC)
 
         try:
             # Memory Recall (if required)
@@ -225,7 +225,7 @@ class TaskManager:
                 result = await self._execute_direct(task)
 
             # Success
-            duration = (datetime.utcnow() - start_time).total_seconds()
+            duration = (datetime.now(datetime.UTC) - start_time).total_seconds()
             await self._complete_task(task_id, result, duration)
 
         except Exception as e:
@@ -236,7 +236,7 @@ class TaskManager:
             if task.retry_count <= task.max_retries:
                 await self._retry_task(task_id, str(e))
             else:
-                duration = (datetime.utcnow() - start_time).total_seconds()
+                duration = (datetime.now(datetime.UTC) - start_time).total_seconds()
                 await self._fail_task(task_id, str(e), duration)
 
         finally:
@@ -307,7 +307,7 @@ Report back with result.
         """Mark task as completed"""
         await self.db.update_task(task_id, {
             "status": TaskStatus.COMPLETED,
-            "completed_at": datetime.utcnow(),
+            "completed_at": datetime.now(datetime.UTC),
             "result": result,
             "actual_duration_seconds": int(duration)
         })
@@ -352,7 +352,7 @@ Report back with result.
         """Mark task as failed"""
         await self.db.update_task(task_id, {
             "status": TaskStatus.FAILED,
-            "completed_at": datetime.utcnow(),
+            "completed_at": datetime.now(datetime.UTC),
             "error_message": error_message,
             "actual_duration_seconds": int(duration)
         })
@@ -415,7 +415,7 @@ Report back with result.
 
         while self.scheduler_running:
             try:
-                now = datetime.utcnow()
+                now = datetime.now(datetime.UTC)
                 scheduled_tasks = await self.db.get_scheduled_tasks(now)
 
                 for task in scheduled_tasks:
@@ -449,7 +449,7 @@ Report back with result.
 
         await self.db.update_task(task_id, {
             "status": TaskStatus.CANCELLED,
-            "completed_at": datetime.utcnow()
+            "completed_at": datetime.now(datetime.UTC)
         })
 
         await self.db.log_event(task_id, "cancelled", "Task cancelled by user")

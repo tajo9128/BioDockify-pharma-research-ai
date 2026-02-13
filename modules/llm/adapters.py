@@ -312,7 +312,7 @@ class LMStudioAdapter(BaseLLMAdapter):
 class ZhipuAdapter(BaseLLMAdapter):
     """Adapter for Zhipu AI (GLM-4)."""
     
-    def __init__(self, api_key: str, model: str = "glm-4"):
+    def __init__(self, api_key: str, model: str = "glm-5"):
         self.api_key = api_key
         self.model = model
         self.url = "https://open.bigmodel.cn/api/paas/v4/chat/completions"

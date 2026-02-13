@@ -92,7 +92,7 @@ def main():
     try:
         logging.info("Starting Uvicorn server...")
         # Bind to 0.0.0.0 (More robust for Windows/IPv6 resolution of localhost)
-        uvicorn.run(app, host="0.0.0.0", port=8234, log_level="info")
+        uvicorn.run(app, host="0.0.0.0", port=3000, log_level="info")
     except Exception as e:
         logging.critical(f"Server crashed: {e}")
         traceback.print_exc()

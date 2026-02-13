@@ -81,9 +81,9 @@ class NanoBotReceptionist:
         # Robust Fallback Logic
         use_fallback = False
         
-        if self.config.primary_model == "lm_studio":
+        if self.config.primary_model == "custom" or self.config.primary_model == "lm_studio":
             api_base = self.config.custom_base_url
-            api_key = "lm-studio"
+            api_key = self.config.glm_key or "lm-studio"
             if model == "auto": model = "local-model"
             
         elif self.config.primary_model == "openrouter":
@@ -110,7 +110,7 @@ class NanoBotReceptionist:
         if use_fallback:
             self.config.primary_model = "lm_studio"
             api_base = "http://localhost:1234/v1"
-            api_key = "lm-studio"
+            api_key = self.config.glm_key or "lm-studio"
             model = "local-model"
 
         self.provider = LiteLLMProvider(
@@ -317,7 +317,8 @@ class NanoBotReceptionist:
             "openrouter_key": ai.get("openrouter_key"),
             "ollama_host": ai.get("ollama_host") or "http://localhost:11434",
             "custom_base_url": ai.get("lm_studio_url") or "http://localhost:1234/v1",
-            "custom_model": ai.get("lm_studio_model") or "auto"
+            "custom_model": ai.get("lm_studio_model") or "auto",
+            "glm_key": ai.get("glm_key")
         }
 
     async def process_chat(self, message: str) -> str:

@@ -8,7 +8,7 @@ import subprocess
 import logging
 from pathlib import Path
 from typing import List, Dict, Optional
-import xml.etree.ElementTree as ET
+from defusedxml import ElementTree as ET
 import shutil
 
 logger = logging.getLogger(__name__)
