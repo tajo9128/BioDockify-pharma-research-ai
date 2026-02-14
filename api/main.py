@@ -136,11 +136,26 @@ except ImportError as e:
 try:
     from api.routes.settings_routes import router as settings_router
     app.include_router(settings_router)
+# Register Statistics Routes
+try:
+    from api.routes.statistics import router as statistics_router
+    app.include_router(statistics_router)
 except ImportError as e:
     import logging
-    logging.getLogger("biodockify_api").warning(f"Settings routes not loaded: {e}")
+    logging.getLogger("biodockify_api").warning(f"Statistics routes not loaded: {e}")
 
 from fastapi.middleware.cors import CORSMiddleware
+
+
+# ===================== Proactive Guidance Integration =====================
+from modules.proactive_integration import create_proactive_guidance_routes
+
+# Initialize proactive guidance system
+try:
+    proactive_guidance_manager = create_proactive_guidance_routes(config, app)
+except Exception as e:
+    proactive_guidance_manager = None
+# ========================================================================
 
 @app.get("/api/health")
 async def health_check():

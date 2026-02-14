@@ -1,10 +1,71 @@
 import React, { useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useNavigate, Link } from 'react-router-dom';
 import apiService from './api';
 import ResearchDashboard from './components/ResearchDashboard';
+import StatisticsView from './views/StatisticsView';
 import BackendInitializer from './components/BackendInitializer';
 import FirstRunWizard from './components/FirstRunWizard';
-import { Microscope, ArrowRight, Play } from 'lucide-react';
+import { Microscope, ArrowRight, BarChart, Home, Settings, Database, FileText } from 'lucide-react';
+
+const Navigation = () => {
+  return (
+    <nav className="fixed top-0 left-0 right-0 z-50 bg-slate-900/95 backdrop-blur-md border-b border-slate-800">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-16">
+          {/* Logo */}
+          <div className="flex items-center gap-3">
+            <Link to="/" className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                <Microscope size={20} className="text-white" />
+              </div>
+              <span className="text-white font-bold text-lg">BioDockify</span>
+            </Link>
+          </div>
+
+          {/* Navigation Links */}
+          <div className="flex items-center gap-1">
+            <Link
+              to="/"
+              className="flex items-center gap-2 px-4 py-2 text-sm text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+            >
+              <Home size={18} />
+              <span>Research</span>
+            </Link>
+            <Link
+              to="/statistics"
+              className="flex items-center gap-2 px-4 py-2 text-sm text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+            >
+              <BarChart size={18} />
+              <span>Statistics</span>
+            </Link>
+            <Link
+              to="/dashboard"
+              className="flex items-center gap-2 px-4 py-2 text-sm text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+            >
+              <Database size={18} />
+              <span>Data</span>
+            </Link>
+            <Link
+              to="/settings"
+              className="flex items-center gap-2 px-4 py-2 text-sm text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+            >
+              <Settings size={18} />
+              <span>Settings</span>
+            </Link>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex items-center gap-2">
+            <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm font-medium transition-colors">
+              <FileText size={18} />
+              <span>New Project</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </nav>
+  );
+};
 
 const LandingPage = () => {
     const [title, setTitle] = useState('');
@@ -28,7 +89,7 @@ const LandingPage = () => {
     };
 
     return (
-        <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-4 text-white">
+        <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-4 text-white pt-20">
             <div className="max-w-2xl w-full space-y-8 text-center">
 
                 <div className="space-y-4">
@@ -87,6 +148,24 @@ const LandingPage = () => {
                     </div>
                 </div>
 
+                {/* Feature Highlight: Statistics */}
+                <div className="bg-gradient-to-r from-cyan-900/20 to-blue-900/20 p-6 rounded-xl border border-cyan-800/30">
+                    <div className="flex items-center gap-3 mb-3">
+                        <BarChart className="w-6 h-6 text-cyan-400" />
+                        <strong className="text-white">Comprehensive Statistics</strong>
+                    </div>
+                    <p className="text-sm text-slate-400 mb-3">
+                        Access 25+ statistical analyses including T-Tests, ANOVA, Survival Analysis, PK/PD Analysis, and more.
+                    </p>
+                    <Link
+                        to="/statistics"
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg text-sm font-medium transition-colors"
+                    >
+                        <BarChart size={16} />
+                        <span>Explore Statistics</span>
+                    </Link>
+                </div>
+
             </div>
         </div>
     );
@@ -106,10 +185,16 @@ const App = () => {
         <BackendInitializer>
             {showWizard && <FirstRunWizard onComplete={handleWizardComplete} />}
             <Router>
-                <Routes>
-                    <Route path="/" element={<LandingPage />} />
-                    <Route path="/dashboard/:taskId" element={<ResearchDashboard />} />
-                </Routes>
+                <Navigation />
+                <div className="pt-16">
+                    <Routes>
+                        <Route path="/" element={<LandingPage />} />
+                        <Route path="/dashboard/:taskId" element={<ResearchDashboard />} />
+                        <Route path="/statistics" element={<StatisticsView />} />
+                        <Route path="/dashboard" element={<ResearchDashboard />} />
+                        <Route path="/settings" element={<div className="p-8 pt-20"><h1 className="text-2xl font-bold text-white">Settings</h1><p className="text-slate-400 mt-2">Settings panel coming soon.</p></div>} />
+                    </Routes>
+                </div>
             </Router>
         </BackendInitializer>
     );

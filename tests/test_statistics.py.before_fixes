@@ -103,7 +103,7 @@ class TestDataImporter:
         assert isinstance(df, pd.DataFrame)
         assert len(df) == 12
         assert 'group' in df.columns
-    assert 'metadata' in result  # Format in different structure
+        assert metadata['format'] == 'csv'
         assert metadata['rows'] == 12
 
     def test_json_import(self, sample_json_file):
@@ -113,7 +113,7 @@ class TestDataImporter:
 
         assert isinstance(df, pd.DataFrame)
         assert len(df) == 12
-    assert 'metadata' in result  # Format in different structure
+        assert metadata['format'] == 'json'
 
     def test_data_cleaning(self, sample_dataframe):
         """Test data cleaning"""
@@ -125,16 +125,19 @@ class TestDataImporter:
         importer = DataImporter()
         df_clean, report = importer.clean_data(df_dirty)
 
-    assert 'operations' in report or 'missing_values_handled' in report
+        assert 'missing_values_handled' in report
         assert 'outliers_removed' in report
 
     def test_format_detection(self):
         """Test file format detection"""
         importer = DataImporter()
 
-    def test_format_detection(self):
-        # Format detection done differently - skip
-        assert True
+        assert importer._detect_format('test.csv') == 'csv'
+        assert importer._detect_format('test.xlsx') == 'xlsx'
+        assert importer._detect_format('test.json') == 'json'
+        assert importer._detect_format('test.docx') == 'docx'
+
+
 class TestEnhancedStatisticalEngine:
     """Test Enhanced Statistical Engine"""
 
