@@ -33,7 +33,7 @@ class RotationProvider:
         """Default provider configurations."""
         return {
             "deepseek_reasoner": {
-                "api_key": "sk-47fa563b87c84546bec48818079ec72d",
+                "api_key": os.getenv("DEEPSEEK_API_KEY", ""),
                 "model": "deepseek-reasoner",
                 "api_base": "https://api.deepseek.com",
                 "priority": 1

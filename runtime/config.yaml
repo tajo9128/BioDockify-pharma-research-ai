@@ -10,49 +10,18 @@ ai_advanced:
   performance_profile: high
   thread_count: 8
 ai_provider:
-  aws_access_key: ''
-  aws_model_id: anthropic.claude-3-sonnet-20240229-v1:0
-  aws_region_name: us-east-1
-  aws_secret_key: ''
-  azure_api_version: 2024-02-15-preview
-  azure_deployment: ''
-  azure_endpoint: ''
-  azure_key: ''
-  brave_key: ''
-  cloud_fallback: true
-  custom_base_url: https://api.us-west-2.modal.direct/v1
-  custom_key: ''
-  custom_model: zai-org/GLM-5-FP8
-  deepseek_key: sk-47fa563b87c84546bec48818079ec72d
-  deepseek_model: deepseek-reasoner
-  elsevier_key: ''
-  glm_key: dd45abe0a64648fa8f4f9b7b2144e5c2.JHGdsrQhEBZbAdTx
-  google_key: ''
-  huggingface_key: ''
-  item_key: ''
-  jina_key: ''
-  kimi_key: ''
-  kimi_model: moonshot-v1-8k
-  lm_studio_model: user-model-name
-  lm_studio_url: https://api.example.com/v1
-  minimax_api_base: https://api.minimax.chat/v1
-  minimax_group_id: ''
-  minimax_key: ''
-  minimax_model: abab6.5s-chat
-  mistral_key: ''
-  mistral_model: mistral-large-latest
-  mode: zhipu
-  ollama_base_url: http://localhost:11434
-  ollama_enabled: true
-  ollama_fallback: true
-  ollama_model: llama3.2
-  ollama_url: http://localhost:11434
-  openrouter_key: ''
-  primary_model: lm_studio
-  pubmed_email: ''
-  serper_key: ''
-  venice_key: ''
-  venice_model: llama-3-70b
+  mode: custom
+  custom_base_url: ''
+  custom_model: ''
+  api_key: ''
+  lm_studio_url: http://host.docker.internal:1234/v1
+  lm_studio_model: ''
+  ollama_base_url: http://host.docker.internal:11434
+  ollama_model: ''
+  deepseek_url: https://api.deepseek.com
+  deepseek_model: ''
+  minimax_url: https://api.minimax.chat/v1
+  minimax_model: ''
 channels:
   discord:
     allow_from: []
