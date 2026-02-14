@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { AnalysisType, ParameterDefinition } from '@/types/statistics';
+import { AnalysisType, AnalysisParameter } from '@/types/statistics';
 import { getAnalysesByCategory } from '@/lib/statistics/analysis-definitions';
 import { getColumnsByType, getSuggestedColumns } from '@/lib/statistics/data-detection';
 import { DataTypeDetection } from '@/types/statistics';
@@ -70,7 +70,7 @@ export default function ParameterForm({
     onParametersChange(newParams);
   };
 
-  const renderParameterInput = (param: ParameterDefinition) => {
+  const renderParameterInput = (param: AnalysisParameter) => {
     const value = localParams[param.name] !== undefined ? localParams[param.name] : param.defaultValue;
     const isRequired = param.required;
 

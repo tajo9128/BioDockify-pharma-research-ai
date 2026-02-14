@@ -1,4 +1,4 @@
-import { AnalysisType, AnalysisCategory, AnalysisDefinition, ParameterDefinition } from '@/types/statistics';
+import { AnalysisType, AnalysisCategory, AnalysisDefinition, AnalysisParameter } from '@/types/statistics';
 
 export const ANALYSIS_CATEGORIES: Record<AnalysisCategory, { name: string; description: string; icon: string }> = {
   basic: {
