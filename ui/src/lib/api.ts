@@ -289,7 +289,9 @@ async function apiRequest<T>(
     throw error;
   } finally {
     clearTimeout(id);
-  }
+
+}
+}
 
 export const api = {
   // Research endpoints
