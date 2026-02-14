@@ -54,6 +54,17 @@ export const apiService = {
 
     createEnhancedProject: async (title, type, context = '') => {
         return api.post(`/api/enhanced/project?project_title=${encodeURIComponent(title)}&project_type=${encodeURIComponent(type)}&additional_context=${encodeURIComponent(context)}`);
+    },
+
+    // Export statistics analysis result
+    exportStatistics: async (result, format, includeAssumptions = true, includeInterpretation = true, includeCode = false) => {
+        return api.post('/api/statistics/export', {
+            analysis_id: result.analysis_id,
+            format: format,
+            include_assumptions: includeAssumptions,
+            include_interpretation: includeInterpretation,
+            include_code: includeCode
+        });
     }
 };
 
