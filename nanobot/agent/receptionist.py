@@ -381,7 +381,7 @@ class NanoBotReceptionist:
                         final_reply += "\n\n(Error: Agent Zero is not in the office.)"
                         
                 # Local Skills (Browser, Email, Message, Search)
-                elif call.name in ["browser_automation", "send_email", "message", "web_search", "consult_manual", "craft_research_title", "design_methodology", "evaluate_research_strategy", "freeze_reproducibility_snapshot"]:
+                elif call.name in ["browser_automation", "send_email", "message", "web_search", "consult_manual", "craft_research_title", "design_methodology", "evaluate_research_strategy", "freeze_reproducibility_snapshot", "bootstrap_project", "validate_research_output", "register_execution_heartbeat"]:
                     logger.info(f"NanoBot executing skill: {call.name}")
                     if not final_reply:
                         final_reply = f"Executing {call.name}..."
@@ -408,6 +408,61 @@ class NanoBotReceptionist:
              await self.memory.store({"content": f"User: {message}\nMe: {final_reply}", "type": "chat"})
              
         return final_reply
+    async def _consult_manual(self, query: str) -> str:
+        """Search documentation files for answers about BioDockify capabilities."""
+        import os
+        from pathlib import Path
+
+        query_lower = query.lower()
+        results = []
+
+        # Key documentation files to search
+        doc_files = [
+            "ARCHITECTURE.md",
+            "SECURITY.md",
+            "SURFSENSE_ARCHITECTURE.md",
+            "ENHANCED_SELF_AWARENESS_SYSTEM.md",
+            "RESEARCH_MANAGEMENT_SYSTEM.md",
+            "SELF_REPAIR_CAPABILITIES.md",
+            "MULTI_PROJECT_CAPABILITY.md",
+            "PROACTIVE_GUIDANCE_SYSTEM.md",
+            "CONTRIBUTING.md",
+            "README.md"
+        ]
+
+        project_root = Path(__file__).parent.parent.parent
+
+        for doc_file in doc_files:
+            doc_path = project_root / doc_file
+            if not doc_path.exists():
+                continue
+
+            try:
+                with open(doc_path, 'r', encoding='utf-8') as f:
+                    lines = f.readlines()
+
+                # Search for query in file
+                matches = []
+                for i, line in enumerate(lines, 1):
+                    if query_lower in line.lower():
+                        # Get context (lines around match)
+                        start = max(0, i - 3)
+                        end = min(len(lines), i + 2)
+                        context = ''.join(lines[start:end]).strip()
+                        matches.append(f"[Line {i}] {context}")
+
+                if matches:
+                    results.append(f"\n**{doc_file}**:\n" + "\n".join(matches[:3]))
+            except Exception as e:
+                logger.warning(f"Failed to read {doc_file}: {e}")
+
+        if results:
+            return f"Found information in documentation:
+{''.join(results[:5])}
+(Showing top 5 results from documentation)"
+        else:
+            return f"No information found for '{query}' in documentation. Try rephrasing or check the README.md for general information about BioDockify capabilities."
+
 
     async def _execute_local_skill(self, name: str, args: dict) -> str:
         """Execute local NanoBot skills."""
@@ -427,7 +482,7 @@ class NanoBotReceptionist:
             tool = WebSearchTool()
             return await tool.execute(**args)
         elif name == "consult_manual":
-            return "Manual consult feature pending implementation."
+            return await self._consult_manual(args.get("query", ""))
         
         # Strategic Planner Skills
         elif name == "craft_research_title":

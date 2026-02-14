@@ -22,26 +22,29 @@ class DiscordTool:
 
     def to_schema(self) -> dict:
         return {
-            "name": self.name,
-            "description": self.description,
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "action": {
-                        "type": "string",
-                        "enum": ["announce", "history"],
-                        "description": "Action to perform."
+            "type": "function",
+            "function": {
+                "name": self.name,
+                "description": self.description,
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "enum": ["announce", "history"],
+                            "description": "Action to perform."
+                        },
+                        "channel_id": {
+                            "type": "string",
+                            "description": "Discord Channel ID."
+                        },
+                        "content": {
+                            "type": "string",
+                            "description": "Message content (for announce)."
+                        }
                     },
-                    "channel_id": {
-                        "type": "string",
-                        "description": "Discord Channel ID."
-                    },
-                    "content": {
-                        "type": "string",
-                        "description": "Message content (for announce)."
-                    }
-                },
-                "required": ["action", "channel_id"]
+                    "required": ["action", "channel_id"]
+                }
             }
         }
 

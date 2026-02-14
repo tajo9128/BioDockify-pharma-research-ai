@@ -19,46 +19,49 @@ class CalendarTool:
 
     def to_schema(self) -> dict:
         return {
-            "name": self.name,
-            "description": self.description,
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "action": {
-                        "type": "string",
-                        "enum": ["agenda", "add", "quick"],
-                        "description": "The action to perform."
+            "type": "function",
+            "function": {
+                "name": self.name,
+                "description": self.description,
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "enum": ["agenda", "add", "quick"],
+                            "description": "The action to perform."
+                        },
+                        "start": {
+                            "type": "string",
+                            "description": "Start time/date (for agenda) or event date."
+                        },
+                        "end": {
+                            "type": "string",
+                            "description": "End time/date (for agenda)."
+                        },
+                        "title": {
+                            "type": "string",
+                            "description": "Title of the event (for add)."
+                        },
+                        "where": {
+                            "type": "string",
+                            "description": "Location of the event."
+                        },
+                        "when": {
+                            "type": "string",
+                            "description": "Time of the event (e.g. '10am')."
+                        },
+                        "duration": {
+                            "type": "integer",
+                            "description": "Duration in minutes (default 60)."
+                        },
+                        "text": {
+                            "type": "string",
+                            "description": "Text for quick add (e.g. 'Dinner at 7pm')."
+                        }
                     },
-                    "start": {
-                        "type": "string",
-                        "description": "Start time/date (for agenda) or event date."
-                    },
-                    "end": {
-                        "type": "string",
-                        "description": "End time/date (for agenda)."
-                    },
-                    "title": {
-                        "type": "string",
-                        "description": "Title of the event (for add)."
-                    },
-                    "where": {
-                        "type": "string",
-                        "description": "Location of the event."
-                    },
-                    "when": {
-                        "type": "string",
-                        "description": "Time of the event (e.g. '10am')."
-                    },
-                    "duration": {
-                        "type": "integer",
-                        "description": "Duration in minutes (default 60)."
-                    },
-                     "text": {
-                        "type": "string",
-                        "description": "Text for quick add (e.g. 'Dinner at 7pm')."
-                    }
-                },
-                "required": ["action"]
+                    "required": ["action"]
+                }
             }
         }
 

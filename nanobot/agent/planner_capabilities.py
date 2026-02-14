@@ -82,8 +82,8 @@ Provide the output in a structured format:
             # Attempt to parse JSON if the LLM followed instructions
             tasks = json.loads(response)
             return tasks
-        except:
-             logger.warning("LLM failed to provide structured JSON for roadmap. Returning raw text as 'task'.")
+        except (json.JSONDecodeError, ValueError) as e:
+             logger.warning(f"LLM failed to provide structured JSON for roadmap: {e}. Returning raw text as 'task'.")
              return [{"title": "Execute Methodology", "description": response, "category": "custom"}]
 
     async def evaluate_strategy(self, methodology: str, working_memory: WorkingMemory) -> Dict[str, Any]:

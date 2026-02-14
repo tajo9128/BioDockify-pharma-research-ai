@@ -82,12 +82,12 @@ from dataclasses import asdict
 # Register NanoBot Hybrid Agent Routes
 try:
     from api.routes.nanobot_routes import router as nanobot_router
-from api.routes.research_management import router as research_management_router
+    from api.routes.research_management import router as research_management_router
     app.include_router(nanobot_router)
-app.include_router(research_router)
-
     # Research management routes
     app.include_router(research_management_router)
+except ImportError as e:
+    logger.warning(f"Could not import research routes: {e}")
 except ImportError as e:
     import logging
     logging.getLogger("biodockify_api").warning(f"NanoBot routes not loaded: {e}")
@@ -136,6 +136,10 @@ except ImportError as e:
 try:
     from api.routes.settings_routes import router as settings_router
     app.include_router(settings_router)
+except ImportError as e:
+    import logging
+    logger.warning(f"Settings routes not loaded: {e}")
+
 # Register Statistics Routes
 try:
     from api.routes.statistics import router as statistics_router
@@ -481,7 +485,7 @@ async def set_agent_goal(request: AgentGoal, background_tasks: BackgroundTasks):
     agent_state.append_log(f"Goal received: {request.goal}")
     
     # Define Background Task wrapper
-    def run_agent_task(goal: str, mode: str):
+    async def run_agent_task(goal: str, mode: str):
         try:
             from runtime.config_loader import load_config
             cfg = load_config()
@@ -501,7 +505,7 @@ async def set_agent_goal(request: AgentGoal, background_tasks: BackgroundTasks):
                 planning_mode = "synthesize"
             
             # Plan
-            plan = orch.plan_research(goal, mode=planning_mode)
+            plan = await orch.plan_research(goal, mode=planning_mode)
             if plan is None:
                 raise ValueError("LLM failed to generate a plan. Check AI provider configuration.")
             
@@ -1357,7 +1361,7 @@ class TaskStatus(BaseModel):
 # Background Worker
 # -----------------------------------------------------------------------------
 
-def run_research_task(task_id: str, title: str, mode: str):
+async def run_research_task(task_id: str, title: str, mode: str):
     """
     Background worker function to run the full research pipeliine.
     """
@@ -1387,7 +1391,7 @@ def run_research_task(task_id: str, title: str, mode: str):
         orchestrator = ResearchOrchestrator(config)
         
         # Pass the research mode to the planner
-        plan = orchestrator.plan_research(title, mode=mode, task_id=task_id)
+        plan = await orchestrator.plan_research(title, mode=mode, task_id=task_id)
         
         task["status"] = "executing"
         task_manager.save_task(task_id, task)
@@ -1401,7 +1405,7 @@ def run_research_task(task_id: str, title: str, mode: str):
         
         for attempt in range(MAX_JOB_RETRIES):
             try:
-                context = executor.execute_plan(plan)
+                context = await executor.execute_plan(plan)
                 break # Success
             except Exception as job_err:
                 logger.warning(f"Task {task_id} failed attempt {attempt+1}: {job_err}")

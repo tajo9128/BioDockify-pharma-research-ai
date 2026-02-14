@@ -11,6 +11,7 @@ import asyncio
 import json
 import logging
 from datetime import datetime, timezone
+import hashlib
 from typing import Any, Callable, Coroutine, List, Optional
 
 from nanobot.models.heartbeat_schema import Heartbeat
@@ -204,10 +205,10 @@ class HybridAgent:
         await self.bus.start()
         await self.cron.start()
         self._channels_started = True
-
     async def stop_services(self):
         await self.bus.stop()
         await self.cron.stop()
+        self._channels_started = False
 
     async def _spawn_subagent(self, params: dict) -> str:
         task = params.get("task")
@@ -640,7 +641,7 @@ class HybridAgent:
             for marker in ["tool:", "call:", "execute:"]:
                 if marker in response.lower():
                     # Format: "tool: tool_name parameters..."
-                    parts = response.split(marker, 1)[1].strip().split(None, 1)
+                    parts = response.lower().split(marker, 1)[1].strip().split(None, 1)
                     tool_name = parts[0].strip(": \n")
                     if len(parts) > 1:
                         params = {"input": parts[1].strip()}

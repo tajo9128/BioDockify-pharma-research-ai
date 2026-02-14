@@ -28,7 +28,7 @@ def get_agent() -> HybridAgentBrain:
     global _agent
     if _agent is None:
         _agent = create_hybrid_agent(
-            workspace_path="./workspace/nanobot",
+            workspace_path="./data/workspace/nanobot",
             model="anthropic/claude-sonnet-4-5",
         )
     return _agent

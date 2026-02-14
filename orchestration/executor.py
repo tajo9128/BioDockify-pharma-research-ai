@@ -17,15 +17,19 @@ from orchestration.planner.orchestrator import ResearchPlan, ResearchStep
 from modules.pdf_processor.parser import parse_pdf_text
 from modules.bio_ner.ner_engine import BioNER
 
-# Graph Builder is optional - SurfSense is the primary knowledge engine
-try:
-    # Neo4j removed - using SurfSense Knowledge Engine
-    HAS_GRAPH_BUILDER = True  # SurfSense is always available
-except ImportError:
-    HAS_GRAPH_BUILDER = False
-    def add_paper(*args, **kwargs): pass
-    def connect_compound(*args, **kwargs): pass
-    def create_constraints(*args, **kwargs): pass
+# Graph Builder stubs - Neo4j removed, using SurfSense Knowledge Engine
+# These stub functions prevent runtime errors during transition to SurfSense
+def add_paper(*args, **kwargs):
+    """Stub function - Neo4j graph building removed, using SurfSense instead."""
+    pass
+
+def connect_compound(*args, **kwargs):
+    """Stub function - Neo4j graph building removed, using SurfSense instead."""
+    pass
+
+def create_constraints(*args, **kwargs):
+    """Stub function - Neo4j graph building removed, using SurfSense instead."""
+    pass
 
 try:
     from modules.deep_drive.memory_engine import MemoryEngine
@@ -74,11 +78,7 @@ class ResearchExecutor:
         else:
             self.memory = None
         
-        # Ensure graph constraints
-        try:
-            create_constraints()
-        except:
-            pass # Ignore if offline
+        # Graph constraints stubbed - SurfSense handles constraints
 
     async def log_to_task(self, message: str, type: str = "info"):
         """Append a log entry to the task state on disk."""
@@ -345,13 +345,6 @@ class ResearchExecutor:
         repurposing = await asyncio.to_thread(self.analyst.find_potential_repurposing)
         if repurposing:
             logger.info(f"Found {len(repurposing)} repurposing candidates.")
-
-    def _handle_molecular_vision(self, step: ResearchStep, context: ResearchContext):
-        """
-        Process images if available.
-        """
-        # Placeholder: Scan for image files or use extracted images from PDFs
-        logger.info("Molecular vision step (Placeholder for image scanning)")
 
     async def _handle_final_report(self, step: ResearchStep, context: ResearchContext):
         """

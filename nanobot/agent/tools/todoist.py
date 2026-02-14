@@ -16,30 +16,33 @@ class TaskTool:
 
     def to_schema(self) -> dict:
         return {
-            "name": self.name,
-            "description": self.description,
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "action": {
-                        "type": "string",
-                        "enum": ["add", "list"],
-                        "description": "The action to perform."
+            "type": "function",
+            "function": {
+                "name": self.name,
+                "description": self.description,
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "enum": ["add", "list"],
+                            "description": "The action to perform."
+                        },
+                        "content": {
+                            "type": "string",
+                            "description": "The content of the task (for add)."
+                        },
+                        "due_string": {
+                            "type": "string",
+                            "description": "Natural language due date (e.g. 'tomorrow')."
+                        },
+                        "project_id": {
+                            "type": "string",
+                            "description": "Optional project ID."
+                        }
                     },
-                    "content": {
-                        "type": "string",
-                        "description": "The content of the task (for add)."
-                    },
-                    "due_string": {
-                        "type": "string",
-                        "description": "Natural language due date (e.g. 'tomorrow')."
-                    },
-                    "project_id": {
-                        "type": "string",
-                        "description": "Optional project ID."
-                    }
-                },
-                "required": ["action"]
+                    "required": ["action"]
+                }
             }
         }
 

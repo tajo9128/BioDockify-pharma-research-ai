@@ -92,7 +92,8 @@ class ReasoningEngine:
                     args = item.get("params") or item.get("arguments") or {}
                     if name:
                         calls.append(ToolCallRequest(id=f"manual_{datetime.now().timestamp()}", name=name, arguments=args))
-            except: pass
+            except (json.JSONDecodeError, ValueError, KeyError) as e:
+                logger.debug(f"Failed to parse tool calls from marker {marker}: {e}")
 
         # 2. Try legacy string format (tool: name params)
         if not calls:
