@@ -15,6 +15,7 @@ export type AnalysisCategory =
   | 'categorical';
 
 export type DataType = 'numeric' | 'categorical' | 'binary' | 'datetime' | 'text';
+export type DataTypeDetection = DataColumnType;
 
 export type CorrelationMethod = 'pearson' | 'spearman' | 'kendall';
 export type TTestType = 'independent' | 'paired';
