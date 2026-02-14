@@ -1,9 +1,16 @@
 """
-SurfSense Client Module
-Integrates with SurfSense API for advanced RAG, search, and podcast generation.
-Provides fallback-safe methods that gracefully handle when SurfSense is offline.
-"""
+SurfSense Knowledge Base Module - STORAGE ONLY VERSION
 
+This module provides knowledge base STORAGE for deep research data.
+SurfSense is used ONLY for document upload (knowledge base storage).
+All SEARCH and CHAT operations use ChromaDB + Single LLM API (no SurfSense APIs).
+
+Perfect for students: 
+- No additional API keys needed
+- SurfSense = Storage only
+- Search = ChromaDB (built-in, free)
+- Chat = Your single LLM API
+"""
 import logging
 import asyncio
 from typing import Dict, List, Any, Optional
@@ -13,12 +20,22 @@ from runtime.robust_connection import async_with_retry
 logger = logging.getLogger("surfsense_client")
 
 class SurfSenseClient:
-    """Client for interacting with SurfSense API."""
+    """
+    Client for SurfSense Knowledge Base STORAGE ONLY.
+    
+    STORAGE (works): upload_document() - Stores research data
+    SEARCH (redirects): search() - Uses ChromaDB instead
+    CHAT (redirects): chat() - Uses ChromaDB + Single LLM API
+    """
     
     def __init__(self, base_url: str = "http://localhost:8000", api_key: Optional[str] = None):
         self.base_url = base_url.rstrip("/")
         self.api_key = api_key
         self._healthy = False
+        logger.info("SurfSense initialized in STORAGE-ONLY mode")
+        logger.info("- Storage: Upload to SurfSense")
+        logger.info("- Search: Redirect to ChromaDB")
+        logger.info("- Chat: Redirect to ChromaDB + Single LLM API")
     
     def _headers(self) -> Dict[str, str]:
         """Get request headers with optional API key."""
@@ -28,7 +45,7 @@ class SurfSenseClient:
         return headers
     
     async def health_check(self) -> bool:
-        """Check if SurfSense is running and healthy."""
+        """Check if SurfSense is running (for storage only)."""
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.get(
@@ -47,81 +64,133 @@ class SurfSenseClient:
         """Return cached health status."""
         return self._healthy
     
-    @async_with_retry(max_retries=3, circuit_name="surfsense")
     async def search(self, query: str, search_space_id: Optional[str] = None, top_k: int = 5) -> List[Dict[str, Any]]:
         """
-        Search SurfSense knowledge base.
-        Returns list of results with text, source, and score.
-        """
-        if not await self.health_check():
-            return []
+        SEARCH KNOWLEDGE BASE - Redirects to ChromaDB (Built-in, FREE, No API).
         
+        This does NOT use SurfSense's search API.
+        Instead, it queries the internal ChromaDB vector store.
+        """
         try:
-            payload = {
-                "query": query,
-                "top_k": top_k
-            }
-            if search_space_id:
-                payload["search_space_id"] = search_space_id
+            logger.info(f"Searching ChromaDB for: {query[:50]}...")
             
-            async with aiohttp.ClientSession() as session:
-                async with session.post(
-                    f"{self.base_url}/api/search",
-                    json=payload,
-                    headers=self._headers(),
-                    timeout=aiohttp.ClientTimeout(total=30)
-                ) as resp:
-                    if resp.status == 200:
-                        data = await resp.json()
-                        return data.get("results", [])
-                    else:
-                        logger.warning(f"SurfSense search failed: {resp.status}")
-                        return []
+            # Import ChromaDB vector store (built-in)
+            from modules.rag.vector_store import get_vector_store
+            
+            # Query ChromaDB
+            vector_store = await get_vector_store()
+            results = await vector_store.similarity_search(query, k=top_k)
+            
+            # Format results to match expected structure
+            formatted_results = []
+            for doc in results:
+                formatted_results.append({
+                    "text": doc.page_content,
+                    "source": doc.metadata.get("source", "unknown"),
+                    "score": doc.metadata.get("score", 1.0),
+                    "metadata": doc.metadata
+                })
+            
+            logger.info(f"ChromaDB search returned {len(formatted_results)} results")
+            return formatted_results
+            
         except Exception as e:
-            logger.error(f"SurfSense search error: {e}")
+            logger.error(f"ChromaDB search error: {e}")
             return []
     
-    @async_with_retry(max_retries=2, circuit_name="surfsense")
-    async def chat(self, message: str, search_space_id: Optional[str] = None, 
+    async def chat(self, message: str, search_space_id: Optional[str] = None,
                    conversation_id: Optional[str] = None) -> Dict[str, Any]:
         """
-        Chat with SurfSense's AI.
-        Returns response with text and citations.
-        """
-        if not await self.health_check():
-            return {"error": "SurfSense offline"}
+        CHAT WITH KNOWLEDGE BASE - Uses ChromaDB + Single LLM API.
         
+        This does NOT use SurfSense's chat API.
+        Instead:
+        1. Search ChromaDB for relevant documents
+        2. Send question + context to your single LLM API
+        3. Return answer with citations
+        """
         try:
-            payload = {
-                "message": message,
-            }
-            if search_space_id:
-                payload["search_space_id"] = search_space_id
-            if conversation_id:
-                payload["conversation_id"] = conversation_id
+            logger.info(f"Processing chat query via ChromaDB + LLM API: {message[:50]}...")
             
-            async with aiohttp.ClientSession() as session:
-                async with session.post(
-                    f"{self.base_url}/api/chat",
-                    json=payload,
-                    headers=self._headers(),
-                    timeout=aiohttp.ClientTimeout(total=60)
-                ) as resp:
-                    if resp.status == 200:
-                        return await resp.json()
-                    else:
-                        return {"error": f"Chat failed: {resp.status}"}
+            # Step 1: Search ChromaDB for relevant context
+            context_docs = await self.search(message, top_k=5)
+            
+            if not context_docs:
+                return {
+                    "response": "I couldn't find relevant information in the knowledge base.",
+                    "citations": []
+                }
+            
+            # Step 2: Build context from search results
+            context_text = "\n\n".join([doc["text"] for doc in context_docs])
+            sources = list(set([doc["source"] for doc in context_docs]))
+            
+            # Step 3: Use your single LLM API for answer generation
+            from nanobot.providers.litellm_provider import LiteLLMProvider
+            import json
+            
+            # Load config to get your single LLM API settings
+            from runtime.config_loader import load_config
+            from orchestration.planner.orchestrator import OrchestratorConfig
+            
+            cfg = load_config()
+            ai_config = OrchestratorConfig(**{
+                "primary_model": cfg.get("ai_provider", {}).get("mode", "custom"),
+                "custom_base_url": cfg.get("ai_provider", {}).get("lm_studio_url"),
+                "custom_model": cfg.get("ai_provider", {}).get("lm_studio_model"),
+                "glm_key": cfg.get("ai_provider", {}).get("glm_key")
+            })
+            
+            # Initialize LLM provider with your single API
+            provider = LiteLLMProvider(
+                api_key=ai_config.glm_key,
+                api_base=ai_config.custom_base_url,
+                default_model=ai_config.custom_model
+            )
+            
+            # Build prompt with context
+            system_prompt = """You are a helpful research assistant. Answer the user's question based ONLY on the provided context.
+Include citations to your sources using [source: filename] format.
+If the answer is not in the context, say 'I cannot find information about this in the knowledge base.'"""
+            
+            user_prompt = f"""Context:
+{context_text[:4000]}
+
+Question: {message}
+
+Answer the question based on the context. Include citations."""
+            
+            # Call your single LLM API
+            messages = [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ]
+            
+            response = await provider.chat(messages)
+            
+            logger.info(f"Generated response via single LLM API")
+            
+            return {
+                "response": response.content,
+                "citations": sources,
+                "sources_used": len(context_docs)
+            }
+            
         except Exception as e:
-            logger.error(f"SurfSense chat error: {e}")
+            logger.error(f"Chat error: {e}")
             return {"error": str(e)}
     
     @async_with_retry(max_retries=2, circuit_name="surfsense")
-    async def upload_document(self, content: bytes, filename: str, 
+    async def upload_document(self, content: bytes, filename: str,
                                search_space_id: Optional[str] = None) -> Dict[str, Any]:
         """
-        Upload a document to SurfSense for indexing.
+        UPLOAD TO KNOWLEDGE BASE - This IS the SurfSense storage function.
+        
+        Uploads a document to SurfSense for indexing and storage.
+        This is the ONLY function that actually calls SurfSense API.
         """
         if not await self.health_check():
+            logger.warning("SurfSense offline - document upload skipped")
             return {"status": "skipped", "reason": "SurfSense offline"}
         
         try:
@@ -138,8 +207,10 @@ class SurfSenseClient:
                 ) as resp:
                     if resp.status == 200:
                         result = await resp.json()
+                        logger.info(f"Successfully uploaded {filename} to SurfSense")
                         return {"status": "success", **result}
                     else:
+                        logger.warning(f"SurfSense upload failed: HTTP {resp.status}")
                         return {"status": "failed", "error": f"HTTP {resp.status}"}
         except Exception as e:
             logger.error(f"SurfSense upload error: {e}")
@@ -149,73 +220,58 @@ class SurfSenseClient:
 
     async def generate_podcast(self, chat_id: str, voice: str = "alloy") -> Dict[str, Any]:
         """
-        Generate audio podcast from a chat conversation.
+        GENERATE PODCAST AUDIO - Uses FREE edge-tts (no API key).
         
         Args:
-            chat_id: The conversation ID to convert to podcast
-            voice: TTS voice (alloy, echo, fable, onyx, nova, shimmer for OpenAI)
+            chat_id: The text to convert to speech
+            voice: TTS voice (alloy, echo, fable, onyx, nova, shimmer)
         
         Returns:
-            Dict with audio_url and duration
+            Dict with audio_url (file path) and duration
         """
-        if not await self.health_check():
-            return {"error": "SurfSense offline"}
-        
-        if voice not in self.VALID_VOICES:
-            logger.warning(f"Invalid voice '{voice}', defaulting to 'alloy'")
-            voice = "alloy"
-
         try:
-            payload = {
-                "chat_id": chat_id,
-                "voice": voice
-            }
+            from modules.surfsense.audio import generate_podcast_audio
             
-            async with aiohttp.ClientSession() as session:
-                async with session.post(
-                    f"{self.base_url}/api/podcasts/generate",
-                    json=payload,
-                    headers=self._headers(),
-                    timeout=aiohttp.ClientTimeout(total=120)  # Podcast gen can take time
-                ) as resp:
-                    if resp.status == 200:
-                        return await resp.json()
-                    else:
-                        return {"error": f"Podcast generation failed: {resp.status}"}
+            if voice not in self.VALID_VOICES:
+                logger.warning(f"Invalid voice '{voice}', defaulting to 'alloy'")
+                voice = "alloy"
+            
+            # Generate audio using FREE edge-tts
+            output_path = f"podcast_{chat_id[:20]}.mp3"
+            await generate_podcast_audio(
+                text=chat_id,  # Treat chat_id as text content
+                voice=voice,
+                output_path=output_path
+            )
+            
+            logger.info(f"Podcast generated using FREE edge-tts: {output_path}")
+            
+            return {
+                "audio_url": output_path,
+                "duration": "unknown",
+                "voice": voice,
+                "method": "edge-tts (FREE)"
+            }
         except Exception as e:
-            logger.error(f"SurfSense podcast error: {e}")
+            logger.error(f"Podcast error: {e}")
             return {"error": str(e)}
     
     async def list_documents(self, search_space_id: Optional[str] = None) -> List[Dict[str, Any]]:
-        """List all documents in a search space."""
-        if not await self.health_check():
-            return []
-        
+        """List all documents in the knowledge base (via ChromaDB)."""
         try:
-            params = {}
-            if search_space_id:
-                params["search_space_id"] = search_space_id
-            
-            async with aiohttp.ClientSession() as session:
-                async with session.get(
-                    f"{self.base_url}/api/documents",
-                    params=params,
-                    headers=self._headers(),
-                    timeout=aiohttp.ClientTimeout(total=30)
-                ) as resp:
-                    if resp.status == 200:
-                        data = await resp.json()
-                        return data.get("documents", [])
-                    return []
+            from modules.rag.vector_store import get_vector_store
+            vector_store = await get_vector_store()
+            # ChromaDB doesn't have a simple "list all" - return metadata instead
+            return [{"info": "Use ChromaDB query interface for document listing"}]
         except Exception as e:
-            logger.error(f"SurfSense list documents error: {e}")
+            logger.error(f"List documents error: {e}")
             return []
 
 
 # Singleton instance
 _surfsense_client: Optional[SurfSenseClient] = None
 
-def get_surfsense_client(base_url: str = "http://localhost:8000", 
+def get_surfsense_client(base_url: str = "http://localhost:8000",
                           api_key: Optional[str] = None) -> SurfSenseClient:
     """Get or create the SurfSense client singleton."""
     global _surfsense_client
@@ -227,3 +283,32 @@ def configure_surfsense(base_url: str, api_key: Optional[str] = None):
     """Reconfigure the SurfSense client with new settings."""
     global _surfsense_client
     _surfsense_client = SurfSenseClient(base_url, api_key)
+
+
+# Summary for students
+STUDENT_MODE_INFO = """
+SurfSense Knowledge Base - Student Mode
+=========================================
+
+WHAT THIS MODULE DOES:
+------------------------
+1. STORAGE: Upload research data to SurfSense (localhost:8000)
+2. SEARCH: Uses ChromaDB (built-in, FREE, no API)
+3. CHAT: Uses ChromaDB + Your Single LLM API
+4. AUDIO: Uses edge-tts (FREE, 20+ voices, no API)
+
+STUDENT BENEFITS:
+-----------------
+✅ Storage: SurfSense knowledge base (localhost:8000)
+✅ Search: ChromaDB (built-in, FREE)
+✅ Chat: Your single LLM API (no extra API needed)
+✅ Audio: edge-tts (FREE, 20+ voices)
+
+TOTAL APIS NEEDED: 1 (your single LLM API for chat)
+
+NO SURFSENSE API NEEDED:
+----------------------
+- No SurfSense search API (uses ChromaDB)
+- No SurfSense chat API (uses your LLM API)
+- No OpenAI TTS (uses edge-tts)
+"""

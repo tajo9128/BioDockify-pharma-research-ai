@@ -89,5 +89,117 @@
     "goal": "",
     "content": "User: Hello, who are you?\nMe: Error calling LLM: litellm.BadRequestError: Hosted_vllmException - {\"error\":\"[\\n  {\\n    \\\"code\\\": \\\"invalid_literal\\\",\\n    \\\"expected\\\": \\\"function\\\",\\n    \\\"path\\\": [\\n      6,\\n      \\\"type\\\"\\n    ],\\n    \\\"message\\\": \\\"Invalid literal value, expected \\\\\\\"function\\\\\\\"\\\"\\n  },\\n  {\\n    \\\"code\\\": \\\"invalid_type\\\",\\n    \\\"expected\\\": \\\"object\\\",\\n    \\\"received\\\": \\\"undefined\\\",\\n    \\\"path\\\": [\\n      6,\\n      \\\"function\\\"\\n    ],\\n    \\\"message\\\": \\\"Required\\\"\\n  },\\n  {\\n    \\\"code\\\": \\\"invalid_literal\\\",\\n    \\\"expected\\\": \\\"function\\\",\\n    \\\"path\\\": [\\n      7,\\n      \\\"type\\\"\\n    ],\\n    \\\"message\\\": \\\"Invalid literal value, expected \\\\\\\"function\\\\\\\"\\\"\\n  },\\n  {\\n    \\\"code\\\": \\\"invalid_type\\\",\\n    \\\"expected\\\": \\\"object\\\",\\n    \\\"received\\\": \\\"undefined\\\",\\n    \\\"path\\\": [\\n      7,\\n      \\\"function\\\"\\n    ],\\n    \\\"message\\\": \\\"Required\\\"\\n  },\\n  {\\n    \\\"code\\\": \\\"invalid_literal\\\",\\n    \\\"expected\\\": \\\"function\\\",\\n    \\\"path\\\": [\\n      8,\\n      \\\"type\\\"\\n    ],\\n    \\\"message\\\": \\\"Invalid literal value, expected \\\\\\\"function\\\\\\\"\\\"\\n  },\\n  {\\n    \\\"code\\\": \\\"invalid_type\\\",\\n    \\\"expected\\\": \\\"object\\\",\\n    \\\"received\\\": \\\"undefined\\\",\\n    \\\"path\\\": [\\n      8,\\n      \\\"function\\\"\\n    ],\\n    \\\"message\\\": \\\"Required\\\"\\n  }\\n]\"}",
     "type": "chat"
+  },
+  {
+    "timestamp": "2026-02-13T15:42:12.252074",
+    "phd_stage": "unknown",
+    "goal": "",
+    "content": "User: Hello, please introduce yourself briefly.\nMe: Error calling LLM: litellm.BadRequestError: LLM Provider NOT provided. Pass in the LLM provider you are trying to call. You passed model=auto\n Pass model as E.g. For 'Huggingface' inference endpoints pass in `completion(model='huggingface/starcoder',..)` Learn more: https://docs.litellm.ai/docs/providers",
+    "type": "chat"
+  },
+  {
+    "timestamp": "2026-02-13T15:44:23.886465",
+    "phd_stage": "unknown",
+    "goal": "",
+    "content": "User: Hello, introduce yourself briefly\nMe: Error calling LLM: litellm.BadRequestError: LLM Provider NOT provided. Pass in the LLM provider you are trying to call. You passed model=auto\n Pass model as E.g. For 'Huggingface' inference endpoints pass in `completion(model='huggingface/starcoder',..)` Learn more: https://docs.litellm.ai/docs/providers",
+    "type": "chat"
+  },
+  {
+    "timestamp": "2026-02-13T15:44:23.933374",
+    "phd_stage": "unknown",
+    "goal": "",
+    "content": "User: What is BioDockify?\nMe: Error calling LLM: litellm.BadRequestError: LLM Provider NOT provided. Pass in the LLM provider you are trying to call. You passed model=auto\n Pass model as E.g. For 'Huggingface' inference endpoints pass in `completion(model='huggingface/starcoder',..)` Learn more: https://docs.litellm.ai/docs/providers",
+    "type": "chat"
+  },
+  {
+    "timestamp": "2026-02-13T15:44:23.961399",
+    "phd_stage": "unknown",
+    "goal": "",
+    "content": "User: Tell me about Alzheimer research capabilities\nMe: Error calling LLM: litellm.BadRequestError: LLM Provider NOT provided. Pass in the LLM provider you are trying to call. You passed model=auto\n Pass model as E.g. For 'Huggingface' inference endpoints pass in `completion(model='huggingface/starcoder',..)` Learn more: https://docs.litellm.ai/docs/providers",
+    "type": "chat"
+  },
+  {
+    "timestamp": "2026-02-13T15:48:51.909422",
+    "phd_stage": "unknown",
+    "goal": "",
+    "content": "User: Hello! Please introduce yourself in one sentence.\nMe: Error calling LLM: litellm.AuthenticationError: AuthenticationError: ZaiException - token expired or incorrect",
+    "type": "chat"
+  },
+  {
+    "timestamp": "2026-02-13T15:49:46.050192",
+    "phd_stage": "unknown",
+    "goal": "",
+    "content": "User: Hi\nMe: Error calling LLM: litellm.AuthenticationError: AuthenticationError: ZaiException - token expired or incorrect",
+    "type": "chat"
+  },
+  {
+    "timestamp": "2026-02-13T15:52:27.239978",
+    "phd_stage": "unknown",
+    "goal": "",
+    "content": "User: Hi\nMe: Error calling LLM: litellm.AuthenticationError: AuthenticationError: ZaiException - token expired or incorrect",
+    "type": "chat"
+  },
+  {
+    "timestamp": "2026-02-13T15:54:26.910824",
+    "phd_stage": "unknown",
+    "goal": "",
+    "content": "User: Hello! Who are you?\nMe: Error calling LLM: litellm.AuthenticationError: AuthenticationError: ZaiException - token expired or incorrect",
+    "type": "chat"
+  },
+  {
+    "timestamp": "2026-02-13T15:56:05.429692",
+    "phd_stage": "unknown",
+    "goal": "",
+    "content": "User: Hello! Who are you? Please answer in one sentence.\nMe: Error calling LLM: litellm.AuthenticationError: AuthenticationError: ZaiException - token expired or incorrect",
+    "type": "chat"
+  },
+  {
+    "timestamp": "2026-02-13T15:56:37.115445",
+    "phd_stage": "unknown",
+    "goal": "",
+    "content": "User: Hi\nMe: Error calling LLM: litellm.AuthenticationError: AuthenticationError: ZaiException - token expired or incorrect",
+    "type": "chat"
+  },
+  {
+    "timestamp": "2026-02-13T16:00:46.035266",
+    "phd_stage": "unknown",
+    "goal": "",
+    "content": "User: Hi\nMe: Error calling LLM: litellm.AuthenticationError: AuthenticationError: ZaiException - token expired or incorrect",
+    "type": "chat"
+  },
+  {
+    "timestamp": "2026-02-13T16:01:28.446882",
+    "phd_stage": "unknown",
+    "goal": "",
+    "content": "User: Hello! Who are you? Please answer in one sentence.\nMe: Error calling LLM: litellm.AuthenticationError: AuthenticationError: ZaiException - token expired or incorrect",
+    "type": "chat"
+  },
+  {
+    "timestamp": "2026-02-13T16:02:52.590349",
+    "phd_stage": "unknown",
+    "goal": "",
+    "content": "User: Hello! Who are you? Please answer in one sentence.\nMe: Error calling LLM: litellm.AuthenticationError: AuthenticationError: ZaiException - token expired or incorrect",
+    "type": "chat"
+  },
+  {
+    "timestamp": "2026-02-13T16:15:58.302376",
+    "phd_stage": "unknown",
+    "goal": "",
+    "content": "User: Hello, can you confirm your configuration?\nMe: Error calling LLM: litellm.AuthenticationError: AuthenticationError: ZaiException - token expired or incorrect",
+    "type": "chat"
+  },
+  {
+    "timestamp": "2026-02-14T02:34:45.207801",
+    "phd_stage": "unknown",
+    "goal": "",
+    "content": "User: Hello from Lite mode test\nMe: Error calling LLM: litellm.InternalServerError: InternalServerError: Hosted_vllmException - Cannot connect to host api.example.com:443 ssl:<ssl.SSLContext object at 0x7ead9dbd2fd0> [Name or service not known]",
+    "type": "chat"
+  },
+  {
+    "timestamp": "2026-02-14T02:35:30.205551",
+    "phd_stage": "unknown",
+    "goal": "",
+    "content": "User: Hello, who are you?\nMe: Error calling LLM: litellm.InternalServerError: InternalServerError: Hosted_vllmException - Cannot connect to host api.example.com:443 ssl:<ssl.SSLContext object at 0x7ead9dbd2fd0> [Name or service not known]",
+    "type": "chat"
   }
 ]

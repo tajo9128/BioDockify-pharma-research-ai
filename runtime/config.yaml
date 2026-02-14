@@ -21,23 +21,23 @@ ai_provider:
   brave_key: ''
   cloud_fallback: true
   custom_base_url: https://api.us-west-2.modal.direct/v1
-  custom_key: ""
+  custom_key: ''
   custom_model: zai-org/GLM-5-FP8
-  deepseek_key: ''
-  deepseek_model: deepseek-chat
+  deepseek_key: sk-47fa563b87c84546bec48818079ec72d
+  deepseek_model: deepseek-reasoner
   elsevier_key: ''
-  glm_key: ""
+  glm_key: dd45abe0a64648fa8f4f9b7b2144e5c2.JHGdsrQhEBZbAdTx
   google_key: ''
   huggingface_key: ''
   item_key: ''
   jina_key: ''
   kimi_key: ''
   kimi_model: moonshot-v1-8k
-  lm_studio_model: qwen2.5-coder-7b-instruct
-  lm_studio_url: http://host.docker.internal:1234/v1/
+  lm_studio_model: user-model-name
+  lm_studio_url: https://api.example.com/v1
   mistral_key: ''
   mistral_model: mistral-large-latest
-  mode: lm_studio
+  mode: zhipu
   ollama_fallback: true
   ollama_model: llama2
   ollama_url: http://localhost:11434
@@ -123,56 +123,37 @@ system:
   minimize_to_tray: true
   pause_on_battery: true
   version: 2.6.2
-
-# =============================================================================
-# INTERNATIONAL SETTINGS (ISO Standards & Compliance)
-# =============================================================================
 international:
-  # Language Configuration (ISO 639-1)
-  default_language: "en"  # en, zh, es, fr, de, ja, ko, ar, etc.
+  default_language: en
   supported_languages:
-    - "en"  # English
-    - "zh"  # Chinese (Simplified)
-    - "es"  # Spanish
-    - "fr"  # French
-    - "de"  # German
-    - "ja"  # Japanese
-    - "ko"  # Korean
-    - "ar"  # Arabic (RTL)
-    - "pt"  # Portuguese
-    - "ru"  # Russian
-  
-  # Region Configuration (ISO 3166-1 alpha-2)
-  default_region: "US"  # US, CN, EU, JP, etc.
-  
-  # Timezone (IANA timezone database)
-  default_timezone: "UTC"
+  - en
+  - zh
+  - es
+  - fr
+  - de
+  - ja
+  - ko
+  - ar
+  - pt
+  - ru
+  default_region: US
+  default_timezone: UTC
   auto_detect_timezone: true
-  
-  # Date/Time/Number Formatting
-  date_format: "ISO8601"  # ISO8601, ISO, US, EU, LOCAL
-  time_format: "24h"  # 24h or 12h
-  number_format: "ISO"  # ISO, US, EU, LOCAL
-  
-  # RTL (Right-to-Left) Support
-  enable_rtl: true  # For Arabic, Hebrew, Farsi, etc.
-  
-  # Data Compliance
+  date_format: ISO8601
+  time_format: 24h
+  number_format: ISO
+  enable_rtl: true
   compliance:
-    gdpr_mode: false  # Enable GDPR compliance for EU users
-    ccpa_mode: false  # Enable CCPA compliance for CA users
-    data_localization: false  # Keep data in user's region
-    consent_required: true  # Require user consent for data processing
-    
-  # Legal & Standards
+    gdpr_mode: false
+    ccpa_mode: false
+    data_localization: false
+    consent_required: true
   standards:
-    iso_3166_country_codes: true  # Use ISO country codes
-    iso_639_language_codes: true  # Use ISO language codes
-    iso_8601_datetime: true  # Use ISO datetime format
-    unicode_support: true  # Full Unicode support (UTF-8)
-    
-  # Cultural Settings
+    iso_3166_country_codes: true
+    iso_639_language_codes: true
+    iso_8601_datetime: true
+    unicode_support: true
   cultural_adaptation:
     respect_local_holidays: true
-    respect_working_hours: true  # Avoid notifications outside business hours
-    currency_aware: true  # Display local currency when applicable
+    respect_working_hours: true
+    currency_aware: true

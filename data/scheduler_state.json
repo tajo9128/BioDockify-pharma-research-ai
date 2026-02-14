@@ -1,9 +1,24 @@
 {
   "queued": [
     {
-      "id": "4cf1972a-5b51-42f8-9272-69deb86c9602",
-      "title": "Study Protocol Design",
-      "description": "Design detailed study protocol including methods and materials",
+      "id": "t1",
+      "title": "Task 1",
+      "description": "Desc 1",
+      "priority": 0,
+      "dependencies": [],
+      "status": "queued",
+      "result": null,
+      "error": null,
+      "started_at": null,
+      "completed_at": null,
+      "estimated_seconds": 3600,
+      "progress": 0.0,
+      "device_session_id": null
+    },
+    {
+      "id": "t2",
+      "title": "Task 2",
+      "description": "Desc 2",
       "priority": 1,
       "dependencies": [],
       "status": "queued",
@@ -11,161 +26,29 @@
       "error": null,
       "started_at": null,
       "completed_at": null,
-      "estimated_seconds": 57600,
+      "estimated_seconds": 3600,
       "progress": 0.0,
-      "device_session_id": "d5ae7ff3-9db4-41a2-97f4-8151803bd7ef"
+      "device_session_id": null
     },
     {
-      "id": "c422c73b-9ac6-4e60-a2c8-0c3012d907ed",
-      "title": "Data Collection",
-      "description": "Execute data collection according to protocol",
-      "priority": 1,
-      "dependencies": [
-        "4cf1972a-5b51-42f8-9272-69deb86c9602",
-        "416a5a62-27a2-44c4-ad78-eb4d83960d58"
-      ],
-      "status": "queued",
-      "result": null,
-      "error": null,
-      "started_at": null,
-      "completed_at": null,
-      "estimated_seconds": 216000,
-      "progress": 0.0,
-      "device_session_id": "d5ae7ff3-9db4-41a2-97f4-8151803bd7ef"
-    },
-    {
-      "id": "2e3987ea-ddb3-432c-b003-9c5d97a5b209",
-      "title": "Data Analysis",
-      "description": "Analyze collected data using appropriate statistical methods",
+      "id": "t3",
+      "title": "Task 3",
+      "description": "Desc 3",
       "priority": 2,
       "dependencies": [
-        "c422c73b-9ac6-4e60-a2c8-0c3012d907ed"
+        "t1"
       ],
       "status": "queued",
       "result": null,
       "error": null,
       "started_at": null,
       "completed_at": null,
-      "estimated_seconds": 144000,
+      "estimated_seconds": 3600,
       "progress": 0.0,
-      "device_session_id": "d5ae7ff3-9db4-41a2-97f4-8151803bd7ef"
-    },
-    {
-      "id": "5301a733-7c1e-4b66-a0d2-77ad758a4039",
-      "title": "Results Interpretation",
-      "description": "Interpret results and draw conclusions",
-      "priority": 2,
-      "dependencies": [
-        "2e3987ea-ddb3-432c-b003-9c5d97a5b209"
-      ],
-      "status": "queued",
-      "result": null,
-      "error": null,
-      "started_at": null,
-      "completed_at": null,
-      "estimated_seconds": 86400,
-      "progress": 0.0,
-      "device_session_id": "d5ae7ff3-9db4-41a2-97f4-8151803bd7ef"
-    },
-    {
-      "id": "f687e890-3e5e-4e51-8d23-1a65b6c20e1d",
-      "title": "Manuscript Drafting",
-      "description": "Draft manuscript including introduction, methods, results, discussion",
-      "priority": 3,
-      "dependencies": [
-        "5301a733-7c1e-4b66-a0d2-77ad758a4039"
-      ],
-      "status": "queued",
-      "result": null,
-      "error": null,
-      "started_at": null,
-      "completed_at": null,
-      "estimated_seconds": 144000,
-      "progress": 0.0,
-      "device_session_id": "d5ae7ff3-9db4-41a2-97f4-8151803bd7ef"
-    },
-    {
-      "id": "e561a322-e79a-4cb4-a7ca-81a80df0a3cb",
-      "title": "Peer Review Response",
-      "description": "Address reviewer comments and revise manuscript",
-      "priority": 3,
-      "dependencies": [
-        "f687e890-3e5e-4e51-8d23-1a65b6c20e1d"
-      ],
-      "status": "queued",
-      "result": null,
-      "error": null,
-      "started_at": null,
-      "completed_at": null,
-      "estimated_seconds": 86400,
-      "progress": 0.0,
-      "device_session_id": "d5ae7ff3-9db4-41a2-97f4-8151803bd7ef"
-    },
-    {
-      "id": "9770c2fa-bb4c-4d76-85fa-12b684febd86",
-      "title": "Final Submission",
-      "description": "Submit final manuscript to target journal",
-      "priority": 4,
-      "dependencies": [
-        "e561a322-e79a-4cb4-a7ca-81a80df0a3cb"
-      ],
-      "status": "queued",
-      "result": null,
-      "error": null,
-      "started_at": null,
-      "completed_at": null,
-      "estimated_seconds": 28800,
-      "progress": 0.0,
-      "device_session_id": "d5ae7ff3-9db4-41a2-97f4-8151803bd7ef"
+      "device_session_id": null
     }
   ],
-  "running": [
-    {
-      "id": "431a7078-5e1d-45a8-93b8-a4633d917076",
-      "title": "Literature Review",
-      "description": "Conduct comprehensive literature review on Integrated Research Project",
-      "priority": 0,
-      "dependencies": [],
-      "status": "running",
-      "result": null,
-      "error": null,
-      "started_at": "2026-02-13T06:29:05.740591",
-      "completed_at": null,
-      "estimated_seconds": 144000,
-      "progress": 100.0,
-      "device_session_id": "d5ae7ff3-9db4-41a2-97f4-8151803bd7ef"
-    },
-    {
-      "id": "b336f521-752d-4e8e-af5a-539502695e53",
-      "title": "Hypothesis Development",
-      "description": "Formulate testable hypotheses based on literature review",
-      "priority": 0,
-      "dependencies": [],
-      "status": "running",
-      "result": null,
-      "error": null,
-      "started_at": "2026-02-13T06:29:05.740591",
-      "completed_at": null,
-      "estimated_seconds": 28800,
-      "progress": 0.0,
-      "device_session_id": "d5ae7ff3-9db4-41a2-97f4-8151803bd7ef"
-    },
-    {
-      "id": "416a5a62-27a2-44c4-ad78-eb4d83960d58",
-      "title": "IRB/Ethics Approval",
-      "description": "Prepare and submit IRB/ethics committee application",
-      "priority": 0,
-      "dependencies": [],
-      "status": "running",
-      "result": null,
-      "error": null,
-      "started_at": "2026-02-13T06:29:05.741254",
-      "completed_at": null,
-      "estimated_seconds": 72000,
-      "progress": 0.0,
-      "device_session_id": "d5ae7ff3-9db4-41a2-97f4-8151803bd7ef"
-    }
-  ],
+  "running": [],
   "paused": [],
   "completed": []
 }
