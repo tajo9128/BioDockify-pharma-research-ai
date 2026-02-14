@@ -180,7 +180,7 @@ export default function ResultsViewer({ result, data, analysisType }: ResultsVie
               <span className="text-slate-400">P-value</span>
               <span className={`font-mono font-medium ${
                 result.pValue < (result.significance ?? 0.05) ? 'text-green-400' : 'text-amber-400'
-              }`}>
+              }`>
                 {result.pValue < 0.001 ? '< 0.001' : result.pValue.toFixed(4)}
               </span>
             </div>
@@ -190,7 +190,7 @@ export default function ResultsViewer({ result, data, analysisType }: ResultsVie
               <span className="text-slate-400">{key}</span>
               <span className={`font-mono font-medium ${
                 value < (result.significance ?? 0.05) ? 'text-green-400' : 'text-amber-400'
-              }`}>
+              }`>
                 {value < 0.001 ? '< 0.001' : value.toFixed(4)}
               </span>
             </div>
@@ -207,7 +207,7 @@ export default function ResultsViewer({ result, data, analysisType }: ResultsVie
               <span className="text-slate-400">{key}</span>
               <span className={`font-mono font-medium ${
                 value < (result.significance ?? 0.05) ? 'text-green-400' : 'text-amber-400'
-              }`}>
+              }`>
                 {value < 0.001 ? '< 0.001' : value.toFixed(4)}
               </span>
             </div>
@@ -262,7 +262,7 @@ export default function ResultsViewer({ result, data, analysisType }: ResultsVie
                   : check.status === 'failed'
                   ? 'bg-red-950/20 border-red-900'
                   : 'bg-amber-950/20 border-amber-900'
-              }`}>
+              }`>
                 {check.status === 'passed' && <CheckCircle className="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0" />}
                 {check.status === 'failed' && <XCircle className="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0" />}
                 {check.status === 'warning' && <AlertCircle className="w-4 h-4 text-amber-400 mt-0.5 flex-shrink-0" />}

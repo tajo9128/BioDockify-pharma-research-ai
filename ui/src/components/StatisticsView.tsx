@@ -201,7 +201,7 @@ export default function StatisticsView() {
                                     <option value="chi_goodness">Chi-Square Goodness of Fit</option>
                                     <option value="chi_independence">Chi-Square Test of Independence</option>
                                     <option value="fisher">Fisher's Exact Test</option>
-                                    <option value="mcnemar">McNemar's Test</option>
+                                    <option value="mcnemar">McNemar&apos;s Test</option>
                                 </>
                             )}
 
@@ -212,7 +212,7 @@ export default function StatisticsView() {
                                     <option value="pca">Principal Component Analysis (PCA)</option>
                                     <option value="bayesian">Bayesian Inference</option>
                                     <option value="friedman">Friedman Test (Repeated Measures)</option>
-                                    <option value="dunns">Dunn's Post-Hoc Test</option>
+                                    <option value="dunns">Dunn&apos;s Post-Hoc Test</option>
                                     <option value="cmh">Cochran-Mantel-Haenszel Test</option>
                                 </>
                             )}
