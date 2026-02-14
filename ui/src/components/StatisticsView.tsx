@@ -98,7 +98,7 @@ export default function StatisticsView() {
 
             if (exportResult.success && exportResult.output_path) {
                 // Create download URL
-                const downloadUrl = `${api.baseURL}/api/statistics/download?path=${encodeURIComponent(exportResult.output_path)}`;
+                const downloadUrl = `/api/statistics/download?path=${encodeURIComponent(exportResult.output_path)}`;
                 setExportUrl(downloadUrl);
 
                 // Trigger download
