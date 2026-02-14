@@ -290,7 +290,6 @@ async function apiRequest<T>(
   } finally {
     clearTimeout(id);
   }
-}
 
 export const api = {
   // Research endpoints
@@ -623,6 +622,27 @@ export const api = {
 
     getSystemStatus: () =>
       apiRequest<EnhancedSystemStatus>('/enhanced/system/status')
+},
+
+  // Statistics Export (Phase 14)
+  statistics: {
+    export: async (
+      analysisId: string,
+      format: 'json' | 'csv' | 'latex' | 'markdown',
+      includeAssumptions: boolean = true,
+      includeInterpretation: boolean = true,
+      includeCode: boolean = false
+    ) =>
+      apiRequest<{ success: boolean; output_path?: string; error?: string }>('/api/statistics/export', {
+        method: 'POST',
+        body: JSON.stringify({
+          analysis_id: analysisId,
+          format: format,
+          include_assumptions: includeAssumptions,
+          include_interpretation: includeInterpretation,
+          include_code: includeCode
+        })
+      })
   }
 };
 

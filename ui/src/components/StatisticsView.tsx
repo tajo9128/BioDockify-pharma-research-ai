@@ -94,7 +94,7 @@ export default function StatisticsView() {
 
         setExporting(format);
         try {
-            const exportResult = await api.exportStatistics(result, format);
+            const exportResult = await api.statistics.export(result, format);
 
             if (exportResult.success && exportResult.output_path) {
                 // Create download URL
