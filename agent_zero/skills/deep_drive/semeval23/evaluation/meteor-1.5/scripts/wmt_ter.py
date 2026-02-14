@@ -5,8 +5,8 @@ import os, subprocess, sys
 def main(argv):
     
     if len(argv[1:]) < 5:
-        print('usage: {0} <test> <ref> <lang-pair> <test-set> <system>'.format()
-          argv[0])
+        print('usage: {0} <test> <ref> <lang-pair> <test-set> <system>'.format() argv[0])
+
         print('writes ter.lang-pair.test-set.system.{seg.scr,sys.scr}')
         sys.exit(1)
     

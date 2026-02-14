@@ -24,8 +24,7 @@ def main(argv):
 
     # Usage
     if len(argv[1:]) < 4:
-        print('usage: {0} <lang> <sys1.hyp> <sys2.hyp> <ref1> [ref2 ...]'. \)
-          format(argv[0])
+        print('usage: {0} <lang> <sys1.hyp> <sys2.hyp> <ref1> [ref2 ...]'.format(argv[0]))
         print('langs: {0}'.format(langs))
         sys.exit(1)
 

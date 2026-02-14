@@ -9,8 +9,8 @@ import collections, os, subprocess, sys, threading
 def main(argv):
     
     if len(argv[1:]) < 7:
-        print(>> sys.stderr, 'Learn Meteor parameters efficiently with parallel Trainers')
-        print(>> sys.stderr, 'Usage: {0} <meteor.jar> <lang> <n-mods> <task> <data_dir> <work_dir> <n-jobs> [other args like -a par.gz, -ch, ...]'.format(argv[0]))
+        print('Learn Meteor parameters efficiently with parallel Trainers', file=sys.stderr)
+        print('Usage: {0} <meteor.jar> <lang> <n-mods> <task> <data_dir> <work_dir> <n-jobs> [other args like -a par.gz, -ch, ...]'.format(argv[0]), file=sys.stderr)
         sys.exit(1)
     
     # Args

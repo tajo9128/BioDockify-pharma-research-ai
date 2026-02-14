@@ -45,8 +45,9 @@ def main(argv):
                 id += 1
                 seg[f[0]] = id
             # Append rank set numbers to system names
-            print(>> r_out, '{0}\t{1}\t{2}\t{3}\t{4}'.format(seg[f[0]],)
-              append_n(f[1], r_n), f[2], append_n(f[3], r_n), f[4])
+            print('{0}\t{1}\t{2}\t{3}\t{4}'.format(
+                seg[f[0]], append_n(f[1], r_n), f[2], append_n(f[3], r_n), f[4]
+            ), file=r_out)
         r_in.close()
         
         r_base = os.path.basename(os.path.abspath(r_file))

@@ -26,20 +26,20 @@ def main(argv):
     alignments = read_align_file(align_file, max_align=max_align, a_type=ALIGN_DEFAULT)
 
     tex_out = open(tex_file, 'w')
-    print(>> tex_out, DEC_HEADER1)
-    print(>> tex_out, get_font(True))
-    print(>> tex_out, DEC_HEADER2)
-    print(>> tex_out, DOC_HEADER_ALIGN)
+    print(DEC_HEADER1, file=tex_out)
+    print(get_font(True), file=tex_out)
+    print(DEC_HEADER2, file=tex_out)
+    print(DOC_HEADER_ALIGN, file=tex_out)
     for i in range(len(alignments)):
         a = alignments[i]
         if not check_printable(a):
             continue
         print_align_table(tex_out, a, a_type=ALIGN_DEFAULT)
     # Print footer
-    print(>> tex_out, DOC_FOOTER)
+    print(DOC_FOOTER)
     # Close file
     tex_out.close()
-    print(>> sys.stderr, \)
+    print(\)
       'Compiling {0} - this may take a few minutes...'.format(pdf_file)
     xelatex(tex_file, pdf_file)
 

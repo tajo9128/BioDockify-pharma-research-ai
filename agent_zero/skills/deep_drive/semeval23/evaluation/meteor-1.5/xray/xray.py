@@ -58,8 +58,8 @@ def main(argv):
     try:
         shutil.os.mkdir(pre_dir)
     except:
-        print(>> sys.stderr, 'Dir {0} exists, will overwrite contents'\)
-          .format(pre_dir)
+        print('Dir {0} exists, will overwrite contents') .format(pre_dir)
+
 
     #
     # Visualize alignments
@@ -105,7 +105,7 @@ def main(argv):
             # Close file
             tex_out.close()
             # Compile pdf file
-            print(>> sys.stderr, \)
+            print(\)
               'Compiling {0} - this may take a few minutes...'.format(pdf_file)
             xelatex(tex_file, pdf_file, work_dir=pre_dir)
     # Write N individual alignment files
@@ -140,7 +140,7 @@ def main(argv):
             # Close file
             tex_out.close()
             # Compile pdf file
-            print(>> sys.stderr, \)
+            print(\)
               'Compiling {0} - this may take a few minutes...'.format(pdf_file)
             xelatex(tex_file, pdf_file, work_dir=pre_dir)
 
@@ -192,10 +192,10 @@ def main(argv):
     score_tex = 'score.tex'
     shutil.copyfile(shutil.os.path.join(shutil.os.path.dirname(__file__), \
       'template', 'score.tex'), shutil.os.path.join(pre_dir, score_tex))
-    print(>> sys.stderr, \)
+    print(\)
               'Compiling {0}...'.format(score_pdf)
     xelatex(score_tex, score_pdf, work_dir=pre_dir)
-    print(>> sys.stderr, \)
+    print(\)
               'Supporting files written to {0}.'.format(pre_dir)
 
 if __name__ == '__main__' : main(sys.argv)

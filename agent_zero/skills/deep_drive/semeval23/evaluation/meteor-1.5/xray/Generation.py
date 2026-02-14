@@ -62,12 +62,12 @@ def get_font(uni):
 def check_printable(a1, a2=None):
     # Too long
     if len(a1.sen2) > MAX_LEN:
-        print(>> sys.stderr, 'Skipping', a1.name, '- too large:', \)
-          len(a1.sen2), 'reference words'
+        print('Skipping', a1.name, '- too large:', ) len(a1.sen2), 'reference words'
+
         return False
     # Different references?
     if a2 and a1.sen2 != a2.sen2:
-        print(>> sys.stderr, 'Skipping', a1.name, \)
+        print('Skipping', a1.name, \)
           '- different references used'
         return False
     return True

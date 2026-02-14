@@ -7,8 +7,8 @@ import os, sys
 def main(argv):
     
     if len(argv[1:]) < 3:
-        print('usage: {0} <lang-pair> <test-set> <system> [metric]'.format()
-          argv[0])
+        print('usage: {0} <lang-pair> <test-set> <system> [metric]'.format() argv[0])
+
         print('writes metric.lang-pair.test-set.system.{seg.scr,sys.scr}')
         print('')
         print('Pipe Meteor output to this script')

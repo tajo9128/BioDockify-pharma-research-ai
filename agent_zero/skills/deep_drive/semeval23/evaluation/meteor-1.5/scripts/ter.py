@@ -7,8 +7,8 @@ TERCOM = os.path.join(os.path.dirname(__file__), 'tercom-0.8.0.jar')
 def main(argv):
 
     if len(argv[1:]) < 2:
-        print(>> sys.stderr, 'Usage: {0} hyps refs [--no-norm] [--char]'.format(argv[0]))
-        print(>> sys.stderr, 'Segment scores to stderr, final to stdout')
+        print('Usage: {0} hyps refs [--no-norm] [--char]'.format(argv[0]), file=sys.stderr)
+        print('Segment scores to stderr, final to stdout', file=sys.stderr)
         sys.exit(1)
 
     norm = '-s' if '--no-norm' in argv[3:] else '-N'

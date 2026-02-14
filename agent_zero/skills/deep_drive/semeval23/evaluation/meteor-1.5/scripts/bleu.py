@@ -7,8 +7,8 @@ mteval_pl = os.path.abspath(os.path.join(os.path.dirname(__file__), 'mteval-v13m
 def main(argv):
     
     if len(argv[1:]) < 2:
-        print(>> sys.stderr, 'Usage: {0} <hyp> <ref> [--no-norm] [--char]'.format(argv[0]))
-        print(>> sys.stderr, 'Segment scores to stderr, final to stdout')
+        print('Usage: {0} <hyp> <ref> [--no-norm] [--char]'.format(argv[0]), file=sys.stderr)
+        print('Segment scores to stderr, final to stdout', file=sys.stderr)
         sys.exit(1)
     
     work = tempfile.mkdtemp(prefix='bleu.')

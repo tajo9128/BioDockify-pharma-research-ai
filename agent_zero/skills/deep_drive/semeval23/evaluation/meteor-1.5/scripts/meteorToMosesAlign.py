@@ -30,4 +30,4 @@ for Line in sys.stdin:
 				for j in range( RefIndex, RefIndex + RefLength ):
 					Alignments.append( ( j, i ) )
 
-  print(" ".join( [ "%d-%d" % Pair for Pair in sorted(Alignments) ] ))
+	print(" ".join( [ "%d-%d" % Pair for Pair in sorted(Alignments) ] ))

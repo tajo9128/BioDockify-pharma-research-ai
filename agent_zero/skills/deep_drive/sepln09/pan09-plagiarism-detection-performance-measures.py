@@ -432,7 +432,7 @@ Options:
       --det-tag    Tag name of the detection annotations,
                    default: 'detected-plagiarism'
   -h, --help       Show this message
-"""
+""")
 
 
 def parse_options():
