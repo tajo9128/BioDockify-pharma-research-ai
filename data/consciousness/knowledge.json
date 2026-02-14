@@ -50,6 +50,31 @@
         "timestamp": "2026-02-14T03:40:02.649886+00:00",
         "confidence": 0.8,
         "reasoning": "Fixed error 4"
+      },
+      {
+        "timestamp": "2026-02-14T03:41:40.699445+00:00",
+        "confidence": 0.8,
+        "reasoning": "Fixed error 0"
+      },
+      {
+        "timestamp": "2026-02-14T03:41:40.699464+00:00",
+        "confidence": 0.8,
+        "reasoning": "Fixed error 1"
+      },
+      {
+        "timestamp": "2026-02-14T03:41:40.699471+00:00",
+        "confidence": 0.8,
+        "reasoning": "Fixed error 2"
+      },
+      {
+        "timestamp": "2026-02-14T03:41:40.699475+00:00",
+        "confidence": 0.8,
+        "reasoning": "Fixed error 3"
+      },
+      {
+        "timestamp": "2026-02-14T03:41:40.699479+00:00",
+        "confidence": 0.8,
+        "reasoning": "Fixed error 4"
       }
     ]
   },
@@ -70,6 +95,20 @@
     },
     {
       "timestamp": "2026-02-14T03:40:02.650144+00:00",
+      "actions_analyzed": 5,
+      "success_rate": 1.0,
+      "average_confidence": 0.8,
+      "confidence_trend": "stable",
+      "common_patterns": [
+        "Frequently makes code_repair decisions (5 times)",
+        "Successful decisions have 0.80 average confidence"
+      ],
+      "recommendations": [
+        "Excellent performance - consider expanding capability scope"
+      ]
+    },
+    {
+      "timestamp": "2026-02-14T03:41:40.699853+00:00",
       "actions_analyzed": 5,
       "success_rate": 1.0,
       "average_confidence": 0.8,

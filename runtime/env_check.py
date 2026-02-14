@@ -34,7 +34,6 @@ def main():
 
     # 2. Services
     services = {
-        "Neo4j (7474)": ("localhost", 7474),
         "Ollama (11434)": ("localhost", 11434),
         "Backend (8000)": ("localhost", 8000)
     }

@@ -17,7 +17,6 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 # --- PROTECTIVE STARTUP CHECKS ---
 REQUIRED_ENV = [
-    # "NEO4J_URI", "NEO4J_USER", "NEO4J_PASS",  # Uncomment if Neo4j is critical for startup
     # "OLLAMA_HOST" # Uncomment if Ollama is critical
 ]
 
@@ -71,13 +70,6 @@ except ImportError:
     pdfminer = None
 
 # Optional dependencies
-try:
-    import neo4j
-    NEO4J_AVAILABLE = True
-except ImportError:
-    NEO4J_AVAILABLE = False
-    logging.info("Neo4j not installed - graph features will operate in offline mode")
-
 # Safe Import of Main App
 try:
     logging.info("Attempting to import api.main...")

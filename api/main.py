@@ -82,7 +82,12 @@ from dataclasses import asdict
 # Register NanoBot Hybrid Agent Routes
 try:
     from api.routes.nanobot_routes import router as nanobot_router
+from api.routes.research_management import router as research_management_router
     app.include_router(nanobot_router)
+app.include_router(research_router)
+
+    # Research management routes
+    app.include_router(research_management_router)
 except ImportError as e:
     import logging
     logging.getLogger("biodockify_api").warning(f"NanoBot routes not loaded: {e}")
@@ -967,7 +972,6 @@ def analyze_statistics(req: StatisticsRequest):
     Routes to the 3-Tier Statistical Engine.
     """
     # License Check for Statistics features
-    from modules.system.auth_manager import verify_license
     if not verify_license():
         return JSONResponse(
             status_code=403, 
@@ -1394,7 +1398,7 @@ def run_research_task(task_id: str, title: str, mode: str):
              raise Exception("Task execution returned no context after retries.")
         
         # ---------------------------------------------------------------------
-        # 2.5 Auto-Ingest into Local NotebookLM (RAG) & Neo4j
+        # 2.5 Auto-Ingest into Local NotebookLM (RAG)
         # ---------------------------------------------------------------------
         try:
             from modules.rag.vector_store import vector_store
@@ -1457,7 +1461,7 @@ def run_research_task(task_id: str, title: str, mode: str):
 def health_check():
     """
     Comprehensive System Health Check.
-    Monitors: API, Ollama, Vector Store, Neo4j (optional), System Resources.
+    Monitors: API, Ollama, Vector Store, System Resources.
     """
     import psutil
     import shutil
@@ -1506,9 +1510,8 @@ def health_check():
     except Exception as e:
          status["components"]["vector_db"] = {"status": "degraded", "message": "Store not initialized"}
 
-    # 4. Knowledge Engine (SurfSense - replaces Neo4j)
-    # Neo4j is deprecated, SurfSense is the primary knowledge engine
-    status["components"]["knowledge_engine"] = {"status": "ok", "message": "SurfSense (Neo4j deprecated)"}
+    # 4. Knowledge Engine (SurfSense)
+    status["components"]["knowledge_engine"] = {"status": "ok", "message": "SurfSense Knowledge Engine"}
 
     # 5. System Resources
     try:
@@ -2616,8 +2619,6 @@ async def test_connection_endpoint(request: TestConnectionRequest):
         return {"status": "error", "message": str(e)}
 
 
-# -----------------------------------------------------------------------------
-# AUTH & LICENSING (Supabase)
 # -----------------------------------------------------------------------------
 class AuthRequest(BaseModel):
     name: str

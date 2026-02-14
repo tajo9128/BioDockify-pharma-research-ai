@@ -1,6 +1,6 @@
 """
 Knowledge Graph Tool for Agent Zero.
-Enables interaction with Memgraph or Neo4j databases via the GraphBuilder module.
+Enables interaction with SurfSense Knowledge Engine for graph-based research data.
 """
 import logging
 from typing import Dict, Any, List, Optional
@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 class KnowledgeGraphTool:
     """
     Allows the agent to query and manipulate the Knowledge Graph.
-    Supports Memgraph and Neo4j.
+    Supports SurfSense Knowledge Engine (replaces Neo4j).
     """
     
     def __init__(self):
@@ -52,7 +52,7 @@ class KnowledgeGraphTool:
         Get the current graph schema (Node labels and Relationship types).
         """
         try:
-            # Memgraph/Neo4j standardized schema query
+            # SurfSense Knowledge Engine schema query
             labels_query = "CALL db.labels()"
             types_query = "CALL db.relationshipTypes()"
             

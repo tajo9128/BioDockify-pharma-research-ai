@@ -36,20 +36,8 @@ services:
       retries: 3
     restart: unless-stopped
 
-  # Knowledge Graph (Neo4j/Memgraph)
-  neo4j:
-    image: neo4j:5.12-community
-    container_name: biodockify-neo4j
-    ports:
-      - "7474:7474"
-      - "7687:7687"
-    environment:
-      - NEO4J_AUTH=none
-    volumes:
-      - neo4j_data:/data
-    networks:
-      - biodockify-network
-    restart: unless-stopped
+  # Knowledge Graph (SurfSense)
+
 
 
   # Vector Database (ChromaDB - FREE)
@@ -166,8 +154,6 @@ volumes:
   prometheus_data:
   grafana_data:
   loki_data:
-  neo4j_data:
-
 networks:
   biodockify-network:
     driver: bridge

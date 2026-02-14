@@ -53,6 +53,15 @@ class LiteLLMProvider(LLMProvider):
                 os.environ.setdefault("GEMINI_API_KEY", api_key)
             elif "zhipu" in default_model or "glm" in default_model or "zai" in default_model:
                 os.environ.setdefault("ZHIPUAI_API_KEY", api_key)
+            elif "ollama" in default_model.lower():
+                # Ollama - local model server
+                os.environ.setdefault("OLLAMA_API_BASE", api_base or "http://localhost:11434")
+            elif "minimax" in default_model.lower():
+                # MiniMax - Chinese LLM provider
+                os.environ.setdefault("MINIMAX_API_KEY", api_key)
+                if api_base:
+                    os.environ.setdefault("MINIMAX_API_BASE", api_base)
+                os.environ.setdefault("ZHIPUAI_API_KEY", api_key)
             elif "groq" in default_model:
                 os.environ.setdefault("GROQ_API_KEY", api_key)
             elif "moonshot" in default_model or "kimi" in default_model:

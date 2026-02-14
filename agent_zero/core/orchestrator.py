@@ -17,8 +17,6 @@ from datetime import datetime
 from dataclasses import dataclass, field
 import asyncio.exceptions
 
-# Security: License Guard import
-# from modules.security.license_guard import license_guard  # REMOVED - License disabled
 
 
 # Set up logging
@@ -184,9 +182,6 @@ class AgentZero:
         self._circuit_open = False
         self._circuit_threshold = 5
         
-        # Security: License state
-        self._license_valid = True
-        self._license_message = ""
         # Auto-load email from storage if available
         self._user_email = "user@biodockify.ai"  # License disabled - unlimited user
 

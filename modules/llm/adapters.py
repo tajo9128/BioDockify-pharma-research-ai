@@ -585,3 +585,62 @@ class AWSAdapter(BaseLLMAdapter):
             timeout=60
         )
         return response.choices[0].message.content
+
+
+class MiniMaxAdapter(BaseLLMAdapter):
+    """MiniMax API Adapter for Chinese LLM services."""
+
+    def __init__(self, api_key: str, group_id: str = "", model: str = "abab6.5s-chat", **kwargs):
+        self.api_key = api_key
+        self.group_id = group_id
+        self.model = model
+        self.base_url = kwargs.get('api_base', 'https://api.minimax.chat/v1')
+
+    def chat(self, messages: list, **kwargs) -> str:
+        """Generate chat response using MiniMax API."""
+        headers = {
+            'Authorization': f'Bearer {self.api_key}',
+            'Content-Type': 'application/json'
+        }
+
+        payload = {
+            'model': self.model,
+            'messages': messages,
+            'temperature': kwargs.get('temperature', 0.7),
+            'max_tokens': kwargs.get('max_tokens', 2000)
+        }
+
+        if self.group_id:
+            headers['GroupId'] = self.group_id
+
+        import requests
+        response = requests.post(
+            f"{self.base_url}/chat/completions",
+            headers=headers,
+            json=payload,
+            timeout=30
+        )
+
+        response.raise_for_status()
+        return response.json()['choices'][0]['message']['content']
+
+    def embed(self, text: str) -> list:
+        """Generate embeddings using MiniMax API."""
+        headers = {
+            'Authorization': f'Bearer {self.api_key}',
+            'Content-Type': 'application/json'
+        }
+
+        if self.group_id:
+            headers['GroupId'] = self.group_id
+
+        import requests
+        response = requests.post(
+            f"{self.base_url}/embeddings",
+            headers=headers,
+            json={'model': self.model, 'input': text},
+            timeout=30
+        )
+
+        response.raise_for_status()
+        return response.json()['data'][0]['embedding']

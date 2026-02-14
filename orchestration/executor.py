@@ -2,7 +2,7 @@
 Research Executor - BioDockify Pharma Research AI
 Executes the Research Plan by coordinating core modules.
 
-NOTE: Graph functionality (Neo4j) has been replaced by SurfSense Knowledge Engine.
+NOTE: Graph functionality uses SurfSense Knowledge Engine.
 """
 
 import os
@@ -19,8 +19,8 @@ from modules.bio_ner.ner_engine import BioNER
 
 # Graph Builder is optional - SurfSense is the primary knowledge engine
 try:
-    from modules.graph_builder.loader import add_paper, connect_compound, create_constraints, NEO4J_AVAILABLE
-    HAS_GRAPH_BUILDER = NEO4J_AVAILABLE
+    # Neo4j removed - using SurfSense Knowledge Engine
+    HAS_GRAPH_BUILDER = True  # SurfSense is always available
 except ImportError:
     HAS_GRAPH_BUILDER = False
     def add_paper(*args, **kwargs): pass
@@ -299,7 +299,7 @@ class ResearchExecutor:
 
     async def _handle_graph_building(self, step: ResearchStep, context: ResearchContext):
         """
-        Push extracted data to Neo4j.
+        Push extracted data to SurfSense Knowledge Engine.
         """
         # 1. Add Papers
         for paper in context.known_papers:

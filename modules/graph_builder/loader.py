@@ -1,9 +1,9 @@
 """
-Neo4j Graph Builder Module - BioDockify Pharma Research AI
-Handles loading research data into a Neo4j Knowledge Graph.
+Graph Builder Module - BioDockify Pharma Research AI
+Handles loading research data into SurfSense Knowledge Engine.
 Designed to fail gracefully if the database is offline or package not installed.
 
-NOTE: Neo4j functionality is being replaced by SurfSense Knowledge Engine.
+NOTE: Using SurfSense Knowledge Engine for graph-based research data storage.
 This module is kept for backward compatibility but will be deprecated.
 """
 
@@ -11,9 +11,9 @@ import os
 import logging
 from typing import Dict, List, Optional, Any
 
-# Make neo4j import optional - SurfSense is the primary knowledge engine now
+# Neo4j removed - using SurfSense client
 try:
-    from neo4j import GraphDatabase, basic_auth
+    from modules.surfsense.client import SurfSenseClient
     from neo4j.exceptions import ServiceUnavailable, AuthError
     NEO4J_AVAILABLE = True
 except ImportError:

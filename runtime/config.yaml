@@ -35,11 +35,17 @@ ai_provider:
   kimi_model: moonshot-v1-8k
   lm_studio_model: user-model-name
   lm_studio_url: https://api.example.com/v1
+  minimax_api_base: https://api.minimax.chat/v1
+  minimax_group_id: ''
+  minimax_key: ''
+  minimax_model: abab6.5s-chat
   mistral_key: ''
   mistral_model: mistral-large-latest
   mode: zhipu
+  ollama_base_url: http://localhost:11434
+  ollama_enabled: true
   ollama_fallback: true
-  ollama_model: llama2
+  ollama_model: llama3.2
   ollama_url: http://localhost:11434
   openrouter_key: ''
   primary_model: lm_studio
@@ -67,6 +73,40 @@ execution:
   max_runtime_minutes: 45
   mode: research
   use_knowledge_graph: true
+international:
+  auto_detect_timezone: true
+  compliance:
+    ccpa_mode: false
+    consent_required: true
+    data_localization: false
+    gdpr_mode: false
+  cultural_adaptation:
+    currency_aware: true
+    respect_local_holidays: true
+    respect_working_hours: true
+  date_format: ISO8601
+  default_language: en
+  default_region: US
+  default_timezone: UTC
+  enable_rtl: true
+  number_format: ISO
+  standards:
+    iso_3166_country_codes: true
+    iso_639_language_codes: true
+    iso_8601_datetime: true
+    unicode_support: true
+  supported_languages:
+  - en
+  - zh
+  - es
+  - fr
+  - de
+  - ja
+  - ko
+  - ar
+  - pt
+  - ru
+  time_format: 24h
 literature:
   enable_crossref: true
   enable_preprints: false
@@ -123,37 +163,3 @@ system:
   minimize_to_tray: true
   pause_on_battery: true
   version: 2.6.2
-international:
-  default_language: en
-  supported_languages:
-  - en
-  - zh
-  - es
-  - fr
-  - de
-  - ja
-  - ko
-  - ar
-  - pt
-  - ru
-  default_region: US
-  default_timezone: UTC
-  auto_detect_timezone: true
-  date_format: ISO8601
-  time_format: 24h
-  number_format: ISO
-  enable_rtl: true
-  compliance:
-    gdpr_mode: false
-    ccpa_mode: false
-    data_localization: false
-    consent_required: true
-  standards:
-    iso_3166_country_codes: true
-    iso_639_language_codes: true
-    iso_8601_datetime: true
-    unicode_support: true
-  cultural_adaptation:
-    respect_local_holidays: true
-    respect_working_hours: true
-    currency_aware: true
