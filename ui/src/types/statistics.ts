@@ -172,6 +172,7 @@ export interface AnalysisDefinition {
   examples: string[];
   references: string[];
   icon?: string;
+  minSampleSize?: number;
 }
 
 export interface AnalysisParameters {
