@@ -30,6 +30,12 @@ export default function ResultsViewer({ result, data, analysisType }: ResultsVie
     </button>
   );
 
+  const getStatusColor = (status: string) => {
+    if (status === 'passed') return 'bg-green-950/20 border-green-900';
+    if (status === 'failed') return 'bg-red-950/20 border-red-900';
+    return 'bg-amber-950/20 border-amber-900';
+  };
+
   const renderOverviewTab = () => (
     <div className="space-y-4">
       {/* Summary Card */}
@@ -151,7 +157,7 @@ export default function ResultsViewer({ result, data, analysisType }: ResultsVie
   const renderStatisticsTab = () => (
     <div className="space-y-4">
       {/* Test Statistics */}
-      {result.testStatistics && Object.keys(result.testStatistics).length > 0 && (
+      {result.testStatistics && Object.keys(result.testStatistics).length > 0 ? (
         <div className="bg-slate-900/30 rounded-lg p-4 border border-slate-800">
           <h3 className="text-sm font-medium text-cyan-400 mb-3">Test Statistics</h3>
           <div className="overflow-x-auto">
@@ -169,7 +175,7 @@ export default function ResultsViewer({ result, data, analysisType }: ResultsVie
             </table>
           </div>
         </div>
-      )}
+      ) : null}
 
       {/* P-values */}
       {result.pValue !== undefined || (result.pValues && Object.keys(result.pValues).length > 0) ? (
@@ -178,9 +184,7 @@ export default function ResultsViewer({ result, data, analysisType }: ResultsVie
           {result.pValue !== undefined && (
             <div className="flex justify-between text-sm items-center py-2">
               <span className="text-slate-400">P-value</span>
-              <span className={`font-mono font-medium ${
-                result.pValue < (result.significance ?? 0.05) ? 'text-green-400' : 'text-amber-400'
-              }`>
+              <span className={`font-mono font-medium ${result.pValue < (result.significance ?? 0.05) ? 'text-green-400' : 'text-amber-400'}`}>
                 {result.pValue < 0.001 ? '< 0.001' : result.pValue.toFixed(4)}
               </span>
             </div>
@@ -188,9 +192,7 @@ export default function ResultsViewer({ result, data, analysisType }: ResultsVie
           {result.pValues && Object.entries(result.pValues).map(([key, value]) => (
             <div key={key} className="flex justify-between text-sm items-center py-2 border-t border-slate-800">
               <span className="text-slate-400">{key}</span>
-              <span className={`font-mono font-medium ${
-                value < (result.significance ?? 0.05) ? 'text-green-400' : 'text-amber-400'
-              }`>
+              <span className={`font-mono font-medium ${value < (result.significance ?? 0.05) ? 'text-green-400' : 'text-amber-400'}`}>
                 {value < 0.001 ? '< 0.001' : value.toFixed(4)}
               </span>
             </div>
@@ -199,15 +201,13 @@ export default function ResultsViewer({ result, data, analysisType }: ResultsVie
       ) : null}
 
       {/* Adjusted P-values */}
-      {result.adjustedPValues && Object.keys(result.adjustedPValues).length > 0 && (
+      {result.adjustedPValues && Object.keys(result.adjustedPValues).length > 0 ? (
         <div className="bg-slate-900/30 rounded-lg p-4 border border-slate-800">
           <h3 className="text-sm font-medium text-cyan-400 mb-3">Adjusted P-values</h3>
           {Object.entries(result.adjustedPValues).map(([key, value]) => (
             <div key={key} className="flex justify-between text-sm items-center py-2 border-b border-slate-800 last:border-b-0">
               <span className="text-slate-400">{key}</span>
-              <span className={`font-mono font-medium ${
-                value < (result.significance ?? 0.05) ? 'text-green-400' : 'text-amber-400'
-              }`>
+              <span className={`font-mono font-medium ${value < (result.significance ?? 0.05) ? 'text-green-400' : 'text-amber-400'}`}>
                 {value < 0.001 ? '< 0.001' : value.toFixed(4)}
               </span>
             </div>
@@ -256,13 +256,7 @@ export default function ResultsViewer({ result, data, analysisType }: ResultsVie
           <h3 className="text-sm font-medium text-cyan-400 mb-3">Assumption Checks</h3>
           <div className="space-y-2">
             {result.assumptionsCheck.map((check, idx) => (
-              <div key={idx} className={`flex items-start gap-3 p-3 rounded border ${
-                check.status === 'passed'
-                  ? 'bg-green-950/20 border-green-900'
-                  : check.status === 'failed'
-                  ? 'bg-red-950/20 border-red-900'
-                  : 'bg-amber-950/20 border-amber-900'
-              }`>
+              <div key={idx} className={`flex items-start gap-3 p-3 rounded border ${getStatusColor(check.status)}`}>
                 {check.status === 'passed' && <CheckCircle className="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0" />}
                 {check.status === 'failed' && <XCircle className="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0" />}
                 {check.status === 'warning' && <AlertCircle className="w-4 h-4 text-amber-400 mt-0.5 flex-shrink-0" />}
