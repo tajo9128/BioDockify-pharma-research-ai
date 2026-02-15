@@ -11,6 +11,7 @@ from datetime import datetime, timedelta
 import logging
 import uuid
 import os
+import sys
 
 sys.path.insert(0, "/a0/usr/projects/biodockify_ai")
 from modules.research_persistence import (
