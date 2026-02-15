@@ -1,4 +1,4 @@
-import { AnalysisType, AnalysisCategory, AnalysisDefinition, ParameterDefinition } from '@/types/statistics';
+import { AnalysisType, AnalysisCategory, AnalysisDefinition } from '@/types/statistics';
 
 export const ANALYSIS_CATEGORIES: Record<AnalysisCategory, { name: string; description: string; icon: string }> = {
   basic: {
@@ -55,8 +55,12 @@ const basicAnalyses: AnalysisDefinition[] = [
         description: 'Select numeric columns for descriptive statistics'
       }
     ],
-    minSampleSize: 1,
-    assumptions: ['Numeric data', 'Random sampling recommended']
+    requiredColumns: ['columns'],
+    optionalColumns: [],
+    outputs: ['mean', 'median', 'mode', 'std', 'variance', 'min', 'max', 'q1', 'q3'],
+    assumptions: ['Numeric data', 'Random sampling recommended'],
+    examples: ['Calculate summary statistics for patient ages', 'Get descriptive stats for lab results'],
+    references: ['Agresti, A. (2012). Categorical Data Analysis']
   },
   {
     id: 't_test',

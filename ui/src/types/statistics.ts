@@ -146,13 +146,16 @@ export interface APAReport {
 export interface AnalysisParameter {
   name: string;
   label: string;
-  type: 'text' | 'number' | 'select' | 'multiselect' | 'checkbox' | 'radio' | 'file';
+  type: 'text' | 'number' | 'select' | 'multiselect' | 'checkbox' | 'radio' | 'file' | 'column' | 'columns' | 'boolean';
+  subtype?: 'numeric' | 'categorical' | 'binary' | 'group';
   required: boolean;
   default?: any;
+  defaultValue?: any;
   options?: Array<{ value: string; label: string }>;
   min?: number;
   max?: number;
   step?: number;
+  hint?: string;
   placeholder?: string;
   description?: string;
   dependsOn?: string;
@@ -165,13 +168,14 @@ export interface AnalysisDefinition {
   category: AnalysisCategory;
   description: string;
   parameters: AnalysisParameter[];
-  requiredColumns: string[];
-  optionalColumns: string[];
-  outputs: string[];
-  assumptions: string[];
-  examples: string[];
-  references: string[];
+  requiredColumns?: string[];
+  optionalColumns?: string[];
+  outputs?: string[];
+  assumptions?: string[];
+  examples?: string[];
+  references?: string[];
   icon?: string;
+  minSampleSize?: number;
 }
 
 export interface AnalysisParameters {
