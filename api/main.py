@@ -82,10 +82,8 @@ from dataclasses import asdict
 # Register NanoBot Hybrid Agent Routes
 try:
     from api.routes.nanobot_routes import router as nanobot_router
-from api.routes.research_management import router as research_management_router
+    from api.routes.research_management import router as research_management_router
     app.include_router(nanobot_router)
-app.include_router(research_router)
-
     # Research management routes
     app.include_router(research_management_router)
 except ImportError as e:
@@ -136,6 +134,10 @@ except ImportError as e:
 try:
     from api.routes.settings_routes import router as settings_router
     app.include_router(settings_router)
+except ImportError as e:
+    import logging
+    logging.getLogger("biodockify_api").warning(f"Settings routes not loaded: {e}")
+
 # Register Statistics Routes
 try:
     from api.routes.statistics import router as statistics_router
