@@ -210,7 +210,7 @@ export default function ResultsViewer({ result, data, analysisType }: ResultsVie
       {hasAdjustedPValues ? (
         <div className="bg-slate-900/30 rounded-lg p-4 border border-slate-800">
           <h3 className="text-sm font-medium text-cyan-400 mb-3">Adjusted P-values</h3>
-          {Object.entries(result.adjustedPValues).map(([key, value]) => (
+          {result.adjustedPValues && Object.entries(result.adjustedPValues).map(([key, value]) => (
             <div key={key} className="flex justify-between text-sm items-center py-2 border-b border-slate-800 last:border-b-0">
               <span className="text-slate-400">{key}</span>
               <span className={`font-mono font-medium ${value < (result.significance ?? 0.05) ? 'text-green-400' : 'text-amber-400'}`}>
