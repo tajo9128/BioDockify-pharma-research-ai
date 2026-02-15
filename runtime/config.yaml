@@ -20,8 +20,8 @@ ai_provider:
   ollama_model: ''
   deepseek_url: https://api.deepseek.com
   deepseek_model: ''
-  minimax_url: https://api.minimax.chat/v1
-  minimax_model: ''
+  minimax_url: https://api.minimax.io/anthropic
+  minimax_model: MiniMax-M2.5
 channels:
   discord:
     allow_from: []
