@@ -5,7 +5,16 @@ All notable changes to **BioDockify** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [v2.6.10] - 2026-02-13
+## [v2.8.4] - 2026-02-15
+### Changed
+- Major version bump for production stabilization release.
+- Internal version alignment across all components.
+
+## [v2.7.7] - 2026-02-15
+### Fixed
+- Fixed `re` import in `headless_research/engine.py`.
+- Fixed hardcoded paths in `statistics/orchestrator.py`.
+- Aligned version strings across API, UI, and Docker.
 ### Fixed
 - **Docker Release Hardening**: Resolved environment variable mismatch (`BIODOCKIFY_DATA` vs `BIODOCKIFY_DATA_DIR`) and removed redundant layer definitions in the Dockerfile.
 

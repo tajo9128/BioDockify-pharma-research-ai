@@ -199,7 +199,7 @@ class MultiTaskScheduler:
     async def _start_task(self, task: ExecutableTask):
         """Start a task for execution"""
         task.status = TaskStatus.RUNNING
-        task.started_at = datetime.now(datetime.UTC)
+        task.started_at = datetime.now(datetime.timezone.utc)
         self.running_tasks[task.id] = task
 
         # Remove from queue
@@ -213,7 +213,7 @@ class MultiTaskScheduler:
         try:
             result = await self._execute_task_logic(task)
             task.status = TaskStatus.COMPLETED
-            task.completed_at = datetime.now(datetime.UTC)
+            task.completed_at = datetime.now(datetime.timezone.utc)
             task.result = result
             task.progress = 100.0
             self.completed_tasks.append(task)
@@ -240,7 +240,7 @@ class MultiTaskScheduler:
             
             # Wait for completion (poll for now as simple impl)
             while True:
-                status = await self.task_manager.get_task_status(tm_task_id)
+                status = await self.task_manager.get_task_status(tm_task_id.id)
                 if not status: break
                 
                 tm_status = status['task'].get('status')

@@ -77,21 +77,21 @@ class SurfSenseClient:
             # Import ChromaDB vector store (built-in)
             from modules.rag.vector_store import get_vector_store
             
-            # Query ChromaDB
-            vector_store = await get_vector_store()
-            results = await vector_store.similarity_search(query, k=top_k)
+            # Query VectorStore
+            vector_store = get_vector_store()
+            results = await vector_store.search(query, k=top_k)
             
-            # Format results to match expected structure
+            # Format results
             formatted_results = []
-            for doc in results:
+            for res in results:
                 formatted_results.append({
-                    "text": doc.page_content,
-                    "source": doc.metadata.get("source", "unknown"),
-                    "score": doc.metadata.get("score", 1.0),
-                    "metadata": doc.metadata
+                    "text": res.get("text", ""),
+                    "source": res.get("metadata", {}).get("source", "unknown"),
+                    "score": res.get("score", 1.0),
+                    "metadata": res.get("metadata", {})
                 })
             
-            logger.info(f"ChromaDB search returned {len(formatted_results)} results")
+            logger.info(f"VectorStore search returned {len(formatted_results)} results")
             return formatted_results
             
         except Exception as e:
@@ -260,7 +260,7 @@ Answer the question based on the context. Include citations."""
         """List all documents in the knowledge base (via ChromaDB)."""
         try:
             from modules.rag.vector_store import get_vector_store
-            vector_store = await get_vector_store()
+            vector_store = get_vector_store()
             # ChromaDB doesn't have a simple "list all" - return metadata instead
             return [{"info": "Use ChromaDB query interface for document listing"}]
         except Exception as e:

@@ -63,7 +63,6 @@ SYSTEM_SOLVING = """
 - `browse_pdf`: Download PDF. params: {"url": "..."}
 
 # EXPERT SKILLS
-- `deep_drive_analyze`: Forensic authorship analysis. params: {"text": "...", "task": "clef24"}
 - `scholar_complete`: AI writing assist (citation aware). params: {"text": "..."}
 - `summarize_content`: Summarize text or URL. params: {"text": "...", "url": "..."}
 

@@ -1,5 +1,4 @@
-# =============================================================================
-# BioDockify v2.6.0 - Optimized Multi-Stage Docker Image
+# BioDockify v2.8.4 - Optimized Multi-Stage Docker Image
 # =============================================================================
 
 # -----------------------------------------------------------------------------
@@ -153,10 +152,10 @@ environment=PORT="3001",HOSTNAME="0.0.0.0",NODE_ENV="production" \n\
 ' > /etc/supervisor/conf.d/biodockify.conf
 
 # Startup Scripts
-LABEL version="v2.7.5"
+LABEL version="v2.8.4"
 LABEL description="BioDockify - Pharma Research AI"
 RUN echo '#!/bin/bash \n\
-echo "BioDockify v2.6.10 - Optimized Launch" \n\
+echo "BioDockify v2.8.4 - Optimized Launch" \n\
 echo "Node Version: $(node -v)" \n\
 echo "Node Path: $(which node)" \n\
 mkdir -p /app/data \n\
@@ -167,6 +166,6 @@ exec /usr/bin/supervisord -c /etc/supervisor/supervisord.conf \n\
 EXPOSE 3000
 VOLUME ["/app/data"]
 HEALTHCHECK --interval=30s --timeout=15s --start-period=60s --retries=3 \
-    CMD curl -sf http://localhost:3000/health || exit 1
+    CMD curl -sf http://localhost:8234/health || exit 1
 
 CMD ["/app/start.sh"]

@@ -5,7 +5,7 @@ Orchestrates tasks with Agent Zero + NanoBot integration
 import asyncio
 import logging
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import List, Optional, Dict, Any, Callable
 from collections import defaultdict
 
@@ -163,7 +163,7 @@ class TaskManager:
 
             await self.db.update_task(task_id, {
                 "status": TaskStatus.IN_PROGRESS,
-                "started_at": datetime.now(datetime.UTC)
+                "started_at": datetime.now(timezone.utc)
             })
 
             await self.db.log_event(
@@ -206,7 +206,7 @@ class TaskManager:
             logger.error(f"Task not found for execution: {task_id}")
             return
 
-        start_time = datetime.now(datetime.UTC)
+        start_time = datetime.now(timezone.utc)
 
         try:
             # Memory Recall (if required)
@@ -225,7 +225,7 @@ class TaskManager:
                 result = await self._execute_direct(task)
 
             # Success
-            duration = (datetime.now(datetime.UTC) - start_time).total_seconds()
+            duration = (datetime.now(datetime.timezone.utc) - start_time).total_seconds()
             await self._complete_task(task_id, result, duration)
 
         except Exception as e:
@@ -236,7 +236,7 @@ class TaskManager:
             if task.retry_count <= task.max_retries:
                 await self._retry_task(task_id, str(e))
             else:
-                duration = (datetime.now(datetime.UTC) - start_time).total_seconds()
+                duration = (datetime.now(datetime.timezone.utc) - start_time).total_seconds()
                 await self._fail_task(task_id, str(e), duration)
 
         finally:
@@ -307,7 +307,7 @@ Report back with result.
         """Mark task as completed"""
         await self.db.update_task(task_id, {
             "status": TaskStatus.COMPLETED,
-            "completed_at": datetime.now(datetime.UTC),
+            "completed_at": datetime.now(datetime.timezone.utc),
             "result": result,
             "actual_duration_seconds": int(duration)
         })
@@ -352,7 +352,7 @@ Report back with result.
         """Mark task as failed"""
         await self.db.update_task(task_id, {
             "status": TaskStatus.FAILED,
-            "completed_at": datetime.now(datetime.UTC),
+            "completed_at": datetime.now(datetime.timezone.utc),
             "error_message": error_message,
             "actual_duration_seconds": int(duration)
         })
@@ -394,15 +394,19 @@ Report back with result.
 
     async def _trigger_callbacks(self, task_id: str):
         """Trigger callbacks for task events"""
-        if task_id in self.task_callbacks:
-            for callback in self.task_callbacks[task_id]:
-                try:
-                    if asyncio.iscoroutinefunction(callback):
-                        await callback(task_id)
-                    else:
-                        callback(task_id)
-                except Exception as e:
-                    logger.error(f"Callback error: {e}")
+        # Specific task callbacks
+        callbacks = list(self.task_callbacks.get(task_id, []))
+        # Global callbacks
+        callbacks.extend(self.task_callbacks.get(None, []))
+
+        for callback in callbacks:
+            try:
+                if asyncio.iscoroutinefunction(callback):
+                    await callback(task_id)
+                else:
+                    callback(task_id)
+            except Exception as e:
+                logger.error(f"Callback error: {e}")
 
     def register_callback(self, task_id: str, callback: Callable):
         """Register callback for task completion"""
@@ -410,12 +414,16 @@ Report back with result.
 
     async def start_scheduler(self):
         """Start task scheduler for scheduled tasks"""
+        if self.scheduler_running:
+            logger.warning("Task scheduler is already running")
+            return
+
         self.scheduler_running = True
         logger.info("Task scheduler started")
 
         while self.scheduler_running:
             try:
-                now = datetime.now(datetime.UTC)
+                now = datetime.now(timezone.utc)
                 scheduled_tasks = await self.db.get_scheduled_tasks(now)
 
                 for task in scheduled_tasks:
@@ -449,7 +457,7 @@ Report back with result.
 
         await self.db.update_task(task_id, {
             "status": TaskStatus.CANCELLED,
-            "completed_at": datetime.now(datetime.UTC)
+            "completed_at": datetime.now(timezone.utc)
         })
 
         await self.db.log_event(task_id, "cancelled", "Task cancelled by user")

@@ -6,6 +6,7 @@ import logging
 import asyncio
 from dataclasses import asdict
 from agent_zero.web_research.surfsense import SurfSense, CrawlConfig, ExtractionRules
+from agent_zero.hybrid.memory import MemoryArea
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +39,7 @@ class WebCrawlerConnector:
                 if res.success:
                     await self.agent.memory.add_memory(
                         f"Crawled Source: {res.url}\nTitle: {res.title}\nContent: {res.content[:1000]}",
-                        area="fragments" # MemoryArea.FRAGMENTS
+                        area=MemoryArea.FRAGMENTS
                     )
             
             return results

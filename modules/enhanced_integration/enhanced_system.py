@@ -147,7 +147,7 @@ class EnhancedSystem:
         for project_id in self.device_manager.active_projects:
             # For each active project, we save its current state
             # This is a stub for potential richer UI context saving
-            await self.device_manager.save_project_context(project_id, {"suspended_at": datetime.now(datetime.UTC).isoformat()})
+            await self.device_manager.save_project_context(project_id, {"suspended_at": datetime.now(datetime.timezone.utc).isoformat()})
 
         logger.info("State saved successfully")
 
@@ -189,7 +189,7 @@ class EnhancedSystem:
                 await self.device_manager.save_project_context(project_id, {
                     "last_task_update": task_id, 
                     "last_progress": progress,
-                    "updated_at": datetime.now(datetime.UTC).isoformat()
+                    "updated_at": datetime.now(datetime.timezone.utc).isoformat()
                 })
 
         return {

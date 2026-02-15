@@ -1,6 +1,0 @@
-README.md
-Dockerfile
-*.egg-info
-**/build
-**/*.pyc
-**/__pycache__

@@ -290,9 +290,9 @@ class LiteratureAggregator:
                     asyncio.set_event_loop(loop)
 
                 if loop.is_running():
-                     asyncio.create_task(surfsense.upload_file(content, filename))
+                     asyncio.create_task(surfsense.upload_document(content, filename))
                 else:
-                     loop.run_until_complete(surfsense.upload_file(content, filename))
+                     loop.run_until_complete(surfsense.upload_document(content, filename))
 
                 logger.info(f"Uploaded literature review to SurfSense: {filename}")
             except Exception as e:

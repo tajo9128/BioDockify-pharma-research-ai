@@ -3,17 +3,10 @@ ReviewerAgent Skill Wrapper
 Integrates the citation verification engine into Agent Zero skills.
 """
 
+from loguru import logger
 from typing import Dict, Any, Optional
 import threading
-try:
-    from modules.literature.reviewer import CitationReviewer
-except ImportError:
-    try:
-        from agent_zero.literature.reviewer import CitationReviewer
-    except ImportError:
-        logger.error("CitationReviewer not found in modules or agent_zero.")
-        raise
-from loguru import logger
+from modules.literature.reviewer import CitationReviewer
 
 class ReviewerAgentSkill:
     """

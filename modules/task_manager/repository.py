@@ -33,7 +33,7 @@ class TaskORM(Base):
     priority = Column(String, nullable=False, index=True)
     status = Column(String, nullable=False, index=True)
 
-    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+    created_at = Column(DateTime, default=datetime.timezone.utcnow, index=True)
     scheduled_at = Column(DateTime, nullable=True, index=True)
     started_at = Column(DateTime, nullable=True)
     completed_at = Column(DateTime, nullable=True)
@@ -72,7 +72,7 @@ class TaskExecutionEventORM(Base):
     id = Column(String, primary_key=True)
     task_id = Column(String, ForeignKey('tasks.id'), nullable=False, index=True)
     event_type = Column(String, nullable=False, index=True)
-    timestamp = Column(DateTime, default=datetime.utcnow, index=True)
+    timestamp = Column(DateTime, default=datetime.timezone.utcnow, index=True)
     message = Column(Text, nullable=True)
     event_metadata = Column(JSON, nullable=True, default=dict)
     agent_id = Column(String, nullable=True)
@@ -121,7 +121,7 @@ class TaskRepository:
 
                 # Create initial event
                 event_orm = TaskExecutionEventORM(
-                    id=f"event_{task.id}_{datetime.now(datetime.UTC).timestamp()}",
+                    id=f"event_{task.id}_{datetime.now(datetime.timezone.utc).timestamp()}",
                     task_id=task.id,
                     event_type="created",
                     message=f"Task '{task.title}' created"
@@ -243,7 +243,7 @@ class TaskRepository:
         async with self.async_session() as session:
             async with session.begin():
                 event = TaskExecutionEventORM(
-                    id=f"event_{task_id}_{datetime.now(datetime.UTC).timestamp()}_{event_type}",
+                    id=f"event_{task_id}_{datetime.now(datetime.timezone.utc).timestamp()}_{event_type}",
                     task_id=task_id,
                     event_type=event_type,
                     message=message,

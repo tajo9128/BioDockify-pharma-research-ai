@@ -1871,8 +1871,9 @@ class AdditionalStatisticalTools:
                 table = Table2x2(obs_array)
                 or_ci = table.oddsratio_confint(alpha=0.05)
                 or_ci_lower, or_ci_upper = or_ci[0], or_ci[1]
-            except:
+            except Exception as e:
                 # Fallback to Woolf's method
+                logger.debug(f"statsmodels Table2x2 failed: {e}. Falling back to Woolf's method.")
                 se_log_or = np.sqrt(1/a + 1/b + 1/c + 1/d)
                 z = stats.norm.ppf(1 - (1 - 0.95) / 2)
                 log_or = np.log(odds_ratio_adj)
@@ -2687,8 +2688,8 @@ class AdditionalStatisticalTools:
                     'p_value': float(p_value_trend),
                     'significant': has_trend
                 }
-        except:
-            pass
+        except Exception as e:
+            logger.debug(f"Trend analysis failed: {e}")
         
         # Series statistics
         series_stats = {

@@ -40,7 +40,7 @@ class SyllabusParser:
             import pypdf
             with open(file_path, "rb") as f:
                 reader = pypdf.PdfReader(f)
-                text = "\n".join([page.extract_text() for page in reader.pages])
+                text = "\n".join([page.extract_text() for page in reader.pages if page.extract_text()])
             return self._extract_syllabus_info(text)
         except Exception as e:
             logger.error(f"Error parsing PDF: {e}")
@@ -150,7 +150,7 @@ class ClassMaterialsGenerator:
     """Generate class materials including notes, PPTs, handouts."""
     
     def __init__(self):
-        self.output_dir = Path("/a0/usr/projects/biodockify_ai/data/class_materials")
+        self.output_dir = Path.home() / ".biodockify" / "data" / "class_materials"
         self.output_dir.mkdir(parents=True, exist_ok=True)
     
     def generate_lecture_notes(self, topic: str, week_info: Dict[str, Any], resources: Dict[str, Any] = None) -> Dict[str, Any]:

@@ -24,16 +24,13 @@ async def test_missing_skills():
     with patch("agent_zero.hybrid.agent.LLMFactory") as mock_factory, \
          patch("agent_zero.hybrid.agent.MessageBus"), \
          patch("agent_zero.hybrid.agent.CronService"), \
-         patch("agent_zero.skills.deep_drive.wrapper.DeepDriveSkill") as mock_deep, \
          patch("agent_zero.skills.scholar_copilot.wrapper.ScholarCopilotSkill") as mock_scholar, \
          patch("agent_zero.hybrid.agent.get_browser_scraper"):
         
         # Setup mocks
         mock_factory.get_adapter.return_value.generate = AsyncMock(return_value="Summary content")
         
-        # Mock Deep Drive
-        mock_deep_inst = mock_deep.return_value
-        mock_deep_inst.analyze_authorship.return_value = {"status": "Analysis Complete"}
+
         
         # Mock Scholar
         mock_scholar_inst = mock_scholar.return_value
@@ -45,14 +42,7 @@ async def test_missing_skills():
         
         print("[+] HybridAgent Initialized.")
         
-        # 1. Test deep_drive_analyze
-        print("[1] Testing deep_drive_analyze...")
-        call = json.dumps({"tool": "deep_drive_analyze", "params": {"text": "test text"}})
-        res = await agent._execute_tool(call)
-        if "Analysis Complete" in str(res):
-            print("[+] deep_drive_analyze passed.")
-        else:
-            print(f"[!] deep_drive_analyze failed: {res}")
+
             
         # 2. Test scholar_complete
         print("[2] Testing scholar_complete...")

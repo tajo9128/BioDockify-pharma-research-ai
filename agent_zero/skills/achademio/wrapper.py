@@ -43,7 +43,11 @@ class AchademioSkill:
                 ],
                 temperature=0
             )
-            return response.choices[0].message.content
+            if hasattr(response, 'choices'):
+                return response.choices[0].message.content
+            elif isinstance(response, dict):
+                return response['choices'][0]['message']['content']
+            return str(response)
         except Exception as e:
             logger.error(f"LLM call failed: {e}")
             return f"Error: {e}"

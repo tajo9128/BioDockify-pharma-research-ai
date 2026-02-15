@@ -6,6 +6,7 @@ Constraints: No Docker, strictly Playwright Python.
 import os
 import asyncio
 import logging
+import re
 from pathlib import Path
 from typing import Optional, Dict, Any, List
 try:
@@ -129,7 +130,8 @@ class HeadlessResearcher:
             
         except Exception as e:
             logger.error(f"Research failed for {url}: {e}")
-            screenshot_path = f"error_{url.replace('://', '_').replace('/', '_')[:100]}.png"
+            safe_url = re.sub(r'[^a-zA-Z0-9]', '_', url)[:100]
+            screenshot_path = f"error_{safe_url}.png"
             try:
                 await page.screenshot(path=screenshot_path)
             except:
@@ -146,7 +148,8 @@ class HeadlessResearcher:
             
         try:
             content = result.get("content", "").encode("utf-8")
-            filename = f"research_{result['title'][:50].strip().replace(' ', '_')}.md"
+            safe_title = re.sub(r'[^a-zA-Z0-9]', '_', result.get('title', 'untitiled')).strip('_')[:50]
+            filename = f"research_{safe_title}.md"
             
             # Use the SurfSense client we built earlier
             client = get_surfsense_client()

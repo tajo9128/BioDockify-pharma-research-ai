@@ -237,7 +237,8 @@ class SearchPlanner:
     def create_search_plan(
         self,
         query: SearchQuery,
-        context: Optional[Dict[str, Any]] = None
+        context: Optional[Dict[str, Any]] = None,
+        max_sources: int = 3
     ) -> SearchPlan:
         """
         Create a detailed execution plan for web research.
@@ -245,12 +246,13 @@ class SearchPlanner:
         Args:
             query: The search query
             context: Additional context for planning
+            max_sources: Maximum number of sources to recommend
             
         Returns:
             A search plan with steps and time estimates
         """
         # Recommend sources based on query
-        recommended_sources = self.recommend_sources(query)
+        recommended_sources = self.recommend_sources(query, max_sources=max_sources)
         
         # Calculate estimated time (5 minutes per source)
         estimated_time = len(recommended_sources) * 5
@@ -295,4 +297,4 @@ async def plan_web_research(
     planner = SearchPlanner()
     query = SearchQuery(question=question, context=context)
     
-    return planner.create_search_plan(query, max_sources=max_sources)
+    return planner.create_search_plan(query, context=context, max_sources=max_sources)

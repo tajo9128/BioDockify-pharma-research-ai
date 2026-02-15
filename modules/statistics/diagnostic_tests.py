@@ -1758,7 +1758,7 @@ class DiagnosticTests:
                 try:
                     zscore_result = self.detect_outliers_zscore(col_data, col, threshold=outlier_threshold)
                     report['outlier_detection'][f'{col}_zscore'] = zscore_result
-                except:
+                except Exception:
                     pass  # Skip if variance is zero
                 
                 # Track outliers

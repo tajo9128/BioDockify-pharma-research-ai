@@ -59,7 +59,7 @@ class Task(BaseModel):
     status: TaskStatus = Field(default=TaskStatus.PENDING)
 
     # Timestamps
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=datetime.timezone.utcnow)
     scheduled_at: Optional[datetime] = Field(None, description="When to start (if scheduled)")
     started_at: Optional[datetime] = Field(None)
     completed_at: Optional[datetime] = Field(None)
@@ -109,7 +109,7 @@ class TaskBatch(BaseModel):
     name: str
     description: Optional[str] = None
     task_ids: List[str] = Field(default_factory=list)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=datetime.timezone.utcnow)
     status: TaskStatus = Field(default=TaskStatus.PENDING)
     batch_metadata: Dict[str, Any] = Field(default_factory=dict)
 
@@ -119,7 +119,7 @@ class TaskExecutionEvent(BaseModel):
     id: str
     task_id: str
     event_type: str  # created, started, progress, completed, failed, retry
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=datetime.timezone.utcnow)
     message: Optional[str] = None
     metadata: Dict[str, Any] = Field(default_factory=dict)
     agent_id: Optional[str] = None

@@ -10,6 +10,7 @@ Combines:
 import asyncio
 import json
 import logging
+import hashlib
 from datetime import datetime, timezone
 from typing import Any, Callable, Coroutine, List, Optional
 
@@ -29,7 +30,7 @@ from agent_zero.hybrid.tools.github_tool import GitHubTool
 from agent_zero.skills.reviewer_agent import get_reviewer_agent
 from agent_zero.skills.achademio.wrapper import get_achademio
 from agent_zero.skills.latte_review.wrapper import get_latte_review
-from agent_zero.skills.deep_drive.wrapper import get_deep_drive
+
 from agent_zero.skills.scholar_copilot.wrapper import get_scholar_copilot
 from agent_zero.skills.email_messenger import get_email_messenger
 from agent_zero.skills.browser_scraper import get_browser_scraper
@@ -153,7 +154,7 @@ class HybridAgent:
             "browse_general": self._tool_browse_general,
             "browse_pdf": self._tool_browse_pdf,
             
-            "deep_drive_analyze": lambda p: get_deep_drive().analyze_authorship(p.get("text"), p.get("task", "clef24")),
+
             "scholar_complete": lambda p: get_scholar_copilot().complete_text(p.get("text")),
             "summarize_content": self._tool_summarize_content,
             "report_progress": self._tool_report_progress,
@@ -244,7 +245,7 @@ class HybridAgent:
             # 3. Construct Search URLs (Simple Mapping for Demo)
             start_urls = []
             for source in sources:
-                if source == "PubMed":
+                if source.name == "PubMed":
                     start_urls.append(f"https://pubmed.ncbi.nlm.nih.gov/?term={query.replace(' ', '+')}")
                 elif source == "Wikipedia":
                     start_urls.append(f"https://en.wikipedia.org/w/index.php?search={query.replace(' ', '+')}")
@@ -381,7 +382,7 @@ class HybridAgent:
         
         # Get singleton and run
         scraper = get_browser_scraper()
-        res = await scraper.scrape_page(url, wait_for)
+        res = await scraper.scrape_page(url, wait_for=wait_for)
         
         if res.get("success"):
             content = res.get("content", "")

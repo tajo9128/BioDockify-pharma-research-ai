@@ -443,13 +443,13 @@ class Curator:
             # Load results
             results = []
             for result_meta in self.index.results[query_id]:
-                result_path = Path(result_meta['file_path'])
+                result_path = Path(result_meta.file_path)
                 if result_path.exists():
                     with open(result_path, 'r', encoding='utf-8') as f:
                         content = f.read()
                         results.append({
-                            'url': result_meta['url'],
-                            'title': result_meta['title'],
+                            'url': result_meta.url,
+                            'title': result_meta.title,
                             'content': content,
                             'metadata': result_meta
                         })

@@ -49,5 +49,26 @@ export function useSettings() {
         }
     };
 
-    return { settings, loading, updateSettings, refresh: loadSettings };
+    const resetSettings = async () => {
+        setLoading(true);
+        try {
+            const result = await api.resetSettings();
+            setSettings(result.config);
+            toast({
+                title: "Settings reset",
+                description: "Configuration has been restored to defaults."
+            });
+        } catch (error) {
+            console.error('Failed to reset settings:', error);
+            toast({
+                title: "Error resetting settings",
+                description: "Could not restore default configuration.",
+                variant: "destructive"
+            });
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return { settings, loading, updateSettings, resetSettings, refresh: loadSettings };
 }

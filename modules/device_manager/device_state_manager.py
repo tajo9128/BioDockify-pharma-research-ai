@@ -11,7 +11,7 @@ import uuid
 import asyncio
 import logging
 from typing import Dict, Any, Optional, List
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 from dataclasses import dataclass, field, asdict
 
@@ -32,7 +32,7 @@ class DeviceSession:
     """Represents a device session"""
     session_id: str = field(default_factory=lambda: str(uuid.uuid4()))
     device_id: str = ""
-    start_time: datetime = field(default_factory=datetime.utcnow)
+    start_time: datetime = field(default_factory=datetime.timezone.utcnow)
     end_time: Optional[datetime] = None
     state: DeviceState = DeviceState.ACTIVE
     active_tasks: List[str] = field(default_factory=list)
@@ -108,7 +108,7 @@ class DeviceStateManager:
 Device State Changed
 Device ID: {self.current_device_id}
 New State: {state.value}
-Timestamp: {datetime.now(datetime.UTC).isoformat()}
+Timestamp: {datetime.now(datetime.timezone.utc).isoformat()}
 Active Tasks: {len(self.active_projects)}
             """.strip()
 
@@ -148,7 +148,7 @@ Active Tasks: {len(self.active_projects)}
     async def end_session(self, session_id: str):
         """End a session"""
         if self.current_session and self.current_session.session_id == session_id:
-            self.current_session.end_time = datetime.now(datetime.UTC)
+            self.current_session.end_time = datetime.now(timezone.utc)
 
             # Remove active projects
             for project_id in self.current_session.active_tasks:
@@ -328,7 +328,7 @@ Annotations: {len(context.annotations)} items
 
                 # Check for idle timeout
                 if self.current_session and self.current_session.state == DeviceState.IDLE:
-                    idle_time = (datetime.now(datetime.UTC) - self.current_session.start_time).total_seconds()
+                    idle_time = (datetime.now(datetime.timezone.utc) - self.current_session.start_time).total_seconds()
 
                     if idle_time > self.idle_timeout:
                         logger.info(f"Idle timeout reached, suspending device")
@@ -375,7 +375,7 @@ Annotations: {len(context.annotations)} items
             "session_id": self.current_session.session_id if self.current_session else None,
             "active_projects": self.active_projects,
             "last_heartbeat": self.current_session.start_time.isoformat() if self.current_session else None,
-            "idle_time": (datetime.now(datetime.UTC) - self.current_session.start_time).total_seconds() if self.current_session else 0
+            "idle_time": (datetime.now(datetime.timezone.utc) - self.current_session.start_time).total_seconds() if self.current_session else 0
         }
 
     async def get_active_project_contexts(self) -> Dict[str, Any]:

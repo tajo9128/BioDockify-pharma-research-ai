@@ -49,6 +49,7 @@ class LanguageToolChecker:
             # Fallback logic if local server missing
             if resp.status_code != 200 and not self.use_public:
                 logger.warning("Local LanguageTool not found. Switching to Public API (Limited).")
+                self.use_public = True
                 url = f"{self.public_api}/check"
                 resp = requests.post(url, data=params, timeout=10)
 

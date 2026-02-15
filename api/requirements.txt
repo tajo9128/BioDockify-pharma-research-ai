@@ -18,11 +18,7 @@ google-genai>=1.15.0
 tokencost>=0.1.17
 ollama>=0.4.4
 neo4j>=5.14.0
-bandit==1.7.6
-pre-commit==4.5.0
-detect-secrets==1.4.0
 sentry-sdk[fastapi]==1.40.0
-ragas==0.0.22
 pandas==2.2.0
 jinja2==3.1.3
 
@@ -48,7 +44,6 @@ fake-http-header>=0.3.5
 
 # Data & Config
 numpy>=1.26.3,<2.0.0
-pandas>=2.0.0
 statsmodels>=0.14.0
 scikit-learn>=1.3.0
 scipy>=1.11.0
@@ -56,6 +51,7 @@ tabulate>=0.9.0
 protobuf>=4.25.3,<5.0.0
 
 # PDF & Text
+python-pptx>=0.6.21
 pypdf>=3.0.0
 pdfminer.six>=20221105
 pdf2image>=1.17.0
@@ -84,3 +80,8 @@ aiosqlite>=0.19.0
 chromadb==0.4.22
 faiss-cpu>=1.7.4
 sentence-transformers>=2.2.2
+
+# Statistics & Survival (Phase 4 & 7)
+lifelines>=0.28.0
+matplotlib>=3.8.0
+seaborn>=0.13.0

@@ -332,11 +332,11 @@ class EnhancedSelfRepairSystem:
         return {"success": result["success"], "strategy_used": "dependency_healing", "actions_taken": [f"Installed {module_name}"], "details": result}
     
     async def _fix_syntax_error(self, diagnosis: Dict[str, Any]) -> Dict[str, Any]:
-        if "file" not in diagnosis:
+        if "file" not in diagnosis or not diagnosis["file"]:
             return {"success": False, "reason": "No file in context"}
         file_path = Path(diagnosis["file"])
         if not file_path.exists():
-            return {"success": False, "reason": "File not found"}
+            return {"success": False, "reason": f"File not found: {file_path}"}
         result = self.code_fixer.apply_fix(file_path, "syntax")
         return {"success": result["success"], "strategy_used": "code_fixing", "actions_taken": ["Applied autopep8"], "details": result}
     

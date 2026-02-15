@@ -351,7 +351,7 @@ Answer:"""
         """
         # Try to extract year from content
         import re
-        year_pattern = r'\b(19|20)\d{2}\b'
+        year_pattern = r'\b(?:19|20)\d{2}\b'
         years = re.findall(year_pattern, result.content)
         if years:
             citation.year = int(years[0])

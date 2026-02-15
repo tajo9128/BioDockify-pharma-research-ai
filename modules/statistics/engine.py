@@ -89,8 +89,23 @@ class StatisticalEngine:
             }
 
     def _clean_data(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Standard cleaning: Drop NaNs in relevant numeric types."""
-        return df.dropna()
+        """Surgical cleaning: Drop NaNs only in columns where they exceed 50% or keep for analysis."""
+        # Only drop rows where critical columns for the specific analysis are missing
+        # For now, we drop rows that are entirely empty or have crucial missing data
+        initial_count = len(df)
+        df = df.dropna(how='all')
+        
+        # Identify numeric columns
+        numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+        if numeric_cols:
+            # We only drop rows if they have NaN in ALL numeric columns
+            df = df.dropna(subset=numeric_cols, how='all')
+            
+        final_count = len(df)
+        if initial_count > final_count:
+            logger.info(f"Cleaned data: dropped {initial_count - final_count} invalid rows")
+            
+        return df
 
     def _analyze_descriptive(self, df: pd.DataFrame, cols: List[str]) -> Dict:
         """Basic descriptive stats."""

@@ -166,8 +166,9 @@ class RegressionAnalyzer:
                 # P-value (Wald test)
                 z_stat = coef / se_i
                 p_values[name] = 2 * (1 - stats.norm.cdf(abs(z_stat)))
-        except:
+        except Exception as e:
             # Fallback if matrix is singular
+            logger.warning(f"Matrix inversion failed for Wald CI: {e}. Falling back to NaNs.")
             for name in ['intercept'] + predictors:
                 confidence_intervals[name] = (np.nan, np.nan)
                 p_values[name] = np.nan

@@ -36,7 +36,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="BioDockify API",
     description="Backend for BioDockify Pharma Research AI",
-    version="v2.6.10",
+    version="v2.8.4",
     lifespan=lifespan
 )
 
@@ -82,9 +82,11 @@ from dataclasses import asdict
 # Register NanoBot Hybrid Agent Routes
 try:
     from api.routes.nanobot_routes import router as nanobot_router
-from api.routes.research_management import router as research_management_router
+    from api.routes.research_management import router as research_management_router
+    # from api.routers.research import router as research_router # Already included later with prefix
+
     app.include_router(nanobot_router)
-app.include_router(research_router)
+    # app.include_router(research_router) # Redundant here
 
     # Research management routes
     app.include_router(research_management_router)
@@ -136,6 +138,10 @@ except ImportError as e:
 try:
     from api.routes.settings_routes import router as settings_router
     app.include_router(settings_router)
+except ImportError as e:
+    import logging
+    logging.getLogger("biodockify_api").warning(f"Settings routes not loaded: {e}")
+
 # Register Statistics Routes
 try:
     from api.routes.statistics import router as statistics_router
@@ -157,18 +163,20 @@ except Exception as e:
     proactive_guidance_manager = None
 # ========================================================================
 
-@app.get("/api/health")
-async def health_check():
-    return {"status": "healthy", "timestamp": time.time()}
+
 
 # CORS Configuration - Whitelist specific origins for security
-allowed_origins = [
-    "http://localhost:3000",
-    "http://localhost:8234",
-    "http://127.0.0.1:3000",
-    "http://127.0.0.1:8234",
-    "tauri://localhost",  # Tauri desktop app
-]
+# Priority: ENV > Defaults
+env_origins = os.getenv("ALLOWED_ORIGINS", "").split(",")
+allowed_origins = [o.strip() for o in env_origins if o.strip()]
+if not allowed_origins:
+    allowed_origins = [
+        "http://localhost:3000",
+        "http://localhost:8234",
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:8234",
+        "tauri://localhost",
+    ]
 
 app.add_middleware(
     CORSMiddleware,
@@ -261,7 +269,6 @@ async def limit_request_size(request: Request, call_next):
 # -----------------------------------------------------------------------------
 # Global Error Handling & Resilience
 # -----------------------------------------------------------------------------
-from fastapi import Request
 from fastapi import Request
 import logging
 import time
@@ -361,29 +368,7 @@ class AgentStateManager:
 
 agent_state = AgentStateManager()
 
-# Standard Verification API (called by UI)
-@app.post("/api/auth/verify")
-async def verify_user_license(request: Dict[str, str]):
-    """
-    Standard verification endpoint.
-    Delegates to AuthManager -> LicenseGuard -> Supabase 'profiles'.
-    """
-    email = request.get("email")
-    if not email:
-        raise HTTPException(status_code=400, detail="Email is required")
-        
-    # Standard check (will check cache first, then online if needed)
-    # For First Run Wizard, we might want to force online if cache is old?
-    # But LicenseGuard handles that automatically (monthly check).
-    success, msg = True, "License verification bypassed - unlimited access enabled"
-    
-    if success:
-        return {"status": "success", "message": msg}
-    else:
-        # 403 Forbidden is appropriate for invalid license
-        # But we return 200 with status=failed so UI can show message nicely
-        # avoiding confusing fetch errors.
-        return {"status": "failed", "message": msg}
+# Auth verification is implemented further down in the file (consolidated)
 
 @app.post("/api/auth/verify-emergency")
 async def verify_emergency_access(request: Dict[str, str]):
@@ -745,7 +730,7 @@ async def query_knowledge_base(request: KnowledgeQueryRequest):
     try:
         from modules.rag.vector_store import get_vector_store
         store = get_vector_store()
-        results = store.search(request.query, k=request.top_k)
+        results = await store.search(request.query, k=request.top_k)
         return {
             "status": "success",
             "query": request.query,
@@ -1044,7 +1029,7 @@ async def upload_file(file: UploadFile = File(...)):
         try:
             chunks = ingestor.ingest_file(str(file_path))
             if chunks:
-                get_vector_store().add_documents(chunks)
+                await get_vector_store().add_documents(chunks)
                 chunk_count = len(chunks)
                 vector_status = "indexed"
                 # Mark file as processed
@@ -1096,13 +1081,8 @@ async def query_library(request: LibraryQuery):
     try:
         from modules.rag.vector_store import get_vector_store
         store = get_vector_store()
-        results = store.search(request.query, request.top_k)
+        results = await store.search(request.query, request.top_k)
         return {"results": results}
-    except Exception as e:
-         # Graceful fallback if RAG is offline
-         logger.warning(f"RAG Search failed: {e}")
-         return {"results": []}
-
     except Exception as e:
         logger.error(f"Library search failed: {e}")
         return {"results": [], "error": str(e)}
@@ -1357,7 +1337,7 @@ class TaskStatus(BaseModel):
 # Background Worker
 # -----------------------------------------------------------------------------
 
-def run_research_task(task_id: str, title: str, mode: str):
+async def run_research_task(task_id: str, title: str, mode: str):
     """
     Background worker function to run the full research pipeliine.
     """
@@ -1407,7 +1387,7 @@ def run_research_task(task_id: str, title: str, mode: str):
                 logger.warning(f"Task {task_id} failed attempt {attempt+1}: {job_err}")
                 if attempt == MAX_JOB_RETRIES - 1:
                      raise job_err # Propagate up to main handler
-                time.sleep(2 * (attempt + 1)) # Backoff
+                await asyncio.sleep(2 * (attempt + 1)) # Backoff
         
         if not context:
              raise Exception("Task execution returned no context after retries.")
@@ -1416,7 +1396,8 @@ def run_research_task(task_id: str, title: str, mode: str):
         # 2.5 Auto-Ingest into Local NotebookLM (RAG)
         # ---------------------------------------------------------------------
         try:
-            from modules.rag.vector_store import vector_store
+            from modules.rag.vector_store import get_vector_store
+            store = get_vector_store()
             
             # Simple Chunking Strategy
             full_text = context.extracted_text
@@ -1436,7 +1417,7 @@ def run_research_task(task_id: str, title: str, mode: str):
                 })
             
             if docs_to_ingest:
-                vector_store.add_documents(docs_to_ingest)
+                await store.add_documents(docs_to_ingest)
                 
             # Neo4j Sync (Entities)
             # Assuming context.entities is a list of dicts/obects
@@ -1518,9 +1499,10 @@ def health_check():
 
     # 3. Vector DB (Chroma/FAISS)
     try:
-         from modules.rag.vector_store import vector_store
+         from modules.rag.vector_store import get_vector_store
+         store = get_vector_store()
          # Simple count check
-         count = vector_store.client.count() if hasattr(vector_store, 'client') else 0
+         count = store.index.ntotal if (store.index and hasattr(store.index, 'ntotal')) else 0
          status["components"]["vector_db"] = {"status": "ok", "documents": count}
     except Exception as e:
          status["components"]["vector_db"] = {"status": "degraded", "message": "Store not initialized"}
@@ -1537,7 +1519,8 @@ def health_check():
             "ram_free_gb": round(mem.available / (1024**3), 1),
             "disk_free_gb": round(disk.free / (1024**3), 1)
         }
-    except:
+    except Exception as e:
+        logger.warning(f"System health check partial failure: {e}")
         status["components"]["system"] = {"status": "unknown"}
         
     return status
@@ -1894,12 +1877,13 @@ async def agent_execute(request: AgentExecuteRequest):
         # RESTART_SERVICE: Manage background services
         elif action == "restart_service":
             service = params.get("service")
-            from runtime.service_manager import ServiceManager
-            mgr = ServiceManager()
+            from runtime.config_loader import load_config
+            from runtime.service_manager import get_service_manager
+            mgr = get_service_manager(load_config())
             if service == "ollama":
-                mgr.restart_service("ollama")
+                mgr.attempt_repair("ollama")
             elif service == "surfsense":
-                mgr.restart_service("surfsense")
+                mgr.attempt_repair("surfsense")
             else:
                 return {"status": "error", "message": "Unknown service"}
             return {"status": "success", "action": "restart_service", "message": f"Restarted {service}"}
@@ -2224,7 +2208,8 @@ def get_system_info():
     try:
         total, used, free = shutil.disk_usage(".")
         disk_free_gb = round(free / (1024**3), 1)
-    except:
+    except Exception as e:
+        logger.debug(f"Free space check failed: {e}")
         disk_free_gb = 0
         
     # Python
@@ -2236,7 +2221,8 @@ def get_system_info():
         with tempfile.TemporaryFile() as f:
             f.write(b"test")
             temp_writable = True
-    except:
+    except Exception as e:
+        logger.debug(f"Temp writability check failed: {e}")
         temp_writable = False
         
     return {
@@ -2388,7 +2374,8 @@ async def generate_slides(request: SlideRequest, background_tasks: BackgroundTas
             orch_config = OrchestratorConfig()
             provider = cfg.get("ai_provider", {}).get("mode", "auto")
             llm = LLMFactory.get_adapter(provider, orch_config)
-        except:
+        except Exception as e:
+            logger.warning(f"LLM initialization in task failed: {e}")
             llm = None
         
         generator = get_slide_generator(llm, rag)
@@ -2463,198 +2450,11 @@ async def render_slides_html(request: dict):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# -----------------------------------------------------------------------------
-# SETTINGS & CONNECTION TEST
-# -----------------------------------------------------------------------------
-class TestConnectionRequest(BaseModel):
-    service_type: str  # 'llm', 'elsevier'
-    provider: Optional[str] = None
-    key: Optional[str] = None
-    base_url: Optional[str] = None
-    model: Optional[str] = None
-
-@app.post("/api/settings/test")
-async def test_connection_endpoint(request: TestConnectionRequest):
-    """
-    Test connection to external services to avoid CORS issues.
-    Proxies the request from the backend to escape browser restrictions.
-    """
-    logger.info(f"[DEBUG] test_connection_endpoint called: service_type={request.service_type}, provider={request.provider}, has_key={bool(request.key)}, base_url={request.base_url}, model={request.model}")
-    
-    try:
-        # 1. LLM Testing
-        if request.service_type == "llm":
-            from modules.llm.adapters import (
-                GoogleGeminiAdapter, 
-                OpenRouterAdapter, 
-                HuggingFaceAdapter, 
-                CustomAdapter, 
-                ZhipuAdapter
-            )
-            
-            adapter = None
-            
-            # Map provider to Adapter
-            # Dedicated presets
-            if request.provider == "google":
-                adapter = GoogleGeminiAdapter(request.key)
-            elif request.provider == "openrouter":
-                adapter = OpenRouterAdapter(request.key, model=request.model or "mistralai/mistral-7b-instruct")
-            elif request.provider == "huggingface":
-                adapter = HuggingFaceAdapter(request.key)
-            elif request.provider in ["glm", "zhipu"]:
-                adapter = ZhipuAdapter(request.key)
-            elif request.provider == "deepseek":
-                # DeepSeek dedicated case (using CustomAdapter with official base URL)
-                adapter = CustomAdapter(request.key, "https://api.deepseek.com", request.model or "deepseek-chat")
-            elif request.provider == "groq":
-                adapter = CustomAdapter(request.key, "https://api.groq.com/openai/v1", request.model or "llama-3.3-70b-versatile")
-            
-            # Generic Custom case
-            elif request.provider == "custom":
-                if not request.base_url:
-                     return {"status": "error", "message": "Base URL required for custom provider"}
-                
-                # Normalize URL
-                base = request.base_url.rstrip("/")
-                if base.endswith("/chat/completions"):
-                    base = base.replace("/chat/completions", "")
-                
-                adapter = CustomAdapter(request.key or "dummy", base, request.model)
-            
-            if not adapter:
-                 return {"status": "error", "message": f"Unsupported provider: {request.provider}"}
-
-            # Perform test generation in a threadpool to avoid blocking the event loop
-            def _run_test():
-                return adapter.generate("Test. Reply with 'OK'.", system_prompt="You are a connection tester.")
-            
-            logger.info(f"[DEBUG] Running {request.provider} test via executor...")
-            response = await asyncio.get_event_loop().run_in_executor(None, _run_test)
-            
-            if response:
-                 logger.info(f"[DEBUG] {request.provider} test SUCCESS")
-                 return {"status": "success", "message": f"Connected! Response: {response[:50]}..."}
-            else:
-                 logger.warning(f"[DEBUG] {request.provider} test FAILED: No response")
-                 return {"status": "error", "message": "No response received from API."}
-
-        # 2. Elsevier Testing
-        elif request.service_type == "elsevier":
-             if not request.key:
-                 return {"status": "error", "message": "API Key required"}
-             
-             # Simple test query to ScienceDirect or Scopus
-             # We use requests directly here
-             headers = {
-                 "X-ELS-APIKey": request.key,
-                 "Accept": "application/json"
-             }
-             # Search for something static
-             url = "https://api.elsevier.com/content/search/scopus?query=heart&count=1"
-             
-             def _do_req():
-                 with requests.Session() as session:
-                     return session.get(url, headers=headers, timeout=10)
-            
-             resp = await asyncio.get_event_loop().run_in_executor(None, _do_req)
-                 
-             if resp.status_code == 200:
-                  return {"status": "success", "message": "Elsevier API Connected via Scopus"}
-             elif resp.status_code == 401:
-                  return {"status": "error", "message": "Invalid API Key"}
-             else:
-                  return {"status": "error", "message": f"API Error: {resp.status_code} {resp.text[:100]}"}
-
-        # 3. Bohrium Testing (MCP)
-        elif request.service_type == "bohrium":
-            target_url = request.base_url or "http://localhost:7000/mcp"
-            
-            # Simple JSON-RPC tool call
-            payload = {
-                "jsonrpc": "2.0",
-                "method": "call_tool",
-                "params": {
-                    "name": "search_papers",
-                    "arguments": {"query": "test", "limit": 1}
-                },
-                "id": 999
-            }
-            
-            def _do_bohrium_req():
-                try:
-                    return requests.post(target_url, json=payload, timeout=5)
-                except requests.exceptions.RequestException as e:
-                    return str(e)
-
-            result = await asyncio.get_event_loop().run_in_executor(None, _do_bohrium_req)
-            
-            if isinstance(result, str):
-                 return {"status": "error", "message": f"Connection Error: {result}"}
-            
-            if result.status_code == 200:
-                 return {"status": "success", "message": "Bohrium Agent Connected (MCP)"}
-            else:
-                 return {"status": "error", "message": f"Bohrium Error: {result.status_code}"}
-
-        # 4. Brave Search Testing
-        elif request.service_type == "brave":
-            if not request.key:
-                return {"status": "error", "message": "Brave API Key required"}
-            
-            headers = {
-                "Accept": "application/json",
-                "Accept-Encoding": "gzip",
-                "X-Subscription-Token": request.key
-            }
-            url = "https://api.search.brave.com/res/v1/web/search?q=test"
-            
-            def _do_brave_req():
-                try:
-                    return requests.get(url, headers=headers, timeout=10)
-                except Exception as e:
-                    return str(e)
-            
-            result = await asyncio.get_event_loop().run_in_executor(None, _do_brave_req)
-            
-            if isinstance(result, str):
-                return {"status": "error", "message": f"Connection Error: {result}"}
-            
-            if result.status_code == 200:
-                return {"status": "success", "message": "Brave Search API Connected"}
-            elif result.status_code == 401:
-                return {"status": "error", "message": "Invalid Brave API Key"}
-            else:
-                return {"status": "error", "message": f"Brave Error: {result.status_code} {result.text[:100]}"}
-
-        return {"status": "error", "message": f"Unknown service type: {request.service_type}"}
-
-    except Exception as e:
-        logger.error(f"Connection test failed: {e}")
-        return {"status": "error", "message": str(e)}
+# SETTINGS & CONNECTION TEST (Managed by api/routes/settings_routes.py)
 
 
 # -----------------------------------------------------------------------------
-class AuthRequest(BaseModel):
-    name: str
-    email: str
-
-@app.post("/api/auth/verify")
-async def verify_user_license(request: AuthRequest):
-    """
-    Verify user against Supabase registry.
-    """
-    # from modules.system.auth_manager import auth_manager  # REMOVED - Supabase
-    success, message = True, "License verification bypassed - unlimited access enabled"
-    
-    return {
-        "success": success,
-        "message": message,
-        "user": {
-            "name": request.name,
-            "email": request.email
-        } if success else None
-    }
+# Auth verification consolidated above
 
 # -----------------------------------------------------------------------------
 # LITERATURE & CITATION VERIFICATION (Reviewer Agent)

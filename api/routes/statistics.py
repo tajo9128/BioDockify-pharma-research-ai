@@ -26,9 +26,6 @@ from fastapi import APIRouter, UploadFile, File, HTTPException, BackgroundTasks
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, Field
 
-import sys
-sys.path.insert(0, '/a0/usr/projects/biodockify_ai')
-
 from modules.statistics.orchestrator import StatisticsOrchestrator
 
 # Import new statistics modules
@@ -6586,6 +6583,7 @@ async def pk_summary_statistics(request: PKSummaryRequest, data: Dict[str, Any])
 # MULTIPLICITY CONTROL ENDPOINTS
 # =============================================================================
 
+@router.post("/fdr/benjamini-yekutieli", response_model=Dict[str, Any])
 async def benjamini_yekutieli_correction(request: FDRRequest):
     """Apply Benjamini-Yekutieli correction under arbitrary dependence
 
@@ -6625,6 +6623,7 @@ async def benjamini_yekutieli_correction(request: FDRRequest):
 # ENHANCED PARAMETRIC TESTS ENDPOINTS
 # =============================================================================
 
+@router.post("/glm", response_model=Dict[str, Any])
 async def glm_analysis(request: GLMRequest, data: Dict[str, Any]):
     """Perform Generalized Linear Model analysis
 
@@ -6641,7 +6640,7 @@ async def glm_analysis(request: GLMRequest, data: Dict[str, Any]):
         orchestrator = get_statistics_orchestrator()
         df = orchestrator._prepare_dataframe(data)
 
-        analyzer = StatisticalTests(alpha=0.05, power=0.80)
+        analyzer = AdvancedBiostatistics(alpha=0.05)
         results = analyzer.generalized_linear_model(
             data=df,
             dependent_var=request.dependent_var,
@@ -6671,6 +6670,7 @@ async def glm_analysis(request: GLMRequest, data: Dict[str, Any]):
 # INTELLIGENCE & AUTOMATION ENDPOINTS
 # =============================================================================
 
+@router.post("/auto-analyze", response_model=Dict[str, Any])
 async def auto_analyze(request: AutoAnalyzeRequest, data: Dict[str, Any]):
     """Perform automated statistical analysis
 

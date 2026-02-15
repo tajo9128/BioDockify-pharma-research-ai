@@ -6,7 +6,7 @@ import uuid
 import asyncio
 import logging
 from typing import List, Dict, Any, Optional
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from dataclasses import dataclass, field
 from enum import Enum
 
@@ -48,7 +48,7 @@ class ProjectTask:
     estimated_hours: float = 0.0
     status: str = "pending"
     assigned_to: Optional[str] = None
-    created_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=datetime.timezone.utcnow)
     completed_at: Optional[datetime] = None
 
 
@@ -59,7 +59,7 @@ class Project:
     title: str = ""
     description: str = ""
     project_type: ProjectType = ProjectType.RESEARCH
-    created_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=datetime.timezone.utcnow)
     estimated_completion: Optional[datetime] = None
     status: str = "planning"
     tasks: List[ProjectTask] = field(default_factory=list)
@@ -135,7 +135,7 @@ class ProjectPlanner:
             title=project_title,
             description=project_plan.get('description', ''),
             project_type=project_type,
-            estimated_completion=datetime.now(datetime.UTC) + timedelta(days=project_plan.get('estimated_days', 30)),
+            estimated_completion=datetime.now(datetime.timezone.utc) + timedelta(days=project_plan.get('estimated_days', 30)),
             tasks=tasks,
             metadata=project_plan.get('metadata', {})
         )
@@ -520,7 +520,7 @@ Task List:
             if task.id == task_id:
                 task.status = status
                 if status == "completed":
-                    task.completed_at = datetime.now(datetime.UTC)
+                    task.completed_at = datetime.now(timezone.utc)
 
                 # Store task completion in memory
                 if self.memory_system:

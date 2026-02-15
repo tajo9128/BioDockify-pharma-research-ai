@@ -88,15 +88,27 @@ How can I assist your research today?`,
 
     // Health check function
     const checkHealth = useCallback(async () => {
-        // Check backend
+        // Check backend - use relative path if possible, or fallback to dev port
+        const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:8234';
+        const apiBase = baseUrl.includes(':3000') ? 'http://localhost:8234' : baseUrl;
+
         try {
-            const res = await fetch('http://localhost:8234/health', {
+            // Check both root health and /api/health for robustness
+            const res = await fetch(`${apiBase}/api/health`, {
                 method: 'GET',
                 signal: AbortSignal.timeout(3000)
             });
             setHealth(h => ({ ...h, backend: res.ok ? 'online' : 'offline' }));
         } catch {
-            setHealth(h => ({ ...h, backend: 'offline' }));
+            try {
+                const res = await fetch(`${apiBase}/health`, {
+                    method: 'GET',
+                    signal: AbortSignal.timeout(3000)
+                });
+                setHealth(h => ({ ...h, backend: res.ok ? 'online' : 'offline' }));
+            } catch {
+                setHealth(h => ({ ...h, backend: 'offline' }));
+            }
         }
 
         // Check LM Studio

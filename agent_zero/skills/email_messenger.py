@@ -283,7 +283,7 @@ This email was sent automatically. Do not reply.
             from agent_zero.channels import get_channels
             channels = get_channels()
             
-            if channels and hasattr(channels, 'channel_manager'):
+            if channels and hasattr(channels, '_channel_manager'):
                 # Route through existing Discord channel
                 logger.info(f"Discord message queued for {channel_id}")
                 return True

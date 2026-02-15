@@ -1,3 +1,0 @@
-click
-scikit-learn
-pandas

@@ -717,38 +717,45 @@ Guidelines:
             logger.error(f"Error generating alternative task: {str(e)}")
             return task
 
-        logger.warning(f"Could not parse JSON from: {text[:200]}")
         return {}
 
 class ToolTimeoutError(Exception):
     """Raised when a tool execution exceeds configured timeout"""
     pass
 
-    def get_thinking_log(self) -> List[Dict]:
-        """Get the complete thinking log"""
-        return self.thinking.copy()
+# Extension methods for AgentZero
+def get_thinking_log(self) -> List[Dict]:
+    """Get the complete thinking log"""
+    return self.thinking.copy()
 
-    def get_execution_log(self) -> List[Dict]:
-        """Get the complete execution log"""
-        return self._execution_log.copy()
-    
-    def set_user_email(self, email: str):
-        """Set user email for license validation"""
-        self._user_email = email
-        logger.info(f"User email set for license validation: {email}")
-    
-    def get_license_status(self) -> Dict:
-        """Get current license status"""
-        return {
-            'valid': self._license_valid,
-            'message': self._license_message,
-            'email': self._user_email
-        }
+def get_execution_log(self) -> List[Dict]:
+    """Get the complete execution log"""
+    return self._execution_log.copy()
 
-    def reset(self):
-        """Reset the agent state"""
-        self.thinking = []
-        self._execution_log = []
-        self.is_running = False
-        logger.info("Agent state reset")
+def set_user_email(self, email: str):
+    """Set user email for license validation"""
+    self._user_email = email
+    logger.info(f"User email set for license validation: {email}")
+
+def get_license_status(self) -> Dict:
+    """Get current license status"""
+    return {
+        'valid': self._license_valid,
+        'message': self._license_message,
+        'email': self._user_email
+    }
+
+def reset(self):
+    """Reset the agent state"""
+    self.thinking = []
+    self._execution_log = []
+    self.is_running = False
+    logger.info("Agent state reset")
+
+# Re-attach methods to AgentZero
+AgentZero.get_thinking_log = get_thinking_log
+AgentZero.get_execution_log = get_execution_log
+AgentZero.set_user_email = set_user_email
+AgentZero.get_license_status = get_license_status
+AgentZero.reset = reset
 

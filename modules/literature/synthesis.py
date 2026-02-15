@@ -78,11 +78,11 @@ class ReviewSynthesizer:
             
             if agent_generate:
                 # Agent Zero generates content
-                content = agent_generate(topic, section_title, context)
+                content = await agent_generate(topic, section_title, context)
             elif self._agent_callback:
                 # Use registered callback
                 prompt = self._build_section_prompt(topic, section_title, section_focus, context)
-                content = self._agent_callback(prompt)
+                content = await self._agent_callback(prompt)
             else:
                 # Fallback to structured excerpts
                 content = self._fallback_section(topic, section_title, context)

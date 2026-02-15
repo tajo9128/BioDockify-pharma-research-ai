@@ -9,9 +9,9 @@ from dataclasses import dataclass, field
 import logging
 import asyncio
 import re
-from urllib.parse import urljoin, urlparse
+from urllib.parse import urljoin, urlparse, urlunparse
 from collections import deque
-import hashlib
+from urllib.robotparser import RobotFileParser
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +43,7 @@ class CrawlResult:
     url: str
     depth: int
     success: bool
+    title: Optional[str] = None
     content: Optional[str] = None
     links_found: List[str] = field(default_factory=list)
     error: Optional[str] = None
@@ -67,6 +68,8 @@ class SurfSense:
         self.domain_counts: Dict[str, int] = {}
         self.max_per_domain = 10
         self.max_queue_size = 1000  # Fix for Bug #4: Infinite URL Queue
+        self.queued_urls: Set[str] = set()
+        self.robots_cache: Dict[str, RobotFileParser] = {}
         self.default_rules = ExtractionRules()
         
         # Default clean patterns for removing unwanted content
@@ -111,7 +114,10 @@ class SurfSense:
         
         # Initialize queue with seed URLs
         for url in config.urls:
-            self.url_queue.append((url, 0))  # (url, depth)
+            canonical_url = self._canonicalize_url(url)
+            if self._is_valid_url(canonical_url) and canonical_url not in self.visited_urls and canonical_url not in self.queued_urls:
+                self.url_queue.append((canonical_url, 0))  # (url, depth)
+                self.queued_urls.add(canonical_url)
         
         # Process queue
         while self.url_queue and len(results) < config.max_pages:
@@ -151,9 +157,11 @@ class SurfSense:
                 # Add discovered links to queue (with size check for Bug #4)
                 if depth < config.depth and len(self.url_queue) < self.max_queue_size:
                     for link in result.links_found:
+                        canonical_link = self._canonicalize_url(link)
                         if len(self.url_queue) < self.max_queue_size:
-                            if link not in self.visited_urls:
-                                self.url_queue.append((link, depth + 1))
+                            if canonical_link not in self.visited_urls and canonical_link not in self.queued_urls:
+                                self.url_queue.append((canonical_link, depth + 1))
+                                self.queued_urls.add(canonical_link)
                         else:
                             break
                 
@@ -197,9 +205,13 @@ class SurfSense:
         data, content_type = raw
         links_found = []
         
-        # 1. Handle Text Content
         if "text/html" in content_type:
             html = data.decode('utf-8', errors='ignore')
+            
+            # Apply extraction rules (HTML-oriented) while it's still HTML
+            if config.rules:
+                html = await self.apply_extraction_rules(html, config.rules)
+            
             content = await executor.extract_text(html, url)
             links_found = self._extract_links(html, url)
         else:
@@ -207,10 +219,6 @@ class SurfSense:
             # but we preserve the raw data
             content = f"[Binary Content: {content_type}]"
             links_found = []
-
-        # Apply extraction rules (only to text/html)
-        if config.rules and "text/html" in content_type:
-            content = await self.apply_extraction_rules(content, config.rules)
         
         # Check for empty/short content for HTML
         if "text/html" in content_type and (not content or len(content) < config.rules.min_content_length):
@@ -269,16 +277,38 @@ class SurfSense:
             # Convert to absolute URL
             absolute_url = urljoin(base_url, href)
             
-            # Fix for Bug #13: Missing URL Validation
-            if not self._is_valid_url(absolute_url):
+            # Canonicalize and Validate
+            canonical_url = self._canonicalize_url(absolute_url)
+            if not self._is_valid_url(canonical_url):
                 continue
                 
-            links.append(absolute_url)
+            links.append(canonical_url)
         
-        # Remove duplicates while preserving order (Fix for Bug #12: Inefficient List Deduplication)
+        # Remove duplicates while preserving order
         unique_links = list(dict.fromkeys(links))
         
         return unique_links
+
+    def _canonicalize_url(self, url: str) -> str:
+        """Canonicalize URL by removing fragments and trailing slashes."""
+        try:
+            parsed = urlparse(url)
+            # Remove fragment
+            # Normalize path: remove trailing slash if not root
+            path = parsed.path
+            if path > "/" and path.endswith("/"):
+                path = path[:-1]
+            
+            return urlunparse((
+                parsed.scheme,
+                parsed.netloc.lower(),
+                path,
+                parsed.params,
+                parsed.query,
+                None # No fragment
+            ))
+        except:
+            return url
 
     def _is_valid_url(self, url: str) -> bool:
         """Check if URL is valid (Fix for Bug #13)."""
@@ -326,25 +356,27 @@ class SurfSense:
     
     async def _respect_robots_txt(self, url: str) -> bool:
         """
-        Check if URL is allowed by robots.txt (Fix for Bug #3: Missing Robots.txt Implementation).
+        Check if URL is allowed by robots.txt with caching and timeout.
         """
-        from urllib.robotparser import RobotFileParser
         try:
             parsed = urlparse(url)
-            robots_url = f"{parsed.scheme}://{parsed.netloc}/robots.txt"
+            domain = parsed.netloc
+            robots_url = f"{parsed.scheme}://{domain}/robots.txt"
             
-            rp = RobotFileParser()
-            rp.set_url(robots_url)
+            if domain not in self.robots_cache:
+                rp = RobotFileParser()
+                rp.set_url(robots_url)
+                try:
+                    # Limit robots.txt fetch to 5 seconds
+                    await asyncio.wait_for(asyncio.to_thread(rp.read), timeout=5.0)
+                except asyncio.TimeoutError:
+                    logger.warning(f"Timeout fetching robots.txt from {robots_url}")
+                    return True # Permissive on timeout
+                self.robots_cache[domain] = rp
             
-            # Run the blocking read in a thread
-            await asyncio.to_thread(rp.read)
-            
-            # Use a default user-agent or a custom one if available
-            return rp.can_fetch("*", url)
+            return self.robots_cache[domain].can_fetch("*", url)
         except Exception as e:
             logger.debug(f"Failed to check robots.txt for {url}: {e}")
-            # Be conservative/permissive if check fails depending on policy; 
-            # common approach is to allow if robots.txt is missing/unparseable
             return True
     
     def create_default_rules(self) -> ExtractionRules:

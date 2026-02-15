@@ -58,7 +58,7 @@ class BohriumConnector:
         """
         Search for patents via Bohrium.
         """
-        return await self._execute_tool("search_patents", {"query": query, "limit": limit})
+        return await self._execute_tool("search_papers", {"query": query, "limit": limit})
 
     async def _execute_tool(self, tool_name: str, arguments: Dict) -> List[Dict]:
         """

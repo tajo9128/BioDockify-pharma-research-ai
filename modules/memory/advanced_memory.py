@@ -6,7 +6,7 @@ import asyncio
 import logging
 import uuid
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Dict, Any, Optional
 from enum import Enum
 from dataclasses import dataclass, asdict
@@ -186,7 +186,7 @@ class AdvancedMemorySystem:
     ) -> str:
         """Add a memory to the system"""
         memory_id = str(uuid.uuid4())
-        now = datetime.now(datetime.UTC)
+        now = datetime.now(timezone.utc)
 
         memory = Memory(
             id=memory_id,
@@ -380,7 +380,7 @@ class AdvancedMemorySystem:
                     old_metadata = results['metadatas'][0] if results.get('metadatas') else {}
 
                     new_metadata = old_metadata.copy()
-                    new_metadata['last_accessed'] = datetime.now(datetime.UTC).isoformat()
+                    new_metadata['last_accessed'] = datetime.now(datetime.timezone.utc).isoformat()
                     new_metadata['access_count'] = old_metadata.get('access_count', 0) + 1
 
                     collection.update(ids=[memory_id], metadatas=[new_metadata])

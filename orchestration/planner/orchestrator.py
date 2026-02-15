@@ -14,12 +14,7 @@ from modules.bio_ner.pubtator import PubTatorValidator
 from modules.literature.semantic_scholar import SemanticScholarSearcher
 from modules.compliance.academic_compliance import AcademicComplianceEngine
 
-try:
-    from modules.deep_drive.memory_engine import MemoryEngine
-    HAS_MEMORY_ENGINE = True
-except ImportError:
-    MemoryEngine = None
-    HAS_MEMORY_ENGINE = False
+
 
 
 # =============================================================================
@@ -277,17 +272,11 @@ class ResearchOrchestrator:
                 performance_profile=runtime_cfg.get("ai_advanced", {}).get("performance_profile", "high")
             )
 
-        # Initialize Brain Components (Phase 2)
+        # Brain Components
         self.pubtator = PubTatorValidator()
         self.scholar = SemanticScholarSearcher()
         self.compliance = AcademicComplianceEngine(strictness=self.config.novelty_strictness)
-        
-        if HAS_MEMORY_ENGINE:
-            self.memory = MemoryEngine()
-            print("[+] Deep Drive Memory Engine: Connected")
-        else:
-            self.memory = None
-            print("[!] Deep Drive Memory Engine: Not available")
+        self.memory = None
             
         if self.config.use_cloud_api and self.config.cloud_api_key:
             print(f"[+] Hybrid Mode Enabled: Using Cloud API")
@@ -409,27 +398,7 @@ class ResearchOrchestrator:
         except Exception as e:
             print(f"[!] Semantic Scholar context extraction failed: {e}")
 
-        # 2. Deep Drive Memory (Native)
-        if self.memory:
-            try:
-                # Search Memory
-                memories = await self.memory.search_memory(query, top_k=3)
-                if memories:
-                    mem_text = "; ".join([m.get("text", "")[:100] for m in memories])
-                    context.append(f"Internal Memory: {mem_text}")
-                
-                # Search Graph
-                graph_data = await self.memory.search_graph(query, limit=5)
-                if graph_data:
-                    nodes = graph_data.get("nodes", [])
-                    if nodes:
-                        node_labels = [n.get("labels", [])[0] if n.get("labels") else "Entity" for n in nodes]
-                        node_props = [n.get("properties", {}).get("name", "Unknown") for n in nodes]
-                        graph_summary = ", ".join([f"{l}:{p}" for l, p in zip(node_labels, node_props)])
-                        context.append(f"Knowledge Graph: {graph_summary}")
-                        
-            except Exception as e:
-                print(f"[!] Memory context extraction failed: {e}")
+
             
         return "\n".join(context)
     

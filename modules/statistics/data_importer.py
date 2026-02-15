@@ -129,7 +129,7 @@ class DataImporter:
                     df = pd.read_csv(file_path, encoding=encoding, delimiter=delimiter)
                     if df.shape[1] > 1:  # Valid table found
                         return df
-                except:
+                except Exception:
                     continue
 
             # Fallback to comma delimiter
@@ -348,7 +348,7 @@ class DataImporter:
                     if converted.notna().sum() > len(df_clean) * 0.5:  # >50% convertible
                         df_clean[col] = converted
                         report['operations'].append(f"Converted column '{col}' to numeric")
-                except:
+                except Exception:
                     pass
 
         report['final_rows'] = len(df_clean)

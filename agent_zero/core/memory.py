@@ -9,7 +9,7 @@ This module provides:
 """
 
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, List, Optional, Any
 import logging
@@ -122,10 +122,8 @@ class PersistentMemory:
             memory['timestamp'] = datetime.now().isoformat()
 
         # Add tags and metadata if provided
-        if tags:
-            memory['tags'] = tags
-        if metadata:
-            memory['metadata'] = metadata
+        memory['tags'] = tags or []
+        memory['metadata'] = metadata or {}
 
         # Add to short-term memory
         self.short_term.append(memory)

@@ -9,10 +9,20 @@ import { Settings } from '../lib/api';
 
 export default function SettingsPanel() {
     const [activeTab, setActiveTab] = useState('models');
-    const { settings, updateSettings } = useSettings();
+    const { settings, loading, updateSettings, resetSettings } = useSettings();
 
-    const handleReset = () => {
-        console.log("Reset requested - not implemented");
+    if (loading) {
+        return (
+            <div className="fixed inset-0 bg-slate-950 z-50 flex items-center justify-center">
+                <div className="text-slate-400">Loading settings...</div>
+            </div>
+        );
+    }
+
+    const handleReset = async () => {
+        if (window.confirm("Are you sure you want to reset all settings to defaults?")) {
+            await resetSettings();
+        }
     };
 
     return (
@@ -20,7 +30,7 @@ export default function SettingsPanel() {
             <SettingsLayout activeTab={activeTab} setActiveTab={setActiveTab}>
                 {activeTab === 'models' && (
                     <ModelIntelligenceSettings
-                        settings={settings as Settings}
+                        settings={(settings || {}) as Settings}
                         onUpdate={(newSettings) => {
                             if (newSettings.ai_provider) {
                                 updateSettings('ai_provider', newSettings.ai_provider);
@@ -32,7 +42,7 @@ export default function SettingsPanel() {
                 {activeTab === 'research' && <BioDockifyResearchSettings />}
                 {activeTab === 'system' && (
                     <SystemSettings
-                        settings={settings as Settings}
+                        settings={(settings || {}) as Settings}
                         onSettingChange={updateSettings}
                         onReset={handleReset}
                     />

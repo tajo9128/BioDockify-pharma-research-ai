@@ -91,6 +91,40 @@ class StatisticsOrchestrator:
         self.current_data = None
         self.current_metadata = None
 
+    def _prepare_dataframe(self, data: Union[Dict[str, Any], List[Dict[str, Any]], pd.DataFrame]) -> pd.DataFrame:
+        """Helper to prepare a pandas DataFrame from various input formats
+        
+        Args:
+            data: Input data (dict, list of dicts, or already a DataFrame)
+            
+        Returns:
+            pd.DataFrame: Prepared and optionally cleaned DataFrame
+        """
+        if isinstance(data, pd.DataFrame):
+            df = data
+        elif isinstance(data, list):
+            df = pd.DataFrame(data)
+        elif isinstance(data, dict):
+            # If it's a dict of columns
+            if all(isinstance(v, list) for v in data.values()):
+                df = pd.DataFrame(data)
+            # If it's a dict with 'data' field
+            elif 'data' in data and isinstance(data['data'], list):
+                df = pd.DataFrame(data['data'])
+            else:
+                # Try raw conversion
+                df = pd.DataFrame([data])
+        else:
+            raise ValueError(f"Unsupported data format for preparation: {type(data)}")
+            
+        if self.auto_clean:
+            # Drop rows where all elements are missing
+            df = df.dropna(how='all')
+            # Reset index
+            df = df.reset_index(drop=True)
+            
+        return df
+
     def import_data(
         self,
         file_path: Union[str, Path],
@@ -621,8 +655,8 @@ class StatisticsOrchestrator:
                     'p_value': float(bartlett_p),
                     'equal_variance': bartlett_p > 0.05
                 }
-            except:
-                pass
+            except Exception as e:
+                logger.debug(f"Bartlett's test failed: {e}")
 
         # 3. Outlier Detection
         for col in columns:
@@ -1361,8 +1395,9 @@ plt.show()
         # Generate output path if not provided
         if output_path is None:
             timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-            output_path = f"/a0/usr/projects/biodockify_ai/export/statistical_analysis_{timestamp}.docx"
-            Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+            export_dir = Path("export")
+            export_dir.mkdir(parents=True, exist_ok=True)
+            output_path = str(export_dir / f"statistical_analysis_{timestamp}.docx")
 
         # Create document
         doc = Document()
