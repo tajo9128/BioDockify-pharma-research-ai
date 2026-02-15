@@ -147,7 +147,7 @@ export interface APAReport {
 export interface AnalysisParameter {
   name: string;
   label: string;
-  type: 'text' | 'number' | 'select' | 'multiselect' | 'checkbox' | 'radio' | 'file';
+  type: 'text' | 'number' | 'select' | 'multiselect' | 'checkbox' | 'radio' | 'file' | 'column';
   required: boolean;
   default?: any;
   options?: Array<{ value: string; label: string }>;
@@ -158,6 +158,7 @@ export interface AnalysisParameter {
   description?: string;
   dependsOn?: string;
   validation?: (value: any) => string | null;
+  subtype?: 'numeric' | 'categorical' | 'group' | 'time';
 }
 
 export interface AnalysisDefinition {
