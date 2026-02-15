@@ -5,6 +5,11 @@ All notable changes to **BioDockify** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v2.8.5] - 2026-02-15
+### Fixed
+- Resolved Statistics type error in `StatisticsResult` definition, ensuring compatibility with `ResultsViewer` and reporting libraries.
+- Unified confidence interval representation as `[number, number]` arrays across the statistical engine.
+
 ## [v2.8.4] - 2026-02-15
 ### Changed
 - Major version bump for production stabilization release.

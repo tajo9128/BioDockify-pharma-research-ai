@@ -115,13 +115,13 @@ export interface AssumptionCheck {
   remedy?: string;
 }
 
-export interface AnalysisResult {
+export interface StatisticsResult {
   analysisType: AnalysisType;
   testStatistics: Record<string, any>;
   pValue?: number;
   pValues?: Record<string, number>;
-  confidenceInterval?: ConfidenceInterval;
-  confidenceIntervals?: Record<string, ConfidenceInterval>;
+  confidenceInterval?: [number, number];
+  confidenceIntervals?: Record<string, [number, number]>;
   confidenceLevel: number;
   sampleSize: number;
   degreesOfFreedom?: number;
@@ -130,6 +130,7 @@ export interface AnalysisResult {
   significance: number;
   effectSize?: number;
   effectSizeInterpretation?: string;
+  effectSizes?: Record<string, number | any>;
   interpretation?: string;
   assumptionsCheck?: AssumptionCheck[];
   adjustedPValues?: Record<string, number>;
@@ -279,7 +280,7 @@ export interface ParameterFormProps {
 }
 
 export interface ResultsViewerProps {
-  result: AnalysisResult;
+  result: StatisticsResult;
   data: DataRow[];
   analysisType: AnalysisType;
 }
