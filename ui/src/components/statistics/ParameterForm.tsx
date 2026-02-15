@@ -14,11 +14,11 @@ interface ParameterFormProps {
   disabled?: boolean;
 }
 
-export default function ParameterForm({ 
-  analysisType, 
-  data, 
+export default function ParameterForm({
+  analysisType,
+  data,
   dataTypes,
-  parameters, 
+  parameters,
   onParametersChange,
   disabled = false
 }: ParameterFormProps) {
@@ -52,7 +52,7 @@ export default function ParameterForm({
     .concat(...Object.values(getAnalysesByCategory('categorical')));
 
   const analysis = allAnalyses.find(a => a.id === analysisType);
-  
+
   if (!analysis || !analysis.parameters) {
     return (
       <div className="flex items-center justify-center h-64 text-slate-500">
@@ -86,12 +86,12 @@ export default function ParameterForm({
           >
             <option value="">{isRequired ? 'Select a column *' : 'Select a column (optional)'}</option>
             {data.length > 0 && Object.keys(data[0]).map((col) => {
-              const colType = dataTypes.find(d => d.column === col);
+              const colType = dataTypes.find(d => d.name === col);
               const typeIcon = colType ? `(${colType.type})` : '';
               const suggestion = param.subtype === 'numeric' && colType?.type === 'numeric' ? ' (Recommended)' :
-                               param.subtype === 'categorical' && ['categorical', 'binary'].includes(colType?.type || '') ? ' (Recommended)' :
-                               param.subtype === 'group' && ['categorical', 'binary'].includes(colType?.type || '') ? ' (Recommended)' :
-                               param.subtype === 'time' && colType?.type === 'datetime' ? ' (Recommended)' : '';
+                param.subtype === 'categorical' && ['categorical', 'binary'].includes(colType?.type || '') ? ' (Recommended)' :
+                  param.subtype === 'group' && ['categorical', 'binary'].includes(colType?.type || '') ? ' (Recommended)' :
+                    param.subtype === 'time' && colType?.type === 'datetime' ? ' (Recommended)' : '';
               return (
                 <option key={col} value={col}>
                   {col} {typeIcon}{suggestion}
@@ -112,7 +112,7 @@ export default function ParameterForm({
           >
             <option value="">{isRequired ? 'Select columns *' : 'Select columns (optional)'}</option>
             {data.length > 0 && Object.keys(data[0]).map((col) => {
-              const colType = dataTypes.find(d => d.column === col);
+              const colType = dataTypes.find(d => d.name === col);
               const typeIcon = colType ? `(${colType.type})` : '';
               return (
                 <option key={col} value={col}>
@@ -133,11 +133,15 @@ export default function ParameterForm({
             required={isRequired}
           >
             <option value="">{isRequired ? 'Select an option *' : 'Select an option (optional)'}</option>
-            {param.options?.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
+            {param.options?.map((opt) => {
+              const optValue = typeof opt === 'string' ? opt : opt.value;
+              const optLabel = typeof opt === 'string' ? opt : opt.label;
+              return (
+                <option key={optValue} value={optValue}>
+                  {optLabel}
+                </option>
+              );
+            })}
           </select>
         );
 

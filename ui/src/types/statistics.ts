@@ -5,7 +5,7 @@
  * comprehensive statistics analysis system supporting 25+ analyses.
  */
 
-export type AnalysisCategory = 
+export type AnalysisCategory =
   | 'basic'
   | 'survival'
   | 'bioequivalence'
@@ -147,15 +147,18 @@ export interface APAReport {
 export interface AnalysisParameter {
   name: string;
   label: string;
-  type: 'text' | 'number' | 'select' | 'multiselect' | 'checkbox' | 'radio' | 'file';
+  type: 'text' | 'number' | 'select' | 'multiselect' | 'checkbox' | 'radio' | 'file' | 'column' | 'columns' | 'boolean';
   required: boolean;
   default?: any;
-  options?: Array<{ value: string; label: string }>;
+  defaultValue?: any;
+  options?: string[] | Array<{ value: string; label: string }>;
   min?: number;
   max?: number;
   step?: number;
   placeholder?: string;
   description?: string;
+  hint?: string;
+  subtype?: 'numeric' | 'categorical' | 'binary' | 'datetime' | 'group' | 'text' | 'time' | 'column' | 'columns';
   dependsOn?: string;
   validation?: (value: any) => string | null;
 }
@@ -185,57 +188,55 @@ export interface AnalysisParameters {
   variable2?: string;
   variables?: string[];
   subject?: string;
-  
+  alpha?: number;
+  testType?: TTestType | string;
+
   // T-test specific
-  testType?: TTestType;
   varianceAssumption?: VarianceAssumption;
-  
+
   // ANOVA specific
   postHoc?: PostHocMethod;
-  
+
   // Correlation specific
   method?: CorrelationMethod;
-  
+
   // Non-parametric specific
   alternative?: AlternativeHypothesis;
-  
+
   // Power analysis specific
-  testType?: string;
   effectSize?: number;
-  alpha?: number;
   power?: number;
   sampleSize?: number;
-  
+
   // Survival analysis specific
   time?: string;
   event?: string;
   covariates?: string[];
   strata?: string[];
-  
+
   // Bioequivalence specific
   test?: string;
   reference?: string;
   logTransform?: boolean;
   confidenceLevel?: number;
-  
+
   // PK/PD specific
   dose?: number;
   route?: 'IV' | 'EV';
   concentration?: string;
   concentrationColumn?: string;
-  
+
   // Multiplicity control specific
   pValues?: string[];
-  alpha?: number;
   q?: number;
-  
+
   // Categorical tests specific
   col1?: string;
   col2?: string;
   stratifyBy?: string;
   correction?: boolean;
   expected?: number[];
-  
+
   // General
   columns?: string[];
   title?: string;
