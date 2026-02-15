@@ -71,7 +71,7 @@ export default function ParameterForm({
   };
 
   const renderParameterInput = (param: AnalysisParameter) => {
-    const value = localParams[param.name] !== undefined ? localParams[param.name] : param.defaultValue;
+    const value = localParams[param.name] !== undefined ? localParams[param.name] : param.default;
     const isRequired = param.required;
 
     switch (param.type) {
@@ -305,8 +305,8 @@ export default function ParameterForm({
             onClick={() => {
               const newParams: Record<string, any> = {};
               analysis.parameters.forEach(param => {
-                if (param.defaultValue !== undefined) {
-                  newParams[param.name] = param.defaultValue;
+                if (param.default !== undefined) {
+                  newParams[param.name] = param.default;
                 }
               });
               setLocalParams(newParams);
