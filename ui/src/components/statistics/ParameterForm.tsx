@@ -237,7 +237,9 @@ export default function ParameterForm({
                 {param.required && <span className="text-red-400 ml-1">*</span>}
               </label>
               {param.description && (
-                <Info className="w-4 h-4 text-slate-500" title={param.description} />
+                <span title={param.description}>
+                  <Info className="w-4 h-4 text-slate-500" />
+                </span>
               )}
             </div>
             {renderParameterInput(param)}
