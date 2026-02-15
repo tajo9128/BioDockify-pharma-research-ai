@@ -1,1 +1,5 @@
-2.8.5
+BioDockify v2.8.6
+Release Date: 2026-02-15
+Optimized Multi-Stage Docker Build
+Statistics Module Hardened
+Results Viewer JSX Fixed

@@ -16,11 +16,10 @@ export default function ResultsViewer({ result, data, analysisType }: ResultsVie
   const renderTabButton = (id: typeof activeTab, icon: React.ReactNode, label: string, count?: number) => (
     <button
       onClick={() => setActiveTab(id)}
-      className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-        activeTab === id
-          ? 'bg-cyan-950/50 text-cyan-400 border border-cyan-900'
-          : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-      }`}
+      className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === id
+        ? 'bg-cyan-950/50 text-cyan-400 border border-cyan-900'
+        : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+        }`}
     >
       {icon}
       <span>{label}</span>
@@ -64,11 +63,10 @@ export default function ResultsViewer({ result, data, analysisType }: ResultsVie
       </div>
 
       {/* Conclusion Card */}
-      <div className={`rounded-lg p-4 border ${
-        (result.pValue ?? Infinity) < (result.significance ?? 0.05)
-          ? 'bg-green-950/30 border-green-900'
-          : 'bg-amber-950/30 border-amber-900'
-      }`}>
+      <div className={`rounded-lg p-4 border ${(result.pValue ?? Infinity) < (result.significance ?? 0.05)
+        ? 'bg-green-950/30 border-green-900'
+        : 'bg-amber-950/30 border-amber-900'
+        }`}>
         <div className="flex items-start gap-3">
           {(result.pValue ?? Infinity) < (result.significance ?? 0.05) ? (
             <CheckCircle className="w-5 h-5 text-green-400 mt-0.5 flex-shrink-0" />
@@ -178,9 +176,8 @@ export default function ResultsViewer({ result, data, analysisType }: ResultsVie
           {result.pValue !== undefined && (
             <div className="flex justify-between text-sm items-center py-2">
               <span className="text-slate-400">P-value</span>
-              <span className={`font-mono font-medium ${
-                result.pValue < (result.significance ?? 0.05) ? 'text-green-400' : 'text-amber-400'
-              }`>
+              <span className={`font-mono font-medium ${result.pValue < (result.significance ?? 0.05) ? 'text-green-400' : 'text-amber-400'
+                }`}>
                 {result.pValue < 0.001 ? '< 0.001' : result.pValue.toFixed(4)}
               </span>
             </div>
@@ -188,9 +185,8 @@ export default function ResultsViewer({ result, data, analysisType }: ResultsVie
           {result.pValues && Object.entries(result.pValues).map(([key, value]) => (
             <div key={key} className="flex justify-between text-sm items-center py-2 border-t border-slate-800">
               <span className="text-slate-400">{key}</span>
-              <span className={`font-mono font-medium ${
-                value < (result.significance ?? 0.05) ? 'text-green-400' : 'text-amber-400'
-              }`>
+              <span className={`font-mono font-medium ${value < (result.significance ?? 0.05) ? 'text-green-400' : 'text-amber-400'
+                }`}>
                 {value < 0.001 ? '< 0.001' : value.toFixed(4)}
               </span>
             </div>
@@ -205,15 +201,14 @@ export default function ResultsViewer({ result, data, analysisType }: ResultsVie
           {Object.entries(result.adjustedPValues).map(([key, value]) => (
             <div key={key} className="flex justify-between text-sm items-center py-2 border-b border-slate-800 last:border-b-0">
               <span className="text-slate-400">{key}</span>
-              <span className={`font-mono font-medium ${
-                value < (result.significance ?? 0.05) ? 'text-green-400' : 'text-amber-400'
-              }`>
+              <span className={`font-mono font-medium ${value < (result.significance ?? 0.05) ? 'text-green-400' : 'text-amber-400'
+                }`}>
                 {value < 0.001 ? '< 0.001' : value.toFixed(4)}
               </span>
             </div>
           ))}
         </div>
-      ) : null}
+      )}
     </div>
   );
 
@@ -256,13 +251,12 @@ export default function ResultsViewer({ result, data, analysisType }: ResultsVie
           <h3 className="text-sm font-medium text-cyan-400 mb-3">Assumption Checks</h3>
           <div className="space-y-2">
             {result.assumptionsCheck.map((check, idx) => (
-              <div key={idx} className={`flex items-start gap-3 p-3 rounded border ${
-                check.status === 'passed'
+              <div key={idx} className={`flex items-start gap-3 p-3 rounded border ${check.status === 'passed'
                   ? 'bg-green-950/20 border-green-900'
                   : check.status === 'failed'
-                  ? 'bg-red-950/20 border-red-900'
-                  : 'bg-amber-950/20 border-amber-900'
-              }`>
+                    ? 'bg-red-950/20 border-red-900'
+                    : 'bg-amber-950/20 border-amber-900'
+                }`}>
                 {check.status === 'passed' && <CheckCircle className="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0" />}
                 {check.status === 'failed' && <XCircle className="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0" />}
                 {check.status === 'warning' && <AlertCircle className="w-4 h-4 text-amber-400 mt-0.5 flex-shrink-0" />}
@@ -390,9 +384,9 @@ export default function ResultsViewer({ result, data, analysisType }: ResultsVie
     <div className="bg-slate-950/50 rounded-xl border border-slate-800">
       {/* Tab Header */}
       <div className="flex items-center gap-1 p-2 border-b border-slate-800 overflow-x-auto">
-        {renderTabButton('overview', <span className="w-4 h-4" />, 'Overview')}
-        {renderTabButton('statistics', <span className="w-4 h-4" />, 'Statistics')}
-        {renderTabButton('interpretation', <span className="w-4 h-4" />, 'Interpretation')}
+        {renderTabButton('overview', <div className="w-4 h-4" />, 'Overview')}
+        {renderTabButton('statistics', <div className="w-4 h-4" />, 'Statistics')}
+        {renderTabButton('interpretation', <div className="w-4 h-4" />, 'Interpretation')}
         {renderTabButton('tables', <TableIcon className="w-4 h-4" />, 'Tables & Graphs')}
         {renderTabButton('export', <Download className="w-4 h-4" />, 'Export')}
       </div>

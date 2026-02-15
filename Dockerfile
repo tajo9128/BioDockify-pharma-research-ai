@@ -1,4 +1,4 @@
-# BioDockify v2.8.5 - Optimized Multi-Stage Docker Image
+# BioDockify v2.8.6 - Optimized Multi-Stage Docker Image
 # =============================================================================
 
 # -----------------------------------------------------------------------------
@@ -67,7 +67,6 @@ ENV LC_ALL=C.UTF-8
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl ca-certificates libpq5 \
     libgl1 libglib2.0-0 ffmpeg poppler-utils \
-
     nginx supervisor chromium chromium-driver \
     && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && apt-get install -y nodejs \
@@ -152,10 +151,10 @@ environment=PORT="3001",HOSTNAME="0.0.0.0",NODE_ENV="production" \n\
 ' > /etc/supervisor/conf.d/biodockify.conf
 
 # Startup Scripts
-LABEL version="v2.8.5"
+LABEL version="v2.8.6"
 LABEL description="BioDockify - Pharma Research AI"
 RUN echo '#!/bin/bash \n\
-echo "BioDockify v2.8.5 - Optimized Launch" \n\
+echo "BioDockify v2.8.6 - Optimized Launch" \n\
 echo "Node Version: $(node -v)" \n\
 echo "Node Path: $(which node)" \n\
 mkdir -p /app/data \n\
