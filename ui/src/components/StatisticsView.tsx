@@ -1,6 +1,6 @@
 
 import React, { useState, useRef } from 'react';
-import { api } from '@/lib/api';
+import { api, API_BASE } from '@/lib/api';
 import { Calculator, BarChart3, GraduationCap, Microscope, AlertTriangle, CheckCircle2, Download, FileJson, FileSpreadsheet, FileCode, FileText, Loader2 } from 'lucide-react';
 import ProgressStep from './ProgressStep';
 
@@ -98,7 +98,7 @@ export default function StatisticsView() {
 
             if (exportResult.success && exportResult.output_path) {
                 // Create download URL
-                const downloadUrl = `${api.baseURL}/api/statistics/download?path=${encodeURIComponent(exportResult.output_path)}`;
+                const downloadUrl = `${API_BASE}/statistics/download?path=${encodeURIComponent(exportResult.output_path)}`;
                 setExportUrl(downloadUrl);
 
                 // Trigger download
