@@ -290,6 +290,7 @@ async function apiRequest<T>(
   } finally {
     clearTimeout(id);
   }
+}
 
 export const api = {
   // Research endpoints
@@ -647,4 +648,3 @@ export const api = {
 };
 
 export default api;
-
