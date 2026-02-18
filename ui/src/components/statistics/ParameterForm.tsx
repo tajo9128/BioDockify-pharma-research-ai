@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { AnalysisType, ParameterDefinition } from '@/types/statistics';
+import { AnalysisType, AnalysisParameter, DataTypeDetection } from '@/types/statistics';
 import { getAnalysesByCategory } from '@/lib/statistics/analysis-definitions';
 import { getColumnsByType, getSuggestedColumns } from '@/lib/statistics/data-detection';
-import { DataTypeDetection } from '@/types/statistics';
 import { Info, Sliders, Database, Clock } from 'lucide-react';
 
 interface ParameterFormProps {
@@ -70,7 +69,7 @@ export default function ParameterForm({
     onParametersChange(newParams);
   };
 
-  const renderParameterInput = (param: ParameterDefinition) => {
+  const renderParameterInput = (param: AnalysisParameter) => {
     const value = localParams[param.name] !== undefined ? localParams[param.name] : param.defaultValue;
     const isRequired = param.required;
 
@@ -91,7 +90,7 @@ export default function ParameterForm({
               const suggestion = param.subtype === 'numeric' && colType?.type === 'numeric' ? ' (Recommended)' :
                                param.subtype === 'categorical' && ['categorical', 'binary'].includes(colType?.type || '') ? ' (Recommended)' :
                                param.subtype === 'group' && ['categorical', 'binary'].includes(colType?.type || '') ? ' (Recommended)' :
-                               param.subtype === 'time' && colType?.type === 'datetime' ? ' (Recommended)' : '';
+                               param.subtype === 'datetime' && colType?.type === 'datetime' ? ' (Recommended)' : '';
               return (
                 <option key={col} value={col}>
                   {col} {typeIcon}{suggestion}
@@ -288,7 +287,7 @@ export default function ParameterForm({
             <button
               type="button"
               onClick={() => {
-                const timeParam = analysis.parameters.find(p => p.subtype === 'time');
+                const timeParam = analysis.parameters.find(p => p.subtype === 'datetime');
                 if (timeParam && suggestedColumns.datetime.length > 0) {
                   handleParameterChange(timeParam.name, suggestedColumns.datetime[0]);
                 }

@@ -14,7 +14,16 @@ export type AnalysisCategory =
   | 'multiplicity'
   | 'categorical';
 
-export type DataType = 'numeric' | 'categorical' | 'binary' | 'datetime' | 'text';
+export type DataType = 'numeric' | 'categorical' | 'binary' | 'datetime' | 'text' | 'ordinal';
+
+export interface DataTypeDetection {
+  column: string;
+  type: 'numeric' | 'categorical' | 'binary' | 'datetime' | 'ordinal';
+  confidence: number;
+  values?: any[];
+  uniqueCount?: number;
+  missingCount?: number;
+}
 
 export type CorrelationMethod = 'pearson' | 'spearman' | 'kendall';
 export type TTestType = 'independent' | 'paired';
@@ -147,7 +156,7 @@ export interface AnalysisParameter {
   name: string;
   label: string;
   type: 'text' | 'number' | 'select' | 'multiselect' | 'checkbox' | 'radio' | 'file' | 'column' | 'columns' | 'boolean';
-  subtype?: 'numeric' | 'categorical' | 'binary' | 'group';
+  subtype?: 'numeric' | 'categorical' | 'binary' | 'group' | 'datetime';
   required: boolean;
   default?: any;
   defaultValue?: any;
@@ -202,9 +211,9 @@ export interface AnalysisParameters {
   alternative?: AlternativeHypothesis;
   
   // Power analysis specific
-  testType?: string;
+  powerTestType?: string;
   effectSize?: number;
-  alpha?: number;
+  powerAlpha?: number;
   power?: number;
   sampleSize?: number;
   
@@ -215,7 +224,7 @@ export interface AnalysisParameters {
   strata?: string[];
   
   // Bioequivalence specific
-  test?: string;
+  bioequivalenceTest?: string;
   reference?: string;
   logTransform?: boolean;
   confidenceLevel?: number;
@@ -228,7 +237,7 @@ export interface AnalysisParameters {
   
   // Multiplicity control specific
   pValues?: string[];
-  alpha?: number;
+  multiplicityAlpha?: number;
   q?: number;
   
   // Categorical tests specific
