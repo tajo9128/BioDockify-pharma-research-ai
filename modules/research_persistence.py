@@ -42,11 +42,22 @@ class ResearchPersistenceManager:
 
     def __init__(self, storage_path: str = None):
         if storage_path is None:
-            storage_path = "/a0/usr/projects/biodockify_ai/data/research_state"
+            # Use BIODOCKIFY_DATA_DIR environment variable or default to /tmp
+            data_dir = os.environ.get('BIODOCKIFY_DATA_DIR', '/tmp')
+            storage_path = os.path.join(data_dir, 'research_state')
 
         self.storage_path = Path(storage_path)
-        self.storage_path.mkdir(parents=True, exist_ok=True)
-        logger.info(f"Research persistence initialized at: {self.storage_path}")
+        
+        # Try to create directory, fallback to /tmp if failed
+        try:
+            self.storage_path.mkdir(parents=True, exist_ok=True)
+            logger.info(f"Research persistence initialized at: {self.storage_path}")
+        except (PermissionError, OSError) as e:
+            # Fallback to /tmp if original path not writable
+            fallback_path = Path('/tmp') / 'research_state'
+            self.storage_path = fallback_path
+            self.storage_path.mkdir(parents=True, exist_ok=True)
+            logger.warning(f"Could not create storage at original path, using fallback: {self.storage_path}")
 
     def save_research_state(
         self,

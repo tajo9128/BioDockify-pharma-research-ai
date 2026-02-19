@@ -1,5 +1,5 @@
 # =============================================================================
-# BioDockify v2.9.4 - Optimized Multi-Stage Docker Image
+# BioDockify v2.9.5 - Optimized Multi-Stage Docker Image
 # =============================================================================
 
 # -----------------------------------------------------------------------------
@@ -153,10 +153,10 @@ environment=PORT="3001",HOSTNAME="0.0.0.0",NODE_ENV="production" \n\
 ' > /etc/supervisor/conf.d/biodockify.conf
 
 # Startup Scripts
-LABEL version="v2.9.4"
+LABEL version="v2.9.5"
 LABEL description="BioDockify - Pharma Research AI"
 RUN echo '#!/bin/bash \n\
-echo "BioDockify v2.9.4 - Optimized Launch" \n\
+echo "BioDockify v2.9.5 - Optimized Launch" \n\
 echo "Node Version: $(node -v)" \n\
 echo "Node Path: $(which node)" \n\
 mkdir -p /app/data \n\
