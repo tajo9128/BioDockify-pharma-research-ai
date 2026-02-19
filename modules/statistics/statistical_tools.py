@@ -1735,10 +1735,10 @@ class AdditionalStatisticalTools:
                     f"{'Significant association' if p_value < self.alpha else 'No significant association'} "
                     f"between variables (χ²={chi2_stat:.2f}, df={dof}, p={p_value:.4e})."
                 ),
-                'effect_size': (
-                    f"{"Cramer's V" if n_rows > 2 or n_cols > 2 else "Phi coefficient"} ({cramers_v:.3f}) "
-                    f"indicates {self._interpret_cramers_v(cramers_v)} association strength."
-                ),
+            'effect_size': (
+                ("Cramer's V" if n_rows > 2 or n_cols > 2 else "Phi coefficient") + f" ({cramers_v:.3f}) "
+                f"indicates {self._interpret_cramers_v(cramers_v)} association strength."
+            ),
                 'clinical_relevance': (
                     f"{'Variables are statistically associated' if p_value < self.alpha else 'No statistical association detected'}. "
                     f"{'Effect size: ' + self._interpret_cramers_v(cramers_v) if cramers_v >= 0.1 else ''}"
