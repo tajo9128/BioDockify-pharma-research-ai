@@ -232,7 +232,12 @@ export default function ParameterForm({
                 {param.required && <span className="text-red-400 ml-1">*</span>}
               </label>
               {param.description && (
-                <Info className="w-4 h-4 text-slate-500" title={param.description} />
+                <div className="group relative">
+                  <Info className="w-4 h-4 text-slate-500 cursor-help" />
+                  <div className="absolute left-6 top-0 z-10 invisible group-hover:visible w-64 p-2 bg-slate-800 border border-slate-700 rounded-lg text-xs text-slate-300 shadow-lg">
+                    {param.description}
+                  </div>
+                </div>
               )}
             </div>
             {renderParameterInput(param)}
