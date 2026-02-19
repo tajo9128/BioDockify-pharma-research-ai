@@ -5,6 +5,12 @@ All notable changes to **BioDockify** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v3.0.0] - 2026-02-19
+### Added
+- **Major Release**: BioDockify v3.0.0 — full version synchronization across all project files.
+- **Statistics Engine**: Added `ResultsViewer` component, `StatisticsResult` types, APA report generator, and effect-size calculator.
+- **Build Fix**: Resolved Docker build-blocking TypeScript error (`StatisticsResult` missing from `@/types/statistics`).
+
 ## [v2.6.10] - 2026-02-13
 ### Fixed
 - **Docker Release Hardening**: Resolved environment variable mismatch (`BIODOCKIFY_DATA` vs `BIODOCKIFY_DATA_DIR`) and removed redundant layer definitions in the Dockerfile.
