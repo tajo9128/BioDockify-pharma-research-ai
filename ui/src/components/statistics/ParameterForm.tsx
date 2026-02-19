@@ -133,8 +133,8 @@ export default function ParameterForm({
           >
             <option value="">{isRequired ? 'Select an option *' : 'Select an option (optional)'}</option>
             {param.options?.map((opt) => (
-              <option key={opt} value={opt}>
-                {opt}
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
               </option>
             ))}
           </select>
