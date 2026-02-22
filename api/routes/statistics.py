@@ -26,8 +26,14 @@ from fastapi import APIRouter, UploadFile, File, HTTPException, BackgroundTasks
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, Field
 
+# Add project root dynamically for cross-platform compatibility
+import os as _os
+import sys as _sys
+_project_root = _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))
+if _project_root not in _sys.path:
+    _sys.path.insert(0, _project_root)
+
 import sys
-sys.path.insert(0, '/a0/usr/projects/biodockify_ai')
 
 from modules.statistics.orchestrator import StatisticsOrchestrator
 

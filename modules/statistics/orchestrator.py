@@ -1358,11 +1358,14 @@ plt.show()
         except ImportError:
             raise ImportError("python-docx package required. Install with: pip install python-docx")
 
-        # Generate output path if not provided
+        # Generate output path if not provided (cross-platform compatible)
         if output_path is None:
             timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-            output_path = f"/a0/usr/projects/biodockify_ai/export/statistical_analysis_{timestamp}.docx"
-            Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+            # Use project root dynamically for cross-platform compatibility
+            project_root = Path(__file__).parent.parent.parent.absolute()
+            export_dir = project_root / "export"
+            export_dir.mkdir(parents=True, exist_ok=True)
+            output_path = export_dir / f"statistical_analysis_{timestamp}.docx"
 
         # Create document
         doc = Document()

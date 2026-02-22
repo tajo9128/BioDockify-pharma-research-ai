@@ -1752,7 +1752,7 @@ class AdditionalStatisticalTools:
             'recommendations': [
                 f"Chi-square test is {'appropriate' if min_expected >= 5 else 'questionable due to low expected frequencies'}.",
                 f"Effect size {cramers_v:.3f} indicates {self._interpret_cramers_v(cramers_v)} association.",
-                f"{"Yates' correction applied for 2x2 table" if apply_yates else "No correction applied"}.",
+                f"{'Yates\' correction applied for 2x2 table' if apply_yates else 'No correction applied'}.",
                 "For 2x2 tables with small samples, Fisher's exact test is recommended.",
                 "Report proportions and confidence intervals alongside the test result.",
                 "Consider clinical significance beyond statistical significance."

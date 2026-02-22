@@ -1,4 +1,3 @@
-
 """
 Integrated Research Management API
 Provides endpoints for research persistence, wet lab coordination, and thesis tracking.
@@ -13,7 +12,11 @@ import uuid
 import os
 import sys
 
-sys.path.insert(0, "/a0/usr/projects/biodockify_ai")
+# Add project root dynamically for cross-platform compatibility
+_project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+if _project_root not in sys.path:
+    sys.path.insert(0, _project_root)
+
 from modules.research_persistence import (
     ResearchPersistenceManager,
     ResearchState

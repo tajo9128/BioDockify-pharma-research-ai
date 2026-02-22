@@ -10,6 +10,7 @@ import os
 import json
 import re
 import shutil
+from pathlib import Path
 from typing import Dict, Any, Optional, List
 from datetime import datetime
 import pandas as pd
@@ -249,9 +250,10 @@ class SurfSenseStatisticsBridge:
         Returns:
             Document ID (file path)
         """
-        # Create local storage directory
-        storage_dir = '/a0/usr/projects/biodockify_ai/data/statistics_analyses'
-        os.makedirs(storage_dir, exist_ok=True)
+        # Create local storage directory (cross-platform compatible)
+        project_root = Path(__file__).parent.parent.parent.absolute()
+        storage_dir = project_root / "data" / "statistics_analyses"
+        storage_dir.mkdir(parents=True, exist_ok=True)
 
         # Generate filename
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')

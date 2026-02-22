@@ -123,13 +123,16 @@ export interface AssumptionCheck {
   remedy?: string;
 }
 
+// Alias for AnalysisResult used in ResultsViewer
+export type StatisticsResult = AnalysisResult;
+
 export interface AnalysisResult {
   analysisType: AnalysisType;
   testStatistics: Record<string, any>;
   pValue?: number;
   pValues?: Record<string, number>;
-  confidenceInterval?: ConfidenceInterval;
-  confidenceIntervals?: Record<string, ConfidenceInterval>;
+  confidenceInterval?: [number, number] | ConfidenceInterval;
+  confidenceIntervals?: Record<string, [number, number] | ConfidenceInterval>;
   confidenceLevel: number;
   sampleSize: number;
   degreesOfFreedom?: number;
@@ -137,6 +140,7 @@ export interface AnalysisResult {
   recommendation?: string;
   significance: number;
   effectSize?: number;
+  effectSizes?: Record<string, number>;
   effectSizeInterpretation?: string;
   interpretation?: string;
   assumptionsCheck?: AssumptionCheck[];

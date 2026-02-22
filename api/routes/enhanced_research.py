@@ -10,9 +10,15 @@ from pydantic import BaseModel, Field
 from datetime import datetime
 import asyncio
 
-# Import research components
+# Import research components - dynamic path resolution for cross-platform compatibility
 import sys
-sys.path.append('/a0/usr/projects/biodockify_ai')
+from pathlib import Path
+
+# Get project root dynamically
+_project_root = Path(__file__).parent.parent.parent.absolute()
+if str(_project_root) not in sys.path:
+    sys.path.insert(0, str(_project_root))
+
 from modules.research_detector import ResearchTopicDetector, ResearchTopic
 from modules.auto_research_orchestrator import (
     AutoResearchOrchestrator,

@@ -1,10 +1,10 @@
-
 """
 Thesis Milestone Tracker
 Manages year-long thesis projects with milestones, deadlines, and progress tracking.
 Follows pharmaceutical research standards for PhD and research projects.
 """
 import logging
+import os
 from typing import Dict, Any, List, Optional, Tuple
 from dataclasses import dataclass, field, asdict
 from datetime import datetime, timedelta
@@ -90,15 +90,19 @@ class ThesisMilestoneTracker:
     def __init__(self, research_id: str, storage_path: str = None):
         self.research_id = research_id
         if storage_path is None:
-            storage_path = "/a0/usr/projects/biodockify_ai/data/research_state"
+            # Use environment variable or default to a platform-independent path
+            base_path = os.environ.get('BIODOCKIFY_DATA_DIR')
+            if base_path is None:
+                # Default to a data subdirectory in the project root
+                base_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data', 'research_state')
+            storage_path = base_path
 
-        self.storage_path = f"{storage_path}/{research_id}_thesis.json"
+        self.storage_path = os.path.join(storage_path, f"{research_id}_thesis.json")
         self.thesis: Optional[ThesisProject] = None
         self.load_thesis()
 
     def load_thesis(self):
         """Load thesis from storage."""
-        import os
         if os.path.exists(self.storage_path):
             with open(self.storage_path, 'r') as f:
                 data = json.load(f)
@@ -115,7 +119,6 @@ class ThesisMilestoneTracker:
 
     def save_thesis(self):
         """Save thesis to storage."""
-        import os
         os.makedirs(os.path.dirname(self.storage_path), exist_ok=True)
 
         data = asdict(self.thesis)

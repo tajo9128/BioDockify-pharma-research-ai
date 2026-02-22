@@ -127,7 +127,9 @@ export default function ResultsViewer({ result, data, analysisType }: ResultsVie
           {result.confidenceInterval && (
             <div className="text-center">
               <span className="text-lg font-medium text-slate-200">
-                [{result.confidenceInterval[0].toFixed(4)}, {result.confidenceInterval[1].toFixed(4)}]
+                {Array.isArray(result.confidenceInterval) 
+                  ? `[${result.confidenceInterval[0].toFixed(4)}, ${result.confidenceInterval[1].toFixed(4)}]`
+                  : `[${result.confidenceInterval.lower.toFixed(4)}, ${result.confidenceInterval.upper.toFixed(4)}]`}
               </span>
             </div>
           )}
@@ -137,7 +139,9 @@ export default function ResultsViewer({ result, data, analysisType }: ResultsVie
                 <div key={key} className="flex justify-between text-sm">
                   <span className="text-slate-400">{key}:</span>
                   <span className="text-slate-200">
-                    [{value[0].toFixed(4)}, {value[1].toFixed(4)}]
+                    {Array.isArray(value) 
+                      ? `[${value[0].toFixed(4)}, ${value[1].toFixed(4)}]`
+                      : `[${value.lower.toFixed(4)}, ${value.upper.toFixed(4)}]`}
                   </span>
                 </div>
               ))}

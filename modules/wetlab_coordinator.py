@@ -1,10 +1,10 @@
-
 """
 Wet Lab Integration System
 Manages wet lab and animal study tasks for pharmaceutical research.
 Coordinates between BioDockify AI and physical lab work.
 """
 import logging
+import os
 from typing import Dict, Any, List, Optional, Tuple
 from dataclasses import dataclass, field, asdict
 from datetime import datetime, timedelta
@@ -87,15 +87,19 @@ class WetLabCoordinator:
     def __init__(self, research_id: str, storage_path: str = None):
         self.research_id = research_id
         if storage_path is None:
-            storage_path = "/a0/usr/projects/biodockify_ai/data/research_state"
+            # Use environment variable or default to a platform-independent path
+            base_path = os.environ.get('BIODOCKIFY_DATA_DIR')
+            if base_path is None:
+                # Default to a data subdirectory in the project root
+                base_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data', 'research_state')
+            storage_path = base_path
 
-        self.storage_path = f"{storage_path}/{research_id}_wetlab.json"
+        self.storage_path = os.path.join(storage_path, f"{research_id}_wetlab.json")
         self.experiments: Dict[str, WetLabExperiment] = {}
         self.load_experiments()
 
     def load_experiments(self):
         """Load experiments from storage."""
-        import os
         if os.path.exists(self.storage_path):
             with open(self.storage_path, 'r') as f:
                 data = json.load(f)
@@ -108,7 +112,6 @@ class WetLabCoordinator:
 
     def save_experiments(self):
         """Save experiments to storage."""
-        import os
         os.makedirs(os.path.dirname(self.storage_path), exist_ok=True)
 
         data = {}

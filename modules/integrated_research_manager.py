@@ -4,11 +4,17 @@ Auto-Research Integration with Research Management System
 Integrates persistence, wet lab, and thesis tracking with auto-research workflow.
 """
 import logging
+import os
+import sys
+from pathlib import Path
 from typing import Dict, Any, List, Optional
 from datetime import datetime, timedelta
 import uuid
 
-sys.path.insert(0, '/a0/usr/projects/biodockify_ai')
+# Add project root dynamically for cross-platform compatibility
+_project_root = Path(__file__).parent.parent.absolute()
+if str(_project_root) not in sys.path:
+    sys.path.insert(0, str(_project_root))
 
 from modules.research_persistence import ResearchPersistenceManager
 from modules.wetlab_coordinator import WetLabCoordinator, ExperimentType
