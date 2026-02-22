@@ -549,7 +549,10 @@ class AdvancedBiostatistics:
             clin_sig = ci_lower > clinical_relevance
             interpretations["clinical_interpretation"] = f"MCID = {clinical_relevance:.4f}. {'Clinically significant' if clin_sig else 'Not clinically significant'} (lower CI {' > ' if ci_lower > clinical_relevance else '≤'} {clinical_relevance})."
             both_sig = stat_sig and clin_sig
-            interpretations["overall_conclusion"] = f"{'Treatment demonstrates both' if both_sig else "Treatment doesn't demonstrate both"} statistical and clinical significance. {'Statistical' if stat_sig else 'No statistical'} significance, {'clinical' if clin_sig else 'no clinical'} significance."
+            overall_text = "Treatment demonstrates both" if both_sig else "Treatment does not demonstrate both"
+            stat_text = "Statistical" if stat_sig else "No statistical"
+            clin_text = "clinical" if clin_sig else "no clinical"
+            interpretations["overall_conclusion"] = f"{overall_text} statistical and clinical significance. {stat_text} significance, {clin_text} significance."
         else:
             interpretations["clinical_interpretation"] = "No clinical relevance threshold specified."
             interpretations["overall_conclusion"] = f"Treatment is {'statistically superior' if stat_sig else 'not statistically superior'} to control (p={p_value:.4f})."
