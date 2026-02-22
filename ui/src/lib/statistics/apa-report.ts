@@ -1,4 +1,11 @@
-import { StatisticsResult, AnalysisType } from '@/types/statistics';
+import { StatisticsResult, AnalysisType, ConfidenceInterval } from '@/types/statistics';
+
+/**
+ * Helper to get CI bounds as tuple
+ */
+function getCIBounds(ci: [number, number] | ConfidenceInterval): [number, number] {
+  return Array.isArray(ci) ? ci : [ci.lower, ci.upper];
+}
 
 /**
  * Generate APA-formatted statistical report
@@ -58,13 +65,15 @@ export function generateAPAReport(result: StatisticsResult): string {
   
   // Confidence intervals
   if (confidenceInterval) {
-    report += `\n${Math.round(confidenceLevel * 100)}% CI [${formatNumber(confidenceInterval[0])}, ${formatNumber(confidenceInterval[1])}]\n`;
+    const [lower, upper] = getCIBounds(confidenceInterval);
+    report += `\n${Math.round(confidenceLevel * 100)}% CI [${formatNumber(lower)}, ${formatNumber(upper)}]\n`;
   } else if (confidenceIntervals) {
     const entries = Object.entries(confidenceIntervals);
     if (entries.length > 0) {
       report += `\n${Math.round(confidenceLevel * 100)}% Confidence Intervals:\n`;
       entries.forEach(([key, value]) => {
-        report += `  ${key}: [${formatNumber(value[0])}, ${formatNumber(value[1])}]\n`;
+        const [lower, upper] = getCIBounds(value);
+        report += `  ${key}: [${formatNumber(lower)}, ${formatNumber(upper)}]\n`;
       });
     }
   }
@@ -133,7 +142,8 @@ export function generateInlineAPA(result: StatisticsResult): string {
   
   // Add confidence interval
   if (confidenceInterval) {
-    citation += `, ${Math.round(confidenceLevel * 100)}% CI [${formatNumber(confidenceInterval[0])}, ${formatNumber(confidenceInterval[1])}]`;
+    const [lower, upper] = getCIBounds(confidenceInterval);
+    citation += `, ${Math.round(confidenceLevel * 100)}% CI [${formatNumber(lower)}, ${formatNumber(upper)}]`;
   }
   
   return citation;
@@ -206,7 +216,7 @@ export function generateInterpretationParagraph(result: StatisticsResult): strin
   
   // Add confidence interval interpretation
   if (confidenceInterval) {
-    const [lower, upper] = confidenceInterval;
+    const [lower, upper] = getCIBounds(confidenceInterval);
     if (lower > 0 || upper < 0) {
       paragraph += `The ${Math.round((result.confidenceLevel || 0.95) * 100)}% confidence interval [${formatNumber(lower)}, ${formatNumber(upper)}] does not include zero, supporting the significance of the finding. `;
     } else {
@@ -216,10 +226,13 @@ export function generateInterpretationParagraph(result: StatisticsResult): strin
   
   // Add bioequivalence specific interpretation
   if (['tost', 'ci_approach'].includes(analysisType)) {
-    if (confidenceInterval && confidenceInterval[0] >= 80 && confidenceInterval[1] <= 125) {
-      paragraph += 'The 90% confidence interval falls within the bioequivalence acceptance range (80-125%), indicating bioequivalence. ';
-    } else {
-      paragraph += 'The 90% confidence interval falls outside the bioequivalence acceptance range, indicating failure to demonstrate bioequivalence. ';
+    if (confidenceInterval) {
+      const [lower, upper] = getCIBounds(confidenceInterval);
+      if (lower >= 80 && upper <= 125) {
+        paragraph += 'The 90% confidence interval falls within the bioequivalence acceptance range (80-125%), indicating bioequivalence. ';
+      } else {
+        paragraph += 'The 90% confidence interval falls outside the bioequivalence acceptance range, indicating failure to demonstrate bioequivalence. ';
+      }
     }
   }
   
@@ -252,6 +265,10 @@ function formatAnalysisType(type: AnalysisType): string {
     poisson_regression: 'Poisson Regression',
     linear_mixed_effects: 'Linear Mixed Effects Model',
     generalized_estimating_equations: 'Generalized Estimating Equations',
+    repeated_measures_anova: 'Repeated Measures ANOVA',
+    multivariate_analysis: 'Multivariate Analysis',
+    principal_component_analysis: 'Principal Component Analysis',
+    cluster_analysis: 'Cluster Analysis',
     meta_analysis: 'Meta-Analysis',
     nca_pk: 'Non-Compartmental PK Analysis',
     auc_calculation: 'AUC Calculation',
@@ -259,9 +276,11 @@ function formatAnalysisType(type: AnalysisType): string {
     half_life: 'Half-Life Estimation',
     clearance: 'Clearance and Volume of Distribution',
     pd_response_modeling: 'PD Response Modeling',
+    dose_proportionality: 'Dose Proportionality',
     bonferroni: 'Bonferroni Correction',
     holm: 'Holm-Bonferroni Method',
     bh_fdr: 'Benjamini-Hochberg FDR Control',
+    by: 'Benjamini-Yekutieli FDR Control',
     wilcoxon_signed_rank: 'Wilcoxon Signed-Rank Test',
     sign_test: 'Sign Test',
     friedman: 'Friedman Test',

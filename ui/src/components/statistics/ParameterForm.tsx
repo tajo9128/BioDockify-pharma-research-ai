@@ -132,11 +132,16 @@ export default function ParameterForm({
             required={isRequired}
           >
             <option value="">{isRequired ? 'Select an option *' : 'Select an option (optional)'}</option>
-            {param.options?.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
+            {param.options?.map((opt) => {
+              const isString = typeof opt === 'string';
+              const optValue = isString ? opt : (opt as { value: string; label: string }).value;
+              const optLabel = isString ? opt : (opt as { value: string; label: string }).label;
+              return (
+                <option key={optValue} value={optValue}>
+                  {optLabel}
+                </option>
+              );
+            })}
           </select>
         );
 

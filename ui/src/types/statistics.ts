@@ -79,7 +79,9 @@ export type AnalysisType =
   | 'chi_square'
   | 'fisher_exact'
   | 'mcnemar'
-  | 'cmh';
+  | 'cmh'
+  // Meta Analysis
+  | 'meta_analysis';
 
 export interface DataColumnType {
   name: string;
@@ -100,6 +102,13 @@ export interface TestSuggestion {
   confidence: number;
   reasons: string[];
   parameters?: Record<string, any>;
+}
+
+export interface SuggestedTest {
+  analysisType: AnalysisType;
+  reason: string;
+  confidence: number;
+  assumptions?: string[];
 }
 
 export interface EffectSizeResult {
@@ -164,7 +173,7 @@ export interface AnalysisParameter {
   required: boolean;
   default?: any;
   defaultValue?: any;
-  options?: Array<{ value: string; label: string }>;
+  options?: Array<{ value: string; label: string } | string>;
   min?: number;
   max?: number;
   step?: number;

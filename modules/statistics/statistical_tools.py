@@ -1080,7 +1080,7 @@ class AdditionalStatisticalTools:
                 ),
                 'condition_rankings': (
                     f"Conditions ranked by median: "
-                    f"{', '.join([f'{name} ({condition_stats[name]["median"]:.2f})' for name in sorted(condition_names, key=lambda x: condition_stats[x]['median'], reverse=True)])}"
+                    + ", ".join([f"{name} ({condition_stats[name]['median']:.2f})" for name in sorted(condition_names, key=lambda x: condition_stats[x]['median'], reverse=True)])
                 ),
                 'plain_language': (
                     f"The {'shows significant differences' if p_value < self.alpha else 'does not show significant differences'} "
@@ -1474,7 +1474,7 @@ class AdditionalStatisticalTools:
                     'min_expected': float(min_expected),
                     'n_categories_with_low_expected': int(categories_with_low_expected),
                     'adequate': min_expected >= 5,
-                    'interpretation': f"{'All expected frequencies >= 5' if min_expected >= 5 else f'{categories_with_low_expected} categories have expected < 5. Consider Fisher\'s exact test or combine categories.'}"
+                'interpretation': ("All expected frequencies >= 5" if min_expected >= 5 else f"{categories_with_low_expected} categories have expected < 5. Consider Fisher's exact test or combine categories.")
                 },
                 'sample_size': {
                     'total_n': int(total_observed),
@@ -1704,7 +1704,7 @@ class AdditionalStatisticalTools:
                     'min_expected': float(min_expected),
                     'cells_with_low_expected': int(cells_with_low_expected),
                     'adequate': min_expected >= 5,
-                    'interpretation': f"{'All expected >= 5' if min_expected >= 5 else f'{cells_with_low_expected} cells have expected < 5. Consider Fisher\'s exact test.'}"
+                    'interpretation': ("All expected >= 5" if min_expected >= 5 else f"{cells_with_low_expected} cells have expected < 5. Consider Fisher's exact test.")
                 },
                 'sample_size': {
                     'total_n': int(total_n),

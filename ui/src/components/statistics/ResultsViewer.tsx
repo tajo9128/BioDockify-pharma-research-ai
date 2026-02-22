@@ -183,39 +183,43 @@ export default function ResultsViewer({ result, data, analysisType }: ResultsVie
             <div className="flex justify-between text-sm items-center py-2">
               <span className="text-slate-400">P-value</span>
               <span className={`font-mono font-medium ${
-                result.pValue < (result.significance ?? 0.05) ? 'text-green-400' : 'text-amber-400'
-              }`>
-                {result.pValue < 0.001 ? '< 0.001' : result.pValue.toFixed(4)}
+                (result.pValue ?? Infinity) < (result.significance ?? 0.05) ? 'text-green-400' : 'text-amber-400'
+              }`}>
+                {(result.pValue ?? Infinity) < 0.001 ? '< 0.001' : result.pValue?.toFixed(4)}
               </span>
             </div>
           )}
-          {result.pValues && Object.entries(result.pValues).map(([key, value]) => (
-            <div key={key} className="flex justify-between text-sm items-center py-2 border-t border-slate-800">
-              <span className="text-slate-400">{key}</span>
-              <span className={`font-mono font-medium ${
-                value < (result.significance ?? 0.05) ? 'text-green-400' : 'text-amber-400'
-              }`>
-                {value < 0.001 ? '< 0.001' : value.toFixed(4)}
-              </span>
-            </div>
-          ))}
+          {result.pValues && Object.entries(result.pValues).map(([key, value]) => {
+            const numValue = Number(value);
+            const isSignificant = numValue < (result.significance ?? 0.05);
+            return (
+              <div key={key} className="flex justify-between text-sm items-center py-2 border-t border-slate-800">
+                <span className="text-slate-400">{key}</span>
+                <span className={`font-mono font-medium ${isSignificant ? 'text-green-400' : 'text-amber-400'}`}>
+                  {numValue < 0.001 ? '< 0.001' : numValue.toFixed(4)}
+                </span>
+              </div>
+            );
+          })}
         </div>
       ) : null}
 
       {/* Adjusted P-values */}
-      {result.adjustedPValues && Object.keys(result.adjustedPValues).length > 0 && (
+      {result.adjustedPValues && Object.keys(result.adjustedPValues).length > 0 ? (
         <div className="bg-slate-900/30 rounded-lg p-4 border border-slate-800">
           <h3 className="text-sm font-medium text-cyan-400 mb-3">Adjusted P-values</h3>
-          {Object.entries(result.adjustedPValues).map(([key, value]) => (
-            <div key={key} className="flex justify-between text-sm items-center py-2 border-b border-slate-800 last:border-b-0">
-              <span className="text-slate-400">{key}</span>
-              <span className={`font-mono font-medium ${
-                value < (result.significance ?? 0.05) ? 'text-green-400' : 'text-amber-400'
-              }`>
-                {value < 0.001 ? '< 0.001' : value.toFixed(4)}
-              </span>
-            </div>
-          ))}
+          {Object.entries(result.adjustedPValues).map(([key, value]) => {
+            const numValue = Number(value);
+            const isSignificant = numValue < (result.significance ?? 0.05);
+            return (
+              <div key={key} className="flex justify-between text-sm items-center py-2 border-b border-slate-800 last:border-b-0">
+                <span className="text-slate-400">{key}</span>
+                <span className={`font-mono font-medium ${isSignificant ? 'text-green-400' : 'text-amber-400'}`}>
+                  {numValue < 0.001 ? '< 0.001' : numValue.toFixed(4)}
+                </span>
+              </div>
+            );
+          })}
         </div>
       ) : null}
     </div>
@@ -255,7 +259,7 @@ export default function ResultsViewer({ result, data, analysisType }: ResultsVie
       )}
 
       {/* Assumption Checks */}
-      {result.assumptionsCheck && result.assumptionsCheck.length > 0 && (
+      {result.assumptionsCheck && result.assumptionsCheck.length > 0 ? (
         <div className="bg-slate-900/30 rounded-lg p-4 border border-slate-800">
           <h3 className="text-sm font-medium text-cyan-400 mb-3">Assumption Checks</h3>
           <div className="space-y-2">
@@ -266,7 +270,7 @@ export default function ResultsViewer({ result, data, analysisType }: ResultsVie
                   : check.status === 'failed'
                   ? 'bg-red-950/20 border-red-900'
                   : 'bg-amber-950/20 border-amber-900'
-              }`>
+              }`}>
                 {check.status === 'passed' && <CheckCircle className="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0" />}
                 {check.status === 'failed' && <XCircle className="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0" />}
                 {check.status === 'warning' && <AlertCircle className="w-4 h-4 text-amber-400 mt-0.5 flex-shrink-0" />}

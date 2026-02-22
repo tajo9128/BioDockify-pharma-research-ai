@@ -225,8 +225,15 @@ function calculateIRR(testStatistics: any) {
   };
 }
 
-function calculateGMR(testStatistics: any) {
+function calculateGMR(testStatistics: any): {
+  effectSize: number;
+  effectSizeName: string;
+  interpretation: string;
+  magnitude: 'negligible' | 'small' | 'medium' | 'large';
+} | null {
   const GMR = testStatistics.geometric_mean_ratio || testStatistics.GMR;
+  
+  if (GMR === undefined || GMR === null) return null;
   
   return {
     effectSize: GMR,
@@ -267,6 +274,10 @@ export function interpretEffectSize(
     poisson_regression: `Incidence rate ratio of ${effectSize.toFixed(2)} indicates a ${magnitude} effect.`,
     linear_mixed_effects: 'Effect size depends on model coefficients.',
     generalized_estimating_equations: 'Effect size depends on model coefficients.',
+    repeated_measures_anova: 'Effect size depends on within-subject variance.',
+    multivariate_analysis: 'Effect size depends on multivariate test statistics.',
+    principal_component_analysis: 'Effect size depends on variance explained.',
+    cluster_analysis: 'Effect size depends on cluster separation.',
     meta_analysis: `Pooled effect size of ${effectSize.toFixed(2)} indicates a ${magnitude} overall effect.`,
     nca_pk: 'Effect size depends on PK parameters.',
     auc_calculation: 'Effect size depends on AUC values.',
@@ -274,9 +285,11 @@ export function interpretEffectSize(
     half_life: 'Effect size depends on half-life values.',
     clearance: 'Effect size depends on CL and Vd values.',
     pd_response_modeling: 'Effect size depends on Emax and EC50.',
+    dose_proportionality: 'Effect size depends on dose-response relationship.',
     bonferroni: 'N/A for multiplicity control',
     holm: 'N/A for multiplicity control',
     bh_fdr: 'N/A for multiplicity control',
+    by: 'N/A for multiplicity control',
     wilcoxon_signed_rank: `Rank-biserial correlation of ${effectSize.toFixed(2)} indicates a ${magnitude} difference.`,
     sign_test: 'Effect size depends on proportion of positive differences.',
     friedman: `Kendall's W of ${effectSize.toFixed(2)} indicates a ${magnitude} effect.`,
