@@ -1,4 +1,4 @@
-# BioDockify AI v2.6.10 🧬
+# BioDockify AI 🧬
 
 **The Integrated AI Research Platform for Pharmaceutical Intelligence.**
 
