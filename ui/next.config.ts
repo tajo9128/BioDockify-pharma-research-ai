@@ -14,6 +14,16 @@ const nextConfig: NextConfig = {
     unoptimized: true,
   },
   trailingSlash: false,
+  // Proxy API requests to backend in development
+  async rewrites() {
+    const backendUrl = process.env.BACKEND_URL || "http://localhost:8234";
+    return [
+      {
+        source: "/api/:path*",
+        destination: `${backendUrl}/api/:path*`,
+      },
+    ];
+  },
 };
 
 export default nextConfig;

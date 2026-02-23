@@ -88,9 +88,9 @@ How can I assist your research today?`,
 
     // Health check function
     const checkHealth = useCallback(async () => {
-        // Check backend
+        // Check backend via API proxy (works in both dev and production)
         try {
-            const res = await fetch('http://localhost:8234/health', {
+            const res = await fetch('/api/health', {
                 method: 'GET',
                 signal: AbortSignal.timeout(3000)
             });
@@ -99,7 +99,7 @@ How can I assist your research today?`,
             setHealth(h => ({ ...h, backend: 'offline' }));
         }
 
-        // Check LM Studio
+        // Check LM Studio (local only - keep direct URL)
         try {
             const res = await fetch('http://localhost:1234/v1/models', {
                 method: 'GET',
