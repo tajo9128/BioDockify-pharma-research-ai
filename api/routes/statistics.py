@@ -5738,7 +5738,7 @@ async def bioavailability_calculation(request: BioavailabilityRequest):
 # DIAGNOSTIC TESTS ENDPOINTS
 # =============================================================================
 
-async def comprehensive_diagnostics(request: ComprehensiveDiagnosticsRequest, data: Dict[str, Any]):
+async def comprehensive_diagnostics(request: ComprehensiveDiagnosticRequest, data: Dict[str, Any]):
     """Perform comprehensive diagnostic testing
 
     Pharmaceutical Example:
@@ -6104,7 +6104,7 @@ async def equivalence_test(request: EquivalenceRequest):
 # =============================================================================
 
 @router.post("/pkpd/nca")
-async def non_compartmental_analysis(request: PKAnalysisRequest, data: Dict[str, Any]):
+async def non_compartmental_analysis(request: NCAPKRequest, data: Dict[str, Any]):
     """Perform Non-Compartmental Analysis (NCA)
 
     Pharmaceutical Example:
@@ -6162,7 +6162,7 @@ async def non_compartmental_analysis(request: PKAnalysisRequest, data: Dict[str,
 
 
 @router.post("/pkpd/auc")
-async def calculate_auc(request: PKAnalysisRequest, data: Dict[str, Any]):
+async def calculate_auc(request: AUCRequest, data: Dict[str, Any]):
     """Calculate Area Under the Curve (AUC)
 
     Pharmaceutical Example:
@@ -6213,7 +6213,7 @@ async def calculate_auc(request: PKAnalysisRequest, data: Dict[str, Any]):
 
 
 @router.post("/pkpd/cmax-tmax")
-async def calculate_cmax_tmax(request: PKAnalysisRequest, data: Dict[str, Any]):
+async def calculate_cmax_tmax(request: CmaxTmaxRequest, data: Dict[str, Any]):
     """Calculate Cmax and Tmax
 
     Pharmaceutical Example:
@@ -6263,7 +6263,7 @@ async def calculate_cmax_tmax(request: PKAnalysisRequest, data: Dict[str, Any]):
 
 
 @router.post("/pkpd/half-life")
-async def estimate_half_life(request: PKAnalysisRequest, data: Dict[str, Any]):
+async def estimate_half_life(request: HalfLifeRequest, data: Dict[str, Any]):
     """Estimate elimination half-life
 
     Pharmaceutical Example:
@@ -6314,7 +6314,7 @@ async def estimate_half_life(request: PKAnalysisRequest, data: Dict[str, Any]):
 
 
 @router.post("/pkpd/clearance")
-async def calculate_clearance(request: PKAnalysisRequest, data: Dict[str, Any]):
+async def calculate_clearance(request: ClearanceRequest, data: Dict[str, Any]):
     """Calculate drug clearance
 
     Pharmaceutical Example:
@@ -6364,7 +6364,7 @@ async def calculate_clearance(request: PKAnalysisRequest, data: Dict[str, Any]):
 
 
 @router.post("/pkpd/bioavailability")
-async def calculate_bioavailability(request: PKAnalysisRequest, data: Dict[str, Any]):
+async def calculate_bioavailability(request: PKBioavailabilityRequest, data: Dict[str, Any]):
     """Calculate bioavailability
 
     Pharmaceutical Example:
@@ -6414,7 +6414,7 @@ async def calculate_bioavailability(request: PKAnalysisRequest, data: Dict[str, 
 
 
 @router.post("/pkpd/pd-response")
-async def pd_response_modeling(request: PDModelingRequest):
+async def pd_response_modeling(request: PDResponseRequest):
     """Perform PD response modeling
 
     Pharmaceutical Example:
@@ -6454,7 +6454,7 @@ async def pd_response_modeling(request: PDModelingRequest):
 
 
 @router.post("/pkpd/compartmental")
-async def compartmental_analysis(request: PKAnalysisRequest, data: Dict[str, Any]):
+async def compartmental_analysis(request: CompartmentalRequest, data: Dict[str, Any]):
     """Perform compartmental PK analysis
 
     Pharmaceutical Example:
