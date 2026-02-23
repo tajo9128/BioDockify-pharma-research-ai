@@ -1,9 +1,7 @@
-# =============================================================================
-# BioDockify v2.9.9 - Optimized Multi-Stage Docker Image
+# BioDockify v3.0.4 - Optimized Multi-Stage Docker Image
 # =============================================================================
 
-# -----------------------------------------------------------------------------
-# BioDockify AI - v2.9.9 - Dockerfile
+# BioDockify AI - v3.0.4 - Dockerfile
 # -----------------------------------------------------------------------------
 FROM oven/bun:1.1-alpine AS frontend-builder
 WORKDIR /app/ui
@@ -153,10 +151,10 @@ environment=PORT="3001",HOSTNAME="0.0.0.0",NODE_ENV="production" \n\
 ' > /etc/supervisor/conf.d/biodockify.conf
 
 # Startup Scripts
-LABEL version="v2.9.9"
+LABEL version="v3.0.4"
 LABEL description="BioDockify - Pharma Research AI"
 RUN echo '#!/bin/bash \n\
-echo "BioDockify v2.9.8 - Optimized Launch" \n\
+echo "BioDockify v3.0.4 - Optimized Launch" \n\
 echo "Node Version: $(node -v)" \n\
 echo "Node Path: $(which node)" \n\
 mkdir -p /app/data \n\

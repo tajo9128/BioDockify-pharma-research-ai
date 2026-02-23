@@ -5,9 +5,9 @@ authors:
   given-names: "YourFirstname"
   orcid: "https://orcid.org/0000-0000-0000-0000"
 title: "BioDockify: Agentic AI for Pharmaceutical Knowledge Discovery"
-version: 2.0.39
+version: 3.0.4
 doi: 10.5281/zenodo.123456
-date-released: 2026-01-05
+date-released: 2026-02-23
 url: "https://github.com/tajo9128/BioDockify-pharma-research-ai"
 preferred-citation:
   type: software
