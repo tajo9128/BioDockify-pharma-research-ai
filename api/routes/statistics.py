@@ -5551,7 +5551,7 @@ async def log_rank_test(request: LogRankRequest, data: Dict[str, Any]):
 
 
 @router.post("/survival/cox")
-async def cox_proportional_hazards(request: CoxPHRequest, data: Dict[str, Any]):
+async def cox_proportional_hazards(request: CoxRequest, data: Dict[str, Any]):
     """Perform Cox Proportional Hazards regression
 
     Pharmaceutical Example:
@@ -5574,7 +5574,7 @@ async def cox_proportional_hazards(request: CoxPHRequest, data: Dict[str, Any]):
             time_col=request.time_col,
             event_col=request.event_col,
             covariates=request.covariates,
-            stratify_by=request.stratify_by
+            stratify_by=request.strata
         )
 
         logger.info(f"Cox PH model completed: {request.title or 'Untitled'}")
