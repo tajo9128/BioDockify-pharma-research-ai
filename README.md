@@ -1,11 +1,11 @@
-# BioDockify AI v2.6.10 🧬
+# BioDockify AI v3.0.4 🧬
 
 **The Integrated AI Research Platform for Pharmaceutical Intelligence.**
 
 BioDockify AI is a specialized, autonomous ecosystem designed to manage the entire drug discovery lifecycle—from "Blue Sky" hypothesis generation to regulatory submission. It delivers **Pharma-Grade Intelligence** by combining deep reasoning, robotic automation, and advanced biostatistics into a unified, privacy-first workstation.
 
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-2.6.10-green.svg)](https://github.com/tajo9128/BioDockify-pharma-research-ai)
+[![Version](https://img.shields.io/badge/version-3.0.4-green.svg)](https://github.com/tajo9128/BioDockify-pharma-research-ai)
 [![Docker](https://img.shields.io/badge/docker-tajo9128%2Fbiodockify--ai-blue.svg)](https://hub.docker.com/r/tajo9128/biodockify-ai)
 [![Privacy](https://img.shields.io/badge/privacy-Local--First-green.svg)]()
 
@@ -65,7 +65,7 @@ BioDockify AI covers the entire spectrum of pharmaceutical research:
 
 ---
 
-## 🚀 Quick Start (Docker - v2.6.10)
+## 🚀 Quick Start (Docker - v3.0.4)
 
 > **One-Click Installation** - Deploys the entire ecosystem locally.
 
