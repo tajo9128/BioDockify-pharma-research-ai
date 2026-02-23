@@ -228,7 +228,7 @@ export default function PharmaceuticalResearchApp() {
         return (
           <ErrorBoundary name="Settings">
             <div className="h-full overflow-y-auto p-8">
-              <SettingsPanel />
+              <SettingsPanel onClose={() => setActiveView('home')} />
             </div>
           </ErrorBoundary>
         );

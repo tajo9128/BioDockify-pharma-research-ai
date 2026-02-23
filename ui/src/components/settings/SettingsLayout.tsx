@@ -1,14 +1,15 @@
 
 import React from 'react';
-import { Brain, Cpu, Zap, Lock, Activity } from 'lucide-react';
+import { Brain, Cpu, Zap, Lock, Activity, X } from 'lucide-react';
 
 interface SettingsLayoutProps {
     activeTab: string;
     setActiveTab: (tab: string) => void;
     children: React.ReactNode;
+    onClose?: () => void;
 }
 
-export function SettingsLayout({ activeTab, setActiveTab, children }: SettingsLayoutProps) {
+export function SettingsLayout({ activeTab, setActiveTab, children, onClose }: SettingsLayoutProps) {
     const tabs = [
         { id: 'models', label: 'Model Intelligence', icon: Brain },
         { id: 'lite', label: 'BioDockify AI Lite', icon: Zap },
@@ -21,7 +22,18 @@ export function SettingsLayout({ activeTab, setActiveTab, children }: SettingsLa
         <div className="flex h-full bg-slate-900 text-slate-200">
             {/* Sidebar */}
             <div className="w-64 border-r border-slate-800 p-4">
-                <h2 className="text-xl font-bold text-emerald-400 mb-6 px-2">Settings</h2>
+                <div className="flex items-center justify-between mb-6 px-2">
+                    <h2 className="text-xl font-bold text-emerald-400">Settings</h2>
+                    {onClose && (
+                        <button
+                            onClick={onClose}
+                            className="p-1 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors"
+                            title="Close Settings"
+                        >
+                            <X className="h-5 w-5" />
+                        </button>
+                    )}
+                </div>
                 <nav className="space-y-1">
                     {tabs.map((tab) => {
                         const Icon = tab.icon;
