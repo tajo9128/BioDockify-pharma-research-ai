@@ -36,7 +36,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="BioDockify API",
     description="Backend for BioDockify Pharma Research AI",
-    version="v2.6.10",
+    version="v3.1.0",
     lifespan=lifespan
 )
 
@@ -1143,7 +1143,89 @@ async def startup_event():
     """
     Service Stability: Model Loading & Pre-warming.
     """
-    logger.info("Initializing BioDockify Backend...")
+    logger.info("Initializing BioDockify Backend v3.1.0...")
+    
+    # 0. Detect AI Providers on Startup
+    def detect_ai_providers():
+        """Detect available AI providers (Ollama, LM Studio, Cloud APIs)."""
+        import socket
+        import shutil
+        
+        logger.info("=" * 60)
+        logger.info("AI PROVIDER DETECTION")
+        logger.info("=" * 60)
+        
+        # Check Ollama
+        ollama_port = 11434
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.settimeout(2)
+                result = s.connect_ex(("127.0.0.1", ollama_port))
+                if result == 0:
+                    logger.info(f"✅ Ollama detected on port {ollama_port}")
+                    # Try to list models
+                    try:
+                        proc = subprocess.run(
+                            ["ollama", "list"],
+                            capture_output=True,
+                            text=True,
+                            timeout=5
+                        )
+                        if proc.returncode == 0 and proc.stdout.strip():
+                            models = [line.split()[0] for line in proc.stdout.strip().split("\n")[1:] if line.strip()]
+                            if models:
+                                logger.info(f"   Models: {', '.join(models[:3])}{'...' if len(models) > 3 else ''}")
+                    except Exception:
+                        pass
+                else:
+                    logger.info(f"❌ Ollama not running on port {ollama_port}")
+        except Exception as e:
+            logger.info(f"❌ Ollama check failed: {e}")
+        
+        # Check LM Studio
+        lm_studio_port = 1234
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.settimeout(2)
+                result = s.connect_ex(("127.0.0.1", lm_studio_port))
+                if result == 0:
+                    logger.info(f"✅ LM Studio detected on port {lm_studio_port}")
+                else:
+                    logger.info(f"❌ LM Studio not running on port {lm_studio_port}")
+        except Exception as e:
+            logger.info(f"❌ LM Studio check failed: {e}")
+        
+        # Check configured API keys
+        try:
+            from runtime.config_loader import load_config
+            config = load_config()
+            ai_config = config.get("ai_provider", {})
+            
+            keys_found = []
+            if ai_config.get("google_key"):
+                keys_found.append("Google AI")
+            if ai_config.get("openrouter_key"):
+                keys_found.append("OpenRouter")
+            if ai_config.get("deepseek_key"):
+                keys_found.append("DeepSeek")
+            if ai_config.get("custom_key"):
+                keys_found.append("Custom API")
+            
+            if keys_found:
+                logger.info(f"🔑 API Keys configured: {', '.join(keys_found)}")
+            else:
+                logger.info("⚠️  No cloud API keys configured")
+        except Exception:
+            pass
+        
+        logger.info("=" * 60)
+    
+    # Run detection
+    try:
+        import subprocess
+        detect_ai_providers()
+    except Exception as e:
+        logger.warning(f"AI Provider detection failed: {e}")
     
     # 1. Background Initialization (Models + Services)
     def background_init():
