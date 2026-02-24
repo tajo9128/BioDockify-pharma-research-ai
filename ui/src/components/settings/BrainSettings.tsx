@@ -27,16 +27,20 @@ export const BrainSettings: React.FC<BrainSettingsProps> = ({ settings, onSettin
         details: string;
     }>>({});
 
+    // Safe access to ai_provider with defaults
+    const aiProvider = settings?.ai_provider || {};
+    const aiAdvanced = settings?.ai_advanced || { context_window: 4096, gpu_layers: -1, thread_count: 8 };
+
     const updateProvider = (key: string, value: string | boolean | number) => {
-        onSettingChange('ai_provider', { ...settings.ai_provider, [key]: value });
+        onSettingChange('ai_provider', { ...aiProvider, [key]: value });
     };
 
     const updateAdvanced = (key: string, value: string | boolean | number) => {
-        onSettingChange('ai_advanced', { ...settings.ai_advanced, [key]: value });
+        onSettingChange('ai_advanced', { ...aiAdvanced, [key]: value });
     };
 
     const handleTestLmStudio = async () => {
-        const rawUrl = (settings.ai_provider.lm_studio_url || 'http://localhost:1234/v1/models').replace(/\/$/, '');
+        const rawUrl = (aiProvider.lm_studio_url || 'http://localhost:1234/v1/models').replace(/\/$/, '');
         const baseUrl = rawUrl.replace(/\/models\/?$/, '');
         const modelsUrl = `${baseUrl}/models`;
 
@@ -188,7 +192,7 @@ export const BrainSettings: React.FC<BrainSettingsProps> = ({ settings, onSettin
                             <label className="text-[10px] uppercase text-slate-500 font-bold mb-1 block">Local Server URL</label>
                             <input
                                 type="text"
-                                value={settings.ai_provider?.lm_studio_url || 'http://localhost:1234/v1/models'}
+                                value={aiProvider.lm_studio_url || 'http://localhost:1234/v1/models'}
                                 onChange={(e) => updateProvider('lm_studio_url', e.target.value)}
                                 className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500"
                             />
@@ -196,7 +200,7 @@ export const BrainSettings: React.FC<BrainSettingsProps> = ({ settings, onSettin
                         <div>
                             <label className="text-[10px] uppercase text-slate-500 font-bold mb-1 block">Selected Model</label>
                             <select
-                                value={settings.ai_provider?.lm_studio_model || ''}
+                                value={aiProvider.lm_studio_model || ''}
                                 onChange={(e) => updateProvider('lm_studio_model', e.target.value)}
                                 className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
                             >
@@ -222,9 +226,9 @@ export const BrainSettings: React.FC<BrainSettingsProps> = ({ settings, onSettin
                     <Sparkles className="w-5 h-5 mr-2 text-blue-400" /> Free / Open Cloud APIs
                 </h3>
                 <div className="grid md:grid-cols-2 gap-4">
-                    <CloudKeyBox name="Google Gemini" icon="G" value={settings.ai_provider.google_key || ''} onChange={(v) => updateProvider('google_key', v)} onTest={() => handleTestKey('google', settings.ai_provider.google_key)} testStatus={apiTestProgress['google']?.status} testProgress={apiTestProgress['google']?.progress} testMessage={apiTestProgress['google']?.message} testDetails={apiTestProgress['google']?.details} modelValue={settings.ai_provider?.google_model} onModelChange={(v) => updateProvider('google_model', v)} predefinedModels={['gemini-1.5-pro-latest', 'gemini-1.5-flash-latest', 'gemini-1.0-pro']} />
-                    <CloudKeyBox name="Groq (Llama 3)" icon="GQ" value={settings.ai_provider.groq_key || ''} onChange={(v) => updateProvider('groq_key', v)} onTest={() => handleTestKey('groq', settings.ai_provider.groq_key)} testStatus={apiTestProgress['groq']?.status} testProgress={apiTestProgress['groq']?.progress} testMessage={apiTestProgress['groq']?.message} testDetails={apiTestProgress['groq']?.details} modelValue={settings.ai_provider?.groq_model} onModelChange={(v) => updateProvider('groq_model', v)} predefinedModels={['llama-3.3-70b-versatile', 'llama-3.1-8b-instant', 'mixtral-8x7b-32768']} />
-                    <CloudKeyBox name="HuggingFace" icon="HF" value={settings.ai_provider.huggingface_key || ''} onChange={(v) => updateProvider('huggingface_key', v)} onTest={() => handleTestKey('huggingface', settings.ai_provider.huggingface_key)} testStatus={apiTestProgress['huggingface']?.status} testProgress={apiTestProgress['huggingface']?.progress} testMessage={apiTestProgress['huggingface']?.message} testDetails={apiTestProgress['huggingface']?.details} modelValue={settings.ai_provider?.huggingface_model} onModelChange={(v) => updateProvider('huggingface_model', v)} modelPlaceholder="meta-llama/Meta-Llama-3-8B-Instruct" predefinedModels={['meta-llama/Meta-Llama-3-8B-Instruct', 'mistralai/Mistral-7B-Instruct-v0.3']} />
+                    <CloudKeyBox name="Google Gemini" icon="G" value={aiProvider.google_key || ''} onChange={(v) => updateProvider('google_key', v)} onTest={() => handleTestKey('google', aiProvider.google_key)} testStatus={apiTestProgress['google']?.status} testProgress={apiTestProgress['google']?.progress} testMessage={apiTestProgress['google']?.message} testDetails={apiTestProgress['google']?.details} modelValue={aiProvider.google_model} onModelChange={(v) => updateProvider('google_model', v)} predefinedModels={['gemini-1.5-pro-latest', 'gemini-1.5-flash-latest', 'gemini-1.0-pro']} />
+                    <CloudKeyBox name="Groq (Llama 3)" icon="GQ" value={aiProvider.groq_key || ''} onChange={(v) => updateProvider('groq_key', v)} onTest={() => handleTestKey('groq', aiProvider.groq_key)} testStatus={apiTestProgress['groq']?.status} testProgress={apiTestProgress['groq']?.progress} testMessage={apiTestProgress['groq']?.message} testDetails={apiTestProgress['groq']?.details} modelValue={aiProvider.groq_model} onModelChange={(v) => updateProvider('groq_model', v)} predefinedModels={['llama-3.3-70b-versatile', 'llama-3.1-8b-instant', 'mixtral-8x7b-32768']} />
+                    <CloudKeyBox name="HuggingFace" icon="HF" value={aiProvider.huggingface_key || ''} onChange={(v) => updateProvider('huggingface_key', v)} onTest={() => handleTestKey('huggingface', aiProvider.huggingface_key)} testStatus={apiTestProgress['huggingface']?.status} testProgress={apiTestProgress['huggingface']?.progress} testMessage={apiTestProgress['huggingface']?.message} testDetails={apiTestProgress['huggingface']?.details} modelValue={aiProvider.huggingface_model} onModelChange={(v) => updateProvider('huggingface_model', v)} modelPlaceholder="meta-llama/Meta-Llama-3-8B-Instruct" predefinedModels={['meta-llama/Meta-Llama-3-8B-Instruct', 'mistralai/Mistral-7B-Instruct-v0.3']} />
                 </div>
             </div>
 
@@ -234,10 +238,10 @@ export const BrainSettings: React.FC<BrainSettingsProps> = ({ settings, onSettin
                     <Key className="w-5 h-5 mr-2 text-yellow-500" /> Premium / Paid APIs
                 </h3>
                 <div className="grid md:grid-cols-2 gap-4">
-                    <CloudKeyBox name="OpenAI" icon="OA" value={settings.ai_provider.openai_key || ''} onChange={(v) => updateProvider('openai_key', v)} onTest={() => handleTestKey('openai', settings.ai_provider.openai_key)} testStatus={apiTestProgress['openai']?.status} testProgress={apiTestProgress['openai']?.progress} testMessage={apiTestProgress['openai']?.message} testDetails={apiTestProgress['openai']?.details} modelValue={settings.ai_provider?.openai_model} onModelChange={(v) => updateProvider('openai_model', v)} predefinedModels={['gpt-4o', 'gpt-4-turbo', 'gpt-3.5-turbo']} showBaseUrl={true} baseUrlValue={settings.ai_provider?.custom_base_url} onBaseUrlChange={(v) => updateProvider('custom_base_url', v)} />
-                    <CloudKeyBox name="Anthropic" icon="AN" value={settings.ai_provider.anthropic_key || ''} onChange={(v) => updateProvider('anthropic_key', v)} onTest={() => handleTestKey('anthropic', settings.ai_provider.anthropic_key)} testStatus={apiTestProgress['anthropic']?.status} testProgress={apiTestProgress['anthropic']?.progress} testMessage={apiTestProgress['anthropic']?.message} testDetails={apiTestProgress['anthropic']?.details} modelValue={settings.ai_provider?.anthropic_model} onModelChange={(v) => updateProvider('anthropic_model', v)} predefinedModels={['claude-3-5-sonnet-20240620', 'claude-3-opus-20240229']} />
-                    <CloudKeyBox name="DeepSeek" icon="DS" value={settings.ai_provider.deepseek_key || ''} onChange={(v) => updateProvider('deepseek_key', v)} onTest={() => handleTestKey('deepseek', settings.ai_provider.deepseek_key)} testStatus={apiTestProgress['deepseek']?.status} testProgress={apiTestProgress['deepseek']?.progress} testMessage={apiTestProgress['deepseek']?.message} testDetails={apiTestProgress['deepseek']?.details} modelValue={settings.ai_provider?.deepseek_model} onModelChange={(v) => updateProvider('deepseek_model', v)} predefinedModels={['deepseek-chat', 'deepseek-coder']} />
-                    <CloudKeyBox name="OpenRouter" icon="OR" value={settings.ai_provider.openrouter_key || ''} onChange={(v) => updateProvider('openrouter_key', v)} onTest={() => handleTestKey('openrouter', settings.ai_provider.openrouter_key)} testStatus={apiTestProgress['openrouter']?.status} testProgress={apiTestProgress['openrouter']?.progress} testMessage={apiTestProgress['openrouter']?.message} testDetails={apiTestProgress['openrouter']?.details} modelValue={settings.ai_provider?.openrouter_model} onModelChange={(v) => updateProvider('openrouter_model', v)} predefinedModels={['openai/gpt-4o', 'anthropic/claude-3.5-sonnet', 'google/gemini-pro-1.5']} />
+                    <CloudKeyBox name="OpenAI" icon="OA" value={aiProvider.openai_key || ''} onChange={(v) => updateProvider('openai_key', v)} onTest={() => handleTestKey('openai', aiProvider.openai_key)} testStatus={apiTestProgress['openai']?.status} testProgress={apiTestProgress['openai']?.progress} testMessage={apiTestProgress['openai']?.message} testDetails={apiTestProgress['openai']?.details} modelValue={aiProvider.openai_model} onModelChange={(v) => updateProvider('openai_model', v)} predefinedModels={['gpt-4o', 'gpt-4-turbo', 'gpt-3.5-turbo']} showBaseUrl={true} baseUrlValue={aiProvider.custom_base_url} onBaseUrlChange={(v) => updateProvider('custom_base_url', v)} />
+                    <CloudKeyBox name="Anthropic" icon="AN" value={aiProvider.anthropic_key || ''} onChange={(v) => updateProvider('anthropic_key', v)} onTest={() => handleTestKey('anthropic', aiProvider.anthropic_key)} testStatus={apiTestProgress['anthropic']?.status} testProgress={apiTestProgress['anthropic']?.progress} testMessage={apiTestProgress['anthropic']?.message} testDetails={apiTestProgress['anthropic']?.details} modelValue={aiProvider.anthropic_model} onModelChange={(v) => updateProvider('anthropic_model', v)} predefinedModels={['claude-3-5-sonnet-20240620', 'claude-3-opus-20240229']} />
+                    <CloudKeyBox name="DeepSeek" icon="DS" value={aiProvider.deepseek_key || ''} onChange={(v) => updateProvider('deepseek_key', v)} onTest={() => handleTestKey('deepseek', aiProvider.deepseek_key)} testStatus={apiTestProgress['deepseek']?.status} testProgress={apiTestProgress['deepseek']?.progress} testMessage={apiTestProgress['deepseek']?.message} testDetails={apiTestProgress['deepseek']?.details} modelValue={aiProvider.deepseek_model} onModelChange={(v) => updateProvider('deepseek_model', v)} predefinedModels={['deepseek-chat', 'deepseek-coder']} />
+                    <CloudKeyBox name="OpenRouter" icon="OR" value={aiProvider.openrouter_key || ''} onChange={(v) => updateProvider('openrouter_key', v)} onTest={() => handleTestKey('openrouter', aiProvider.openrouter_key)} testStatus={apiTestProgress['openrouter']?.status} testProgress={apiTestProgress['openrouter']?.progress} testMessage={apiTestProgress['openrouter']?.message} testDetails={apiTestProgress['openrouter']?.details} modelValue={aiProvider.openrouter_model} onModelChange={(v) => updateProvider('openrouter_model', v)} predefinedModels={['openai/gpt-4o', 'anthropic/claude-3.5-sonnet', 'google/gemini-pro-1.5']} />
                 </div>
             </div>
 
@@ -249,15 +253,15 @@ export const BrainSettings: React.FC<BrainSettingsProps> = ({ settings, onSettin
                 <div className="grid grid-cols-3 gap-4">
                     <div>
                         <label className="text-xs text-slate-500 uppercase block mb-1">Context Window</label>
-                        <input type="number" value={settings.ai_advanced?.context_window || 4096} onChange={(e) => updateAdvanced('context_window', parseInt(e.target.value))} className="w-full bg-slate-950 border border-slate-800 rounded p-2 text-sm text-white" />
+                        <input type="number" value={aiAdvanced.context_window || 4096} onChange={(e) => updateAdvanced('context_window', parseInt(e.target.value))} className="w-full bg-slate-950 border border-slate-800 rounded p-2 text-sm text-white" />
                     </div>
                     <div>
                         <label className="text-xs text-slate-500 uppercase block mb-1">GPU Layers (-1 = All)</label>
-                        <input type="number" value={settings.ai_advanced?.gpu_layers || -1} onChange={(e) => updateAdvanced('gpu_layers', parseInt(e.target.value))} className="w-full bg-slate-950 border border-slate-800 rounded p-2 text-sm text-white" />
+                        <input type="number" value={aiAdvanced.gpu_layers || -1} onChange={(e) => updateAdvanced('gpu_layers', parseInt(e.target.value))} className="w-full bg-slate-950 border border-slate-800 rounded p-2 text-sm text-white" />
                     </div>
                     <div>
                         <label className="text-xs text-slate-500 uppercase block mb-1">CPU Threads</label>
-                        <input type="number" value={settings.ai_advanced?.thread_count || 8} onChange={(e) => updateAdvanced('thread_count', parseInt(e.target.value))} className="w-full bg-slate-950 border border-slate-800 rounded p-2 text-sm text-white" />
+                        <input type="number" value={aiAdvanced.thread_count || 8} onChange={(e) => updateAdvanced('thread_count', parseInt(e.target.value))} className="w-full bg-slate-950 border border-slate-800 rounded p-2 text-sm text-white" />
                     </div>
                 </div>
             </div>
