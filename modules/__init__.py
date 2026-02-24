@@ -11,4 +11,4 @@ Complies with:
 - ISO 9001 Quality Management
 """
 
-__version__ = '2.7.2'
+__version__ = '3.1.0'
