@@ -19,11 +19,13 @@ import uuid
 # Define paths
 BASE_DIR = Path(__file__).parent.parent
 
+
 class SecurityManager:
     """
     Handles encryption of sensitive configuration values at rest.
     Uses cryptography.fernet for robust encryption with a machine-specific key.
     """
+
     def __init__(self):
         self.sensitive_suffices = ("_key", "password", "secret", "token", "email")
         self._key = self._get_or_create_key()
@@ -31,10 +33,13 @@ class SecurityManager:
         if self._key:
             try:
                 from cryptography.fernet import Fernet
+
                 self._fernet = Fernet(self._key)
             except ImportError:
-                logger.warning("cryptography not found. Falling back to basic obfuscation.")
-        
+                logger.warning(
+                    "cryptography not found. Falling back to basic obfuscation."
+                )
+
         # Legacy node info for backward compatibility fallback
         self.node = str(uuid.getnode())
 
@@ -42,13 +47,14 @@ class SecurityManager:
         """Load or generate a machine-specific encryption key."""
         try:
             from cryptography.fernet import Fernet
+
             # Path for the key: ~/.biodockify/encryption.key
             key_dir = Path.home() / ".biodockify"
             key_path = key_dir / "encryption.key"
-            
+
             if key_path.exists():
                 return key_path.read_bytes()
-            
+
             # Create new key
             key_dir.mkdir(parents=True, exist_ok=True)
             key = Fernet.generate_key()
@@ -65,12 +71,16 @@ class SecurityManager:
 
     def _xor_cipher(self, text: str) -> str:
         """Legacy XOR cipher for backward compatibility."""
-        if not text: return text
-        return ''.join(chr(ord(c) ^ ord(self.node[i % len(self.node)])) for i, c in enumerate(text))
+        if not text:
+            return text
+        return "".join(
+            chr(ord(c) ^ ord(self.node[i % len(self.node)])) for i, c in enumerate(text)
+        )
 
     def encrypt_value(self, value: str) -> str:
         """Encrypts a string value using Fernet."""
-        if not value or value.startswith("ENC:"): return value
+        if not value or value.startswith("ENC:"):
+            return value
         if not self._fernet:
             # Fallback to XOR obfuscation if Fernet is unavailable
             try:
@@ -91,34 +101,36 @@ class SecurityManager:
         """Decrypts a string value with backward compatibility fallback."""
         if not value or not isinstance(value, str) or not value.startswith("ENC:"):
             return value
-        
+
         try:
             # New format checks
             if value.startswith("ENC:FRN:") and self._fernet:
                 payload = value[8:]
                 return self._fernet.decrypt(payload.encode("utf-8")).decode("utf-8")
-            
+
             if value.startswith("ENC:XOR:"):
                 payload = value[8:]
                 xored = base64.b64decode(payload).decode("utf-8")
                 return self._xor_cipher(xored)
-            
+
             # Legacy format (no type prefix)
             payload = value[4:]
             try:
                 # Try Fernet first if it looks like it (unlikely but safe)
                 if self._fernet:
                     try:
-                        return self._fernet.decrypt(payload.encode("utf-8")).decode("utf-8")
+                        return self._fernet.decrypt(payload.encode("utf-8")).decode(
+                            "utf-8"
+                        )
                     except:
                         pass
-                
+
                 # Fallback to XOR
                 xored = base64.b64decode(payload).decode("utf-8")
                 return self._xor_cipher(xored)
             except:
                 return value
-                
+
         except Exception as e:
             logger.warning(f"Config Decryption Error: {e}. Returning raw value.")
             return value
@@ -132,14 +144,18 @@ class SecurityManager:
         for k, v in processed.items():
             if isinstance(v, dict):
                 processed[k] = self.process_config(v, mode)
-            elif isinstance(v, str) and any(k.endswith(s) for s in self.sensitive_suffices):
-                if mode == 'encrypt':
+            elif isinstance(v, str) and any(
+                k.endswith(s) for s in self.sensitive_suffices
+            ):
+                if mode == "encrypt":
                     processed[k] = self.encrypt_value(v)
-                elif mode == 'decrypt':
+                elif mode == "decrypt":
                     processed[k] = self.decrypt_value(v)
         return processed
 
+
 security_manager = SecurityManager()
+
 
 def get_config_path():
     """
@@ -147,16 +163,16 @@ def get_config_path():
     Prioritizes %APPDATA% in production (frozen/installed), falls back to local dev.
     """
     app_name = "BioDockify"
-    
+
     # Check if running as compiled executable (PyInstaller)
-    if getattr(sys, 'frozen', False):
+    if getattr(sys, "frozen", False):
         # Production: Use User AppData
-        app_data = os.getenv('APPDATA')
+        app_data = os.getenv("APPDATA")
         if app_data:
             config_dir = Path(app_data) / app_name
             config_dir.mkdir(parents=True, exist_ok=True)
             return config_dir / "config.yaml"
-            
+
     # Development: Use local source directory
     # Support BIO_ENV for specific configs (dev/prod/staging)
     # Support explicit path override
@@ -166,14 +182,15 @@ def get_config_path():
 
     env = os.getenv("BIO_ENV", "").lower()
     filename = f"config.{env}.yaml" if env else "config.yaml"
-    
+
     # Fallback to standard config if env-specific doesn't exist
     target = BASE_DIR / "runtime" / filename
     if env and not target.exists():
         print(f"[*] {filename} not found, falling back to config.yaml")
         return BASE_DIR / "runtime" / "config.yaml"
-        
+
     return target
+
 
 CONFIG_PATH = get_config_path()
 
@@ -186,27 +203,24 @@ DEFAULT_CONFIG = {
         "name": "My PhD Research",
         "type": "PhD Thesis",
         "disease_context": "Alzheimer's Disease",
-        "stage": "Literature Review"
+        "stage": "Literature Review",
     },
-
     # SECTION B: AGENT ZERO BEHAVIOR
     "agent": {
         "mode": "semi-autonomous",
         "reasoning_depth": "standard",
         "self_correction": True,
         "max_retries": 3,
-        "failure_policy": "ask_user"
+        "failure_policy": "ask_user",
     },
-
     # SECTION C: LITERATURE & EVIDENCE
     "literature": {
-        "sources": ["pubmed"], 
+        "sources": ["pubmed"],
         "enable_crossref": True,
-        "year_range": 10,  
+        "year_range": 10,
         "novelty_strictness": "medium",
-        "grobid_url": "http://localhost:8070"
+        "grobid_url": "http://localhost:8070",
     },
-    
     # NEW: Pharma Pipeline Controls
     "pharma": {
         "enable_pubtator": True,
@@ -226,40 +240,41 @@ DEFAULT_CONFIG = {
             "elsevier": False,
             "scopus": False,
             "wos": False,
-            "science_index": False
-        }
+            "science_index": False,
+        },
     },
-
     # SECTION D: NANOBOT & CHANNELS
-    "nanobot": {
-        "headless_browser": True,
-        "stealth_mode": False,
-        "browser_timeout": 30
-    },
+    "nanobot": {"headless_browser": True, "stealth_mode": False, "browser_timeout": 30},
     "channels": {
-        "telegram": { "enabled": False, "token": "", "allow_from": [] },
-        "whatsapp": { "enabled": False, "bridge_url": "ws://localhost:3001", "auth_token": "", "allow_from": [] },
-        "discord": { "enabled": False, "token": "", "allow_from": [], "gateway_url": "wss://gateway.discord.gg/?v=10&encoding=json" }
+        "telegram": {"enabled": False, "token": "", "allow_from": []},
+        "whatsapp": {
+            "enabled": False,
+            "bridge_url": "ws://localhost:3001",
+            "auth_token": "",
+            "allow_from": [],
+        },
+        "discord": {
+            "enabled": False,
+            "token": "",
+            "allow_from": [],
+            "gateway_url": "wss://gateway.discord.gg/?v=10&encoding=json",
+        },
     },
-
     # SECTION E: API & AI SETTINGS
     "ai_provider": {
-        "mode": "auto",        # Default to Auto-Detect
-        "primary_model": "openai", # Default to Paid API standard
+        "mode": "auto",  # Default to Auto-Detect
+        "primary_model": "openai",  # Default to Paid API standard
         "cloud_fallback": True,
-        
         # LM Studio
         "lm_studio_url": "http://localhost:1234/v1",
         "lm_studio_model": "",
-
         "google_key": "",
         "openrouter_key": "",
         "huggingface_key": "",
         "glm_key": "",
         "elsevier_key": "",
         "pubmed_email": "",
-        "item_key": "",     # Generic Item Key (not used but reserved)
-        
+        "item_key": "",  # Generic Item Key (not used but reserved)
         # Specific Providers
         "mistral_key": "",
         "mistral_model": "mistral-large-latest",
@@ -267,73 +282,65 @@ DEFAULT_CONFIG = {
         "venice_model": "llama-3-70b",
         "kimi_key": "",
         "kimi_model": "moonshot-v1-8k",
-        "deepseek_key": "", # Already exists but grouping related keys
+        "deepseek_key": "",  # Already exists but grouping related keys
         "deepseek_model": "deepseek-chat",
-        
         # Azure OpenAI
         "azure_endpoint": "",
         "azure_deployment": "",
         "azure_key": "",
         "azure_api_version": "2024-02-15-preview",
-
         # AWS Bedrock
         "aws_access_key": "",
         "aws_secret_key": "",
         "aws_region_name": "us-east-1",
         "aws_model_id": "anthropic.claude-3-sonnet-20240229-v1:0",
-
         # Custom / Universal
         "custom_key": "",
-        "custom_base_url": "", 
+        "custom_base_url": "",
         "custom_model": "gpt-3.5-turbo",
-        
         # Web Research Keys
         "serper_key": "",  # For Google Search (search.serper.dev)
-        "jina_key": "",    # For Content Scraping (r.jina.ai)
-        "brave_key": "",   # For Brave Search API
+        "jina_key": "",  # For Content Scraping (r.jina.ai)
+        "brave_key": "",  # For Brave Search API
     },
-    
     # NEW: Advanced Hardware Controls
     "ai_advanced": {
-        "performance_profile": "high", # "high", "moderate", "low"
+        "performance_profile": "high",  # "high", "moderate", "low"
         "context_window": 8192,
         "gpu_layers": -1,
-        "thread_count": 8
+        "thread_count": 8,
     },
-    
     # NEW: User Persona
     "persona": {
-        "roles": ["PhD Student"], # Updated from 'role' to 'roles'
+        "roles": ["PhD Student"],  # Updated from 'role' to 'roles'
         "strictness": "conservative",
         "introduction": "",
-        "research_focus": ""
+        "research_focus": "",
     },
-    
     # NEW: Output Config
     "output": {
         "format": "markdown",
         "citation_style": "apa",
         "include_disclosure": True,
-        "output_dir": ""
+        "output_dir": "",
     },
-
     # SECTION I: EXECUTION & SAFETY
     "execution": {
-        "mode": "research", 
+        "mode": "research",
         "max_runtime_minutes": 45,
         "use_knowledge_graph": True,
-        "human_approval_gates": True
+        "human_approval_gates": True,
     },
-
     # SYSTEM INTERNALS
     "system": {
         "auto_update": True,
         "pause_on_battery": True,
         "max_cpu_percent": 80,
         "log_level": "INFO",
-        "version": "2.6.2" # Bumped version for config migration
-    }
+        "version": "2.6.2",  # Bumped version for config migration
+    },
 }
+
 
 class ConfigLoader:
     def __init__(self):
@@ -351,27 +358,27 @@ class ConfigLoader:
             print(f"[*] Loading config from: {CONFIG_PATH}")
             with open(CONFIG_PATH, "r") as f:
                 user_config = yaml.safe_load(f)
-                
+
             if not user_config:
                 user_config = DEFAULT_CONFIG
-            
+
             # Merit: Deep merge with defaults to ensure new keys exist
             merged = self._merge_defaults(DEFAULT_CONFIG, user_config)
-            
+
             # Environment Variable Overrides (Runtime Overlay)
             merged = self._apply_env_overrides(merged)
 
             # Migration Check
             final_config = self._migrate_config(merged)
-            
+
             # Decrypt sensitive values for Runtime usage
-            decrypted = security_manager.process_config(final_config, 'decrypt')
+            decrypted = security_manager.process_config(final_config, "decrypt")
 
             # Resolve Auto Mode
             self._resolve_auto_mode(decrypted)
 
             return decrypted
-            
+
         except Exception as e:
             print(f"[!] Error loading config: {e}")
             return DEFAULT_CONFIG
@@ -385,10 +392,12 @@ class ConfigLoader:
             config["ai_provider"]["openrouter_key"] = os.getenv("BIO_OPENROUTER_KEY")
         if os.getenv("BIO_OLLAMA_URL"):
             config["ai_provider"]["ollama_url"] = os.getenv("BIO_OLLAMA_URL")
-        
+        if os.getenv("BIO_LM_STUDIO_URL"):
+            config["ai_provider"]["lm_studio_url"] = os.getenv("BIO_LM_STUDIO_URL")
+
         # System Overrides
         if os.getenv("BIO_MODE"):
-             config["execution"]["mode"] = os.getenv("BIO_MODE")
+            config["execution"]["mode"] = os.getenv("BIO_MODE")
 
         return config
 
@@ -415,8 +424,9 @@ class ConfigLoader:
                 # Fallback to OpenAI (standard Paid API)
                 # This ensures we don't default to specific vendor unless configured
                 config["ai_provider"]["mode"] = "openai"
-                print("[*] Auto-Mode: Defaulting to 'openai'. Please configure API keys.")
-
+                print(
+                    "[*] Auto-Mode: Defaulting to 'openai'. Please configure API keys."
+                )
 
     def save_config(self, new_config: Dict[str, Any]) -> bool:
         """Save new configuration to disk (Legacy Wrapper)."""
@@ -435,9 +445,9 @@ class ConfigLoader:
 
             # 2. Backup existing
             self.backup_config()
-            
+
             # 3. Encrypt sensitive values before saving to Disk
-            secure_config = security_manager.process_config(new_config, 'encrypt')
+            secure_config = security_manager.process_config(new_config, "encrypt")
             self._save_to_disk(secure_config)
             return True, "Settings saved successfully"
         except Exception as e:
@@ -452,29 +462,36 @@ class ConfigLoader:
     def _save_to_disk(self, config_data: Dict[str, Any]):
         """Helper to write YAML to disk atomically."""
         if not CONFIG_PATH.parent.exists():
-             CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
-             
+            CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
+
         # Write to temp file first
-        tmp_path = CONFIG_PATH.with_suffix('.tmp')
+        tmp_path = CONFIG_PATH.with_suffix(".tmp")
         try:
             with open(tmp_path, "w") as f:
                 yaml.dump(config_data, f, default_flow_style=False, sort_keys=False)
-            
+
             # Atomic rename/replace
             if list(platform.uname()).count("Windows") > 0:
-                 # Windows can't atomic replace if dest exists, need remove first
-                 if CONFIG_PATH.exists():
-                     try:
-                         os.remove(CONFIG_PATH)
-                     except Exception as e:
-                         print(f"[!] Warning: Could not remove old config ({e}). Attempting direct overwrite fallback.")
-                         # Fallback: direct write to target, ignoring temp file
-                         with open(CONFIG_PATH, "w") as f:
-                             yaml.dump(config_data, f, default_flow_style=False, sort_keys=False)
-                         if tmp_path.exists():
-                             os.remove(tmp_path)
-                         return
-            
+                # Windows can't atomic replace if dest exists, need remove first
+                if CONFIG_PATH.exists():
+                    try:
+                        os.remove(CONFIG_PATH)
+                    except Exception as e:
+                        print(
+                            f"[!] Warning: Could not remove old config ({e}). Attempting direct overwrite fallback."
+                        )
+                        # Fallback: direct write to target, ignoring temp file
+                        with open(CONFIG_PATH, "w") as f:
+                            yaml.dump(
+                                config_data,
+                                f,
+                                default_flow_style=False,
+                                sort_keys=False,
+                            )
+                        if tmp_path.exists():
+                            os.remove(tmp_path)
+                        return
+
             os.replace(tmp_path, CONFIG_PATH)
         except Exception as e:
             print(f"[!] Atomic save failed: {e}")
@@ -489,7 +506,11 @@ class ConfigLoader:
         """
         result = defaults.copy()
         for key, value in user.items():
-            if key in result and isinstance(result[key], dict) and isinstance(value, dict):
+            if (
+                key in result
+                and isinstance(result[key], dict)
+                and isinstance(value, dict)
+            ):
                 result[key] = self._merge_defaults(result[key], value)
             else:
                 result[key] = value
@@ -498,7 +519,7 @@ class ConfigLoader:
     def backup_config(self):
         """Creates a backup of the current config file."""
         if CONFIG_PATH.exists():
-            backup_path = CONFIG_PATH.with_suffix('.bak')
+            backup_path = CONFIG_PATH.with_suffix(".bak")
             try:
                 shutil.copy2(CONFIG_PATH, backup_path)
             except Exception as e:
@@ -519,19 +540,19 @@ class ConfigLoader:
             # Remove old key
             persona.pop("role", None)
             print(f"[*] Migrated legacy persona role '{role}' to roles list.")
-            
+
         current_version = config.get("system", {}).get("version", "0.0.0")
         target_version = DEFAULT_CONFIG["system"]["version"]
-        
+
         if current_version != target_version:
             print(f"[*] Migrating Config: {current_version} -> {target_version}")
             # Logic for specific version upgrades could go here
             # For now, we just update the version tag since _merge_defaults handles structure
             config["system"]["version"] = target_version
             # Auto-save migrated config (encrypted)
-            secure = security_manager.process_config(config, 'encrypt')
+            secure = security_manager.process_config(config, "encrypt")
             self._save_to_disk(secure)
-            
+
         return config
 
     def _validate_config(self, config: Dict) -> (bool, str):
@@ -545,35 +566,41 @@ class ConfigLoader:
                 msg = f"Missing required section: {section}"
                 print(f"[!] {msg}")
                 return False, msg
-                
+
         # Validate critical numeric ranges
         try:
             ctx = config.get("ai_advanced", {}).get("context_window", 8192)
             # Ensure it's an integer and within reasonable bounds
             if not isinstance(ctx, int) and not str(ctx).isdigit():
-                 return False, f"Invalid context_window: {ctx} is not a number"
-            
+                return False, f"Invalid context_window: {ctx} is not a number"
+
             if int(ctx) < 1024:
                 return False, f"Invalid context_window: {ctx} must be >= 1024"
         except Exception as e:
-             return False, f"Validation Logic Error: {e}"
-             
+            return False, f"Validation Logic Error: {e}"
+
         return True, "OK"
+
 
 # Singleton instance
 _loader = ConfigLoader()
 
+
 def load_config() -> Dict[str, Any]:
     return _loader.load_config()
+
 
 def save_config(config: Dict[str, Any]) -> bool:
     return _loader.save_config(config)
 
+
 def save_config_detailed(config: Dict[str, Any]) -> (bool, str):
     return _loader.save_config_detailed(config)
 
+
 def reset_config() -> Dict[str, Any]:
     return _loader.reset_to_defaults()
+
 
 if __name__ == "__main__":
     # Test run

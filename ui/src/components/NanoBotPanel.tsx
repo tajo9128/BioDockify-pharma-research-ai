@@ -38,7 +38,7 @@ import {
 } from "lucide-react";
 
 // API base URL
-const API_BASE = "http://localhost:8234";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 
 interface Message {
     role: 'user' | 'assistant';

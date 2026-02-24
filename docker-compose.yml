@@ -7,6 +7,8 @@ services:
     container_name: biodockify-app
     ports:
       - "3000:3000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
       - DATABASE_URL=postgresql://biodockify:biodockify@db:5432/biodockify
       - REDIS_URL=redis://redis:6379/0
@@ -17,6 +19,9 @@ services:
       - ENABLE_DIAGNOSIS=true
       - ENABLE_MONITORING=true
       - GROBID_URL=http://grobid:8070
+      - BIO_OLLAMA_URL=http://host.docker.internal:11434
+      - BIO_LM_STUDIO_URL=http://host.docker.internal:1234/v1
+      - LM_STUDIO_URL=http://host.docker.internal:1234/v1
     depends_on:
       db:
         condition: service_healthy

@@ -32,7 +32,7 @@ interface ChannelsStatus {
     };
 }
 
-const API_BASE = 'http://localhost:8234';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
 export default function ChannelsSettingsPanel() {
     const { toast } = useToast();

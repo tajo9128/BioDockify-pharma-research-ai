@@ -60,7 +60,7 @@ export default function LibraryPage() {
         setIsSearching(true);
         setShowRag(true);
         try {
-            const res = await fetch('http://localhost:8234/api/library/query', {
+            const res = await fetch('http://localhost:3000/api/library/query', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ query: searchQuery, top_k: 5 })

@@ -185,7 +185,7 @@ export class SystemController {
 
                     // Save full (sensitive) config to backend (Essential)
                     try {
-                        const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8234';
+                        const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
                         const response = await fetch(`${API_BASE}/api/settings`, {
                             method: 'PUT',
                             headers: { 'Content-Type': 'application/json' },

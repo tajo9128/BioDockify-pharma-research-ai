@@ -154,8 +154,8 @@ export async function repairLmStudioConfig(): Promise<RepairResult> {
 async function checkLmStudioProcess(): Promise<{ running: boolean; serverReady: boolean }> {
     try {
         const API_BASE = typeof window !== 'undefined'
-            ? (window as any).__BIODOCKIFY_API_URL__ || 'http://localhost:8234'
-            : 'http://localhost:8234';
+            ? (window as any).__BIODOCKIFY_API_URL__ || 'http://localhost:3000'
+            : 'http://localhost:3000';
         const res = await fetch(`${API_BASE}/api/system/check-process?name=LM Studio`, {
             method: 'GET',
             signal: AbortSignal.timeout(3000)
@@ -213,8 +213,8 @@ export async function runSelfRepairDiagnostics(): Promise<{
 async function checkBackend(): Promise<ServiceStatus> {
     try {
         const API_BASE = typeof window !== 'undefined'
-            ? (window as any).__BIODOCKIFY_API_URL__ || 'http://localhost:8234'
-            : 'http://localhost:8234';
+            ? (window as any).__BIODOCKIFY_API_URL__ || 'http://localhost:3000'
+            : 'http://localhost:3000';
         const res = await fetch(`${API_BASE}/api/health`, {
             method: 'GET',
             signal: AbortSignal.timeout(3000)

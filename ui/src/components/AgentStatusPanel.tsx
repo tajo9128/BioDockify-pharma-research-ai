@@ -40,7 +40,7 @@ interface AgentStatusPanelProps {
 export default function AgentStatusPanel({
     useWebSocket = true,
     pollInterval = 2000,
-    apiBaseUrl = 'http://localhost:8234',
+    apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000',
     onComplete
 }: AgentStatusPanelProps) {
     const [status, setStatus] = useState<AgentStatus | null>(null);

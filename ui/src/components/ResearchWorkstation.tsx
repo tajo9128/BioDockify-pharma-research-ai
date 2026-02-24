@@ -311,7 +311,7 @@ export default function ResearchWorkstation({
                         <div className="p-4 border-b border-slate-800">
                             <AgentStatusPanel
                                 useWebSocket={true}
-                                apiBaseUrl="http://localhost:8234"
+                                apiBaseUrl={process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"}
                             />
                         </div>
                     )}
