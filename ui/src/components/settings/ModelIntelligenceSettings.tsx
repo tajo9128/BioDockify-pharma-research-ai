@@ -11,11 +11,14 @@ export function ModelIntelligenceSettings({ settings, onUpdate }: ModelIntellige
     const [testingConnection, setTestingConnection] = useState(false);
     const [connectionStatus, setConnectionStatus] = useState<'success' | 'failure' | null>(null);
 
+    // Safe access to ai_provider with defaults
+    const aiProvider = settings?.ai_provider || {};
+
     const handleChange = (field: string, value: any) => {
         // If changing mode, we might want to set some defaults
         if (field === 'ai_provider.mode') {
             const newSettings = { ...settings };
-            const updatedAi = { ...settings.ai_provider, mode: value };
+            const updatedAi = { ...aiProvider, mode: value };
 
             // Merge specific model defaults if needed
             if (value === 'venice') {
@@ -35,7 +38,7 @@ export function ModelIntelligenceSettings({ settings, onUpdate }: ModelIntellige
             onUpdate({
                 ...settings,
                 ai_provider: {
-                    ...settings.ai_provider,
+                    ...aiProvider,
                     [parts[1]]: value
                 }
             });
@@ -46,7 +49,7 @@ export function ModelIntelligenceSettings({ settings, onUpdate }: ModelIntellige
         setTestingConnection(true);
         setConnectionStatus(null);
         try {
-            const result = await api.testConnection(settings.ai_provider);
+            const result = await api.testConnection(aiProvider);
             setConnectionStatus(result.success ? 'success' : 'failure');
             if (!result.success) {
                 alert(`Connection Failed: ${result.message}`);
@@ -59,7 +62,7 @@ export function ModelIntelligenceSettings({ settings, onUpdate }: ModelIntellige
         }
     };
 
-    const mode = settings.ai_provider?.mode || 'openai';
+    const mode = aiProvider.mode || 'openai';
 
     return (
         <div className="space-y-8">
@@ -124,7 +127,7 @@ export function ModelIntelligenceSettings({ settings, onUpdate }: ModelIntellige
                                 <label className="text-sm font-medium text-slate-300">API Key</label>
                                 <input
                                     type="password"
-                                    value={settings.ai_provider.openai_key || ''}
+                                    value={aiProvider.openai_key || ''}
                                     onChange={(e) => handleChange('ai_provider.openai_key', e.target.value)}
                                     placeholder="sk-..."
                                     className="w-full bg-slate-800 border-slate-700 rounded-lg px-4 py-2 text-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
@@ -139,7 +142,7 @@ export function ModelIntelligenceSettings({ settings, onUpdate }: ModelIntellige
                             <label className="text-sm font-medium text-slate-300">Anthropic API Key</label>
                             <input
                                 type="password"
-                                value={settings.ai_provider.anthropic_key || ''}
+                                value={aiProvider.anthropic_key || ''}
                                 onChange={(e) => handleChange('ai_provider.anthropic_key', e.target.value)}
                                 placeholder="sk-ant-..."
                                 className="w-full bg-slate-800 border-slate-700 rounded-lg px-4 py-2 text-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
@@ -153,7 +156,7 @@ export function ModelIntelligenceSettings({ settings, onUpdate }: ModelIntellige
                             <label className="text-sm font-medium text-slate-300">Google AI Studio Key</label>
                             <input
                                 type="password"
-                                value={settings.ai_provider.google_key || ''}
+                                value={aiProvider.google_key || ''}
                                 onChange={(e) => handleChange('ai_provider.google_key', e.target.value)}
                                 placeholder="AIza..."
                                 className="w-full bg-slate-800 border-slate-700 rounded-lg px-4 py-2 text-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
@@ -168,7 +171,7 @@ export function ModelIntelligenceSettings({ settings, onUpdate }: ModelIntellige
                                 <label className="text-sm font-medium text-slate-300">Endpoint URL</label>
                                 <input
                                     type="text"
-                                    value={settings.ai_provider.azure_endpoint || ''}
+                                    value={aiProvider.azure_endpoint || ''}
                                     onChange={(e) => handleChange('ai_provider.azure_endpoint', e.target.value)}
                                     placeholder="https://my-resource.openai.azure.com/"
                                     className="w-full bg-slate-800 border-slate-700 rounded-lg px-4 py-2 text-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
@@ -178,7 +181,7 @@ export function ModelIntelligenceSettings({ settings, onUpdate }: ModelIntellige
                                 <label className="text-sm font-medium text-slate-300">Deployment Name</label>
                                 <input
                                     type="text"
-                                    value={settings.ai_provider.azure_deployment || ''}
+                                    value={aiProvider.azure_deployment || ''}
                                     onChange={(e) => handleChange('ai_provider.azure_deployment', e.target.value)}
                                     placeholder="gpt-4-deployment"
                                     className="w-full bg-slate-800 border-slate-700 rounded-lg px-4 py-2 text-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
@@ -188,7 +191,7 @@ export function ModelIntelligenceSettings({ settings, onUpdate }: ModelIntellige
                                 <label className="text-sm font-medium text-slate-300">API Key</label>
                                 <input
                                     type="password"
-                                    value={settings.ai_provider.azure_key || ''}
+                                    value={aiProvider.azure_key || ''}
                                     onChange={(e) => handleChange('ai_provider.azure_key', e.target.value)}
                                     className="w-full bg-slate-800 border-slate-700 rounded-lg px-4 py-2 text-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
                                 />
@@ -197,7 +200,7 @@ export function ModelIntelligenceSettings({ settings, onUpdate }: ModelIntellige
                                 <label className="text-sm font-medium text-slate-300">API Version</label>
                                 <input
                                     type="text"
-                                    value={settings.ai_provider.azure_api_version || '2024-02-15-preview'}
+                                    value={aiProvider.azure_api_version || '2024-02-15-preview'}
                                     onChange={(e) => handleChange('ai_provider.azure_api_version', e.target.value)}
                                     className="w-full bg-slate-800 border-slate-700 rounded-lg px-4 py-2 text-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
                                 />
@@ -218,7 +221,7 @@ export function ModelIntelligenceSettings({ settings, onUpdate }: ModelIntellige
                                 <label className="text-sm font-medium text-slate-300">Access Key ID</label>
                                 <input
                                     type="text"
-                                    value={settings.ai_provider.aws_access_key || ''}
+                                    value={aiProvider.aws_access_key || ''}
                                     onChange={(e) => handleChange('ai_provider.aws_access_key', e.target.value)}
                                     className="w-full bg-slate-800 border-slate-700 rounded-lg px-4 py-2 text-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
                                 />
@@ -227,7 +230,7 @@ export function ModelIntelligenceSettings({ settings, onUpdate }: ModelIntellige
                                 <label className="text-sm font-medium text-slate-300">Secret Access Key</label>
                                 <input
                                     type="password"
-                                    value={settings.ai_provider.aws_secret_key || ''}
+                                    value={aiProvider.aws_secret_key || ''}
                                     onChange={(e) => handleChange('ai_provider.aws_secret_key', e.target.value)}
                                     className="w-full bg-slate-800 border-slate-700 rounded-lg px-4 py-2 text-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
                                 />
@@ -236,7 +239,7 @@ export function ModelIntelligenceSettings({ settings, onUpdate }: ModelIntellige
                                 <label className="text-sm font-medium text-slate-300">Region</label>
                                 <input
                                     type="text"
-                                    value={settings.ai_provider.aws_region_name || 'us-east-1'}
+                                    value={aiProvider.aws_region_name || 'us-east-1'}
                                     onChange={(e) => handleChange('ai_provider.aws_region_name', e.target.value)}
                                     className="w-full bg-slate-800 border-slate-700 rounded-lg px-4 py-2 text-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
                                 />
@@ -245,7 +248,7 @@ export function ModelIntelligenceSettings({ settings, onUpdate }: ModelIntellige
                                 <label className="text-sm font-medium text-slate-300">Model ID</label>
                                 <input
                                     type="text"
-                                    value={settings.ai_provider.aws_model_id || 'anthropic.claude-3-sonnet-20240229-v1:0'}
+                                    value={aiProvider.aws_model_id || 'anthropic.claude-3-sonnet-20240229-v1:0'}
                                     onChange={(e) => handleChange('ai_provider.aws_model_id', e.target.value)}
                                     className="w-full bg-slate-800 border-slate-700 rounded-lg px-4 py-2 text-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
                                 />
@@ -261,7 +264,7 @@ export function ModelIntelligenceSettings({ settings, onUpdate }: ModelIntellige
                                 <input
                                     type="password"
                                     // Map generic key field based on mode
-                                    value={settings.ai_provider[`${mode}_key` as keyof typeof settings.ai_provider] as string || ''}
+                                    value={(aiProvider as any)[`${mode}_key`] || ''}
                                     onChange={(e) => handleChange(`ai_provider.${mode}_key`, e.target.value)}
                                     className="w-full bg-slate-800 border-slate-700 rounded-lg px-4 py-2 text-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
                                 />
@@ -270,7 +273,7 @@ export function ModelIntelligenceSettings({ settings, onUpdate }: ModelIntellige
                                 <label className="text-sm font-medium text-slate-300">Model Name (Optional)</label>
                                 <input
                                     type="text"
-                                    value={settings.ai_provider[`${mode}_model` as keyof typeof settings.ai_provider] as string || ''}
+                                    value={(aiProvider as any)[`${mode}_model`] || ''}
                                     onChange={(e) => handleChange(`ai_provider.${mode}_model`, e.target.value)}
                                     placeholder="default"
                                     className="w-full bg-slate-800 border-slate-700 rounded-lg px-4 py-2 text-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
@@ -287,7 +290,7 @@ export function ModelIntelligenceSettings({ settings, onUpdate }: ModelIntellige
                                 <label className="text-sm font-medium text-slate-300">Base URL</label>
                                 <input
                                     type="text"
-                                    value={settings.ai_provider.lm_studio_url || 'http://localhost:1234/v1'}
+                                    value={aiProvider.lm_studio_url || 'http://localhost:1234/v1'}
                                     onChange={(e) => handleChange('ai_provider.lm_studio_url', e.target.value)}
                                     className="w-full bg-slate-800 border-slate-700 rounded-lg px-4 py-2 text-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
                                 />
@@ -297,7 +300,7 @@ export function ModelIntelligenceSettings({ settings, onUpdate }: ModelIntellige
                                 <label className="text-sm font-medium text-slate-300">Model ID</label>
                                 <input
                                     type="text"
-                                    value={settings.ai_provider.lm_studio_model || ''}
+                                    value={aiProvider.lm_studio_model || ''}
                                     onChange={(e) => handleChange('ai_provider.lm_studio_model', e.target.value)}
                                     placeholder="auto"
                                     className="w-full bg-slate-800 border-slate-700 rounded-lg px-4 py-2 text-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
@@ -314,7 +317,7 @@ export function ModelIntelligenceSettings({ settings, onUpdate }: ModelIntellige
                                 <label className="text-sm font-medium text-slate-300">Base URL</label>
                                 <input
                                     type="text"
-                                    value={settings.ai_provider.custom_base_url || ''}
+                                    value={aiProvider.custom_base_url || ''}
                                     onChange={(e) => handleChange('ai_provider.custom_base_url', e.target.value)}
                                     placeholder="https://api.example.com/v1"
                                     className="w-full bg-slate-800 border-slate-700 rounded-lg px-4 py-2 text-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
@@ -324,7 +327,7 @@ export function ModelIntelligenceSettings({ settings, onUpdate }: ModelIntellige
                                 <label className="text-sm font-medium text-slate-300">API Key</label>
                                 <input
                                     type="password"
-                                    value={settings.ai_provider.custom_key || ''}
+                                    value={aiProvider.custom_key || ''}
                                     onChange={(e) => handleChange('ai_provider.custom_key', e.target.value)}
                                     className="w-full bg-slate-800 border-slate-700 rounded-lg px-4 py-2 text-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
                                 />
@@ -333,7 +336,7 @@ export function ModelIntelligenceSettings({ settings, onUpdate }: ModelIntellige
                                 <label className="text-sm font-medium text-slate-300">Model Name</label>
                                 <input
                                     type="text"
-                                    value={settings.ai_provider.custom_model || ''}
+                                    value={aiProvider.custom_model || ''}
                                     onChange={(e) => handleChange('ai_provider.custom_model', e.target.value)}
                                     className="w-full bg-slate-800 border-slate-700 rounded-lg px-4 py-2 text-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
                                 />
