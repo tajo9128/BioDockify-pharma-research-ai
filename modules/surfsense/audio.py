@@ -3,11 +3,27 @@ SurfSense Audio Output Module - FREE VERSION
 Uses edge-tts (Microsoft Edge TTS) - NO API KEY REQUIRED
 Perfect for students and educational use.
 """
-import edge_tts
 import os
 from typing import Optional
 from pathlib import Path
 import asyncio
+
+# Lazy import for edge_tts - allows module to load without the dependency
+# This is useful for CI environments where edge_tts may not be installed
+_edge_tts = None
+
+def _get_edge_tts():
+    """Lazily import edge_tts only when needed."""
+    global _edge_tts
+    if _edge_tts is None:
+        try:
+            import edge_tts as _tts_module
+            _edge_tts = _tts_module
+        except ImportError:
+            raise ImportError(
+                "edge_tts is not installed. Install it with: pip install edge-tts"
+            )
+    return _edge_tts
 
 
 # Available voices from Microsoft Edge TTS
@@ -102,6 +118,9 @@ async def generate_podcast_audio(
         os.makedirs(output_dir, exist_ok=True)
     
     try:
+        # Get edge_tts module (lazy import)
+        edge_tts = _get_edge_tts()
+        
         # Create edge-tts communicate object
         communicate = edge_tts.Communicate(text, edge_voice)
         
