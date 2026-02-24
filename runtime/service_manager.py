@@ -72,6 +72,20 @@ class ServiceManager:
                 logger.warning("Docker Compose not available. Skipping SurfSense startup.")
                 return
 
+            # Check if Docker daemon is running
+            try:
+                result = subprocess.run(
+                    ["docker", "info"],
+                    capture_output=True,
+                    timeout=10
+                )
+                if result.returncode != 0:
+                    logger.warning("Docker daemon not running. Skipping SurfSense startup.")
+                    return
+            except Exception as e:
+                logger.warning(f"Docker not available: {e}. Skipping SurfSense startup.")
+                return
+
             cmd = compose_cmd + ["-f", str(compose_file), "up", "-d"]
             logger.info(f"Starting Service: {' '.join(cmd)}")
             
@@ -82,12 +96,22 @@ class ServiceManager:
                 shell=False,
                 startupinfo=startupinfo,
                 creationflags=flags,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE
             )
-            proc.wait()
-            logger.info("SurfSense initiated (Docker).")
+            stdout, stderr = proc.communicate(timeout=60)
             
+            if proc.returncode == 0:
+                logger.info("SurfSense initiated (Docker).")
+            else:
+                logger.warning(f"SurfSense startup returned non-zero exit code: {proc.returncode}")
+                if stderr:
+                    logger.debug(f"Docker stderr: {stderr.decode('utf-8', errors='ignore')[:200]}")
+            
+        except subprocess.TimeoutExpired:
+            logger.warning("SurfSense startup timed out. Continuing without SurfSense.")
+        except FileNotFoundError as e:
+            logger.warning(f"Docker executable not found: {e}. Skipping SurfSense startup.")
         except Exception as e:
             logger.warning(f"Failed to start SurfSense: {e}")
 

@@ -47,8 +47,8 @@ jobs:
       run: |
         python server.py &
         echo "Waiting for backend to start..."
-        # Wait up to 60 seconds for port 8234 to be active
-        timeout 60s bash -c 'until curl -sf http://localhost:8234/api/health > /dev/null 2>&1; do sleep 2; done' || (echo "Backend failed to start" && exit 1)
+        # Wait up to 90 seconds for port 3000 to be active
+        timeout 90s bash -c 'until curl -sf http://localhost:3000/api/health > /dev/null 2>&1; do sleep 2; done' || (echo "Backend failed to start" && exit 1)
         echo "Backend is ready!"
 
     - name: Run Backend Tests
