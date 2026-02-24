@@ -31,7 +31,7 @@ class ServiceManager:
     def _get_docker_compose_cmd(self) -> Optional[List[str]]:
         """Detects the correct docker compose command (V1 vs V2)."""
         if self._docker_compose_cmd is not None:
-            return self._docker_compose_cmd
+            return self._docker_compose_cmd if self._docker_compose_cmd else None
         
         # Docker Compose V2: "docker compose" (plugin)
         if shutil.which("docker"):
@@ -49,10 +49,20 @@ class ServiceManager:
                 pass
         
         # Docker Compose V1: "docker-compose" (standalone)
+        # Verify it actually works by running version command
         if shutil.which("docker-compose"):
-            self._docker_compose_cmd = ["docker-compose"]
-            logger.debug("Using Docker Compose V1 (docker-compose)")
-            return self._docker_compose_cmd
+            try:
+                result = subprocess.run(
+                    ["docker-compose", "version"],
+                    capture_output=True,
+                    timeout=10
+                )
+                if result.returncode == 0:
+                    self._docker_compose_cmd = ["docker-compose"]
+                    logger.debug("Using Docker Compose V1 (docker-compose)")
+                    return self._docker_compose_cmd
+            except Exception:
+                pass
         
         # Neither available
         logger.warning("Docker Compose not found. Install Docker with Compose plugin.")

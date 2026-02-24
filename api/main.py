@@ -159,10 +159,6 @@ except Exception as e:
     proactive_guidance_manager = None
 # ========================================================================
 
-@app.get("/api/health")
-async def health_check():
-    return {"status": "healthy", "timestamp": time.time()}
-
 # CORS Configuration - Whitelist specific origins for security
 allowed_origins = [
     "http://localhost:3000",
@@ -1559,6 +1555,15 @@ def run_research_task(task_id: str, title: str, mode: str):
 @app.get("/api/health")
 def health_check():
     """
+    Simple Health Check - returns immediately for CI/CD compatibility.
+    Complex checks are available at /api/health/detailed
+    """
+    return {"status": "ok", "timestamp": time.time(), "version": "3.1.0"}
+
+
+@app.get("/api/health/detailed")
+def health_check_detailed():
+    """
     Comprehensive System Health Check.
     Monitors: API, Ollama, Vector Store, System Resources.
     """
@@ -1568,7 +1573,7 @@ def health_check():
     status = {"status": "ok", "components": {}}
     
     # 1. API Service
-    status["components"]["api"] = {"status": "ok", "version": "1.0.0"}
+    status["components"]["api"] = {"status": "ok", "version": "3.1.0"}
     
     # 2. Ollama / AI Provider
     try:
