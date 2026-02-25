@@ -35,7 +35,7 @@ class DeviceSession:
 
     session_id: str = field(default_factory=lambda: str(uuid.uuid4()))
     device_id: str = ""
-    start_time: datetime = field(default_factory=datetime.utcnow)
+    start_time: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     end_time: Optional[datetime] = None
     state: DeviceState = DeviceState.ACTIVE
     active_tasks: List[str] = field(default_factory=list)
