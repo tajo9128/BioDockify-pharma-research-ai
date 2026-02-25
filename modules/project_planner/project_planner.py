@@ -41,7 +41,7 @@ class ProjectPhase(str, Enum):
 
 def _utc_now() -> datetime:
     """Helper to get current UTC time as offset-aware datetime."""
-    return datetime.now(datetime.UTC)
+    return datetime.now(timezone.utc)
 
 
 @dataclass
