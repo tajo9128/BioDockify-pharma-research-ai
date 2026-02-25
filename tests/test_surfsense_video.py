@@ -1,6 +1,7 @@
 import asyncio
 import os
 import sys
+import pytest
 
 # Add project root to path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -10,11 +11,19 @@ if not os.getenv("OPENAI_API_KEY"):
     print("[WARN] No OPENAI_API_KEY found. Using Mock Audio Generation.")
     os.environ["MOCK_TTS"] = "true"
 
-from modules.surfsense.audio import generate_podcast_audio
-from modules.surfsense.slides import generate_slides
-from modules.surfsense.video import create_video_summary
+# Check for optional dependencies
+try:
+    from modules.surfsense.audio import generate_podcast_audio
+    from modules.surfsense.slides import generate_slides
+    from modules.surfsense.video import create_video_summary
+    HAS_SURFSENSE_DEPS = True
+except ImportError as e:
+    HAS_SURFSENSE_DEPS = False
+    IMPORT_ERROR = str(e)
 
 async def test_pipeline():
+    if not HAS_SURFSENSE_DEPS:
+        pytest.skip(f"SurfSense dependencies not available: {IMPORT_ERROR}")
     print("Testing SurfSense Video Pipeline...")
     
     # Ensure output dir exists
