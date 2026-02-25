@@ -258,7 +258,7 @@ class TestAdditionalStatisticalTools:
 
     def test_power_analysis(self, tools):
         """Test power analysis"""
-        # Calculate required sample size
+        # Calculate required sample size (leave n_obs as None to solve for)
         results = tools.perform_power_analysis(effect_size=0.5, alpha=0.05, power=0.80)
 
         assert "analysis_type" in results
