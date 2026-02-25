@@ -7,6 +7,7 @@ Features:
 - Progress persistence
 - Context restoration
 """
+
 import uuid
 import asyncio
 import logging
@@ -20,6 +21,7 @@ logger = logging.getLogger(__name__)
 
 class DeviceState(str, Enum):
     """Device states"""
+
     ONLINE = "online"
     OFFLINE = "offline"
     ACTIVE = "active"
@@ -30,6 +32,7 @@ class DeviceState(str, Enum):
 @dataclass
 class DeviceSession:
     """Represents a device session"""
+
     session_id: str = field(default_factory=lambda: str(uuid.uuid4()))
     device_id: str = ""
     start_time: datetime = field(default_factory=datetime.utcnow)
@@ -43,6 +46,7 @@ class DeviceSession:
 @dataclass
 class ProjectContext:
     """Context for a specific project"""
+
     project_id: str
     task_states: Dict[str, Dict[str, Any]]  # task_id -> state data
     current_phase: str
@@ -56,7 +60,7 @@ class ProjectContext:
 class DeviceStateManager:
     """
     Device State Manager
-    
+
     Features:
     - Track device online/offline state
     - Manage sessions
@@ -108,7 +112,7 @@ class DeviceStateManager:
 Device State Changed
 Device ID: {self.current_device_id}
 New State: {state.value}
-Timestamp: {datetime.now(datetime.UTC).isoformat()}
+Timestamp: {datetime.now(datetime.timezone.utc).isoformat()}
 Active Tasks: {len(self.active_projects)}
             """.strip()
 
@@ -117,7 +121,7 @@ Active Tasks: {len(self.active_projects)}
                 memory_type=MemoryType.EPISODIC,
                 importance=MemoryImportance.MEDIUM,
                 source="device_manager",
-                tags=['device_state', state.value, str(self.current_device_id)]
+                tags=["device_state", state.value, str(self.current_device_id)],
             )
 
         logger.info(f"Device state set to: {state.value}")
@@ -126,11 +130,11 @@ Active Tasks: {len(self.active_projects)}
         """Create a new device session for a project"""
         # Ensure we have a device ID
         device_id = self.current_device_id or "default_device"
-        
+
         session = DeviceSession(
             device_id=device_id,
             active_tasks=[project_id],
-            context={"current_project": project_id}
+            context={"current_project": project_id},
         )
 
         self.current_session = session
@@ -148,7 +152,7 @@ Active Tasks: {len(self.active_projects)}
     async def end_session(self, session_id: str):
         """End a session"""
         if self.current_session and self.current_session.session_id == session_id:
-            self.current_session.end_time = datetime.now(datetime.UTC)
+            self.current_session.end_time = datetime.now(datetime.timezone.utc)
 
             # Remove active projects
             for project_id in self.current_session.active_tasks:
@@ -174,7 +178,7 @@ Active Tasks: {len(self.active_projects)}
 Session ID: {session.session_id}
 Device ID: {session.device_id}
 Start Time: {session.start_time.isoformat()}
-End Time: {session.end_time.isoformat() if session.end_time else 'In Progress'}
+End Time: {session.end_time.isoformat() if session.end_time else "In Progress"}
 State: {session.state.value}
 Active Tasks: {len(session.active_tasks)}
 Context: {str(session.context)}
@@ -185,15 +189,17 @@ Context: {str(session.context)}
                 memory_type=MemoryType.EPISODIC,
                 importance=MemoryImportance.HIGH,
                 source=f"session:{session.session_id}",
-                tags=['session', 'device', str(session.device_id), session.state.value],
+                tags=["session", "device", str(session.device_id), session.state.value],
                 metadata={
-                    'session_id': session.session_id,
-                    'device_id': session.device_id,
-                    'start_time': session.start_time.isoformat(),
-                    'end_time': session.end_time.isoformat() if session.end_time else None,
-                    'active_tasks': session.active_tasks,
-                    'context': session.context
-                }
+                    "session_id": session.session_id,
+                    "device_id": session.device_id,
+                    "start_time": session.start_time.isoformat(),
+                    "end_time": session.end_time.isoformat()
+                    if session.end_time
+                    else None,
+                    "active_tasks": session.active_tasks,
+                    "context": session.context,
+                },
             )
 
         except Exception as e:
@@ -208,30 +214,23 @@ Context: {str(session.context)}
             from modules.memory.advanced_memory import MemoryType
 
             # Search for recent sessions
-            results = await self.memory_system.search(
-                query="session device",
-                limit=10
-            )
+            results = await self.memory_system.search(query="session device", limit=10)
 
             logger.info(f"Restored {len(results)} sessions from memory")
 
         except Exception as e:
             logger.error(f"Error restoring sessions: {e}")
 
-    async def save_project_context(
-        self,
-        project_id: str,
-        context_data: Dict[str, Any]
-    ):
+    async def save_project_context(self, project_id: str, context_data: Dict[str, Any]):
         """Save project context (form data, scroll position, annotations, etc.)"""
         context = ProjectContext(
             project_id=project_id,
-            task_states=context_data.get('task_states', {}),
-            current_phase=context_data.get('current_phase', 'planning'),
-            last_position=context_data.get('last_position', ''),
-            scroll_position=context_data.get('scroll_position', 0),
-            form_data=context_data.get('form_data', {}),
-            annotations=context_data.get('annotations', [])
+            task_states=context_data.get("task_states", {}),
+            current_phase=context_data.get("current_phase", "planning"),
+            last_position=context_data.get("last_position", ""),
+            scroll_position=context_data.get("scroll_position", 0),
+            form_data=context_data.get("form_data", {}),
+            annotations=context_data.get("annotations", []),
         )
 
         self.project_contexts[project_id] = context
@@ -255,16 +254,15 @@ Annotations: {len(context.annotations)} items
                 memory_type=MemoryType.EPISODIC,
                 importance=MemoryImportance.MEDIUM,
                 source=f"project_context:{project_id}",
-                tags=['project_context', project_id, 'state_saved'],
-                metadata={
-                    'project_id': project_id,
-                    'context_data': context_data
-                }
+                tags=["project_context", project_id, "state_saved"],
+                metadata={"project_id": project_id, "context_data": context_data},
             )
 
         logger.info(f"Saved context for project: {project_id}")
 
-    async def restore_project_context(self, project_id: str) -> Optional[ProjectContext]:
+    async def restore_project_context(
+        self, project_id: str
+    ) -> Optional[ProjectContext]:
         """Restore project context from memory"""
         if project_id in self.project_contexts:
             return self.project_contexts[project_id]
@@ -273,29 +271,30 @@ Annotations: {len(context.annotations)} items
         if self.memory_system:
             try:
                 results = await self.memory_system.search(
-                    query=f"project context {project_id}",
-                    limit=1
+                    query=f"project context {project_id}", limit=1
                 )
 
                 if results:
                     # In a real impl, we'd parse the metadata
                     # We'll simulate restoration from the first result's metadata
                     memory = results[0]
-                    metadata = memory.get('metadata', {})
-                    context_data = metadata.get('context_data', {})
-                    
+                    metadata = memory.get("metadata", {})
+                    context_data = metadata.get("context_data", {})
+
                     if context_data:
                         context = ProjectContext(
                             project_id=project_id,
-                            task_states=context_data.get('task_states', {}),
-                            current_phase=context_data.get('current_phase', 'planning'),
-                            last_position=context_data.get('last_position', ''),
-                            scroll_position=context_data.get('scroll_position', 0),
-                            form_data=context_data.get('form_data', {}),
-                            annotations=context_data.get('annotations', [])
+                            task_states=context_data.get("task_states", {}),
+                            current_phase=context_data.get("current_phase", "planning"),
+                            last_position=context_data.get("last_position", ""),
+                            scroll_position=context_data.get("scroll_position", 0),
+                            form_data=context_data.get("form_data", {}),
+                            annotations=context_data.get("annotations", []),
                         )
                         self.project_contexts[project_id] = context
-                        logger.info(f"Restored context for project: {project_id} from memory")
+                        logger.info(
+                            f"Restored context for project: {project_id} from memory"
+                        )
                         return context
 
             except Exception as e:
@@ -327,8 +326,14 @@ Annotations: {len(context.annotations)} items
                 await asyncio.sleep(60)  # Check every minute
 
                 # Check for idle timeout
-                if self.current_session and self.current_session.state == DeviceState.IDLE:
-                    idle_time = (datetime.now(datetime.UTC) - self.current_session.start_time).total_seconds()
+                if (
+                    self.current_session
+                    and self.current_session.state == DeviceState.IDLE
+                ):
+                    idle_time = (
+                        datetime.now(datetime.timezone.utc)
+                        - self.current_session.start_time
+                    ).total_seconds()
 
                     if idle_time > self.idle_timeout:
                         logger.info(f"Idle timeout reached, suspending device")
@@ -351,7 +356,9 @@ Annotations: {len(context.annotations)} items
         # Save all active project contexts
         for project_id in self.active_projects:
             if project_id in self.project_contexts:
-                await self.save_project_context(project_id, asdict(self.project_contexts[project_id]))
+                await self.save_project_context(
+                    project_id, asdict(self.project_contexts[project_id])
+                )
 
         await self._set_device_state(DeviceState.SUSPENDED)
 
@@ -371,11 +378,21 @@ Annotations: {len(context.annotations)} items
         """Get current device status"""
         return {
             "device_id": self.current_device_id,
-            "state": self.current_session.state.value if self.current_session else "unknown",
-            "session_id": self.current_session.session_id if self.current_session else None,
+            "state": self.current_session.state.value
+            if self.current_session
+            else "unknown",
+            "session_id": self.current_session.session_id
+            if self.current_session
+            else None,
             "active_projects": self.active_projects,
-            "last_heartbeat": self.current_session.start_time.isoformat() if self.current_session else None,
-            "idle_time": (datetime.now(datetime.UTC) - self.current_session.start_time).total_seconds() if self.current_session else 0
+            "last_heartbeat": self.current_session.start_time.isoformat()
+            if self.current_session
+            else None,
+            "idle_time": (
+                datetime.now(datetime.timezone.utc) - self.current_session.start_time
+            ).total_seconds()
+            if self.current_session
+            else 0,
         }
 
     async def get_active_project_contexts(self) -> Dict[str, Any]:

@@ -2,14 +2,27 @@
 Task Manager - Database Layer
 PostgreSQL integration with async support
 """
+
 import asyncio
 import logging
 import json
 from datetime import datetime
 from typing import List, Optional, Dict, Any
 from sqlalchemy import (
-    create_engine, Column, String, DateTime, Integer, Text, 
-    Float, JSON, Boolean, ForeignKey, Index, select, and_, or_
+    create_engine,
+    Column,
+    String,
+    DateTime,
+    Integer,
+    Text,
+    Float,
+    JSON,
+    Boolean,
+    ForeignKey,
+    Index,
+    select,
+    and_,
+    or_,
 )
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship
@@ -23,6 +36,7 @@ Base = declarative_base()
 
 class TaskORM(Base):
     """SQLAlchemy ORM for Task"""
+
     __tablename__ = "tasks"
 
     id = Column(String, primary_key=True)
@@ -59,18 +73,19 @@ class TaskORM(Base):
 
     # Indexes for common queries
     __table_args__ = (
-        Index('ix_tasks_status_priority', 'status', 'priority'),
-        Index('ix_tasks_scheduled_status', 'scheduled_at', 'status'),
-        Index('ix_tasks_agent_status', 'assigned_agent', 'status'),
+        Index("ix_tasks_status_priority", "status", "priority"),
+        Index("ix_tasks_scheduled_status", "scheduled_at", "status"),
+        Index("ix_tasks_agent_status", "assigned_agent", "status"),
     )
 
 
 class TaskExecutionEventORM(Base):
     """SQLAlchemy ORM for TaskExecutionEvent"""
+
     __tablename__ = "task_events"
 
     id = Column(String, primary_key=True)
-    task_id = Column(String, ForeignKey('tasks.id'), nullable=False, index=True)
+    task_id = Column(String, ForeignKey("tasks.id"), nullable=False, index=True)
     event_type = Column(String, nullable=False, index=True)
     timestamp = Column(DateTime, default=datetime.utcnow, index=True)
     message = Column(Text, nullable=True)
@@ -79,7 +94,7 @@ class TaskExecutionEventORM(Base):
 
     # Index for querying task history
     __table_args__ = (
-        Index('ix_task_events_task_id_timestamp', 'task_id', 'timestamp'),
+        Index("ix_task_events_task_id_timestamp", "task_id", "timestamp"),
     )
 
 
@@ -93,16 +108,10 @@ class TaskRepository:
         """Initialize repository with async database connection"""
         self.db_url = db_url
         self.engine = create_async_engine(
-            db_url,
-            echo=False,
-            pool_pre_ping=True,
-            pool_size=10,
-            max_overflow=20
+            db_url, echo=False, pool_pre_ping=True, pool_size=10, max_overflow=20
         )
         self.async_session = async_sessionmaker(
-            self.engine,
-            class_=AsyncSession,
-            expire_on_commit=False
+            self.engine, class_=AsyncSession, expire_on_commit=False
         )
 
     async def initialize_schema(self):
@@ -121,10 +130,10 @@ class TaskRepository:
 
                 # Create initial event
                 event_orm = TaskExecutionEventORM(
-                    id=f"event_{task.id}_{datetime.now(datetime.UTC).timestamp()}",
+                    id=f"event_{task.id}_{datetime.now(datetime.timezone.utc).timestamp()}",
                     task_id=task.id,
                     event_type="created",
-                    message=f"Task '{task.title}' created"
+                    message=f"Task '{task.title}' created",
                 )
                 session.add(event_orm)
 
@@ -135,17 +144,19 @@ class TaskRepository:
     async def get_task(self, task_id: str) -> Optional[Task]:
         """Get task by ID"""
         async with self.async_session() as session:
-            result = await session.execute(
-                select(TaskORM).where(TaskORM.id == task_id)
-            )
+            result = await session.execute(select(TaskORM).where(TaskORM.id == task_id))
             task_orm = result.scalar_one_or_none()
             if task_orm:
                 # Filter out SQLAlchemy internal state
-                data = {k: v for k, v in task_orm.__dict__.items() if not k.startswith('_')}
+                data = {
+                    k: v for k, v in task_orm.__dict__.items() if not k.startswith("_")
+                }
                 return Task(**data)
             return None
 
-    async def update_task(self, task_id: str, updates: Dict[str, Any]) -> Optional[Task]:
+    async def update_task(
+        self, task_id: str, updates: Dict[str, Any]
+    ) -> Optional[Task]:
         """Update task fields"""
         async with self.async_session() as session:
             async with session.begin():
@@ -164,69 +175,82 @@ class TaskRepository:
                 await session.commit()
                 await session.refresh(task_orm)
                 logger.info(f"Updated task: {task_id}")
-                data = {k: v for k, v in task_orm.__dict__.items() if not k.startswith('_')}
+                data = {
+                    k: v for k, v in task_orm.__dict__.items() if not k.startswith("_")
+                }
                 return Task(**data)
 
     async def get_pending_tasks(
-        self,
-        limit: int = 50,
-        agent_id: Optional[str] = None
+        self, limit: int = 50, agent_id: Optional[str] = None
     ) -> List[Task]:
         """Get pending tasks ordered by priority"""
         async with self.async_session() as session:
-            query = select(TaskORM).where(
-                TaskORM.status == TaskStatus.PENDING
-            )
+            query = select(TaskORM).where(TaskORM.status == TaskStatus.PENDING)
 
             if agent_id:
                 query = query.where(
                     or_(
                         TaskORM.assigned_agent == agent_id,
-                        TaskORM.assigned_agent.is_(None)
+                        TaskORM.assigned_agent.is_(None),
                     )
                 )
 
             query = query.order_by(
-                TaskORM.priority.desc(),
-                TaskORM.created_at.asc()
+                TaskORM.priority.desc(), TaskORM.created_at.asc()
             ).limit(limit)
 
             result = await session.execute(query)
-            return [Task(**{k: v for k, v in row.__dict__.items() if not k.startswith('_')}) for row in result.scalars()]
+            return [
+                Task(**{k: v for k, v in row.__dict__.items() if not k.startswith("_")})
+                for row in result.scalars()
+            ]
 
     async def get_scheduled_tasks(self, before: datetime) -> List[Task]:
         """Get tasks scheduled to run before given time"""
         async with self.async_session() as session:
-            query = select(TaskORM).where(
-                and_(
-                    TaskORM.status == TaskStatus.SCHEDULED,
-                    TaskORM.scheduled_at <= before
+            query = (
+                select(TaskORM)
+                .where(
+                    and_(
+                        TaskORM.status == TaskStatus.SCHEDULED,
+                        TaskORM.scheduled_at <= before,
+                    )
                 )
-            ).order_by(TaskORM.scheduled_at.asc())
+                .order_by(TaskORM.scheduled_at.asc())
+            )
 
             result = await session.execute(query)
-            return [Task(**{k: v for k, v in row.__dict__.items() if not k.startswith('_')}) for row in result.scalars()]
+            return [
+                Task(**{k: v for k, v in row.__dict__.items() if not k.startswith("_")})
+                for row in result.scalars()
+            ]
 
     async def get_tasks_by_status(
-        self,
-        status: TaskStatus,
-        limit: int = 100
+        self, status: TaskStatus, limit: int = 100
     ) -> List[Task]:
         """Get tasks by status"""
         async with self.async_session() as session:
-            query = select(TaskORM).where(
-                TaskORM.status == status
-            ).order_by(TaskORM.created_at.desc()).limit(limit)
+            query = (
+                select(TaskORM)
+                .where(TaskORM.status == status)
+                .order_by(TaskORM.created_at.desc())
+                .limit(limit)
+            )
 
             result = await session.execute(query)
-            return [Task(**{k: v for k, v in row.__dict__.items() if not k.startswith('_')}) for row in result.scalars()]
+            return [
+                Task(**{k: v for k, v in row.__dict__.items() if not k.startswith("_")})
+                for row in result.scalars()
+            ]
 
     async def get_task_history(self, task_id: str) -> List[TaskExecutionEventORM]:
         """Get execution events for a task"""
         async with self.async_session() as session:
-            query = select(TaskExecutionEventORM).where(
-                TaskExecutionEventORM.task_id == task_id
-            ).order_by(TaskExecutionEventORM.timestamp.desc())
+            query = (
+                select(TaskExecutionEventORM)
+                .where(TaskExecutionEventORM.task_id == task_id)
+                .order_by(TaskExecutionEventORM.timestamp.desc())
+            )
 
             result = await session.execute(query)
             return list(result.scalars())
@@ -237,18 +261,18 @@ class TaskRepository:
         event_type: str,
         message: Optional[str] = None,
         event_metadata: Optional[Dict[str, Any]] = None,
-        agent_id: Optional[str] = None
+        agent_id: Optional[str] = None,
     ):
         """Log a task execution event"""
         async with self.async_session() as session:
             async with session.begin():
                 event = TaskExecutionEventORM(
-                    id=f"event_{task_id}_{datetime.now(datetime.UTC).timestamp()}_{event_type}",
+                    id=f"event_{task_id}_{datetime.now(datetime.timezone.utc).timestamp()}_{event_type}",
                     task_id=task_id,
                     event_type=event_type,
                     message=message,
                     event_metadata=event_metadata or {},
-                    agent_id=agent_id
+                    agent_id=agent_id,
                 )
                 session.add(event)
                 await session.commit()
@@ -257,17 +281,13 @@ class TaskRepository:
         """Get task statistics for monitoring"""
         async with self.async_session() as session:
             # Count by status
-            result = await session.execute(
-                select(TaskORM.status)
-            )
+            result = await session.execute(select(TaskORM.status))
             status_counts = {}
             for row in result:
                 status_counts[row[0]] = status_counts.get(row[0], 0) + 1
 
             # Count by type
-            result = await session.execute(
-                select(TaskORM.task_type)
-            )
+            result = await session.execute(select(TaskORM.task_type))
             type_counts = {}
             for row in result:
                 type_counts[row[0]] = type_counts.get(row[0], 0) + 1
@@ -285,5 +305,5 @@ class TaskRepository:
                 "status_counts": status_counts,
                 "type_counts": type_counts,
                 "average_duration_seconds": avg_duration,
-                "total_tasks": sum(status_counts.values())
+                "total_tasks": sum(status_counts.values()),
             }

@@ -7,15 +7,27 @@ Features:
 - Persistent memory
 - Agent Zero planning
 """
+
 import asyncio
 import logging
 from typing import Optional, Dict, Any, List
 from datetime import datetime
 from dataclasses import asdict
 
-from modules.project_planner.project_planner import ProjectPlanner, get_project_planner, ProjectType
-from modules.device_manager.device_state_manager import DeviceStateManager, get_device_state_manager, DeviceState
-from modules.multi_task.multi_task_scheduler import MultiTaskScheduler, get_multi_task_scheduler
+from modules.project_planner.project_planner import (
+    ProjectPlanner,
+    get_project_planner,
+    ProjectType,
+)
+from modules.device_manager.device_state_manager import (
+    DeviceStateManager,
+    get_device_state_manager,
+    DeviceState,
+)
+from modules.multi_task.multi_task_scheduler import (
+    MultiTaskScheduler,
+    get_multi_task_scheduler,
+)
 from modules.memory.advanced_memory import get_memory_system
 
 logger = logging.getLogger(__name__)
@@ -24,7 +36,7 @@ logger = logging.getLogger(__name__)
 class EnhancedSystem:
     """
     Enhanced Integration System
-    
+
     Unifies:
     - Project Planner (Agent Zero planning)
     - Device State Manager (device awareness)
@@ -35,25 +47,29 @@ class EnhancedSystem:
 
     def __init__(self, hybrid_agent=None, max_parallel_tasks=5):
         self.hybrid_agent = hybrid_agent
-        
+
         # Initialize subsystems
         self.memory_system = get_memory_system()
-        self.project_planner = get_project_planner(hybrid_agent=hybrid_agent, memory_system=self.memory_system)
+        self.project_planner = get_project_planner(
+            hybrid_agent=hybrid_agent, memory_system=self.memory_system
+        )
         self.device_manager = get_device_state_manager(memory_system=self.memory_system)
-        
+
         # For multi-task scheduler, we might need a reference to the existing task manager
         # If we can't find one, it will use its internal mock execution
         task_manager = None
         try:
             from modules.integration.integrated_system import get_integrated_system
+
             integrated = get_integrated_system()
             task_manager = integrated.task_manager if integrated else None
         except (ImportError, ModuleNotFoundError) as e:
-            logger.warning(f"Optional integrated system not available: {e}. Using standalone scheduler.")
+            logger.warning(
+                f"Optional integrated system not available: {e}. Using standalone scheduler."
+            )
 
         self.multi_task_scheduler = get_multi_task_scheduler(
-            max_parallel_tasks=max_parallel_tasks,
-            task_manager=task_manager
+            max_parallel_tasks=max_parallel_tasks, task_manager=task_manager
         )
 
         self.is_initialized = False
@@ -77,7 +93,7 @@ class EnhancedSystem:
         self,
         project_title: str,
         project_type: ProjectType = ProjectType.RESEARCH,
-        additional_context: Optional[str] = None
+        additional_context: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Create a new project with comprehensive task list
@@ -86,7 +102,7 @@ class EnhancedSystem:
         project = await self.project_planner.create_project_from_title(
             project_title=project_title,
             project_type=project_type,
-            additional_context=additional_context
+            additional_context=additional_context,
         )
 
         # Create device session for project
@@ -95,7 +111,7 @@ class EnhancedSystem:
         # Add project tasks to multi-task scheduler
         # We need a mapping from task title/name to task ID for dependencies
         title_to_id = {task.title: task.id for task in project.tasks}
-        
+
         for task in project.tasks:
             # Map dependency titles to IDs if they aren't already IDs
             mapped_deps = []
@@ -112,7 +128,7 @@ class EnhancedSystem:
                 priority=task.priority,
                 dependencies=mapped_deps,
                 estimated_seconds=int(task.estimated_hours * 3600),
-                device_session_id=session.session_id
+                device_session_id=session.session_id,
             )
 
         # Start executing tasks
@@ -126,11 +142,13 @@ class EnhancedSystem:
                 "title": project.title,
                 "description": project.description,
                 "project_type": project.project_type.value,
-                "estimated_completion": project.estimated_completion.isoformat() if project.estimated_completion else None,
+                "estimated_completion": project.estimated_completion.isoformat()
+                if project.estimated_completion
+                else None,
                 "total_tasks": len(project.tasks),
                 "total_hours": sum(task.estimated_hours for task in project.tasks),
-                "session_id": session.session_id
-            }
+                "session_id": session.session_id,
+            },
         }
 
     async def suspend_and_save(self):
@@ -147,7 +165,10 @@ class EnhancedSystem:
         for project_id in self.device_manager.active_projects:
             # For each active project, we save its current state
             # This is a stub for potential richer UI context saving
-            await self.device_manager.save_project_context(project_id, {"suspended_at": datetime.now(datetime.UTC).isoformat()})
+            await self.device_manager.save_project_context(
+                project_id,
+                {"suspended_at": datetime.now(datetime.timezone.utc).isoformat()},
+            )
 
         logger.info("State saved successfully")
 
@@ -171,38 +192,35 @@ class EnhancedSystem:
         logger.info("State restored successfully")
 
     async def update_task_progress(
-        self,
-        project_id: str,
-        task_id: str,
-        progress: float
+        self, project_id: str, task_id: str, progress: float
     ) -> Dict[str, Any]:
         """Update progress for a task"""
         # Update progress in scheduler
-        success = await self.multi_task_scheduler.update_task_progress(task_id, progress)
-        
+        success = await self.multi_task_scheduler.update_task_progress(
+            task_id, progress
+        )
+
         if success:
             # Also update in project planner if it's 100%
             if progress >= 100.0:
-                await self.complete_task(project_id, task_id, {"status": "completed via progress update"})
+                await self.complete_task(
+                    project_id, task_id, {"status": "completed via progress update"}
+                )
             else:
                 # Save project context for intermediate progress
-                await self.device_manager.save_project_context(project_id, {
-                    "last_task_update": task_id, 
-                    "last_progress": progress,
-                    "updated_at": datetime.now(datetime.UTC).isoformat()
-                })
+                await self.device_manager.save_project_context(
+                    project_id,
+                    {
+                        "last_task_update": task_id,
+                        "last_progress": progress,
+                        "updated_at": datetime.now(datetime.timezone.utc).isoformat(),
+                    },
+                )
 
-        return {
-            "success": success,
-            "task_id": task_id,
-            "progress": progress
-        }
+        return {"success": success, "task_id": task_id, "progress": progress}
 
     async def complete_task(
-        self,
-        project_id: str,
-        task_id: str,
-        result_data: Dict[str, Any]
+        self, project_id: str, task_id: str, result_data: Dict[str, Any]
     ):
         """Mark a task as completed with results"""
         # Update task in project planner
@@ -210,14 +228,13 @@ class EnhancedSystem:
             project_id=project_id,
             task_id=task_id,
             status="completed",
-            progress_data=result_data
+            progress_data=result_data,
         )
 
         # Update project context
-        await self.device_manager.save_project_context(project_id, {
-            "task_completed": task_id,
-            "result": result_data
-        })
+        await self.device_manager.save_project_context(
+            project_id, {"task_completed": task_id, "result": result_data}
+        )
 
         logger.info(f"Task completed: {task_id} in project: {project_id}")
 
@@ -246,8 +263,10 @@ class EnhancedSystem:
                 "title": project.title,
                 "description": project.description,
                 "project_type": project.project_type.value,
-                "estimated_completion": project.estimated_completion.isoformat() if project.estimated_completion else None,
-                "status": project.status
+                "estimated_completion": project.estimated_completion.isoformat()
+                if project.estimated_completion
+                else None,
+                "status": project.status,
             },
             "progress": progress,
             "tasks": [
@@ -258,12 +277,12 @@ class EnhancedSystem:
                     "phase": t.phase.value,
                     "priority": t.priority,
                     "status": t.status,
-                    "estimated_hours": t.estimated_hours
+                    "estimated_hours": t.estimated_hours,
                 }
                 for t in tasks
             ],
             "device_status": device_status,
-            "task_queue": queue_status
+            "task_queue": queue_status,
         }
 
     async def get_system_status(self) -> Dict[str, Any]:
@@ -278,7 +297,9 @@ class EnhancedSystem:
         queue_status = await self.multi_task_scheduler.get_queue_status()
 
         # Get memory statistics
-        memory_stats = await self.memory_system.get_statistics() if self.memory_system else {}
+        memory_stats = (
+            await self.memory_system.get_statistics() if self.memory_system else {}
+        )
 
         return {
             "projects": [
@@ -287,7 +308,7 @@ class EnhancedSystem:
                     "title": p.title,
                     "project_type": p.project_type.value,
                     "status": p.status,
-                    "total_tasks": len(p.tasks)
+                    "total_tasks": len(p.tasks),
                 }
                 for p in projects
             ],
@@ -296,7 +317,7 @@ class EnhancedSystem:
             "task_queue": queue_status,
             "memory_stats": memory_stats,
             "system_initialized": self.is_initialized,
-            "system_running": self.is_running
+            "system_running": self.is_running,
         }
 
     async def start(self):
@@ -329,5 +350,7 @@ def get_enhanced_system(hybrid_agent=None, max_parallel_tasks=5) -> EnhancedSyst
     """Get or create global enhanced system instance"""
     global _enhanced_system
     if _enhanced_system is None:
-        _enhanced_system = EnhancedSystem(hybrid_agent=hybrid_agent, max_parallel_tasks=max_parallel_tasks)
+        _enhanced_system = EnhancedSystem(
+            hybrid_agent=hybrid_agent, max_parallel_tasks=max_parallel_tasks
+        )
     return _enhanced_system

@@ -2,6 +2,7 @@
 Task Manager - Core Engine
 Orchestrates tasks with Agent Zero + NanoBot integration
 """
+
 import asyncio
 import logging
 import uuid
@@ -10,8 +11,12 @@ from typing import List, Optional, Dict, Any, Callable
 from collections import defaultdict
 
 from .models import (
-    Task, TaskStatus, TaskPriority, TaskType,
-    TaskDependency, TaskExecutionEvent
+    Task,
+    TaskStatus,
+    TaskPriority,
+    TaskType,
+    TaskDependency,
+    TaskExecutionEvent,
 )
 from .repository import TaskRepository
 from prometheus_client import Counter, Histogram, Gauge
@@ -44,31 +49,27 @@ class TaskManager:
         # We use a try-except block to avoid failure if metrics are already defined
         try:
             self.task_counter = Counter(
-                'task_manager_tasks_total',
-                'Total tasks created',
-                ['status', 'type', 'priority']
+                "task_manager_tasks_total",
+                "Total tasks created",
+                ["status", "type", "priority"],
             )
 
             self.task_duration = Histogram(
-                'task_manager_execution_duration_seconds',
-                'Task execution duration',
-                ['type', 'priority']
+                "task_manager_execution_duration_seconds",
+                "Task execution duration",
+                ["type", "priority"],
             )
 
             self.task_retry_counter = Counter(
-                'task_manager_retries_total',
-                'Total task retries',
-                ['success']
+                "task_manager_retries_total", "Total task retries", ["success"]
             )
 
             self.active_tasks_gauge = Gauge(
-                'task_manager_active_tasks',
-                'Number of currently active tasks'
+                "task_manager_active_tasks", "Number of currently active tasks"
             )
 
             self.queue_depth_gauge = Gauge(
-                'task_manager_queue_depth',
-                'Number of pending tasks'
+                "task_manager_queue_depth", "Number of pending tasks"
             )
         except ValueError:
             # Metrics already registered
@@ -90,7 +91,7 @@ class TaskManager:
         assigned_agent: Optional[str] = None,
         requires_memory: bool = False,
         labels: Optional[Dict[str, str]] = None,
-        timeout_seconds: Optional[int] = None
+        timeout_seconds: Optional[int] = None,
     ) -> Task:
         """Create a new task with optional scheduling and dependencies"""
         task_id = str(uuid.uuid4())
@@ -106,7 +107,7 @@ class TaskManager:
             assigned_agent=assigned_agent,
             requires_memory_recall=requires_memory,
             labels=labels or {},
-            timeout_seconds=timeout_seconds
+            timeout_seconds=timeout_seconds,
         )
 
         # Handle dependencies
@@ -117,11 +118,9 @@ class TaskManager:
         created_task = await self.db.create_task(task)
 
         # Update metrics
-        if hasattr(self, 'task_counter'):
+        if hasattr(self, "task_counter"):
             self.task_counter.labels(
-                status=created_task.status,
-                type=task_type,
-                priority=priority
+                status=created_task.status, type=task_type, priority=priority
             ).inc()
 
         await self._update_queue_depth()
@@ -139,9 +138,9 @@ class TaskManager:
             dep_task = await self.db.get_task(dep.depends_on)
             if dep_task:
                 dep_task.blocking_for.append(task.id)
-                await self.db.update_task(dep_task.id, {
-                    "blocking_for": dep_task.blocking_for
-                })
+                await self.db.update_task(
+                    dep_task.id, {"blocking_for": dep_task.blocking_for}
+                )
 
     async def enqueue_task(self, task_id: str):
         """Enqueue task for execution"""
@@ -151,35 +150,36 @@ class TaskManager:
             return
 
         if task.status not in [TaskStatus.PENDING, TaskStatus.RETRYING]:
-            logger.warning(f"Task not in allowed execution state: {task_id} ({task.status})")
+            logger.warning(
+                f"Task not in allowed execution state: {task_id} ({task.status})"
+            )
             return
 
         # Check dependencies
         if await self._check_dependencies(task_id):
-            asyncio_task = asyncio.create_task(
-                self._execute_task(task_id)
-            )
+            asyncio_task = asyncio.create_task(self._execute_task(task_id))
             self.running_tasks[task_id] = asyncio_task
 
-            await self.db.update_task(task_id, {
-                "status": TaskStatus.IN_PROGRESS,
-                "started_at": datetime.now(datetime.UTC)
-            })
+            await self.db.update_task(
+                task_id,
+                {
+                    "status": TaskStatus.IN_PROGRESS,
+                    "started_at": datetime.now(datetime.timezone.utc),
+                },
+            )
 
             await self.db.log_event(
                 task_id,
                 "started",
                 f"Task '{task.title}' started execution",
-                agent_id=task.assigned_agent
+                agent_id=task.assigned_agent,
             )
 
-            if hasattr(self, 'active_tasks_gauge'):
+            if hasattr(self, "active_tasks_gauge"):
                 self.active_tasks_gauge.inc()
             logger.info(f"Started task execution: {task_id}")
         else:
-            await self.db.update_task(task_id, {
-                "status": TaskStatus.BLOCKED
-            })
+            await self.db.update_task(task_id, {"status": TaskStatus.BLOCKED})
 
     async def _check_dependencies(self, task_id: str) -> bool:
         """Check if all dependencies are satisfied"""
@@ -206,7 +206,7 @@ class TaskManager:
             logger.error(f"Task not found for execution: {task_id}")
             return
 
-        start_time = datetime.now(datetime.UTC)
+        start_time = datetime.now(datetime.timezone.utc)
 
         try:
             # Memory Recall (if required)
@@ -225,7 +225,9 @@ class TaskManager:
                 result = await self._execute_direct(task)
 
             # Success
-            duration = (datetime.now(datetime.UTC) - start_time).total_seconds()
+            duration = (
+                datetime.now(datetime.timezone.utc) - start_time
+            ).total_seconds()
             await self._complete_task(task_id, result, duration)
 
         except Exception as e:
@@ -236,18 +238,22 @@ class TaskManager:
             if task.retry_count <= task.max_retries:
                 await self._retry_task(task_id, str(e))
             else:
-                duration = (datetime.now(datetime.UTC) - start_time).total_seconds()
+                duration = (
+                    datetime.now(datetime.timezone.utc) - start_time
+                ).total_seconds()
                 await self._fail_task(task_id, str(e), duration)
 
         finally:
             self.running_tasks.pop(task_id, None)
-            if hasattr(self, 'active_tasks_gauge'):
+            if hasattr(self, "active_tasks_gauge"):
                 self.active_tasks_gauge.dec()
             await self._update_queue_depth()
             await self._trigger_callbacks(task_id)
             await self._unblock_dependents(task_id)
 
-    async def _execute_with_agent_zero(self, task: Task, enhanced_description: str) -> Dict[str, Any]:
+    async def _execute_with_agent_zero(
+        self, task: Task, enhanced_description: str
+    ) -> Dict[str, Any]:
         """Execute task using Agent Zero's hybrid agent"""
         prompt = f"""
 Task: {task.title}
@@ -258,14 +264,14 @@ Please execute this task using available tools and skills.
 Report back with result.
 """
 
-        if hasattr(self.hybrid_agent, 'loop_data'):
+        if hasattr(self.hybrid_agent, "loop_data"):
             self.hybrid_agent.loop_data.current_task = task.id
-        
+
         # Execute using main interface
         # result = await self.hybrid_agent.execute(prompt)
         # Note: In a real system, we'd use the message bus or a direct execute call
         # For MVP integration, we'll use execute if available
-        if hasattr(self.hybrid_agent, 'execute'):
+        if hasattr(self.hybrid_agent, "execute"):
             result = await self.hybrid_agent.execute(prompt)
             data = result if isinstance(result, dict) else {"content": str(result)}
         else:
@@ -274,19 +280,20 @@ Report back with result.
         return {
             "success": True,
             "data": data,
-            "self_repair_used": getattr(self.hybrid_agent.loop_data, 'self_repair_triggered', False) if hasattr(self.hybrid_agent, 'loop_data') else False
+            "self_repair_used": getattr(
+                self.hybrid_agent.loop_data, "self_repair_triggered", False
+            )
+            if hasattr(self.hybrid_agent, "loop_data")
+            else False,
         }
 
     async def _execute_direct(self, task: Task) -> Dict[str, Any]:
         """Direct task execution (fallback)"""
-        return {
-            "success": True,
-            "data": {"message": f"Executed: {task.title}"}
-        }
+        return {"success": True, "data": {"message": f"Executed: {task.title}"}}
 
     async def _recall_task_memory(self, task: Task) -> str:
         """Recall relevant memory for task"""
-        if not self.hybrid_agent or not hasattr(self.hybrid_agent, 'memory'):
+        if not self.hybrid_agent or not hasattr(self.hybrid_agent, "memory"):
             return ""
 
         search_query = f"{task.title} {task.description or ''}"
@@ -294,38 +301,42 @@ Report back with result.
             memories = await self.hybrid_agent.memory.search(search_query, limit=5)
 
             if memories:
-                memory_ids = [m.get('id') for m in memories]
+                memory_ids = [m.get("id") for m in memories]
                 await self.db.update_task(task.id, {"memory_context_ids": memory_ids})
 
-                return "\n".join([m.get('text', '') for m in memories])
+                return "\n".join([m.get("text", "") for m in memories])
         except Exception as e:
             logger.warning(f"Memory recall failed: {e}")
 
         return ""
 
-    async def _complete_task(self, task_id: str, result: Dict[str, Any], duration: float):
+    async def _complete_task(
+        self, task_id: str, result: Dict[str, Any], duration: float
+    ):
         """Mark task as completed"""
-        await self.db.update_task(task_id, {
-            "status": TaskStatus.COMPLETED,
-            "completed_at": datetime.now(datetime.UTC),
-            "result": result,
-            "actual_duration_seconds": int(duration)
-        })
+        await self.db.update_task(
+            task_id,
+            {
+                "status": TaskStatus.COMPLETED,
+                "completed_at": datetime.now(datetime.timezone.utc),
+                "result": result,
+                "actual_duration_seconds": int(duration),
+            },
+        )
 
         await self.db.log_event(
             task_id,
             "completed",
             f"Task completed in {duration:.2f} seconds",
-            metadata={"result": result}
+            metadata={"result": result},
         )
 
         # Store result in memory
         task = await self.db.get_task(task_id)
-        if self.hybrid_agent and hasattr(self.hybrid_agent, 'memory') and task:
+        if self.hybrid_agent and hasattr(self.hybrid_agent, "memory") and task:
             try:
                 await self.hybrid_agent.memory.add_memory(
-                    f"Task Completed: {task.title}\nResult: {result}",
-                    area="solutions"
+                    f"Task Completed: {task.title}\nResult: {result}", area="solutions"
                 )
             except Exception as e:
                 logger.warning(f"Failed to store task result in memory: {e}")
@@ -334,38 +345,40 @@ Report back with result.
 
     async def _retry_task(self, task_id: str, error_message: str):
         """Schedule task for retry"""
-        await self.db.update_task(task_id, {
-            "status": TaskStatus.RETRYING,
-            "error_message": error_message
-        })
+        await self.db.update_task(
+            task_id, {"status": TaskStatus.RETRYING, "error_message": error_message}
+        )
 
         retry_count = await self._get_retry_count(task_id)
-        await asyncio.sleep(2 ** retry_count)
+        await asyncio.sleep(2**retry_count)
 
         await self.db.update_task(task_id, {"status": TaskStatus.PENDING})
         await self.enqueue_task(task_id)
 
-        if hasattr(self, 'task_retry_counter'):
-            self.task_retry_counter.labels(success='pending').inc()
+        if hasattr(self, "task_retry_counter"):
+            self.task_retry_counter.labels(success="pending").inc()
 
     async def _fail_task(self, task_id: str, error_message: str, duration: float):
         """Mark task as failed"""
-        await self.db.update_task(task_id, {
-            "status": TaskStatus.FAILED,
-            "completed_at": datetime.now(datetime.UTC),
-            "error_message": error_message,
-            "actual_duration_seconds": int(duration)
-        })
+        await self.db.update_task(
+            task_id,
+            {
+                "status": TaskStatus.FAILED,
+                "completed_at": datetime.now(datetime.timezone.utc),
+                "error_message": error_message,
+                "actual_duration_seconds": int(duration),
+            },
+        )
 
         await self.db.log_event(
             task_id,
             "failed",
             f"Task failed: {error_message}",
-            metadata={"error": error_message}
+            metadata={"error": error_message},
         )
 
-        if hasattr(self, 'task_retry_counter'):
-            self.task_retry_counter.labels(success='failed').inc()
+        if hasattr(self, "task_retry_counter"):
+            self.task_retry_counter.labels(success="failed").inc()
 
     async def _unblock_dependents(self, task_id: str):
         """Unblock tasks waiting for this task to complete"""
@@ -377,7 +390,9 @@ Report back with result.
             dependent_task = await self.db.get_task(dependent_id)
             if dependent_task and dependent_task.status == TaskStatus.BLOCKED:
                 if await self._check_dependencies(dependent_id):
-                    await self.db.update_task(dependent_id, {"status": TaskStatus.PENDING})
+                    await self.db.update_task(
+                        dependent_id, {"status": TaskStatus.PENDING}
+                    )
                     await self.enqueue_task(dependent_id)
                     logger.info(f"Unblocked task: {dependent_id}")
 
@@ -389,7 +404,7 @@ Report back with result.
     async def _update_queue_depth(self):
         """Update queue depth metric"""
         pending = await self.db.get_pending_tasks()
-        if hasattr(self, 'queue_depth_gauge'):
+        if hasattr(self, "queue_depth_gauge"):
             self.queue_depth_gauge.set(len(pending))
 
     async def _trigger_callbacks(self, task_id: str):
@@ -415,12 +430,14 @@ Report back with result.
 
         while self.scheduler_running:
             try:
-                now = datetime.now(datetime.UTC)
+                now = datetime.now(datetime.timezone.utc)
                 scheduled_tasks = await self.db.get_scheduled_tasks(now)
 
                 for task in scheduled_tasks:
                     if task.status == TaskStatus.SCHEDULED:
-                        await self.db.update_task(task.id, {"status": TaskStatus.PENDING})
+                        await self.db.update_task(
+                            task.id, {"status": TaskStatus.PENDING}
+                        )
                         await self.enqueue_task(task.id)
 
                 await asyncio.sleep(1)
@@ -447,10 +464,13 @@ Report back with result.
             self.running_tasks[task_id].cancel()
             del self.running_tasks[task_id]
 
-        await self.db.update_task(task_id, {
-            "status": TaskStatus.CANCELLED,
-            "completed_at": datetime.now(datetime.UTC)
-        })
+        await self.db.update_task(
+            task_id,
+            {
+                "status": TaskStatus.CANCELLED,
+                "completed_at": datetime.now(datetime.timezone.utc),
+            },
+        )
 
         await self.db.log_event(task_id, "cancelled", "Task cancelled by user")
         logger.info(f"Cancelled task: {task_id}")
@@ -464,10 +484,7 @@ Report back with result.
 
         history = await self.db.get_task_history(task_id)
 
-        return {
-            "task": task.dict(),
-            "history": [h.__dict__ for h in history]
-        }
+        return {"task": task.dict(), "history": [h.__dict__ for h in history]}
 
     async def get_dashboard_data(self) -> Dict[str, Any]:
         """Get dashboard data for monitoring"""
@@ -480,6 +497,9 @@ Report back with result.
             "pending_tasks": [t.dict() for t in pending[:10]],
             "active_count": active,
             "recent_completed": [
-                t.dict() for t in await self.db.get_tasks_by_status(TaskStatus.COMPLETED, limit=10)
-            ]
+                t.dict()
+                for t in await self.db.get_tasks_by_status(
+                    TaskStatus.COMPLETED, limit=10
+                )
+            ],
         }
