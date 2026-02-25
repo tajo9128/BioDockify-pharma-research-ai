@@ -213,9 +213,11 @@ class DataImporter:
 
     def _generate_metadata(self, df: pd.DataFrame, file_path: Path) -> Dict[str, Any]:
         """Generate metadata about imported data"""
+        file_format = self._detect_format(str(file_path))
         metadata = {
             "file_name": file_path.name,
             "file_path": str(file_path.absolute()),
+            "format": file_format,
             "import_timestamp": datetime.now().isoformat(),
             "rows": len(df),
             "columns": len(df.columns),
