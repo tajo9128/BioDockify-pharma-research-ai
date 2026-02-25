@@ -39,6 +39,11 @@ class ProjectPhase(str, Enum):
     FINALIZATION = "finalization"
 
 
+def _utc_now() -> datetime:
+    """Helper to get current UTC time as offset-aware datetime."""
+    return datetime.now(datetime.UTC)
+
+
 @dataclass
 class ProjectTask:
     """Task within a project"""
@@ -52,7 +57,7 @@ class ProjectTask:
     estimated_hours: float = 0.0
     status: str = "pending"
     assigned_to: Optional[str] = None
-    created_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=_utc_now)
     completed_at: Optional[datetime] = None
 
 
@@ -64,7 +69,7 @@ class Project:
     title: str = ""
     description: str = ""
     project_type: ProjectType = ProjectType.RESEARCH
-    created_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=_utc_now)
     estimated_completion: Optional[datetime] = None
     status: str = "planning"
     tasks: List[ProjectTask] = field(default_factory=list)

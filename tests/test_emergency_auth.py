@@ -5,6 +5,7 @@ import hashlib
 import json
 import base64
 import time
+import pytest
 
 # Use the key from emergency_access.py
 SECRET = "BIODOCKIFY_PHARMA_RESEARCH_OFFLINE_ACCESS_KEY_V1"
@@ -26,10 +27,12 @@ def post_json(url, data):
         headers={'Content-Type': 'application/json'}
     )
     try:
-        with urllib.request.urlopen(req) as f:
+        with urllib.request.urlopen(req, timeout=5) as f:
             return f.status, json.loads(f.read().decode('utf-8'))
     except urllib.error.HTTPError as e:
         return e.code, json.loads(e.read().decode('utf-8'))
+    except (urllib.error.URLError, ConnectionRefusedError, TimeoutError) as e:
+        return None, {"error": str(e)}
 
 def test_endpoint():
     email = "test_user@example.com"
@@ -40,8 +43,12 @@ def test_endpoint():
     print(f"Testing with Email: {email}")
     print(f"Token: {token}")
     
-    print("\n--- Test 1: Valid Token ---")
+    # Check if server is available first
     status, resp = post_json(url, {"email": email, "token": token})
+    if status is None:
+        pytest.skip(f"Server not available at {url}: {resp.get('error', 'Connection refused')}")
+    
+    print("\n--- Test 1: Valid Token ---")
     print(f"Status: {status}")
     print(f"Response: {resp}")
     if status == 200 and resp.get("status") == "success":
