@@ -14,7 +14,7 @@ import logging
 import json
 from pathlib import Path
 from typing import List, Dict, Any, Optional, Set
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from dataclasses import dataclass, field, asdict
 from concurrent.futures import ThreadPoolExecutor
@@ -213,7 +213,7 @@ class MultiTaskScheduler:
     async def _start_task(self, task: ExecutableTask):
         """Start a task for execution"""
         task.status = TaskStatus.RUNNING
-        task.started_at = datetime.now(datetime.timezone.utc)
+        task.started_at = datetime.now(timezone.utc)
         self.running_tasks[task.id] = task
 
         # Remove from queue
@@ -227,7 +227,7 @@ class MultiTaskScheduler:
         try:
             result = await self._execute_task_logic(task)
             task.status = TaskStatus.COMPLETED
-            task.completed_at = datetime.now(datetime.timezone.utc)
+            task.completed_at = datetime.now(timezone.utc)
             task.result = result
             task.progress = 100.0
             self.completed_tasks.append(task)

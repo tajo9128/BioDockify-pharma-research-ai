@@ -262,9 +262,9 @@ class TestAdditionalStatisticalTools:
         results = tools.perform_power_analysis(effect_size=0.5, alpha=0.05, power=0.80)
 
         assert "analysis_type" in results
-        assert "results" in results
-        assert "required_sample_size" in results["results"]
-        assert results["results"]["required_sample_size"] > 0
+        assert "calculated_values" in results
+        assert "n_total" in results["calculated_values"]
+        assert results["calculated_values"]["n_total"] > 0
 
     def test_adf_test(self, tools, sample_time_series):
         """Test Augmented Dickey-Fuller test"""

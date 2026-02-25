@@ -6,7 +6,7 @@ PostgreSQL integration with async support
 import asyncio
 import logging
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional, Dict, Any
 from sqlalchemy import (
     create_engine,
@@ -130,7 +130,7 @@ class TaskRepository:
 
                 # Create initial event
                 event_orm = TaskExecutionEventORM(
-                    id=f"event_{task.id}_{datetime.now(datetime.timezone.utc).timestamp()}",
+                    id=f"event_{task.id}_{datetime.now(timezone.utc).timestamp()}",
                     task_id=task.id,
                     event_type="created",
                     message=f"Task '{task.title}' created",
@@ -267,7 +267,7 @@ class TaskRepository:
         async with self.async_session() as session:
             async with session.begin():
                 event = TaskExecutionEventORM(
-                    id=f"event_{task_id}_{datetime.now(datetime.timezone.utc).timestamp()}_{event_type}",
+                    id=f"event_{task_id}_{datetime.now(timezone.utc).timestamp()}_{event_type}",
                     task_id=task_id,
                     event_type=event_type,
                     message=message,

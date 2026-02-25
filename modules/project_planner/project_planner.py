@@ -7,7 +7,7 @@ import uuid
 import asyncio
 import logging
 from typing import List, Dict, Any, Optional
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from dataclasses import dataclass, field
 from enum import Enum
 
@@ -139,7 +139,7 @@ class ProjectPlanner:
             title=project_title,
             description=project_plan.get("description", ""),
             project_type=project_type,
-            estimated_completion=datetime.now(datetime.timezone.utc)
+            estimated_completion=datetime.now(timezone.utc)
             + timedelta(days=project_plan.get("estimated_days", 30)),
             tasks=tasks,
             metadata=project_plan.get("metadata", {}),
@@ -920,7 +920,7 @@ Task List:
             if task.id == task_id:
                 task.status = status
                 if status == "completed":
-                    task.completed_at = datetime.now(datetime.timezone.utc)
+                    task.completed_at = datetime.now(timezone.utc)
 
                 # Store task completion in memory
                 if self.memory_system:

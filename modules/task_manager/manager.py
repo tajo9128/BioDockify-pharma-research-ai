@@ -6,7 +6,7 @@ Orchestrates tasks with Agent Zero + NanoBot integration
 import asyncio
 import logging
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import List, Optional, Dict, Any, Callable
 from collections import defaultdict
 
@@ -164,7 +164,7 @@ class TaskManager:
                 task_id,
                 {
                     "status": TaskStatus.IN_PROGRESS,
-                    "started_at": datetime.now(datetime.timezone.utc),
+                    "started_at": datetime.now(timezone.utc),
                 },
             )
 
@@ -206,7 +206,7 @@ class TaskManager:
             logger.error(f"Task not found for execution: {task_id}")
             return
 
-        start_time = datetime.now(datetime.timezone.utc)
+        start_time = datetime.now(timezone.utc)
 
         try:
             # Memory Recall (if required)
@@ -225,9 +225,7 @@ class TaskManager:
                 result = await self._execute_direct(task)
 
             # Success
-            duration = (
-                datetime.now(datetime.timezone.utc) - start_time
-            ).total_seconds()
+            duration = (datetime.now(timezone.utc) - start_time).total_seconds()
             await self._complete_task(task_id, result, duration)
 
         except Exception as e:
@@ -238,9 +236,7 @@ class TaskManager:
             if task.retry_count <= task.max_retries:
                 await self._retry_task(task_id, str(e))
             else:
-                duration = (
-                    datetime.now(datetime.timezone.utc) - start_time
-                ).total_seconds()
+                duration = (datetime.now(timezone.utc) - start_time).total_seconds()
                 await self._fail_task(task_id, str(e), duration)
 
         finally:
@@ -318,7 +314,7 @@ Report back with result.
             task_id,
             {
                 "status": TaskStatus.COMPLETED,
-                "completed_at": datetime.now(datetime.timezone.utc),
+                "completed_at": datetime.now(timezone.utc),
                 "result": result,
                 "actual_duration_seconds": int(duration),
             },
@@ -364,7 +360,7 @@ Report back with result.
             task_id,
             {
                 "status": TaskStatus.FAILED,
-                "completed_at": datetime.now(datetime.timezone.utc),
+                "completed_at": datetime.now(timezone.utc),
                 "error_message": error_message,
                 "actual_duration_seconds": int(duration),
             },
@@ -430,7 +426,7 @@ Report back with result.
 
         while self.scheduler_running:
             try:
-                now = datetime.now(datetime.timezone.utc)
+                now = datetime.now(timezone.utc)
                 scheduled_tasks = await self.db.get_scheduled_tasks(now)
 
                 for task in scheduled_tasks:
@@ -468,7 +464,7 @@ Report back with result.
             task_id,
             {
                 "status": TaskStatus.CANCELLED,
-                "completed_at": datetime.now(datetime.timezone.utc),
+                "completed_at": datetime.now(timezone.utc),
             },
         )
 

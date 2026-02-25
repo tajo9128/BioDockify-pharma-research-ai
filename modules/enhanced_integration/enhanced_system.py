@@ -11,7 +11,7 @@ Features:
 import asyncio
 import logging
 from typing import Optional, Dict, Any, List
-from datetime import datetime
+from datetime import datetime, timezone
 from dataclasses import asdict
 
 from modules.project_planner.project_planner import (
@@ -167,7 +167,7 @@ class EnhancedSystem:
             # This is a stub for potential richer UI context saving
             await self.device_manager.save_project_context(
                 project_id,
-                {"suspended_at": datetime.now(datetime.timezone.utc).isoformat()},
+                {"suspended_at": datetime.now(timezone.utc).isoformat()},
             )
 
         logger.info("State saved successfully")
@@ -213,7 +213,7 @@ class EnhancedSystem:
                     {
                         "last_task_update": task_id,
                         "last_progress": progress,
-                        "updated_at": datetime.now(datetime.timezone.utc).isoformat(),
+                        "updated_at": datetime.now(timezone.utc).isoformat(),
                     },
                 )
 

@@ -12,7 +12,7 @@ import uuid
 import asyncio
 import logging
 from typing import Dict, Any, Optional, List
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 from dataclasses import dataclass, field, asdict
 
@@ -112,7 +112,7 @@ class DeviceStateManager:
 Device State Changed
 Device ID: {self.current_device_id}
 New State: {state.value}
-Timestamp: {datetime.now(datetime.timezone.utc).isoformat()}
+Timestamp: {datetime.now(timezone.utc).isoformat()}
 Active Tasks: {len(self.active_projects)}
             """.strip()
 
@@ -152,7 +152,7 @@ Active Tasks: {len(self.active_projects)}
     async def end_session(self, session_id: str):
         """End a session"""
         if self.current_session and self.current_session.session_id == session_id:
-            self.current_session.end_time = datetime.now(datetime.timezone.utc)
+            self.current_session.end_time = datetime.now(timezone.utc)
 
             # Remove active projects
             for project_id in self.current_session.active_tasks:
@@ -331,8 +331,7 @@ Annotations: {len(context.annotations)} items
                     and self.current_session.state == DeviceState.IDLE
                 ):
                     idle_time = (
-                        datetime.now(datetime.timezone.utc)
-                        - self.current_session.start_time
+                        datetime.now(timezone.utc) - self.current_session.start_time
                     ).total_seconds()
 
                     if idle_time > self.idle_timeout:
@@ -389,7 +388,7 @@ Annotations: {len(context.annotations)} items
             if self.current_session
             else None,
             "idle_time": (
-                datetime.now(datetime.timezone.utc) - self.current_session.start_time
+                datetime.now(timezone.utc) - self.current_session.start_time
             ).total_seconds()
             if self.current_session
             else 0,
