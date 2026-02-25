@@ -156,11 +156,19 @@ class MultiTaskScheduler:
                 state = json.load(f)
 
             def dict_to_task(d):
-                # Handle datetime parsing
+                # Handle datetime parsing - ensure timezone-aware datetimes
                 if d.get("started_at"):
-                    d["started_at"] = datetime.fromisoformat(d["started_at"])
+                    dt = datetime.fromisoformat(d["started_at"])
+                    # Make naive datetime timezone-aware (assume UTC)
+                    if dt.tzinfo is None:
+                        dt = dt.replace(tzinfo=timezone.utc)
+                    d["started_at"] = dt
                 if d.get("completed_at"):
-                    d["completed_at"] = datetime.fromisoformat(d["completed_at"])
+                    dt = datetime.fromisoformat(d["completed_at"])
+                    # Make naive datetime timezone-aware (assume UTC)
+                    if dt.tzinfo is None:
+                        dt = dt.replace(tzinfo=timezone.utc)
+                    d["completed_at"] = dt
                 return ExecutableTask(**d)
 
             self.task_queue = [dict_to_task(t) for t in state.get("queued", [])]
