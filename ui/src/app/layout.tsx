@@ -19,13 +19,20 @@ export const metadata: Metadata = {
   keywords: ["BioDockify", "Pharma Research", "AI", "Drug Discovery", "PhD Research", "Neo4j", "Literature Review"],
   authors: [{ name: "BioDockify Team" }],
   icons: {
-    icon: "/favicon.ico",
+    icon: [
+      { url: "/favicon.ico", sizes: "64x64 32x32 24x24 16x16", type: "image/x-icon" },
+      { url: "/logo.png", sizes: "192x192", type: "image/png" },
+      { url: "/logo.png", sizes: "512x512", type: "image/png" }
+    ],
+    apple: "/logo.png",
+    appleTouchIcon: "/logo.png",
   },
   manifest: "/manifest.json",
   openGraph: {
     title: "BioDockify - Pharma Research AI",
     description: "Automate pharmaceutical research with AI-powered literature analysis and drug discovery",
     type: "website",
+    images: ["/logo.png"],
   },
   appleWebApp: {
     capable: true,
