@@ -259,6 +259,15 @@ DEFAULT_CONFIG = {
             "allow_from": [],
             "gateway_url": "wss://gateway.discord.gg/?v=10&encoding=json",
         },
+        "email": {
+            "enabled": False,
+            "smtp_host": "",
+            "smtp_port": 587,
+            "smtp_user": "",
+            "smtp_password": "",
+            "from_email": "",
+            "to_emails": "",
+        },
     },
     # SECTION E: API & AI SETTINGS
     "ai_provider": {
