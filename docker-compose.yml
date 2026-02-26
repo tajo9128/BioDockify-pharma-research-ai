@@ -22,6 +22,7 @@ services:
       - BIO_OLLAMA_URL=http://host.docker.internal:11434
       - BIO_LM_STUDIO_URL=http://host.docker.internal:1234/v1
       - LM_STUDIO_URL=http://host.docker.internal:1234/v1
+      - SURFSENSE_URL=http://surfsense:8000
     depends_on:
       db:
         condition: service_healthy
@@ -42,8 +43,25 @@ services:
     restart: unless-stopped
 
   # Knowledge Graph (SurfSense)
-
-
+  surfsense:
+    image: ghcr.io/modsetter/surfsense:latest
+    container_name: surfsense
+    ports:
+      - "3003:3000"
+      - "8000:8000"
+    volumes:
+      - surfsense-data:/data
+    environment:
+      - PORT=3000
+      - BACKEND_URL=http://localhost:8000
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+    networks:
+      - biodockify-network
 
   # Vector Database (ChromaDB - FREE)
   chroma:
@@ -159,6 +177,7 @@ volumes:
   prometheus_data:
   grafana_data:
   loki_data:
+  surfsense-data:
 networks:
   biodockify-network:
     driver: bridge
