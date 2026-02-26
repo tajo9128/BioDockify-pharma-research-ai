@@ -11,7 +11,6 @@ export function useSettings() {
     const defaultSettings: Partial<Settings> = {
         ai_provider: {
             mode: "lm_studio",
-            primary_model: "google",
             lm_studio_url: "http://localhost:1234/v1",
             lm_studio_model: "auto"
         }
