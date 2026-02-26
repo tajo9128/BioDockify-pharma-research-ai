@@ -120,6 +120,16 @@ export function ModelIntelligenceSettings({ settings, onUpdate }: ModelIntellige
                 DYNAMIC FIELD RENDERING BASED ON MODE 
             */}
 
+                    {/* ==================== CLOUD PROVIDERS SECTION ==================== */}
+                    {['openai', 'anthropic', 'google', 'deepseek', 'mistral', 'venice', 'glm', 'kimi', 'openrouter', 'groq', 'huggingface', 'azure', 'aws'].includes(mode) && (
+                        <div className="space-y-4 border-t border-slate-700/50 pt-4">
+                            <div className="flex items-center gap-2">
+                                <Cloud className="w-4 h-4 text-blue-400" />
+                                <span className="text-sm font-medium text-blue-400">Cloud Provider Settings</span>
+                            </div>
+                        </div>
+                    )}
+
                     {/* --- OpenAI --- */}
                     {mode === 'openai' && (
                         <>
@@ -259,6 +269,28 @@ export function ModelIntelligenceSettings({ settings, onUpdate }: ModelIntellige
                     {/* --- Mistral / Venice / DeepSeek / Kimi / GLM / OpenRouter / Groq / HuggingFace (Standard Key + Model + Base URL for some) --- */}
                     {['mistral', 'venice', 'deepseek', 'kimi', 'glm', 'openrouter', 'groq', 'huggingface'].includes(mode) && (
                         <div className="space-y-4">
+                            {/* API Key first */}
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-slate-300">API Key</label>
+                                <input
+                                    type="password"
+                                    value={(aiProvider as any)[`${mode}_key`] || ''}
+                                    onChange={(e) => handleChange(`ai_provider.${mode}_key`, e.target.value)}
+                                    className="w-full bg-slate-800 border-slate-700 rounded-lg px-4 py-2 text-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
+                                />
+                            </div>
+                            {/* Model second */}
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-slate-300">Model Name (Optional)</label>
+                                <input
+                                    type="text"
+                                    value={(aiProvider as any)[`${mode}_model`] || ''}
+                                    onChange={(e) => handleChange(`ai_provider.${mode}_model`, e.target.value)}
+                                    placeholder={mode === 'deepseek' ? 'deepseek-chat' : mode === 'mistral' ? 'mistral-large-latest' : mode === 'venice' ? 'llama-3-70b' : 'default'}
+                                    className="w-full bg-slate-800 border-slate-700 rounded-lg px-4 py-2 text-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
+                                />
+                            </div>
+                            {/* Base URL last - only for some providers */}
                             {(mode === 'deepseek' || mode === 'openrouter' || mode === 'groq' || mode === 'huggingface') && (
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium text-slate-300">Base URL</label>
@@ -271,25 +303,15 @@ export function ModelIntelligenceSettings({ settings, onUpdate }: ModelIntellige
                                     />
                                 </div>
                             )}
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium text-slate-300">API Key</label>
-                                <input
-                                    type="password"
-                                    // Map generic key field based on mode
-                                    value={(aiProvider as any)[`${mode}_key`] || ''}
-                                    onChange={(e) => handleChange(`ai_provider.${mode}_key`, e.target.value)}
-                                    className="w-full bg-slate-800 border-slate-700 rounded-lg px-4 py-2 text-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium text-slate-300">Model Name (Optional)</label>
-                                <input
-                                    type="text"
-                                    value={(aiProvider as any)[`${mode}_model`] || ''}
-                                    onChange={(e) => handleChange(`ai_provider.${mode}_model`, e.target.value)}
-                                    placeholder={mode === 'deepseek' ? 'deepseek-chat' : mode === 'mistral' ? 'mistral-large-latest' : mode === 'venice' ? 'llama-3-70b' : 'default'}
-                                    className="w-full bg-slate-800 border-slate-700 rounded-lg px-4 py-2 text-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
-                                />
+                        </div>
+                    )}
+
+                    {/* ==================== LOCAL PROVIDERS SECTION ==================== */}
+                    {['lm_studio', 'ollama'].includes(mode) && (
+                        <div className="space-y-4 border-t border-slate-700/50 pt-4">
+                            <div className="flex items-center gap-2">
+                                <Server className="w-4 h-4 text-green-400" />
+                                <span className="text-sm font-medium text-green-400">Local Provider Settings</span>
                             </div>
                         </div>
                     )}
