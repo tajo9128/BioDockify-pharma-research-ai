@@ -5,17 +5,30 @@ import { useToast } from './use-toast';
 export function useSettings() {
     const [settings, setSettings] = useState<Partial<Settings>>({});
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
     const { toast } = useToast();
+
+    const defaultSettings: Partial<Settings> = {
+        ai_provider: {
+            mode: "lm_studio",
+            primary_model: "google",
+            lm_studio_url: "http://localhost:1234/v1",
+            lm_studio_model: "auto"
+        }
+    };
 
     const loadSettings = useCallback(async () => {
         try {
             const data = await api.getSettings();
             setSettings(data);
-        } catch (error) {
-            console.error('Failed to load settings:', error);
+            setError(null);
+        } catch (err) {
+            console.error('Failed to load settings:', err);
+            setError("Server not available - using default settings");
+            setSettings(defaultSettings);
             toast({
-                title: "Error loading settings",
-                description: "Could not fetch configuration from server.",
+                title: "Server not available",
+                description: "Using default settings. Start Docker: docker compose up -d",
                 variant: "destructive"
             });
         } finally {
