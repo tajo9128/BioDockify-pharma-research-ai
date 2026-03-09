@@ -3,7 +3,8 @@ version: '3.8'
 services:
   # BioDockify Application (Agent Zero + NanoBot + Task Manager + Memory)
   app:
-    build: .
+    image: tajo9128/biodockify-ai:latest
+    # build: .
     container_name: biodockify-app
     ports:
       - "3000:3000"
