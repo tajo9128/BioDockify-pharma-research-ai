@@ -37,7 +37,7 @@ echo     PDF Parser: Grobid
 echo.
 echo [NOTE] Please ensure LM Studio is running on your machine with the local server enabled on port 1234.
 
-docker compose up -d --build
+docker compose up -d
 
 if %errorlevel% neq 0 (
     echo [ERROR] Failed to start services.

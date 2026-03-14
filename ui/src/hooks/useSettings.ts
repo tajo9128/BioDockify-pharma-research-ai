@@ -11,7 +11,7 @@ export function useSettings() {
     const defaultSettings: Partial<Settings> = {
         ai_provider: {
             mode: "lm_studio",
-            lm_studio_url: "http://localhost:1234/v1",
+            lm_studio_url: "http://host.docker.internal:1234/v1",
             lm_studio_model: "auto"
         }
     };
